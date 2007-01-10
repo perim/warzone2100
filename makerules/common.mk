@@ -7,8 +7,8 @@
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c -o$@ $<
 
-%.c: %.l
+%.lex.c: %.l
 	$(FLEX) $(FLEXFLAGS) -o$@ $<
 
-%.c: %.y
+%.tab.h %.tab.c: %.y
 	$(BISON) -d $(BISONFLAGS) -o$@ $<

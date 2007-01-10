@@ -13,7 +13,7 @@
 #include "src/scriptvals.h"
 
 /* Get the Yacc definitions */
-#include "src/scriptvals_parser.h"
+#include "scriptvals_parser.tab.h"
 
 /* Maximum length for any TEXT value */
 #ifndef YYLMAX

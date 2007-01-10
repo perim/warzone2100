@@ -20,7 +20,7 @@
 #include "lib/framework/strresly.h"
 
 /* Get the Yacc definitions */
-#include "lib/framework/strres_parser.h"
+#include "strres_parser.tab.h"
 
 void strres_error(const char *pMessage,...);
 
