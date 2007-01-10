@@ -18,8 +18,7 @@
 #include "lib/ivis_common/piefunc.h"
 #include "lib/ivis_common/piestate.h"
 #include "hci.h"//for font
-#include "lib/sound/audio.h"
-#include "lib/sound/cdaudio.h"
+#include "lib/sound/sound.h"
 #include "deliverance.h"
 #include "warzoneconfig.h"
 // FIXME Direct iVis implementation include!

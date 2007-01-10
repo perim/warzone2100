@@ -34,7 +34,7 @@
 #include "game.h"
 #include "objects.h"
 #include "display.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "lib/gamelib/anim.h"
 #include "lib/gamelib/parser.h"
 #include "levels.h"

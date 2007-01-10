@@ -2,7 +2,7 @@
 
 #include "lib/framework/frame.h"
 #include "lib/gamelib/parser.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "lib/gamelib/anim.h"
 
 static int		g_iCurAnimID = 0;

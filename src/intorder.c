@@ -13,7 +13,7 @@
 
 #include "display3d.h"
 #include "hci.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "lib/widget/widgint.h"
 #include "lib/widget/bar.h"

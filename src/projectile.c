@@ -19,7 +19,7 @@
 #include "effects.h"
 #include "map.h"
 #include "audio_id.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "lib/gamelib/hashtabl.h"
 #include "anim_id.h"
 #include "projectile.h"

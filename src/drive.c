@@ -20,7 +20,7 @@
 #include "fpath.h"
 #include "loop.h"
 #include "lib/gamelib/gtime.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "geometry.h"
 #include "lib/gamelib/animobj.h"

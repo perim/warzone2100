@@ -32,7 +32,7 @@
 #include "hci.h"
 #include "component.h"
 #include "research.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "wrappers.h"
 #include "intimage.h"

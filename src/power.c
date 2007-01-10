@@ -9,7 +9,7 @@
 #include "power.h"
 #include "hci.h"
 #include "lib/gamelib/gtime.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "objmem.h"
 #include "frontend.h"

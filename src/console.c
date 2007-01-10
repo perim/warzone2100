@@ -11,7 +11,7 @@
 #include "console.h"
 #include "scriptextern.h"
 #include "audio_id.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 
 /* Alex McLean, Pumpkin Studios, EIDOS Interactive */
 

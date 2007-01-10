@@ -7,8 +7,7 @@
 
 #include "lib/framework/frame.h"
 
-#include "lib/sound/audio.h"
-#include "lib/sound/track.h"
+#include "lib/sound/sound.h"
 #include "cdspan.h"
 
 static char		g_szCurDriveName[MAX_STR] = "";

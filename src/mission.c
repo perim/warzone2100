@@ -36,7 +36,7 @@
 #include "loadsave.h"
 #include "lib/script/script.h"
 #include "scripttabs.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "cmddroid.h"
 #include "warcam.h"
@@ -65,7 +65,6 @@
 
 
 #include "cdspan.h"
-#include "lib/sound/cdaudio.h"
 
 //#include "texture.h"	   // ffs
 

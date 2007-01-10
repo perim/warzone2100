@@ -19,7 +19,7 @@
 #include "messagedef.h"
 #include "message.h"
 #include "researchdef.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 
 #include "multiplay.h"
 

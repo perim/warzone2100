@@ -26,7 +26,7 @@
 #include "wrappers.h"								// for game over
 #include "component.h"
 #include "frontend.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "levels.h"
 #include "selection.h"

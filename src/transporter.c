@@ -29,7 +29,7 @@
 #include "lib/ivis_common/bitimage.h"
 #include "warcam.h"
 #include "selection.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 // FIXME Direct iVis implementation include!
 #include "lib/ivis_opengl/piematrix.h"

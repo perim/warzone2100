@@ -28,7 +28,7 @@
 #include "display3d.h"
 #include "mission.h"
 #include "game.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "intimage.h"
 

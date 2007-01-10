@@ -9,7 +9,7 @@
 
 #include "objectdef.h"
 #include "findpath.h"
-#include "lib/sound/audio.h"
+// #include "lib/sound/sound.h" // Don't tell me this file needs to be included in a header
 
 /* The base movement speed */
 extern FRACT	baseSpeed;

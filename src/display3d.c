@@ -71,7 +71,7 @@
 #include "gateway.h"
 #include "transporter.h"
 #include "warzoneconfig.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "action.h"
 #include "keybind.h"

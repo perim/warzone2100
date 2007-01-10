@@ -51,7 +51,7 @@
 #include "levels.h"
 #include "mission.h"
 #include "geometry.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "gateway.h"
 #include "scripttabs.h"
 #include "scriptextern.h"

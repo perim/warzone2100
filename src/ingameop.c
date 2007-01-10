@@ -12,9 +12,7 @@
 #include "lib/netplay/netplay.h"
 #include "lib/ivis_common/piestate.h"		// for getrendertype
 #include "lib/ivis_common/rendmode.h"
-#include "lib/sound/audio.h"					// for sound.
-#include "lib/sound/cdaudio.h"
-#include "lib/sound/mixer.h"
+#include "lib/sound/sound.h"					// for sound.
 
 #include "display3d.h"
 #include "intdisplay.h"

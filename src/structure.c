@@ -23,7 +23,7 @@
 #include "miscimd.h"
 #include "effects.h"
 #include "combat.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "stats.h"
 #include "lib/framework/fractions.h"

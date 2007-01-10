@@ -15,7 +15,7 @@
 #include "edit3d.h"
 #include "keybind.h"
 #include "mechanics.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "lighting.h"
 #include "power.h"

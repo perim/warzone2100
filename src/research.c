@@ -14,7 +14,7 @@
 #include "research.h"
 #include "message.h"
 #include "text.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "lib/script/script.h"
 #include "scripttabs.h"

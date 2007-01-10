@@ -34,7 +34,7 @@
 #include "stats.h"
 #include "game.h"
 #include "power.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "lib/widget/widgint.h"
 #include "lib/widget/bar.h"

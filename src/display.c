@@ -34,7 +34,7 @@
 #include "edit3d.h"
 #include "geometry.h"
 #include "lib/gamelib/gtime.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "radar.h"
 #include "miscimd.h"

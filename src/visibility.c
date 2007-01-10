@@ -13,7 +13,7 @@
 #include "lib/gamelib/gtime.h"
 #include "mapgrid.h"
 #include "cluster.h"
-#include "lib/sound/audio.h"
+#include "lib/sound/sound.h"
 #include "audio_id.h"
 #include "scriptextern.h"
 #include "structure.h"

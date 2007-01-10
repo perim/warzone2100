@@ -1,6 +1,8 @@
 Some things that are to be done on the sound-system (in no particular order):
 
- * Remove all #include directives (which now include stuff from lib/sound) from the general src/ code and replace them with one header file.
+ ! All #include directives (which included stuff from lib/sound) are now removed from src/ code and replaced with lib/sound/sound.h.
+  ! Design issue: lib/sound/sound.h should (at all times) provide the full interface to the library. Wether the using code is C or C++ it should not depend on any other include file than this one.
+   * TODO: create a list of all sound related functions used by the codebase, then list the purpose of the function (i.e. what it does, not how it does that)
 
  * Probably two sound rendering contexts needed, one for ingame and one for the GUI (outside of the game)
 

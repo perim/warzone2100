@@ -7,7 +7,7 @@
 #define _droiddef_h
 
 #include "lib/gamelib/animobj.h"
-#include "lib/sound/audio.h"
+//#include "lib/sound/sound.h" // is this one really needed in a header file????
 
 #include "base.h"
 #include "deliverance.h"

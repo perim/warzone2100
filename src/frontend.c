@@ -18,7 +18,7 @@
 #include "lib/framework/strres.h"
 #include "lib/ivis_common/rendmode.h"
 #include "lib/netplay/netplay.h"
-#include "lib/sound/mixer.h"
+#include "lib/sound/sound.h"
 #include "lib/widget/widget.h"
 
 #include "advvis.h"
