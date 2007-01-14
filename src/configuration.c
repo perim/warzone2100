@@ -103,14 +103,14 @@ BOOL loadConfig(BOOL bResourceAvailable)
 		gammaValue = val;
 		if (gammaValue < 10)
 			gammaValue = 10;
-		pie_SetGammaValue((float)gammaValue / 20.0f);
+// 		pie_SetGammaValue((float)gammaValue / 20.0f);
 	}
 	else
 	{
 		gammaValue = DEFAULTGAMMA;
 		if (gammaValue < 10)
 			gammaValue = 10;
-		pie_SetGammaValue((float)gammaValue / 20.0f);
+// 		pie_SetGammaValue((float)gammaValue / 20.0f);
 		setWarzoneKeyNumeric("gamma", gammaValue);
 	}
 
@@ -518,7 +518,6 @@ BOOL loadRenderMode(void)
 // ////////////////////////////////////////////////////////////////////////////
 BOOL saveConfig(void)
 {
-
 	debug( LOG_WZ, "Writing prefs to registry\n" );
 
 	if(!openWarzoneKey())

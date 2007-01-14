@@ -13,6 +13,49 @@
 /* For SHGetFolderPath */
 #ifdef WZ_OS_WIN
 # include <shlobj.h>
+# include <shlwapi.h>
+
+#define PACKVERSION(major,minor) MAKELONG(minor,major)
+DWORD GetDllVersion(LPCTSTR lpszDllName)
+{
+	HINSTANCE hinstDll;
+	DWORD dwVersion = 0;
+
+	/* For security purposes, LoadLibrary should be provided with a
+	   fully-qualified path to the DLL. The lpszDllName variable should be
+	   tested to ensure that it is a fully qualified path before it is used. */
+	hinstDll = LoadLibrary(lpszDllName);
+
+	if(hinstDll)
+	{
+		DLLGETVERSIONPROC pDllGetVersion;
+		pDllGetVersion = (DLLGETVERSIONPROC)GetProcAddress(hinstDll, "DllGetVersion");
+
+		/* Because some DLLs might not implement this function, you
+		   must test for it explicitly. Depending on the particular
+		   DLL, the lack of a DllGetVersion function can be a useful
+		   indicator of the version. */
+
+		if(pDllGetVersion)
+		{
+			DLLVERSIONINFO dvi;
+			HRESULT hr;
+
+			ZeroMemory(&dvi, sizeof(dvi));
+			dvi.cbSize = sizeof(dvi);
+
+			hr = (*pDllGetVersion)(&dvi);
+
+			if(SUCCEEDED(hr))
+			{
+				dwVersion = PACKVERSION(dvi.dwMajorVersion, dvi.dwMinorVersion);
+			}
+		}
+
+		FreeLibrary(hinstDll);
+	}
+	return dwVersion;
+}
 #endif // WZ_OS_WIN
 
 #include "lib/framework/configfile.h"
@@ -192,9 +235,8 @@ static void getPlatformUserDir(char * tmpstr)
 	if (!error)
 		strcat( tmpstr, PHYSFS_getDirSeparator() );
 	else
-#else
-		strcpy( tmpstr, PHYSFS_getUserDir() ); // Use PhysFS supplied UserDir (As fallback on Windows / Mac, default on Linux)
 #endif
+		strcpy( tmpstr, PHYSFS_getUserDir() ); // Use PhysFS supplied UserDir (As fallback on Windows / Mac, default on Linux)
 }
 
 
@@ -430,6 +472,8 @@ int main(int argc, char *argv[])
 
 init://jump here from the end if re_initialising
 
+	debug(LOG_MAIN, "reinitializing");
+
 	if (!blkInitialise())
 	{
 		return FALSE;
@@ -439,28 +483,30 @@ init://jump here from the end if re_initialising
 
 	bDisableLobby = FALSE;
 
+	loadConfig(FALSE);
+	atexit( closeConfig );
+
 	// parse the command line
 	if (!reInit) {
 		if (!ParseCommandLine(argc, argv)) {
 			return -1;
 		}
-		atexit( closeConfig );
 	}
+
+	saveConfig();
 
 	scanDataDirs();
 
-	debug(LOG_MAIN, "reinitializing");
-
 	// find out if the lobby stuff has been disabled
 	if (!bDisableLobby &&
-		!lobbyInitialise())			// ajl. Init net stuff. Lobby can modify startup conditions like commandline.
+		!lobbyInitialise())// ajl. Init net stuff. Lobby can modify startup conditions like commandline.
 	{
 		return -1;
 	}
 
 	reInit = FALSE;//just so we dont restart again
 
-	if (!frameInitialise( "Warzone 2100", pie_GetVideoBufferWidth(),pie_GetVideoBufferHeight(), pie_GetVideoBufferDepth(), war_getFullscreen() ))
+	if (!frameInitialise( "Warzone 2100", pie_GetVideoBufferWidth(), pie_GetVideoBufferHeight(), pie_GetVideoBufferDepth(), war_getFullscreen() ))
 	{
 		return -1;
 	}

@@ -960,6 +960,7 @@ BOOL systemInitialise(void)
 
 	pie_SetTranslucent(war_GetTranslucent());
 	pie_SetAdditive(war_GetAdditive());
+	pie_SetGammaValue((float)gammaValue / 20.0f);
 
 	displayBufferSize = pie_GetVideoBufferWidth()*pie_GetVideoBufferHeight()*2;
 	if (displayBufferSize < 5000000)
@@ -986,7 +987,6 @@ BOOL systemInitialise(void)
 
 	if (war_GetPlayAudioCDs()) {
 		cdAudio_Open(UserMusicPath);
-		mixer_Open();
 	}
 
 	if (!bDisableLobby && !multiInitialise()) // ajl. Init net stuff
@@ -1012,8 +1012,6 @@ BOOL systemInitialise(void)
 	{
 		return FALSE;
 	}
-
-	loadConfig(FALSE); // get favourite settings from the registry
 
 	// create a block heap for the game data
 	if (!BLOCK_CREATE(&psGameHeap, GAMEBLOCK_INIT, GAMEBLOCK_EXT))
@@ -1085,7 +1083,6 @@ BOOL systemShutdown(void)
 		debug(LOG_MAIN, "shutting down CD audio");
 		cdAudio_Stop();
 		cdAudio_Close();
-		mixer_Close();
 	}
 
 	if ( audio_Disabled() == FALSE && !audio_Shutdown() )
@@ -1216,7 +1213,7 @@ BOOL frontendInitialise(const char *ResourceFile)
 		return FALSE;
 	}
 
-	loadConfig(TRUE);			// get favourite settings from the registry
+	loadConfig(TRUE);// get favourite settings from the registry
 
 	// keymappings
 	// clear out any existing mappings
@@ -1251,13 +1248,7 @@ BOOL frontendShutdown(void)
 {
 	debug(LOG_MAIN, "Shuting down frontend");
 
-	saveConfig();			// save settings to registry.
-	closeConfig();
-
-	//	if (!aiShutdown())
-//	{
-//		return FALSE;
-//	}
+	saveConfig();// save settings to registry.
 
 	if (!mechShutdown())
 	{
@@ -1328,8 +1319,6 @@ BOOL stageOneInitialise(void)
 	{
 		return FALSE;
 	}
-
-
 
 	iV_Reset(FALSE);			// Reset the IV library. (but not the palette)
 
@@ -1890,28 +1879,17 @@ BOOL stageThreeShutDown(void)
 {
 	debug(LOG_MAIN, "stageThreeShutDown");
 
-
-
 	// make sure any button tips are gone.
 	widgReset();
 
-
 	audio_StopAll();
-
-	saveConfig();					// save options to registry (may have changed in game).
 
 	if(bMultiPlayer)
 	{
 		multiGameShutdown();
 	}
-//#if 0
-//	environShutDown();
-//#endif
-//	avCloseSystem();
 
 	cmdDroidMultiExpBoost(FALSE);
-
-
 
 	eventReset();
 
@@ -1933,12 +1911,6 @@ BOOL stageThreeShutDown(void)
     //reset the run data so that doesn't need to be initialised in the scripts
     initRunData();
 
-	// Remove any remaining enemy objects.
-// Now done in mission state loop.
-//	missionDestroyObjects();
-
-
-
 	resetVTOLLandingPos();
 
 // Restore player colours since the scripts might of changed them.
@@ -1953,7 +1925,6 @@ BOOL stageThreeShutDown(void)
 	{
 		initPlayerColours();		// reset colours leaving multiplayer game.
 	}
-
 
 	setScriptWinLoseVideo(PLAY_NONE);
 
