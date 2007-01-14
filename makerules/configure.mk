@@ -62,6 +62,8 @@ else
 CFLAGS+=-O2 -g0 -DNDEBUG
 endif
 
+CPPFLAGS+=-fexceptions
+
 ifeq ($(strip $(PLATFORM)),windows)
 DIRSEP=\\
 RMF=del /F
@@ -91,7 +93,7 @@ endif
 
 # Generic libs
 
-LDFLAGS+=-lSDL -lSDL_net -ljpeg -lpng -lz -lmad -lvorbisfile -lvorbis -logg -lphysfs
+LDFLAGS+=-lSDL -lSDL_net -ljpeg -lpng -lz -lmad -lvorbisfile -lvorbis -logg -lphysfs -lstdc++
 
 # Additional platform-dependend libs
 

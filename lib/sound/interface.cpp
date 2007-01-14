@@ -25,15 +25,16 @@ BOOL sound_InitLibrary()
     if (sndBase)
     {
         sndBase = new soundBase(true);
-    } else {
-        debug(LOG_WARNING, "sound_InitLibrary(): called while already initialized.\n");
+    }
+    else
+    {
         return TRUE;
     }
 
     sndBase->setListenerPos( 0.0, 0.0, 0.0 );
     sndBase->setListenerVel( 0.0, 0.0, 0.0 );
     //sndBase->setListenerRot( x, y, z ); // TODO: first implement sndBase::setListenerRot,
-                                       // then calculate values for this function call
+    //                                    // then calculate values for this function call
 
     ALfloat listenerOri[6] = { 0.0, 0.0, 1.0, 0.0, 1.0, 0.0 }; // Will replace this with
     alListenerfv( AL_ORIENTATION, listenerOri );               // soundBase::setListenerRot.
@@ -44,6 +45,19 @@ void sound_ShutdownLibrary()
 {
     if (sndBase)
         delete sndBase;
+}
+
+sndStreamID sound_Create2DStream(char* path)
+{
+    if (sndBase)
+    {
+        // do something here
+    }
     else
-        debug(LOG_WARNING, "sound_ShutdownLibrary(): called when not initialized\n");
+        return 0;
+}
+
+void sound_Update(void)
+{
+    sndBase->updateStreams();
 }

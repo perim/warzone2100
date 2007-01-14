@@ -10,16 +10,16 @@
 * $HeadURL$
 */
 
-// Include the OpenAL libraries
-#include <AL/al.h>
-#include <AL/alc.h>
-
-// we're using the vector class from the standard template lib
-#include <vector>
-
 #ifndef SOUNDBASE_H
 #define SOUNDBASE_H
 
+// Include the OpenAL libraries
+#include <AL/al.h>
+#include <AL/alc.h>
+#include "types.h"
+
+// we're using the vector class from the standard template lib
+#include <vector>
 
 class soundBase
 {
@@ -30,7 +30,7 @@ class soundBase
          *  \param init whether the default (system/os default) sound device should be initialized at construction.
          */
         soundBase(bool init = false);
-        virtual ~soundBase();
+        ~soundBase();
 
         void setListenerPos(float x, float y, float z);
         void setListenerVel(float x, float y, float z);
@@ -44,13 +44,13 @@ class soundBase
          */
         void setListenerRot(float pitch, float yaw, float roll);
 
+        void updateStreams();
+
     private:
         ALCdevice* sndDevice;
         ALCcontext* sndContext;
 
         bool sndExtEAX;
 };
-
-
 
 #endif // SOUNDBASE_H

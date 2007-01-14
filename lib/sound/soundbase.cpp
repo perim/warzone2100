@@ -66,3 +66,8 @@ void soundBase::setListenerRot(float pitch, float yaw, float roll)
 {
     // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
 }
+
+void soundBase::updateStreams()
+{
+
+}
