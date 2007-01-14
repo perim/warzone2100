@@ -10,6 +10,9 @@
 * $HeadURL$
 */
 
+#ifndef SOUND_BUFFER_H
+#define SOUND_BUFFER_H
+
 #include <AL/al.h>
 
 class soundBuffer
@@ -19,3 +22,5 @@ class soundBuffer
     private:
         ALuint buffer;
 };
+
+#endif // SOUND_BUFFER_H

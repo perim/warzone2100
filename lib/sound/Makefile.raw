@@ -4,6 +4,7 @@ include $(MAKERULES)/configure.mk
 SRC=buffer.cpp \
 	source.cpp \
 	soundbase.cpp \
+	stream.cpp \
 	interface.cpp
 
 LIB=sound

@@ -10,6 +10,9 @@
 * $HeadURL$
 */
 
+#ifndef SOUND_SOURCE_H
+#define SOUND_SOURCE_H
+
 #include <AL/al.h>
 #include "buffer.h"
 
@@ -54,3 +57,5 @@ class soundSource
         const bool bIs2D;
         const bool bIsStream;
 };
+
+#endif // SOUND_SOURCE_H
