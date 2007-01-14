@@ -1,7 +1,9 @@
 MAKERULES=../../makerules
 include $(MAKERULES)/configure.mk
 
-SRC=soundbase.cpp \
+SRC=buffer.cpp \
+	source.cpp \
+	soundbase.cpp \
 	interface.cpp
 
 LIB=sound

@@ -16,29 +16,30 @@
 #include "types.h"
 
 #if defined(__cplusplus)
-extern "C" {
+extern "C"
+{
 #endif
 
 #include "../framework/frame.h"
 
-/** Initializes the sound-library
- *  \return TRUE when the library is initialized, FALSE otherwise
- */
-BOOL sound_InitLibrary(void);
+    /** Initializes the sound-library
+     *  \return TRUE when the library is initialized, FALSE otherwise
+     */
+    BOOL sound_InitLibrary(void);
 
-/** Shuts down and unloads the sound-library
- */
-void sound_ShutdownLibrary(void);
+    /** Shuts down and unloads the sound-library
+     */
+    void sound_ShutdownLibrary(void);
 
-/** Creates a 2D source and prepares for streaming specified audio from it
- *  \param path the directory path to the file to start playing
- *  \return true on success (stream is playing), false otherwise
- */
-sndStreamID sound_Create2DStream(char* path);
+    /** Creates a 2D source and prepares for streaming specified audio from it
+     *  \param path the directory path to the file to start playing
+     *  \return true on success (stream is playing), false otherwise
+     */
+    sndStreamID sound_Create2DStream(char* path);
 
-/** Performs required update actions
- */
-void sound_Update(void);
+    /** Performs required update actions
+     */
+    void sound_Update(void);
 
 #if defined(__cplusplus)
 }  // extern "C"
