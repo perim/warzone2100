@@ -30,16 +30,16 @@ class soundStream
          *  This should only be used to set positional, directional and doppler data with
          *  \return a pointer to the soundSource used by this stream
          */
-        virtual soundSource* getSource();
+        soundSource* getSource();
 
         /** keep all required buffers filled
          *  needs to be called more often if buffer size is smaller, and less often if larger
          *  \return true if there is still enough data left to fill all buffers, false otherwise
          */
-        virtual bool update();
+        bool update();
 
-        virtual void setBufferSize(unsigned int size);
-        virtual unsigned int getBufferSize();
+        void setBufferSize(unsigned int size);
+        unsigned int getBufferSize();
 
     protected:
 
@@ -47,7 +47,7 @@ class soundStream
          *  \param buffer buffer to fill
          *  \return       true if the buffer is filled, false if there was no data left to fill a buffer with
          */
-        virtual bool stream(soundBuffer* buffer);
+        bool stream(soundBuffer* buffer);
 
         soundSource* source;        // sound source (i.e. in-game)
         soundBuffer  buffers[2];    // front and back buffers (i.e. in the buffer-queue)

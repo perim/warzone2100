@@ -96,11 +96,56 @@ soundSource::sourceState soundSource::getState()
 
 void soundSource::queueBuffer(soundBuffer* sndBuffer)
 {
-    if (bIsStream)
+    if (!bIsStream)
+        throw std::string("soundSource: attempt to (un)queue buffer to/from non-stream source");
+
+    alGetError();   // clear current error state
+
+    ALuint tmpBuffer = sndBuffer->getALBufferID();
+    alSourceQueueBuffers(source, 1, &tmpBuffer);
+
+    ALenum alErrNo = alGetError();
+    if (alErrNo != AL_NO_ERROR)
     {
-        ALuint tmpBuffer = sndBuffer->getALBufferID();
-        alSourceQueueBuffers(source, 1, &tmpBuffer);
+        switch (alErrNo)
+        {
+        case AL_INVALID_VALUE:
+            throw std::string("alSourceQueueBuffers(): OpenAL: specified buffer is invalid or does not exist.");
+        case AL_INVALID_OPERATION:
+            throw std::string("alSourceQueueBuffers(): no current context or buffer format mismatched with the rest of queue (i.e. mono8/mono16/stereo8/stereo16)");
+        }
     }
-    else
-        throw std::string("soundSource: attempt to queue buffer to non-stream source");
+}
+
+ALuint soundSource::unqueueBuffer()
+{
+    if (!bIsStream)
+        throw std::string("soundSource: attempt to (un)queue buffer to/from non-stream source");
+
+    alGetError();   // clear current error state
+
+    ALuint buffer;
+    alSourceUnqueueBuffers(source, 1, &buffer);
+
+    ALenum alErrNo = alGetError();
+    if (alErrNo != AL_NO_ERROR)
+    {
+        switch (alErrNo)
+        {
+        case AL_INVALID_VALUE:
+            throw std::string("alSourceUnqueueBuffers(): not enough non-memory resources, or invalid pointer");
+        default:
+            throw std::string("alSourceUnqueueBuffers(): unknown OpenAL error");
+        }
+    }
+
+    return buffer;
+}
+
+unsigned int soundSource::numProcessedBuffers()
+{
+    int count;
+    alGetSourcei(source, AL_BUFFERS_PROCESSED, &count);
+
+    return count;
 }

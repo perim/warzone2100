@@ -51,6 +51,9 @@ class soundSource
         sourceState getState();
 
         void queueBuffer(soundBuffer* sndBuffer);
+        ALuint unqueueBuffer();
+
+        unsigned int numProcessedBuffers();
 
     private:
         ALuint source;

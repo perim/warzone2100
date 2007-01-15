@@ -31,6 +31,28 @@ soundSource* soundStream::getSource()
 
 bool soundStream::update()
 {
+    bool buffersFull = true;
+
+    for (unsigned int updated = source->numProcessedBuffers() ; updated != 0 ; --updated)
+    {
+        ALuint buffer;
+        buffer = source->unqueueBuffer();
+
+        for (size_t i = 0; i < 2 /* buffercount */; ++i)
+        {
+            if (buffers[i].getALBufferID() == buffer)
+            {
+                buffersFull = stream(&buffers[i]);
+
+                if (buffersFull)
+                    source->queueBuffer(&buffers[i]);
+
+                break;
+            }
+        }
+    }
+
+    return buffersFull;
 }
 
 bool soundStream::stream(soundBuffer* buffer)
