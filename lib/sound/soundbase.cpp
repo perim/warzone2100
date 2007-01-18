@@ -69,5 +69,8 @@ void soundBase::setListenerRot(float pitch, float yaw, float roll)
 
 void soundBase::updateStreams()
 {
-
+    for ( std::map<sndStreamID, std::auto_ptr<soundStream> >::iterator i = sndStreams.begin(); i != sndStreams.end(); i++ )
+    {
+        (*i).second->update();
+    }
 }

@@ -16,10 +16,12 @@
 // Include the OpenAL libraries
 #include <AL/al.h>
 #include <AL/alc.h>
-#include "types.h"
 
-// we're using the vector class from the standard template lib
-#include <vector>
+#include "types.h"
+#include "stream.h"
+
+#include <map>
+#include <memory>
 
 class soundBase
 {
@@ -44,6 +46,13 @@ class soundBase
          */
         void setListenerRot(float pitch, float yaw, float roll);
 
+        /**
+         */
+
+
+        /** updates all streams and keeps them filled
+         *  this function calls update() on every soundStream class
+         */
         void updateStreams();
 
     private:
@@ -51,6 +60,8 @@ class soundBase
         ALCcontext* sndContext;
 
         bool sndExtEAX;
+
+        std::map<sndStreamID, std::auto_ptr<soundStream> > sndStreams;
 };
 
 #endif // SOUNDBASE_H

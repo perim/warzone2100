@@ -10,5 +10,10 @@
 * $HeadURL$
 */
 
+#ifndef SOUND_TYPES_H
+#define SOUND_TYPES_H
+
 typedef unsigned int sndStreamID;
 typedef unsigned int sndSourceID;
+
+#endif // SOUND_TYPES_H

@@ -28,7 +28,7 @@ class soundStream
 
         /** Returns a handle to the OpenAL source which is being streamed from
          *  This should only be used to set positional, directional and doppler data with
-         *  \return a pointer to the soundSource used by this stream
+         *  \return a pointer to the soundSource used by this stream if the stream isn't 2D, throws an exception otherwise
          */
         soundSource* getSource();
 
@@ -38,7 +38,14 @@ class soundStream
          */
         bool update();
 
+        /** sets the buffersize for the streaming buffers
+         *  \param size size of the buffers in bytes, minimum is 4096, which is still not recommended, 4096 is very likely to introduce clipping
+         */
         void setBufferSize(unsigned int size);
+
+        /** returns the currently used buffer size
+         *  \return the currently used buffer size in bytes
+         */
         unsigned int getBufferSize();
 
     protected:

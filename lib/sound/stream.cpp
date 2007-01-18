@@ -13,6 +13,7 @@
 #include "stream.h"
 #include <ogg/ogg.h>
 #include <vorbis/vorbisfile.h>
+#include <string>
 
 soundStream::soundStream(bool b2D) : bufferSize(16384)
 {
@@ -26,6 +27,8 @@ soundStream::~soundStream()
 
 soundSource* soundStream::getSource()
 {
+    if (source->is2D())
+        throw std::string("soundStream: can't retrieve source if stream is 2D");
     return source;
 }
 
