@@ -22,7 +22,7 @@
 	$HeadURL$
 */
 
-#include "stream.h"
+#include "stream.hpp"
 #include <ogg/ogg.h>
 #include <vorbis/vorbisfile.h>
 #include <string>

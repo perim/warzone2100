@@ -26,7 +26,7 @@
  *  This file provides an interface so that C-code is capable of using the soundlibrary.
  */
 
-#include "soundbase.h"
+#include "soundbase.hpp"
 #include "sound.h"
 
 static soundBase* sndBase = NULL;

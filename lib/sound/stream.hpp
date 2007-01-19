@@ -25,8 +25,8 @@
 #ifndef SOUND_STREAM_H
 #define SOUND_STREAM_H
 
-#include "buffer.h"
-#include "source.h"
+#include "buffer.hpp"
+#include "source.hpp"
 
 class soundStream
 {

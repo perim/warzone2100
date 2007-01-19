@@ -22,7 +22,7 @@
 	$HeadURL$
 */
 
-#include "buffer.h"
+#include "buffer.hpp"
 
 ALuint soundBuffer::getALBufferID()
 {

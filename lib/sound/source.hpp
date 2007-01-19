@@ -26,7 +26,7 @@
 #define SOUND_SOURCE_H
 
 #include <AL/al.h>
-#include "buffer.h"
+#include "buffer.hpp"
 
 class soundSource
 {

@@ -30,7 +30,7 @@
 #include <AL/alc.h>
 
 #include "types.h"
-#include "stream.h"
+#include "stream.hpp"
 
 #include <map>
 #include <memory>

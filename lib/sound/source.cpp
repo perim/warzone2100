@@ -22,7 +22,7 @@
 	$HeadURL$
 */
 
-#include "source.h"
+#include "source.hpp"
 #include <string>
 
 soundSource::soundSource(bool b2D) : bIs2D(b2D), bIsStream(true)
