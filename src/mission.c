@@ -775,36 +775,6 @@ void addTransporterTimerInterface(void)
 #define OFFSCREEN_RADIUS	600
 #define OFFSCREEN_HEIGHT	600
 
-/* get offscreen point */
-static void missionGetOffScreenPoint( UWORD iX, UWORD iY,
-						UWORD *piOffX, UWORD *piOffY, UWORD *piOffZ )
-{
-//	UDWORD	iMapWidth  = GetWidthOfMap()  << TILE_SHIFT,
-//			iMapHeight = GetHeightOfMap() << TILE_SHIFT;
-	SDWORD	iTestX = ((SDWORD)iX) - OFFSCREEN_RADIUS,
-			iTestY = ((SDWORD)iY) - OFFSCREEN_RADIUS;
-
-	if ( iTestX > 0 )
-	{
-		*piOffX = (UWORD) iTestX;
-	}
-	else
-	{
-		*piOffX = (UWORD) (((SDWORD)iX) - OFFSCREEN_RADIUS);
-	}
-
-	if ( iTestY > 0 )
-	{
-		*piOffY = (UWORD) iTestY;
-	}
-	else
-	{
-		*piOffY = (UWORD) (((SDWORD)iY) - OFFSCREEN_RADIUS);
-	}
-
-	*piOffZ = (UWORD) (map_Height( iX, iY ) + OFFSCREEN_HEIGHT);
-}
-
 #define	EDGE_SIZE	1
 
 /* pick nearest map edge to point */
@@ -877,7 +847,7 @@ void missionFlyTransportersIn( SDWORD iPlayer, BOOL bTrackTransporter )
 			    fR = (FRACT_D) atan2(iDx, iDy);
 			    if ( fR < 0.0 )
 			    {
-			    	fR += (FRACT_D) (2*PI);
+			    	fR += (FRACT_D) (2 * M_PI);
 			    }
 			    psTransporter->direction = (UWORD)( RAD_TO_DEG(fR) );
 
@@ -2816,22 +2786,6 @@ void missionMoveTransporterOffWorld( DROID *psTransporter )
 }
 
 
-static void intReAddMissionTimer(void)
-{
-	if (widgGetFromID(psWScreen,IDTIMER_FORM) != NULL) {
-		void *UserData;
-
-		// Need to preserve widgets UserData.
-		UserData = widgGetUserData(psWScreen, IDTRANTIMER_DISPLAY);
-
-		intRemoveMissionTimer();
-		intAddMissionTimer();
-
-   		widgSetUserData(psWScreen, IDTRANTIMER_DISPLAY, UserData);
-	}
-}
-
-
 //add the Mission timer into the top  right hand corner of the screen
 BOOL intAddMissionTimer(void)
 {
@@ -3529,7 +3483,6 @@ void intRunMissionResult(void)
 {
 
 	processFrontendSnap(FALSE);
-	pie_SetMouse(IntImages,IMAGE_CURSOR_DEFAULT);
 	frameSetCursorFromRes(IDC_DEFAULT);
 
 	if(bLoadSaveUp)
@@ -3555,11 +3508,6 @@ void intRunMissionResult(void)
 	}
 
 
-}
-
-static void missionCDCancelPressed( void )
-{
-	intAddMissionResult( g_bMissionResult, TRUE );
 }
 
 static void missionContineButtonPressed( void )

@@ -203,6 +203,7 @@ static void removeStructFromMap(STRUCTURE *psStruct);
 static void	structUpdateRecoil( STRUCTURE *psStruct );
 static void resetResistanceLag(STRUCTURE *psBuilding);
 static void revealAll(UBYTE player);
+static void cbNewDroid(STRUCTURE *psFactory, DROID *psDroid);
 
 
 // last time the maximum units message was displayed
@@ -3550,8 +3551,8 @@ BOOL placeDroid(STRUCTURE *psStructure, UDWORD *droidX, UDWORD *droidY)
 }
 
 /* Place a newly manufactured droid next to a factory  and then send if off
-to the assembly point*/
-static void structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl,
+to the assembly point, returns true if droid was placed successfully */
+static BOOL structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl,
 							 DROID **ppsDroid)
 {
 	UDWORD			x,y;
@@ -3581,7 +3582,7 @@ static void structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl,
 		if (!psNewDroid)
 		{
 			*ppsDroid = NULL;
-			return;
+			return FALSE;
 		}
 
         //set the droids order to that of the factory - AB 22/04/99
@@ -3802,16 +3803,14 @@ static void structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl,
 			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DROIDBUILT);
 		}
 #endif
-		psScrCBNewDroid = psNewDroid;
-		psScrCBNewDroidFact = psStructure;
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_NEWDROID);
-		psScrCBNewDroid = NULL;
-		psScrCBNewDroidFact = NULL;
+		return TRUE;
 	}
 	else
 	{
 		*ppsDroid = NULL;
 	}
+
+	return FALSE;
 }
 
 
@@ -3846,14 +3845,6 @@ static BOOL IsFactoryCommanderGroupFull(FACTORY *psFactory)
 static UWORD MaxDroidsAllowedPerPlayer[MAX_PLAYERS]={100,999,999,999,999,999,999,999};
 static UWORD MaxDroidsAllowedPerPlayerMultiPlayer[MAX_PLAYERS]={300,300,300,300,300,300,300,300};
 //static UWORD MaxDroidsAllowedPerPlayerMultiPlayer[MAX_PLAYERS]={10,10,10,10,10,10,10,10};
-
-
-static UDWORD getMaxStructures(UDWORD PlayerNumber)
-{
-	// PC currently doesn't limit number of structures a player can build, so just
-	// return an absurdly large number.
-	return 99999;
-}
 
 
 BOOL IsPlayerStructureLimitReached(UDWORD PlayerNumber)
@@ -3954,7 +3945,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 	RESEARCH_FACILITY	*psResFacility;
 	REARM_PAD			*psReArmPad;
 	iVector				iVecEffect;
-	BOOL				bFinishAction;//bFinishRepair;
+	BOOL				bFinishAction,bDroidPlaced;
 	WEAPON_STATS		*psWStats;
 	BASE_OBJECT			*psTarget;
 	SDWORD				xdiff,ydiff, mindist, currdist;
@@ -4548,7 +4539,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 				!CheckHaltOnMaxUnitsReached(psStructure))
 			{
 				/* Place the droid on the map */
-				structPlaceDroid(psStructure, (DROID_TEMPLATE *)pSubject, &psDroid);
+				bDroidPlaced = structPlaceDroid(psStructure, (DROID_TEMPLATE *)pSubject, &psDroid);
 
 				//reset the start time
 				psFactory->timeStarted = ACTION_START_TIME;
@@ -4569,6 +4560,12 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 						//nothing more to manufacture - reset the Subject and Tab on HCI Form
 						intManufactureFinished(psStructure);
 						psFactory->psSubject = NULL;
+
+						//script callback, must be called after factory was flagged as idle
+						if(bDroidPlaced)
+						{
+							cbNewDroid(psStructure, psDroid);
+						}
 					}
 				}
 				else
@@ -4609,6 +4606,12 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 						//when quantity = 0, reset the Subject and Tab on HCI Form
 						psFactory->psSubject = NULL;
 						intManufactureFinished(psStructure);
+
+						//script callback, must be called after factory was flagged as idle
+						if(bDroidPlaced)
+						{
+							cbNewDroid(psStructure, psDroid);
+						}
 					}
 				}
 			}
@@ -8334,32 +8337,6 @@ UDWORD	structureResistance(STRUCTURE_STATS *psStats, UBYTE player)
 	}
 }
 
-//access function for sensor stats
-static UDWORD structureSensorRange(STRUCTURE_STATS *psStats)
-{
-	if (psStats->pSensor)
-	{
-		return psStats->pSensor->range;
-	}
-	else
-	{
-		return 0;
-	}
-}
-static UDWORD structureSensorPower(STRUCTURE_STATS *psStats)
-{
-	if (psStats->pSensor)
-	{
-		return psStats->pSensor->power;
-	}
-	else
-	{
-		return 0;
-	}
-}
-
-
-
 /*gives the attacking player a reward based on the type of structure that has
 been attacked*/
 BOOL electronicReward(STRUCTURE *psStructure, UBYTE attackPlayer)
@@ -9930,6 +9907,19 @@ BOOL lasSatStructSelected(STRUCTURE *psStruct)
 
     return FALSE;
 
+}
+
+/* Call CALL_NEWDROID script callback */
+static void cbNewDroid(STRUCTURE *psFactory, DROID *psDroid)
+{
+	ASSERT(psDroid != NULL, 
+		"cbNewDroid: no droid assigned for CALL_NEWDROID callback");
+
+	psScrCBNewDroid = psDroid;
+	psScrCBNewDroidFact = psFactory;
+	eventFireCallbackTrigger((TRIGGER_TYPE)CALL_NEWDROID);
+	psScrCBNewDroid = NULL;
+	psScrCBNewDroidFact = NULL;
 }
 
 /******************** demo stuff ************************/

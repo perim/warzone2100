@@ -1025,10 +1025,6 @@ static void seqDispCDOK( void )
 	}
 }
 
-static void seqDispCDCancel( void )
-{
-}
-
 /*returns the next sequence in the list to play*/
 void seq_StartNextFullScreenVideo(void)
 {
