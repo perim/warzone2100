@@ -34,8 +34,9 @@
 
 #include <map>
 #include <memory>
+#include <boost/smart_ptr.hpp>
 
-class soundBase
+class soundContext
 {
     public:
         /** Default constructor
@@ -43,8 +44,8 @@ class soundBase
          *  and optionally intializes the sound device already.
          *  \param init whether the default (system/os default) sound device should be initialized at construction.
          */
-        soundBase(bool init = false);
-        ~soundBase();
+        soundContext(ALCdevice* sndDevice, bool set2D = false);
+        ~soundContext();
 
         void setListenerPos(float x, float y, float z);
         void setListenerVel(float x, float y, float z);
@@ -58,22 +59,26 @@ class soundBase
          */
         void setListenerRot(float pitch, float yaw, float roll);
 
-        /**
-         */
-
-
         /** updates all streams and keeps them filled
          *  this function calls update() on every soundStream class
          */
         void updateStreams();
 
+        /** makes this soundContext current
+         *  Uses OpenAL function alcMakeContextCurrent to make this function current.
+         *  This function and it's effect should be used as few as possible (if at all).
+         */
+        void makeCurrent();
+
     private:
-        ALCdevice* sndDevice;
+        // Identifier towards OpenAL
         ALCcontext* sndContext;
 
-        bool sndExtEAX;
+        // Internal data
+        std::map<sndStreamID, boost::shared_ptr<soundStream> > sndStreams;
 
-        std::map<sndStreamID, std::auto_ptr<soundStream> > sndStreams;
+        // Internal state
+        bool is2D;
 };
 
 #endif // SOUNDBASE_H

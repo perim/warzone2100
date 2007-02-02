@@ -39,6 +39,13 @@ extern "C"
      */
     BOOL sound_InitLibrary(void);
 
+    /** Initializes the sound-library
+     *  This version of the initialization function selects which sound Device should be used
+     *  \param soundDevice the sound-device to use for rendering and output of sound, 0 selects system default
+     *  \return TRUE when the library is initialized, FALSE otherwise (which can be due to double intialization)
+     */
+    BOOL sound_InitLibraryWithDevice(unsigned int soundDevice);
+
     /** Shuts down and unloads the sound-library
      */
     void sound_ShutdownLibrary(void);
