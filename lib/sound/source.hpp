@@ -68,6 +68,12 @@ class soundSource
         unsigned int numProcessedBuffers();
 
     private:
+        /** Handles the creation of the source
+         *  Makes sure an OpenAL source is created and connected errors are dealt with
+         */
+        inline void createSource();
+
+    private:
         ALuint source;
         const bool bIs2D;
         const bool bIsStream;

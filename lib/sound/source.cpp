@@ -27,6 +27,34 @@
 
 soundSource::soundSource(bool b2D) : bIs2D(b2D), bIsStream(true)
 {
+    createSource();
+}
+
+soundSource::soundSource(soundBuffer* sndBuffer, bool b2D) : bIs2D(b2D), bIsStream(false)
+{
+    createSource();
+
+    // Clear current error state
+    alGetError();
+
+    alSourcei(source, AL_BUFFER, sndBuffer->getALBufferID());
+
+    ALenum alErrNo = alGetError();
+    if (alErrNo != AL_NO_ERROR)
+    {
+        switch (alErrNo)
+        {
+        case AL_OUT_OF_MEMORY:
+            throw std::string("alSource(): Out of memory");
+        case AL_INVALID_VALUE:
+            throw std::string("alSource(): not enough non-memory resources, or invalid pointer");
+        }
+    }
+}
+
+inline void soundSource::createSource()
+{
+    // Clear current error state
     alGetError();
     alGenSources(1, &source);
 
@@ -41,38 +69,6 @@ soundSource::soundSource(bool b2D) : bIs2D(b2D), bIsStream(true)
             throw std::string("alGenSources(): not enough non-memory resources, or invalid pointer");
         case AL_INVALID_OPERATION:
             throw std::string("alGenSources(): no context available to create sources in");
-        }
-    }
-}
-
-soundSource::soundSource(soundBuffer* sndBuffer, bool b2D) : bIs2D(b2D), bIsStream(false)
-{
-    alGetError();
-    alGenSources(1, &source);
-
-    ALenum alErrNo = alGetError();
-    if (alErrNo != AL_NO_ERROR)
-    {
-        switch (alErrNo)
-        {
-        case AL_OUT_OF_MEMORY:
-            throw std::string("alGenSources(): Out of memory");
-        case AL_INVALID_VALUE:
-            throw std::string("alGenSources(): not enough non-memory resources, or invalid pointer");
-        case AL_INVALID_OPERATION:
-            throw std::string("alGenSources(): no *current* context available to create sources in");
-        }
-    }
-
-    alSourcei(source, AL_BUFFER, sndBuffer->getALBufferID());
-    if ((alErrNo = alGetError()) != AL_NO_ERROR)
-    {
-        switch (alErrNo)
-        {
-        case AL_OUT_OF_MEMORY:
-            throw std::string("alSource(): Out of memory");
-        case AL_INVALID_VALUE:
-            throw std::string("alSource(): not enough non-memory resources, or invalid pointer");
         }
     }
 }
