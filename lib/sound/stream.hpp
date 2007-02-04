@@ -25,8 +25,8 @@
 #ifndef SOUND_STREAM_H
 #define SOUND_STREAM_H
 
-#include "buffer.hpp"
-#include "source.hpp"
+#include "openal/buffer.hpp"
+#include "openal/source.hpp"
 
 class soundStream
 {

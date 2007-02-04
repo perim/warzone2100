@@ -29,8 +29,8 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 
-#include "types.h"
-#include "stream.hpp"
+#include "../types.h"
+#include "../stream.hpp"
 
 #include <map>
 #include <memory>

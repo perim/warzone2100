@@ -27,7 +27,7 @@
  */
 
 #include "sound.h"
-#include "context.hpp"
+#include "openal/context.hpp"
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <vector>
