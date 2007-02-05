@@ -26,53 +26,48 @@
 #include <ogg/ogg.h>
 #include <vorbis/vorbisfile.h>
 #include <string>
+#include "constants.hpp"
 
-soundStream::soundStream(bool b2D) : bufferSize(16384)
+soundStream::soundStream(bool b2D) : source(new soundSource(b2D)), bufferSize(OpenAL_BufferSize), playing(false)
 {
-    source = new soundSource(b2D);
 }
 
 soundStream::~soundStream()
 {
-    delete source;
 }
 
-soundSource* soundStream::getSource()
+boost::weak_ptr<soundSource> soundStream::getSource()
 {
     if (source->is2D())
         throw std::string("soundStream: can't retrieve source if stream is 2D");
-    return source;
+    return boost::weak_ptr<soundSource>(source);
 }
 
 bool soundStream::update()
 {
+    if (!playing) return false;
+
     bool buffersFull = true;
 
-    for (unsigned int updated = source->numProcessedBuffers() ; updated != 0 ; --updated)
+    for (unsigned int update = source->numProcessedBuffers() ; update != 0 ; --update)
     {
-        ALuint buffer;
-        buffer = source->unqueueBuffer();
+        boost::shared_ptr<soundBuffer> buffer(source->unqueueBuffer());
 
-        for (size_t i = 0; i < 2 /* buffercount */; ++i)
-        {
-            if (buffers[i].getALBufferID() == buffer)
-            {
-                buffersFull = stream(&buffers[i]);
+        buffersFull = stream(buffer);
 
-                if (buffersFull)
-                    source->queueBuffer(&buffers[i]);
-
-                break;
-            }
-        }
+        if (buffersFull)
+            source->queueBuffer(buffer);
     }
 
     return buffersFull;
 }
 
-bool soundStream::stream(soundBuffer* buffer)
+bool soundStream::stream(boost::shared_ptr<soundBuffer> buffer)
 {
+}
 
+bool soundStream::play(bool reset)
+{
 }
 
 void soundStream::setBufferSize(unsigned int size)

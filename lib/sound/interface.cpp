@@ -58,6 +58,13 @@ void enumerateDevices()
 
     sndDeviceList.clear();
 
+    if (DeviceList == NULL)
+    {
+        fprintf(stderr, "soundLib: alcGetString returning NULL; ALC_ERROR: %d; filling DeviceList with default NULL device.\n", alcGetError(NULL));
+        sndDeviceList.push_back(std::string(""));
+        return;
+    }
+
     // The returned C-string DeviceList has its entries separated by one NUL char (0x00),
     // and the list itself is terminated by two NUL chars.
     while (*DeviceList != 0x00)
@@ -83,12 +90,16 @@ BOOL sound_InitLibraryWithDevice(unsigned int soundDevice)
     // check wether the library has already been previously initialized
     if (Initialized) return FALSE;
 
-    enumerateDevices();
-
     try
     {
+        enumerateDevices();
+
         // Open device (default dev (0) usually is "Generic Hardware")
-        sndDevice = alcOpenDevice(sndDeviceList.at(soundDevice).c_str());
+        if (sndDeviceList.at(soundDevice) == std::string(""))
+            sndDevice = alcOpenDevice(NULL);
+        else
+            sndDevice = alcOpenDevice(sndDeviceList.at(soundDevice).c_str());
+
         if (sndDevice == NULL) return FALSE;
 
         snd3DContext = new soundContext(sndDevice);
@@ -120,11 +131,16 @@ BOOL sound_InitLibraryWithDevice(unsigned int soundDevice)
 
 void sound_ShutdownLibrary()
 {
+    if (!Initialized) return;
+
     if (sndDevice)
     {
         alcCloseDevice(sndDevice);
         sndDevice = NULL;
     }
+
+    delete snd3DContext;
+    delete snd2DContext;
 }
 
 sndStreamID sound_Create2DStream(char* path)

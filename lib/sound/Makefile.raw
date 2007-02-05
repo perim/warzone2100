@@ -1,9 +1,7 @@
 MAKERULES=../../makerules
 include $(MAKERULES)/configure.mk
 
-SRC=buffer.cpp \
-	source.cpp \
-	context.cpp \
+SRC=constants.cpp \
 	stream.cpp \
 	interface.cpp
 

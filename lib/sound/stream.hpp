@@ -22,11 +22,12 @@
 	$HeadURL$
 */
 
-#ifndef SOUND_STREAM_H
-#define SOUND_STREAM_H
+#ifndef SOUND_STREAM_HPP
+#define SOUND_STREAM_HPP
 
 #include "openal/buffer.hpp"
 #include "openal/source.hpp"
+#include <boost/smart_ptr.hpp>
 
 class soundStream
 {
@@ -42,13 +43,20 @@ class soundStream
          *  This should only be used to set positional, directional and doppler data with
          *  \return a pointer to the soundSource used by this stream if the stream isn't 2D, throws an exception otherwise
          */
-        soundSource* getSource();
+        boost::weak_ptr<soundSource> getSource();
 
         /** keep all required buffers filled
          *  needs to be called more often if buffer size is smaller, and less often if larger
          *  \return true if there is still enough data left to fill all buffers, false otherwise
          */
         bool update();
+
+        /** initiates playing of the stream
+         *  starts playing the stream or continues it
+         *  \param reset whether we should restart (start playing from the beginning) or not, if this is the first call it will start from the beginning anyway
+         *  \return true on succes, false otherwise
+         */
+        bool play(bool reset = false);
 
         /** sets the buffersize for the streaming buffers
          *  \param size size of the buffers in bytes, minimum is 4096, which is still not recommended, 4096 is very likely to introduce clipping
@@ -60,18 +68,19 @@ class soundStream
          */
         unsigned int getBufferSize();
 
-    protected:
+    private:
 
         /** fill buffer with the next data
          *  \param buffer buffer to fill
          *  \return       true if the buffer is filled, false if there was no data left to fill a buffer with
          */
-        bool stream(soundBuffer* buffer);
+        bool stream(boost::shared_ptr<soundBuffer> buffer);
 
-        soundSource* source;        // sound source (i.e. in-game)
-        soundBuffer  buffers[2];    // front and back buffers (i.e. in the buffer-queue)
+        boost::shared_ptr<soundSource> source;        // sound source (i.e. in-game)
 
+        // Internal state
         unsigned int bufferSize;    // size of the buffers in bytes/octets, default is 16384 bytes or 16kB
+        bool playing;
 };
 
-#endif // SOUND_STREAM_H
+#endif // SOUND_STREAM_HPP

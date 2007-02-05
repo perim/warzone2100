@@ -22,19 +22,7 @@
 	$HeadURL$
 */
 
-#ifndef SOUND_OPENAL_BUFFER_HPP
-#define SOUND_OPENAL_BUFFER_HPP
+#include "constants.hpp"
 
-#include <AL/al.h>
-
-class soundBuffer
-{
-    public:
-        ALuint getALBufferID();
-
-    private:
-        // Internal identifier towards OpenAL
-        ALuint buffer;
-};
-
-#endif // SOUND_OPENAL_BUFFER_HPP
+// Default buffer size used for OpenAL buffers
+const unsigned int OpenAL_BufferSize = 16384;

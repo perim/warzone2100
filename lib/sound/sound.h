@@ -52,7 +52,7 @@ extern "C"
 
     /** Creates a 2D source and prepares for streaming specified audio from it
      *  \param path the directory path to the file to start playing
-     *  \return true on success (stream is playing), false otherwise
+     *  \return the id number of the stream as used internally by the library
      */
     sndStreamID sound_Create2DStream(char* path);
 

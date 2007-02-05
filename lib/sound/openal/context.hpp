@@ -22,8 +22,8 @@
 	$HeadURL$
 */
 
-#ifndef SOUNDBASE_H
-#define SOUNDBASE_H
+#ifndef SOUND_OPENAL_CONTEXT_HPP
+#define SOUND_OPENAL_CONTEXT_HPP
 
 // Include the OpenAL libraries
 #include <AL/al.h>
@@ -81,4 +81,4 @@ class soundContext
         bool is2D;
 };
 
-#endif // SOUNDBASE_H
+#endif // SOUND_OPENAL_CONTEXT_HPP

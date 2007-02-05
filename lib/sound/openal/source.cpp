@@ -30,7 +30,7 @@ soundSource::soundSource(bool b2D) : bIs2D(b2D), bIsStream(true)
     createSource();
 }
 
-soundSource::soundSource(soundBuffer* sndBuffer, bool b2D) : bIs2D(b2D), bIsStream(false)
+soundSource::soundSource(boost::shared_ptr<soundBuffer> sndBuffer, bool b2D) : bIs2D(b2D), bIsStream(false)
 {
     createSource();
 
@@ -102,7 +102,7 @@ soundSource::sourceState soundSource::getState()
     return undefined;
 }
 
-void soundSource::queueBuffer(soundBuffer* sndBuffer)
+void soundSource::queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
 {
     if (!bIsStream)
         throw std::string("soundSource: attempt to (un)queue buffer to/from non-stream source");
@@ -123,17 +123,19 @@ void soundSource::queueBuffer(soundBuffer* sndBuffer)
             throw std::string("alSourceQueueBuffers(): no current context or buffer format mismatched with the rest of queue (i.e. mono8/mono16/stereo8/stereo16)");
         }
     }
+
+    buffers.push_back(sndBuffer);
 }
 
-ALuint soundSource::unqueueBuffer()
+boost::shared_ptr<soundBuffer> soundSource::unqueueBuffer()
 {
     if (!bIsStream)
         throw std::string("soundSource: attempt to (un)queue buffer to/from non-stream source");
 
     alGetError();   // clear current error state
 
-    ALuint buffer;
-    alSourceUnqueueBuffers(source, 1, &buffer);
+    ALuint bufferID;
+    alSourceUnqueueBuffers(source, 1, &bufferID);
 
     ALenum alErrNo = alGetError();
     if (alErrNo != AL_NO_ERROR)
@@ -147,7 +149,15 @@ ALuint soundSource::unqueueBuffer()
         }
     }
 
-    return buffer;
+    for (std::vector< boost::shared_ptr<soundBuffer> >::iterator i = buffers.begin(); i != buffers.end(); ++i)
+    {
+        if ((*i)->getALBufferID() == bufferID)
+        {
+            return *i;
+        }
+    }
+
+    throw std::string("alSourceUnqueueBuffers(): no buffers to unqueue");
 }
 
 unsigned int soundSource::numProcessedBuffers()

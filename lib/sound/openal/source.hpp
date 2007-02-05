@@ -22,10 +22,12 @@
 	$HeadURL$
 */
 
-#ifndef SOUND_SOURCE_H
-#define SOUND_SOURCE_H
+#ifndef SOUND_OPENAL_SOURCE_HPP
+#define SOUND_OPENAL_SOURCE_HPP
 
 #include <AL/al.h>
+#include <vector>
+#include <boost/smart_ptr.hpp>
 #include "buffer.hpp"
 
 class soundSource
@@ -54,7 +56,7 @@ class soundSource
          *  \param sndBuffer the buffer to play from
          *  \param b2D       wether to play as a 2D sound (without distance attenuation, doppler effect, etc.)
          */
-        soundSource(soundBuffer* sndBuffer, bool b2D = false);
+        soundSource(boost::shared_ptr<soundBuffer> sndBuffer, bool b2D = false);
 
         ~soundSource();
 
@@ -62,8 +64,8 @@ class soundSource
         bool isStream();
         sourceState getState();
 
-        void queueBuffer(soundBuffer* sndBuffer);
-        ALuint unqueueBuffer();
+        void queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer);
+        boost::shared_ptr<soundBuffer> unqueueBuffer();
 
         unsigned int numProcessedBuffers();
 
@@ -74,9 +76,15 @@ class soundSource
         inline void createSource();
 
     private:
+        // Identifier towards OpenAL
         ALuint source;
+
+        // Internal data
+        std::vector< boost::shared_ptr<soundBuffer> > buffers;
+
+        // Internal state
         const bool bIs2D;
         const bool bIsStream;
 };
 
-#endif // SOUND_SOURCE_H
+#endif // SOUND_OPENAL_SOURCE_HPP

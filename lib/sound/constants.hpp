@@ -22,19 +22,12 @@
 	$HeadURL$
 */
 
-#ifndef SOUND_OPENAL_BUFFER_HPP
-#define SOUND_OPENAL_BUFFER_HPP
+#ifndef SOUND_CONSTANTS_HPP
+#define SOUND_CONSTANTS_HPP
 
-#include <AL/al.h>
+#include "types.h"
 
-class soundBuffer
-{
-    public:
-        ALuint getALBufferID();
+// Default buffer size used for OpenAL buffers
+extern const unsigned int OpenAL_BufferSize;
 
-    private:
-        // Internal identifier towards OpenAL
-        ALuint buffer;
-};
-
-#endif // SOUND_OPENAL_BUFFER_HPP
+#endif // SOUND_CONSTANTS_HPP
