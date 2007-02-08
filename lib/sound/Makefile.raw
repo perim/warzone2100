@@ -1,47 +1,10 @@
 MAKERULES=../../makerules
 include $(MAKERULES)/configure.mk
 
-SUBDIRS=openal
-.PHONY: $(SUBDIRS)
-
-#CFLAGS+=-Werror
-
 SRC=constants.cpp \
 	stream.cpp \
 	interface.cpp
 
 LIB=sound
 
-all: $(SUBDIRS) ../lib$(LIB).a
-
-openal/source.hpp: openal/buffer.hpp
-openal/context.hpp: types.h stream.hpp
-
-constants.cpp: constants.hpp
-constants.hpp: types.h
-
-
-stream.cpp: stream.hpp
-stream.hpp: openal/buffer.hpp openal/source.hpp
-
-interface.cpp: sound.h openal/context.hpp
-sound.h: types.h
-
-constants.o: constants.cpp
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
-stream.o: stream.cpp
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
-interface.o: interface.cpp
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
-
-DEPS=$(patsubst %.c,%.o, $(SRC:%.cpp=%.o))
-
-$(SUBDIRS):
-	$(MAKE) -f Makefile.raw -C $@ $(MAKECMDGOALS)
-
-../lib$(LIB).a: $(DEPS) openal/buffer.o openal/source.o openal/context.o
-	$(AR) rcv ../lib$(LIB).a $^
-	@echo $(DEPS)
-
-clean: $(SUBDIRS)
-	$(RMF) ..$(DIRSEP)lib$(LIB).a *.o
+include $(MAKERULES)/lib.mk
