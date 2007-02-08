@@ -160,6 +160,16 @@ boost::shared_ptr<soundBuffer> soundSource::unqueueBuffer()
     throw std::string("alSourceUnqueueBuffers(): no buffers to unqueue");
 }
 
+void soundSource::play()
+{
+    alSourcePlay(source);
+}
+
+void soundSource::stop()
+{
+    alSourceStop(source);
+}
+
 unsigned int soundSource::numProcessedBuffers()
 {
     int count;

@@ -67,6 +67,14 @@ class soundSource
         void queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer);
         boost::shared_ptr<soundBuffer> unqueueBuffer();
 
+        /** Tells OpenAL to start playing
+         */
+        void play();
+
+        /** Tells OpenAL to stop playing
+         */
+        void stop();
+
         unsigned int numProcessedBuffers();
 
     private:

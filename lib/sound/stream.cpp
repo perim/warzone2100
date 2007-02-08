@@ -66,8 +66,39 @@ bool soundStream::stream(boost::shared_ptr<soundBuffer> buffer)
 {
 }
 
+bool soundStream::isPlaying()
+{
+    return (source->getState() == playing);
+}
+
 bool soundStream::play(bool reset)
 {
+    if (isPlaying() && !reset)
+        return true;
+    else if (isPlaying() && reset)
+    {
+        source->stop();
+        for (unsigned int i = source->numProcessedBuffers(); i != 0; --i)
+            source->unqueueBuffer();
+    }
+
+    // Create two streaming buffers
+    boost::shared_ptr<soundBuffer> buf1(new soundBuffer);
+    boost::shared_ptr<soundBuffer> buf2(new soundBuffer);
+
+    // Fill the buffers with sounddata
+    if (!stream(buf1))
+        return false;
+    bool buffer2Filled = stream(buf2);
+
+    source->queueBuffer(buf1);
+    // Only queue the second buffer if it is filled (i.e. there was enough data to fill it with)
+    if (buffer2Filled)
+        source->queueBuffer(buf2);
+
+    source->play();
+
+    return true;
 }
 
 void soundStream::setBufferSize(unsigned int size)

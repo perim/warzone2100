@@ -51,6 +51,11 @@ class soundStream
          */
         bool update();
 
+        /** determines wether the stream is currently playing
+         *  \return true if the stream is playing, false otherwise
+         */
+        bool isPlaying();
+
         /** initiates playing of the stream
          *  starts playing the stream or continues it
          *  \param reset whether we should restart (start playing from the beginning) or not, if this is the first call it will start from the beginning anyway

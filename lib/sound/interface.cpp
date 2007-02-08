@@ -32,7 +32,6 @@
 #include <AL/alc.h>
 #include <vector>
 #include <string>
-#include <iostream>
 #include <exception>
 
 // Library initialization status
@@ -58,10 +57,12 @@ void enumerateDevices()
 
     sndDeviceList.clear();
 
+    // Default NULL device
+    sndDeviceList.push_back(std::string(""));
+
     if (DeviceList == NULL)
     {
-        fprintf(stderr, "soundLib: alcGetString returning NULL; ALC_ERROR: %d; filling DeviceList with default NULL device.\n", alcGetError(NULL));
-        sndDeviceList.push_back(std::string(""));
+        fprintf(stderr, "soundLib: alcGetString returning NULL; ALC_ERROR: %d\n", alcGetError(NULL));
         return;
     }
 
@@ -71,8 +72,6 @@ void enumerateDevices()
     {
         // Append the current list entry to the list
         sndDeviceList.push_back(std::string(DeviceList));
-
-        std::cout << "sound Device: " << DeviceList << std::endl;
 
         // Move to the next entry in the list
         // strlen really only detects the position of the first NUL char in the array
@@ -119,11 +118,16 @@ BOOL sound_InitLibraryWithDevice(unsigned int soundDevice)
     }
     catch (std::string &e)
     {
-        std::cerr << "soundLib: ERROR " << e << std::endl;
+        fprintf(stderr, "soundLib: ERROR %s\n", e.c_str());
     }
     catch (std::exception &e)
     {
-        std::cerr << "soundLib: ERROR " << e.what() << std::endl;
+        fprintf(stderr, "soundLib: ERROR %s\n", e.what());
+    }
+    catch (...)
+    {
+        fprintf(stderr, "soundLib: ERROR An unhandled exception occurred!\n");
+        throw;
     }
 
     return (Initialized ? TRUE : FALSE);
@@ -133,24 +137,22 @@ void sound_ShutdownLibrary()
 {
     if (!Initialized) return;
 
+    delete snd3DContext;
+    delete snd2DContext;
+
     if (sndDevice)
     {
         alcCloseDevice(sndDevice);
         sndDevice = NULL;
     }
-
-    delete snd3DContext;
-    delete snd2DContext;
 }
 
 sndStreamID sound_Create2DStream(char* path)
 {
-    if (sndDevice)
-    {
-        // do something here
-    }
-    else
+    if (!sndDevice || !Initialized)
         return 0;
+
+    // do something here
 }
 
 void sound_Update(void)

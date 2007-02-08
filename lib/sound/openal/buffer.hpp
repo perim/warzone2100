@@ -26,10 +26,28 @@
 #define SOUND_OPENAL_BUFFER_HPP
 
 #include <AL/al.h>
+#include <boost/smart_ptr.hpp>
 
 class soundBuffer
 {
     public:
+
+        /** Creates an OpenAL buffer
+         */
+        soundBuffer();
+        ~soundBuffer();
+
+        /** Fills the buffer with the provided data
+         *  \param channels the amount of channels provided in the data stream
+         *  \param frequency the sample frequency of the provided data
+         *  \param data a pointer to an array containing the sound data
+         *  \param size the size of the data array in bytes
+         */
+        void bufferData(unsigned int channels, unsigned int frequency, boost::shared_array<char> data, unsigned int size);
+
+        /** returns the internal OpenAL buffer handle as used by OpenAL functions
+         *  \return internal OpenAL buffer handle
+         */
         ALuint getALBufferID();
 
     private:

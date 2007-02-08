@@ -23,6 +23,40 @@
 */
 
 #include "buffer.hpp"
+#include <string>
+
+soundBuffer::soundBuffer()
+{
+    // Clear error state
+    alGetError();
+
+    alGenBuffers(1, &buffer);
+
+    if (alGetError() != AL_NO_ERROR)
+        throw std::string("soundBuffer: alGenBuffers error, possibly out of memory");
+}
+
+soundBuffer::~soundBuffer()
+{
+    alDeleteBuffers(1, &buffer);
+}
+
+void soundBuffer::bufferData(unsigned int channels, unsigned int frequency, boost::shared_array<char> data, unsigned int size)
+{
+    // Clear error state
+    alGetError();
+
+    alBufferData(buffer, ((channels == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16), data.get(), size, frequency);
+
+    switch (alGetError())
+    {
+        case AL_NO_ERROR:
+            return;
+
+	case AL_INVALID_VALUE:
+            throw std::string("soundBuffer: alBufferData error: invalid size parameter, buffer is in use or NULL pointer passed as data");
+    }
+}
 
 ALuint soundBuffer::getALBufferID()
 {
