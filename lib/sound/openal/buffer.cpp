@@ -52,8 +52,7 @@ void soundBuffer::bufferData(unsigned int channels, unsigned int frequency, boos
     {
         case AL_NO_ERROR:
             return;
-
-	case AL_INVALID_VALUE:
+        case AL_INVALID_VALUE:
             throw std::string("soundBuffer: alBufferData error: invalid size parameter, buffer is in use or NULL pointer passed as data");
     }
 }

@@ -27,21 +27,20 @@
 
 static const float Pi = 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679;
 
-soundContext::soundContext(ALCdevice* sndDevice, bool set2D) : sndContext(NULL), is2D(set2D)
+soundContext::soundContext(ALCdevice* sndDevice, bool set2D) : is2D(set2D)
 {
     alcGetError(sndDevice);
 
     // Create a new rendering context
     sndContext = alcCreateContext(sndDevice, NULL);
-
-    if (sndContext)
-        return;
+    makeCurrent();
 
     switch (alcGetError(sndDevice))
     {
+        case ALC_NO_ERROR:
+            return;
         case ALC_INVALID_VALUE:
             throw std::string("An additional context cannot be created for this device.");
-
         case ALC_INVALID_DEVICE:
             throw std::string("The specified device is not a valid output device.");
     }
@@ -51,7 +50,7 @@ soundContext::~soundContext()
 {
     if ( sndContext != NULL )
     {
-        alcMakeContextCurrent(NULL);
+        makeCurrent();
         alcDestroyContext(sndContext);
         sndContext = NULL;
     }
@@ -61,7 +60,7 @@ void soundContext::setListenerPos(float x, float y, float z)
 {
     if (sndContext)
     {
-        alcMakeContextCurrent(sndContext);
+        makeCurrent();
         alListener3f( AL_POSITION, x, y, z );
     }
     // else throw an exception
@@ -71,7 +70,7 @@ void soundContext::setListenerVel(float x, float y, float z)
 {
     if (sndContext)
     {
-        alcMakeContextCurrent(sndContext);
+        makeCurrent();
         alListener3f( AL_VELOCITY, x, y, z );
     }
     // else throw an exception
@@ -81,7 +80,7 @@ void soundContext::setListenerRot(float pitch, float yaw, float roll)
 {
     if (sndContext)
     {
-        alcMakeContextCurrent(sndContext);
+        makeCurrent();
         // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
     }
     // else throw an exception
@@ -91,11 +90,7 @@ void soundContext::updateStreams()
 {
     for ( std::map<sndStreamID, boost::shared_ptr<soundStream> >::iterator i = sndStreams.begin(); i != sndStreams.end(); ++i )
     {
+        makeCurrent();
         i->second->update();
     }
-}
-
-void soundContext::makeCurrent()
-{
-    alcMakeContextCurrent(sndContext);
 }

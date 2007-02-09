@@ -68,7 +68,10 @@ class soundContext
          *  Uses OpenAL function alcMakeContextCurrent to make this function current.
          *  This function and it's effect should be used as few as possible (if at all).
          */
-        void makeCurrent();
+        inline void makeCurrent()
+        {
+            alcMakeContextCurrent(sndContext);
+        }
 
     private:
         // Identifier towards OpenAL
