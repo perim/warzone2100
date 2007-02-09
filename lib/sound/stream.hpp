@@ -28,6 +28,7 @@
 #include "openal/buffer.hpp"
 #include "openal/source.hpp"
 #include <boost/smart_ptr.hpp>
+#include "decoding.hpp"
 
 class soundStream
 {
@@ -36,7 +37,7 @@ class soundStream
         /** Creates and sets up all resources required for a sound stream
          *  \param b2D wether to play as a 2D sound (without distance attenuation, doppler effect, etc.)
          */
-        soundStream(bool b2D = false);
+        soundStream(boost::shared_ptr<soundDecoding> PCM, bool b2D = false);
         ~soundStream();
 
         /** Returns a handle to the OpenAL source which is being streamed from
@@ -54,7 +55,10 @@ class soundStream
         /** determines wether the stream is currently playing
          *  \return true if the stream is playing, false otherwise
          */
-        bool isPlaying();
+        inline bool isPlaying()
+        {
+            return (source->getState() == playing);
+        }
 
         /** initiates playing of the stream
          *  starts playing the stream or continues it
@@ -82,6 +86,7 @@ class soundStream
         bool stream(boost::shared_ptr<soundBuffer> buffer);
 
         boost::shared_ptr<soundSource> source;        // sound source (i.e. in-game)
+        boost::shared_ptr<soundDecoding> decoder;
 
         // Internal state
         unsigned int bufferSize;    // size of the buffers in bytes/octets, default is 16384 bytes or 16kB

@@ -28,7 +28,7 @@
 #include <string>
 #include "constants.hpp"
 
-soundStream::soundStream(bool b2D) : source(new soundSource(b2D)), bufferSize(OpenAL_BufferSize), playing(false)
+soundStream::soundStream(boost::shared_ptr<soundDecoding> PCM, bool b2D) : source(new soundSource(b2D)), decoder(PCM), bufferSize(OpenAL_BufferSize), playing(false)
 {
 }
 
@@ -45,7 +45,7 @@ boost::weak_ptr<soundSource> soundStream::getSource()
 
 bool soundStream::update()
 {
-    if (!playing) return false;
+    if (!isPlaying()) return false;
 
     bool buffersFull = true;
 
@@ -64,11 +64,15 @@ bool soundStream::update()
 
 bool soundStream::stream(boost::shared_ptr<soundBuffer> buffer)
 {
-}
+    boost::shared_array<char> pcm(new char[bufferSize]);
+    unsigned int size = decoder->decode(pcm, bufferSize);
 
-bool soundStream::isPlaying()
-{
-    return (source->getState() == playing);
+    if (size == 0)
+        return false;
+
+    buffer->bufferData(decoder->numChannels(), decoder->frequency(), pcm, size);
+
+    return true;
 }
 
 bool soundStream::play(bool reset)
@@ -98,7 +102,7 @@ bool soundStream::play(bool reset)
 
     source->play();
 
-    return true;
+    return isPlaying();
 }
 
 void soundStream::setBufferSize(unsigned int size)
