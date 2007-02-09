@@ -57,7 +57,7 @@ class soundStream
          */
         inline bool isPlaying()
         {
-            return (source->getState() == playing);
+            return (source->getState() == soundSource::playing);
         }
 
         /** initiates playing of the stream
@@ -90,7 +90,6 @@ class soundStream
 
         // Internal state
         unsigned int bufferSize;    // size of the buffers in bytes/octets, default is 16384 bytes or 16kB
-        bool playing;
 };
 
 #endif // SOUND_STREAM_HPP

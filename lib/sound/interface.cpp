@@ -42,7 +42,6 @@ static ALCdevice* sndDevice = NULL;
 static std::vector<std::string> sndDeviceList;
 
 // OpenAL rendering contexts (can be rendered in parallel)
-static soundContext* snd3DContext = NULL;
 static soundContext* snd2DContext = NULL;
 
 /** Enumerates OpenAL devices available to open for output
@@ -99,20 +98,13 @@ BOOL sound_InitLibraryWithDevice(unsigned int soundDevice)
         else
             sndDevice = alcOpenDevice(sndDeviceList.at(soundDevice).c_str());
 
-        if (sndDevice == NULL) return FALSE;
+        if (sndDevice == NULL)
+        {
+            fprintf(stderr, "soundLib: ERROR Unable to open audio device.\n");
+            return FALSE;
+        }
 
-        snd3DContext = new soundContext(sndDevice);
         snd2DContext = new soundContext(sndDevice, true);
-
-        snd3DContext->setListenerPos( 0.0, 0.0, 0.0 );
-        snd3DContext->setListenerVel( 0.0, 0.0, 0.0 );
-        //sndBase->setListenerRot( x, y, z ); // TODO: first implement sndBase::setListenerRot,
-        //                                    // then calculate values for this function call
-
-        snd3DContext->makeCurrent();
-
-        ALfloat listenerOri[6] = { 0.0, 0.0, 1.0, 0.0, 1.0, 0.0 }; // Will replace this with
-        alListenerfv( AL_ORIENTATION, listenerOri );               // soundContext::setListenerRot.
 
         Initialized = true;
     }
@@ -137,7 +129,6 @@ void sound_ShutdownLibrary()
 {
     if (!Initialized) return;
 
-    delete snd3DContext;
     delete snd2DContext;
 
     if (sndDevice)
@@ -152,11 +143,79 @@ sndStreamID sound_Create2DStream(char* path)
     if (!sndDevice || !Initialized)
         return 0;
 
-    // do something here
+    try
+    {
+        return snd2DContext->createSoundStream(std::string(path)) + 1;
+    }
+    catch (std::string &e)
+    {
+        fprintf(stderr, "soundLib: ERROR %s\n", e.c_str());
+        return 0;
+    }
+    catch (std::exception &e)
+    {
+        fprintf(stderr, "soundLib: ERROR %s\n", e.what());
+        return 0;
+    }
+    catch (...)
+    {
+        fprintf(stderr, "soundLib: ERROR An unhandled exception occurred!\n");
+        throw;
+    }
+}
+
+BOOL sound_Play2DStream(sndStreamID stream, BOOL reset)
+{
+    if (!Initialized || !stream) return FALSE;
+
+    try
+    {
+        return snd2DContext->getStream(stream - 1)->play((reset == TRUE)) ? TRUE : FALSE;
+    }
+    catch (std::string &e)
+    {
+        fprintf(stderr, "soundLib: ERROR %s\n", e.c_str());
+        return FALSE;
+    }
+    catch (std::exception &e)
+    {
+        fprintf(stderr, "soundLib: ERROR %s\n", e.what());
+        return FALSE;
+    }
+    catch (...)
+    {
+        fprintf(stderr, "soundLib: ERROR An unhandled exception occurred!\n");
+        throw;
+    }
+}
+
+
+BOOL sound_2DStreamIsPlaying(sndStreamID stream)
+{
+    if (!Initialized || !stream) return FALSE;
+
+    try
+    {
+        return snd2DContext->getStream(stream - 1)->isPlaying() ? TRUE : FALSE;
+    }
+    catch (std::string &e)
+    {
+        fprintf(stderr, "soundLib: ERROR %s\n", e.c_str());
+        return FALSE;
+    }
+    catch (std::exception &e)
+    {
+        fprintf(stderr, "soundLib: ERROR %s\n", e.what());
+        return FALSE;
+    }
+    catch (...)
+    {
+        fprintf(stderr, "soundLib: ERROR An unhandled exception occurred!\n");
+        throw;
+    }
 }
 
 void sound_Update(void)
 {
-    snd3DContext->updateStreams();
     snd2DContext->updateStreams();
 }

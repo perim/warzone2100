@@ -27,20 +27,20 @@
 #include "stringconv.hpp"
 #include <vorbis/vorbisfile.h>
 
-size_t ovB_read(void *ptr, size_t size, size_t nmemb, void *datasource)
+static size_t ovB_read(void *ptr, size_t size, size_t nmemb, void *datasource)
 {
     return PHYSFS_read(reinterpret_cast<PHYSFS_file*>(datasource), ptr, 1, size*nmemb);
 }
 
-int ovB_seek(void *datasource, ogg_int64_t offset, int whence) {
+static int ovB_seek(void *datasource, ogg_int64_t offset, int whence) {
     return -1;
 }
 
-int ovB_close(void *datasource) {
+static int ovB_close(void *datasource) {
     return 0;
 }
 
-long ovB_tell(void *datasource) {
+static long ovB_tell(void *datasource) {
     return -1;
 }
 

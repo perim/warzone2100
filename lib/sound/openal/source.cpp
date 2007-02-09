@@ -24,6 +24,7 @@
 
 #include "source.hpp"
 #include <string>
+#include "stringconv.hpp"
 
 soundSource::soundSource(bool b2D) : bIs2D(b2D), bIsStream(true)
 {
@@ -71,6 +72,13 @@ inline void soundSource::createSource()
             throw std::string("alGenSources(): no context available to create sources in");
         }
     }
+
+    // Default initialization
+    alSource3f(source, AL_POSITION,        0.0, 0.0, 0.0);
+    alSource3f(source, AL_VELOCITY,        0.0, 0.0, 0.0);
+    alSource3f(source, AL_DIRECTION,       0.0, 0.0, 0.0);
+    alSourcef (source, AL_ROLLOFF_FACTOR,  0.0          );
+    alSourcei (source, AL_SOURCE_RELATIVE, AL_TRUE      );
 }
 
 soundSource::~soundSource()
@@ -85,18 +93,26 @@ bool soundSource::is2D()
 
 soundSource::sourceState soundSource::getState()
 {
-    ALenum state;
+    // Clear error state
+    alGetError();
+
+    ALenum state = AL_SOURCE_STATE;
     alGetSourcei(source, AL_SOURCE_STATE, &state);
+
+    ALenum error = alGetError();
+    if (error != AL_NO_ERROR)
+        throw std::string("alGetSourcei error: " + to_string(error));
+
     switch (state)
     {
-    case AL_INITIAL:
-        return initial;
-    case AL_PLAYING:
-        return playing;
-    case AL_PAUSED:
-        return paused;
-    case AL_STOPPED:
-        return stopped;
+        case AL_INITIAL:
+            return initial;
+        case AL_PLAYING:
+            return playing;
+        case AL_PAUSED:
+            return paused;
+        case AL_STOPPED:
+            return stopped;
     }
 
     return undefined;
@@ -117,10 +133,10 @@ void soundSource::queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
     {
         switch (alErrNo)
         {
-        case AL_INVALID_VALUE:
-            throw std::string("alSourceQueueBuffers(): OpenAL: specified buffer is invalid or does not exist.");
-        case AL_INVALID_OPERATION:
-            throw std::string("alSourceQueueBuffers(): no current context or buffer format mismatched with the rest of queue (i.e. mono8/mono16/stereo8/stereo16)");
+            case AL_INVALID_VALUE:
+                throw std::string("alSourceQueueBuffers(): OpenAL: specified buffer is invalid or does not exist.");
+            case AL_INVALID_OPERATION:
+                throw std::string("alSourceQueueBuffers(): no current context or buffer format mismatched with the rest of queue (i.e. mono8/mono16/stereo8/stereo16)");
         }
     }
 

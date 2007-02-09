@@ -25,8 +25,6 @@
 #ifndef SOUND_CONSTANTS_HPP
 #define SOUND_CONSTANTS_HPP
 
-#include "types.h"
-
 // Default buffer size used for OpenAL buffers
 extern const unsigned int OpenAL_BufferSize;
 
