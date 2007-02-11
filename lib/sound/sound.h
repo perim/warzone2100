@@ -35,20 +35,29 @@ extern "C"
 #include "../framework/frame.h"
 
     /** Initializes the sound-library
+     *  This also cleans out the memory acquired by sound_DeviceList, but doesn't prevent reallocation of it.
      *  \return TRUE when the library is initialized, FALSE otherwise
      */
     BOOL sound_InitLibrary(void);
 
     /** Initializes the sound-library
      *  This version of the initialization function selects which sound Device should be used
+     *  This also cleans out the memory acquired by sound_DeviceList, but doesn't prevent reallocation of it.
      *  \param soundDevice the sound-device to use for rendering and output of sound, 0 selects system default
      *  \return TRUE when the library is initialized, FALSE otherwise (which can be due to double intialization)
      */
     BOOL sound_InitLibraryWithDevice(unsigned int soundDevice);
 
     /** Shuts down and unloads the sound-library
+     *  This also cleans out the memory acquired by sound_DeviceList, but doesn't prevent reallocation of it.
      */
     void sound_ShutdownLibrary(void);
+
+    /** Returns an array of C-strings with devicenames
+     *  Allocates memory for an array of C-strings, then fills it up with available devices.
+     *  \return an array of pointers to character arrays terminated by a NULL pointer
+     */
+    const char** sound_DeviceList(void);
 
     /** Creates a 2D source and prepares for streaming specified audio from it
      *  \param path the directory path to the file to start playing

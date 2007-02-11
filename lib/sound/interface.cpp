@@ -34,50 +34,21 @@
 #include <vector>
 #include <string>
 #include <exception>
+#include <boost/smart_ptr.hpp>
+#include <string.h>
 
 // Library initialization status
 static bool Initialized = false;
 
 // OpenAL device specific stuff
 static soundDevice* sndDevice = NULL;
-static std::vector<std::string> sndDeviceList;
+static boost::shared_array<char*> DeviceList;
 
 // OpenAL rendering contexts (can be rendered in parallel)
 static sndContextID sndContext = 0;
 
-/** Enumerates OpenAL devices available to open for output
- *  The output values are put into std::vector<std::string> sndDevicelist
- *  \throw std::exception
- */
-void enumerateDevices()
-{
-    // This function call should never fail according to the OpenAL specs (not with these params)
-    // So as long as std::vector doesn't throw any exceptions there should occur no problems
-    const char* DeviceList = static_cast<const char*>(alcGetString(NULL, ALC_DEVICE_SPECIFIER));
-
-    sndDeviceList.clear();
-
-    // Default NULL device
-    sndDeviceList.push_back(std::string(""));
-
-    if (DeviceList == NULL)
-    {
-        fprintf(stderr, "soundLib: alcGetString returning NULL; ALC_ERROR: %d\n", alcGetError(NULL));
-        return;
-    }
-
-    // The returned C-string DeviceList has its entries separated by one NUL char (0x00),
-    // and the list itself is terminated by two NUL chars.
-    while (*DeviceList != 0x00)
-    {
-        // Append the current list entry to the list
-        sndDeviceList.push_back(std::string(DeviceList));
-
-        // Move to the next entry in the list
-        // strlen really only detects the position of the first NUL char in the array
-        DeviceList += strlen(DeviceList) + 1;
-    }
-}
+// Forward declarations of internal functions
+void clearDeviceList();
 
 BOOL sound_InitLibrary()
 {
@@ -86,18 +57,16 @@ BOOL sound_InitLibrary()
 
 BOOL sound_InitLibraryWithDevice(unsigned int deviceNum)
 {
+    // Always clear this list to make sure we're not using memory only necessary once
+    clearDeviceList();
+
     // check wether the library has already been previously initialized
     if (Initialized) return FALSE;
 
     try
     {
-        enumerateDevices();
-
         // Open device (default dev (0) usually is "Generic Hardware")
-        if (sndDeviceList.at(deviceNum) == std::string(""))
-            sndDevice = new soundDevice();
-        else
-            return FALSE; // dummy code, will be replaced when device enumeration is moved to the soundDevice class
+        sndDevice = new soundDevice(soundDevice::deviceList().at(deviceNum));
 
         sndContext = sndDevice->createContext();
 
@@ -122,10 +91,58 @@ BOOL sound_InitLibraryWithDevice(unsigned int deviceNum)
 
 void sound_ShutdownLibrary()
 {
-    if (!Initialized) return;
+    if (sndDevice != NULL)
+    {
+        delete sndDevice;
+        sndDevice = NULL;
+    }
 
-    delete sndDevice;
-    sndDevice = NULL;
+    clearDeviceList();
+}
+
+const char** sound_DeviceList()
+{
+    if (DeviceList.get() == NULL)
+    {
+        // Allocate memory
+        DeviceList = boost::shared_array<char*>(new char*[soundDevice::deviceList().size() + 1]);
+
+        // Mark the end of the array
+        DeviceList[soundDevice::deviceList().size()] = NULL;
+
+        for (unsigned int i = 0; i != soundDevice::deviceList().size(); ++i)
+        {
+            // Allocate memory
+            DeviceList[i] = new char[soundDevice::deviceList()[i].length() + 1];
+
+            // Mark the end of the C-string
+            DeviceList[i][soundDevice::deviceList()[i].length()] = 0;
+
+            // Insert data
+            memcpy(DeviceList[i], soundDevice::deviceList()[i].c_str(), soundDevice::deviceList()[i].length());
+        }
+    }
+
+    return const_cast<const char**>(DeviceList.get());
+}
+
+/** Clears out and destroys the memory used by the enumeration array
+ */
+static void clearDeviceList()
+{
+    if (DeviceList.get() != NULL)
+    {
+        // Run through list and delete its contents (i.e. free memory of its contents)
+        unsigned int i = 0;
+        while (DeviceList[i] != NULL)
+        {
+            delete [] DeviceList[i];
+            ++i;
+        }
+
+        // Destroy the list itself and automatically reset its pointer to NULL
+        DeviceList.reset();
+    }
 }
 
 sndStreamID sound_Create2DStream(char* path)

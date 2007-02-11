@@ -30,6 +30,8 @@
 #include <AL/alc.h>
 
 #include <map>
+#include <vector>
+#include <string>
 #include <boost/smart_ptr.hpp>
 
 #include "../types.h"
@@ -43,6 +45,12 @@ class soundDevice
          *  and intializes the default sound device.
          */
         soundDevice();
+
+        /** Constructs by opening specified device
+         *  \param deviceName the name of the device to open with OpenAL
+         *  \throw std::string object with error messsage on failure
+         */
+        soundDevice(const std::string deviceName);
         ~soundDevice();
 
         /** Creates a sound rendering context
@@ -53,6 +61,11 @@ class soundDevice
         /** Return a pointer to the context
          */
         boost::shared_ptr<soundContext> getContext(sndContextID context);
+
+    public:
+        /** Returns a reference to a vector containing a list of devices available for opening
+         */
+        static std::vector<std::string>& deviceList();
 
     private:
         // Identifier towards OpenAL
