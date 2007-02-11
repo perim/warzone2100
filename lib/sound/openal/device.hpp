@@ -60,7 +60,7 @@ class soundDevice
 
         /** Return a pointer to the context
          */
-        boost::shared_ptr<soundContext> getContext(sndContextID context);
+        const boost::shared_ptr<soundContext> getContext(sndContextID context);
 
     public:
         /** Returns a reference to a vector containing a list of devices available for opening

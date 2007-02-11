@@ -34,23 +34,7 @@ soundSource::soundSource(bool b2D) : bIs2D(b2D), bIsStream(true)
 soundSource::soundSource(boost::shared_ptr<soundBuffer> sndBuffer, bool b2D) : bIs2D(b2D), bIsStream(false)
 {
     createSource();
-
-    // Clear current error state
-    alGetError();
-
-    alSourcei(source, AL_BUFFER, sndBuffer->getALBufferID());
-
-    ALenum alErrNo = alGetError();
-    if (alErrNo != AL_NO_ERROR)
-    {
-        switch (alErrNo)
-        {
-        case AL_OUT_OF_MEMORY:
-            throw std::string("alSource(): Out of memory");
-        case AL_INVALID_VALUE:
-            throw std::string("alSource(): not enough non-memory resources, or invalid pointer");
-        }
-    }
+    setBuffer(sndBuffer);
 }
 
 inline void soundSource::createSource()
@@ -81,14 +65,32 @@ inline void soundSource::createSource()
     alSourcei (source, AL_SOURCE_RELATIVE, AL_TRUE      );
 }
 
+void soundSource::setBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
+{
+    if (bIsStream)
+        throw std::string("soundSource: attempt to single-set buffer on stream source.");
+
+    // Clear current error state
+    alGetError();
+
+    alSourcei(source, AL_BUFFER, sndBuffer->getALBufferID());
+
+    ALenum alErrNo = alGetError();
+    if (alErrNo != AL_NO_ERROR)
+    {
+        switch (alErrNo)
+        {
+        case AL_OUT_OF_MEMORY:
+            throw std::string("alSource(): Out of memory");
+        case AL_INVALID_VALUE:
+            throw std::string("alSource(): not enough non-memory resources, or invalid pointer");
+        }
+    }
+}
+
 soundSource::~soundSource()
 {
     alDeleteSources(1, &source);    // Should only fail if alGenSources() failed
-}
-
-bool soundSource::is2D()
-{
-    return bIs2D;
 }
 
 soundSource::sourceState soundSource::getState()

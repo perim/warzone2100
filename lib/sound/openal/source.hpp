@@ -60,11 +60,41 @@ class soundSource
 
         ~soundSource();
 
-        bool is2D();
-        bool isStream();
+        /** Sets the source's buffer.
+         *  In case of a non streaming source this function sets the buffer for the source.
+         *  \throw std::string containing error message on failure
+         */
+        void setBuffer(boost::shared_ptr<soundBuffer> sndBuffer);
+
+        /** Wether all sound routed through this source will be rendered as 2D.
+         *  \return true if all routed sound is displayed 2D, false otherwise
+         */
+        inline bool is2D()
+        {
+            return bIs2D;
+        }
+
+        /** Wether this source is used for streaming sound
+         *  \return true if this source uses buffer queues to stream from, false otherwise
+         */
+        inline bool isStream()
+        {
+            return bIsStream;
+        }
+
+        /** Retrieve the currect state of the source
+         *  \return an enum representing the current play-state of the source
+         */
         sourceState getState();
 
+        /** Append a buffer to the end of the queue
+         *  \param sndBuffer buffer to append to the end of the queue
+         */
         void queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer);
+
+        /** Remove a finished buffer from the top of the queue
+         *  \return the buffer that was unqueued
+         */
         boost::shared_ptr<soundBuffer> unqueueBuffer();
 
         /** Tells OpenAL to start playing
@@ -79,7 +109,7 @@ class soundSource
 
     private:
         /** Handles the creation of the source
-         *  Makes sure an OpenAL source is created and connected errors are dealt with
+         *  Makes sure an OpenAL source is created and related errors are dealt with
          */
         inline void createSource();
 

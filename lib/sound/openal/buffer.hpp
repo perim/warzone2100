@@ -48,7 +48,10 @@ class soundBuffer
         /** returns the internal OpenAL buffer handle as used by OpenAL functions
          *  \return internal OpenAL buffer handle
          */
-        ALuint getALBufferID();
+        inline const ALuint getALBufferID()
+        {
+            return buffer;
+        }
 
     private:
         // Internal identifier towards OpenAL

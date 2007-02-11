@@ -55,9 +55,12 @@ sndContextID soundDevice::createContext()
     return nextContextID++;
 }
 
-boost::shared_ptr<soundContext> soundDevice::getContext(sndContextID context)
+const boost::shared_ptr<soundContext> soundDevice::getContext(sndContextID context)
 {
-    return sndContexts[context];
+    if (context < nextContextID)
+        return sndContexts[context];
+    else
+        return boost::shared_ptr<soundContext>();
 }
 
 // Device enumeration stuff
