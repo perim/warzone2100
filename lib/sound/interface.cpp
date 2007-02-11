@@ -48,7 +48,7 @@ static boost::shared_array<char*> DeviceList;
 static sndContextID sndContext = 0;
 
 // Forward declarations of internal functions
-void clearDeviceList();
+static void clearDeviceList();
 
 BOOL sound_InitLibrary()
 {
