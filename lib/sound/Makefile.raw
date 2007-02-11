@@ -2,6 +2,7 @@ MAKERULES=../../makerules
 include $(MAKERULES)/configure.mk
 
 SRC=constants.cpp \
+	decoding.cpp \
 	stream.cpp \
 	interface.cpp
 

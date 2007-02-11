@@ -22,11 +22,29 @@
 	$HeadURL$
 */
 
-#ifndef SOUND_TYPES_H
-#define SOUND_TYPES_H
+#include "device.hpp"
+#include <string>
 
-typedef unsigned int sndContextID;
-typedef unsigned int sndStreamID;
-typedef unsigned int sndSourceID;
+soundDevice::soundDevice() : nextContextID(0)
+{
+    sndDevice = alcOpenDevice(NULL);
 
-#endif // SOUND_TYPES_H
+    if (sndDevice == NULL)
+        throw std::string("Unable to open audio device.");
+}
+
+soundDevice::~soundDevice()
+{
+    alcCloseDevice(sndDevice);
+}
+
+sndContextID soundDevice::createContext()
+{
+    sndContexts.insert(std::pair<sndContextID, boost::shared_ptr<soundContext> >(nextContextID, boost::shared_ptr<soundContext>(new soundContext(sndDevice))));
+    return nextContextID++;
+}
+
+boost::shared_ptr<soundContext> soundDevice::getContext(sndContextID context)
+{
+    return sndContexts[context];
+}

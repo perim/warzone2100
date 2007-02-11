@@ -33,7 +33,6 @@
 #include "../stream.hpp"
 
 #include <map>
-#include <memory>
 #include <boost/smart_ptr.hpp>
 
 class soundContext
@@ -44,7 +43,7 @@ class soundContext
          *  and optionally intializes the sound device already.
          *  \param init whether the default (system/os default) sound device should be initialized at construction.
          */
-        soundContext(ALCdevice* sndDevice, bool set2D = false);
+        soundContext(ALCdevice* sndDevice);
         ~soundContext();
 
         void setListenerPos(float x, float y, float z);
@@ -79,9 +78,6 @@ class soundContext
 
         // Internal data
         std::map<sndStreamID, boost::shared_ptr<soundStream> > sndStreams;
-
-        // Internal state
-        bool is2D;
 };
 
 #endif // SOUND_OPENAL_CONTEXT_HPP

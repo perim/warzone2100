@@ -27,6 +27,7 @@
  */
 
 #include "sound.h"
+#include "openal/device.hpp"
 #include "openal/context.hpp"
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -38,11 +39,11 @@
 static bool Initialized = false;
 
 // OpenAL device specific stuff
-static ALCdevice* sndDevice = NULL;
+static soundDevice* sndDevice = NULL;
 static std::vector<std::string> sndDeviceList;
 
 // OpenAL rendering contexts (can be rendered in parallel)
-static soundContext* snd2DContext = NULL;
+static sndContextID sndContext = 0;
 
 /** Enumerates OpenAL devices available to open for output
  *  The output values are put into std::vector<std::string> sndDevicelist
@@ -83,7 +84,7 @@ BOOL sound_InitLibrary()
     return sound_InitLibraryWithDevice(0);
 }
 
-BOOL sound_InitLibraryWithDevice(unsigned int soundDevice)
+BOOL sound_InitLibraryWithDevice(unsigned int deviceNum)
 {
     // check wether the library has already been previously initialized
     if (Initialized) return FALSE;
@@ -93,18 +94,12 @@ BOOL sound_InitLibraryWithDevice(unsigned int soundDevice)
         enumerateDevices();
 
         // Open device (default dev (0) usually is "Generic Hardware")
-        if (sndDeviceList.at(soundDevice) == std::string(""))
-            sndDevice = alcOpenDevice(NULL);
+        if (sndDeviceList.at(deviceNum) == std::string(""))
+            sndDevice = new soundDevice();
         else
-            sndDevice = alcOpenDevice(sndDeviceList.at(soundDevice).c_str());
+            return FALSE; // dummy code, will be replaced when device enumeration is moved to the soundDevice class
 
-        if (sndDevice == NULL)
-        {
-            fprintf(stderr, "soundLib: ERROR Unable to open audio device.\n");
-            return FALSE;
-        }
-
-        snd2DContext = new soundContext(sndDevice, true);
+        sndContext = sndDevice->createContext();
 
         Initialized = true;
     }
@@ -129,13 +124,8 @@ void sound_ShutdownLibrary()
 {
     if (!Initialized) return;
 
-    delete snd2DContext;
-
-    if (sndDevice)
-    {
-        alcCloseDevice(sndDevice);
-        sndDevice = NULL;
-    }
+    delete sndDevice;
+    sndDevice = NULL;
 }
 
 sndStreamID sound_Create2DStream(char* path)
@@ -145,7 +135,7 @@ sndStreamID sound_Create2DStream(char* path)
 
     try
     {
-        return snd2DContext->createSoundStream(std::string(path)) + 1;
+        return sndDevice->getContext(sndContext)->createSoundStream(std::string(path)) + 1;
     }
     catch (std::string &e)
     {
@@ -170,7 +160,7 @@ BOOL sound_Play2DStream(sndStreamID stream, BOOL reset)
 
     try
     {
-        return snd2DContext->getStream(stream - 1)->play((reset == TRUE)) ? TRUE : FALSE;
+        return sndDevice->getContext(sndContext)->getStream(stream - 1)->play((reset == TRUE)) ? TRUE : FALSE;
     }
     catch (std::string &e)
     {
@@ -196,7 +186,7 @@ BOOL sound_2DStreamIsPlaying(sndStreamID stream)
 
     try
     {
-        return snd2DContext->getStream(stream - 1)->isPlaying() ? TRUE : FALSE;
+        return sndDevice->getContext(sndContext)->getStream(stream - 1)->isPlaying() ? TRUE : FALSE;
     }
     catch (std::string &e)
     {
@@ -217,5 +207,5 @@ BOOL sound_2DStreamIsPlaying(sndStreamID stream)
 
 void sound_Update(void)
 {
-    snd2DContext->updateStreams();
+    sndDevice->getContext(sndContext)->updateStreams();
 }
