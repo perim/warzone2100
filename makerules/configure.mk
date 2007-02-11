@@ -95,7 +95,7 @@ endif
 
 # Generic libs
 
-LDFLAGS+=-lSDL -lSDL_net -ljpeg -lpng -lz -lmad -lvorbisfile -lvorbis -logg -lphysfs -lstdc++
+LDFLAGS+=-lSDL -lSDL_net -ljpeg -lpng -lphysfs -lz -lmad -lvorbisfile -lvorbis -logg -lstdc++
 
 # Additional platform-dependend libs
 
