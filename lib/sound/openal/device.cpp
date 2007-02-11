@@ -33,7 +33,7 @@ soundDevice::soundDevice() : nextContextID(0)
         throw std::string("Unable to open audio device.");
 }
 
-soundDevice::soundDevice(const std::string deviceName)
+soundDevice::soundDevice(const std::string deviceName) : nextContextID(0)
 {
     if (deviceName == std::string())
         sndDevice = alcOpenDevice(NULL);
