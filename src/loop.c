@@ -235,13 +235,13 @@ GAMECODE gameLoop(void)
 		}
 
         //don't process the object lists if paused or about to quit to the front end
-		if (!(gameUpdatePaused() OR intRetVal == INT_QUIT))
+		if (!(gameUpdatePaused() || intRetVal == INT_QUIT))
 		{
 			if( (dragBox3D.status != DRAG_DRAGGING) && (wallDrag.status
 				!= DRAG_DRAGGING))
 			{
 				if( (intRetVal == INT_INTERCEPT)
-					|| (radarOnScreen && CoordInRadar(mouseX(),mouseY()) AND
+					|| (radarOnScreen && CoordInRadar(mouseX(),mouseY()) &&
                     getHQExists(selectedPlayer)) )
 				{
 					frameSetCursorFromRes(IDC_DEFAULT);
@@ -257,7 +257,7 @@ GAMECODE gameLoop(void)
 //		intRetVal = INT_NONE;
 
 		// Don't update the game world if the design screen is up and single player game
-		//if (((intRetVal != INT_FULLSCREENPAUSE) || bMultiPlayer) AND ((intRetVal !=
+		//if (((intRetVal != INT_FULLSCREENPAUSE) || bMultiPlayer) && ((intRetVal !=
 		//	INT_INTELPAUSE) || bMultiPlayer))
 
 #ifdef DEBUG
@@ -416,17 +416,17 @@ GAMECODE gameLoop(void)
 					psNBuilding = psCBuilding->psNext;
 					structureUpdate(psCBuilding);
 					//set animation flag
-					/*if (psCBuilding->pStructureType->type == REF_POWER_GEN AND
+					/*if (psCBuilding->pStructureType->type == REF_POWER_GEN &&
 						psCBuilding->status == SS_BUILT)
 					{
 						setPowerGenExists(TRUE, i);
 					}*/
-					if (psCBuilding->pStructureType->type == REF_HQ AND
+					if (psCBuilding->pStructureType->type == REF_HQ &&
 						psCBuilding->status == SS_BUILT)
 					{
 						setHQExists(TRUE, i);
 					}
-					if (psCBuilding->pStructureType->type == REF_SAT_UPLINK AND
+					if (psCBuilding->pStructureType->type == REF_SAT_UPLINK &&
 						psCBuilding->status == SS_BUILT)
 					{
 						setSatUplinkExists(TRUE, i);
@@ -445,12 +445,12 @@ GAMECODE gameLoop(void)
 					   but this covers us anyway It shouldn't do since its not even on the map!*/
 					psNBuilding = psCBuilding->psNext;
 					missionStructureUpdate(psCBuilding);
-					if (psCBuilding->pStructureType->type == REF_HQ AND
+					if (psCBuilding->pStructureType->type == REF_HQ &&
 						psCBuilding->status == SS_BUILT)
 					{
 						setHQExists(TRUE, i);
 					}
-					if (psCBuilding->pStructureType->type == REF_SAT_UPLINK AND
+					if (psCBuilding->pStructureType->type == REF_SAT_UPLINK &&
 						psCBuilding->status == SS_BUILT)
 					{
 						setSatUplinkExists(TRUE, i);
@@ -498,7 +498,7 @@ GAMECODE gameLoop(void)
 
 		//}
 		// Don't update the game world if the design screen is up and single player game
-		//if (((intRetVal != INT_FULLSCREENPAUSE ) || bMultiPlayer) AND ((intRetVal !=
+		//if (((intRetVal != INT_FULLSCREENPAUSE ) || bMultiPlayer) && ((intRetVal !=
 		//	INT_INTELNOSCROLL) || bMultiPlayer))
 		//{
 			//not any more!
@@ -518,7 +518,7 @@ GAMECODE gameLoop(void)
 		//}
 
 		// Don't update the game world if the design screen is up and single player game
-		//if ((intRetVal != INT_FULLSCREENPAUSE AND intRetVal !=
+		//if ((intRetVal != INT_FULLSCREENPAUSE && intRetVal !=
 		//	INT_INTELPAUSE) || bMultiPlayer)
 		//{
 // 			debug( LOG_NEVER, "loop: Objmem Update\n");
@@ -633,9 +633,7 @@ GAMECODE gameLoop(void)
 			//so get a new backdrop
 			quitting = TRUE;
 
-			{
-				pie_LoadBackDrop(SCREEN_RANDOMBDROP);
-			}
+			pie_LoadBackDrop(SCREEN_RANDOMBDROP);
 		}
 		else //if in video mode esc kill video
 		{
@@ -652,7 +650,7 @@ GAMECODE gameLoop(void)
 				if (display3D)
 				{
 					/*bPlayerHasHQ=FALSE;
-					for (psStructure = apsStructLists[selectedPlayer]; psStructure AND
+					for (psStructure = apsStructLists[selectedPlayer]; psStructure &&
 						!bPlayerHasHQ; psStructure = psStructure->psNext)
 					{
 						if (psStructure->pStructureType->type == REF_HQ)
@@ -673,7 +671,7 @@ GAMECODE gameLoop(void)
 
 					//no key clicks or in Intelligence Screen
 	//				if (intRetVal == INT_INTELPAUSE)
-					if (intRetVal == INT_NONE && !InGameOpUp)// OR intRetVal == INT_INTELPAUSE)
+					if (intRetVal == INT_NONE && !InGameOpUp)// || intRetVal == INT_INTELPAUSE)
 					{
 // 						debug( LOG_NEVER, "loop: 3D input\n");
 						//quitting = processInput();
@@ -690,7 +688,7 @@ GAMECODE gameLoop(void)
 				else
 				{
 					//no key clicks or in Intelligence Screen
-					if (intRetVal == INT_NONE)// OR intRetVal == INT_INTELPAUSE)
+					if (intRetVal == INT_NONE)// || intRetVal == INT_INTELPAUSE)
 					{
 // 						debug( LOG_NEVER, "loop: 2D input\n");
 #ifdef DISP2D
@@ -704,7 +702,7 @@ GAMECODE gameLoop(void)
 				}
 			}
 			/* Display the in game interface */
-//			if(widgetsOn OR forceWidgetsOn)
+//			if(widgetsOn || forceWidgetsOn)
 //			{
 			pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_ON);
 			pie_SetFogStatus(FALSE);
@@ -912,7 +910,7 @@ GAMECODE gameLoop(void)
 	}
 
 	/*
-	if( (intMode == INT_NORMAL) AND (forceWidgetsOn == TRUE) )
+	if( (intMode == INT_NORMAL) && (forceWidgetsOn == TRUE) )
 	{
 		forceWidgetsOn = FALSE;
 	}
