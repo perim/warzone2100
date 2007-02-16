@@ -28,7 +28,7 @@
 #include <string>
 #include "constants.hpp"
 
-soundStream::soundStream(boost::shared_ptr<soundDecoding> PCM, bool b2D) : source(new soundSource(b2D)), decoder(PCM), bufferSize(OpenAL_BufferSize)
+soundStream::soundStream(boost::shared_ptr<soundSource> sndSource, boost::shared_ptr<soundDecoding> PCM) : source(sndSource), decoder(PCM), bufferSize(OpenAL_BufferSize)
 {
 }
 

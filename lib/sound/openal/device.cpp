@@ -25,7 +25,7 @@
 #include "device.hpp"
 #include <string>
 
-soundDevice::soundDevice() : nextContextID(0)
+soundDevice::soundDevice()
 {
     sndDevice = alcOpenDevice(NULL);
 
@@ -33,7 +33,7 @@ soundDevice::soundDevice() : nextContextID(0)
         throw std::string("Unable to open audio device.");
 }
 
-soundDevice::soundDevice(const std::string deviceName) : nextContextID(0)
+soundDevice::soundDevice(const std::string deviceName)
 {
     if (deviceName == std::string())
         sndDevice = alcOpenDevice(NULL);
@@ -47,20 +47,6 @@ soundDevice::soundDevice(const std::string deviceName) : nextContextID(0)
 soundDevice::~soundDevice()
 {
     alcCloseDevice(sndDevice);
-}
-
-sndContextID soundDevice::createContext()
-{
-    sndContexts.insert(std::pair<sndContextID, boost::shared_ptr<soundContext> >(nextContextID, boost::shared_ptr<soundContext>(new soundContext(sndDevice))));
-    return nextContextID++;
-}
-
-const boost::shared_ptr<soundContext> soundDevice::getContext(sndContextID context)
-{
-    if (context < nextContextID)
-        return sndContexts[context];
-    else
-        return boost::shared_ptr<soundContext>();
 }
 
 // Device enumeration stuff

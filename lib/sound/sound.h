@@ -65,6 +65,25 @@ extern "C"
      */
     sndStreamID sound_Create2DStream(char* path);
 
+    /** Initiates playing of a stream
+     *  \param stream the stream to play
+     *  \param reset if true the stream will start playing from the beginning, if false it will start from the last known position
+     *  \return true on succes, false otherwise
+     */
+    BOOL sound_Play2DStream(sndStreamID stream, BOOL reset);
+
+    /** Destroys the stream
+     *  Deallocates all resources used by the stream.
+     *  \param stream the stream to destroy
+     */
+    void sound_Destroy2DStream(sndStreamID stream);
+
+    /** Determines wether a stream is playing
+     *  \param stream the stream to check
+     *  \return TRUE if the stream is currently playing, FALSE if it is not or does not exist
+     */
+    BOOL sound_2DStreamIsPlaying(sndStreamID stream);
+
     /** Performs required update actions
      */
     void sound_Update(void);

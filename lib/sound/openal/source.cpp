@@ -26,12 +26,12 @@
 #include <string>
 #include "stringconv.hpp"
 
-soundSource::soundSource(bool b2D) : bIs2D(b2D), bIsStream(true)
+soundSource::soundSource(boost::shared_ptr<soundContext> sndContext, bool b2D) : context(sndContext), bIs2D(b2D), bIsStream(true)
 {
     createSource();
 }
 
-soundSource::soundSource(boost::shared_ptr<soundBuffer> sndBuffer, bool b2D) : bIs2D(b2D), bIsStream(false)
+soundSource::soundSource(boost::shared_ptr<soundContext> sndContext, boost::shared_ptr<soundBuffer> sndBuffer, bool b2D) : context(sndContext), bIs2D(b2D), bIsStream(false)
 {
     createSource();
     setBuffer(sndBuffer);
@@ -39,6 +39,8 @@ soundSource::soundSource(boost::shared_ptr<soundBuffer> sndBuffer, bool b2D) : b
 
 inline void soundSource::createSource()
 {
+    context->makeCurrent();
+
     // Clear current error state
     alGetError();
     alGenSources(1, &source);
@@ -70,6 +72,8 @@ void soundSource::setBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
     if (bIsStream)
         throw std::string("soundSource: attempt to single-set buffer on stream source.");
 
+    context->makeCurrent();
+
     // Clear current error state
     alGetError();
 
@@ -90,11 +94,15 @@ void soundSource::setBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
 
 soundSource::~soundSource()
 {
+    context->makeCurrent();
+
     alDeleteSources(1, &source);    // Should only fail if alGenSources() failed
 }
 
 soundSource::sourceState soundSource::getState()
 {
+    context->makeCurrent();
+
     // Clear error state
     alGetError();
 
@@ -125,6 +133,8 @@ void soundSource::queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
     if (!bIsStream)
         throw std::string("soundSource: attempt to (un)queue buffer to/from non-stream source");
 
+    context->makeCurrent();
+
     alGetError();   // clear current error state
 
     ALuint tmpBuffer = sndBuffer->getALBufferID();
@@ -149,6 +159,8 @@ boost::shared_ptr<soundBuffer> soundSource::unqueueBuffer()
 {
     if (!bIsStream)
         throw std::string("soundSource: attempt to (un)queue buffer to/from non-stream source");
+
+    context->makeCurrent();
 
     alGetError();   // clear current error state
 
@@ -180,16 +192,22 @@ boost::shared_ptr<soundBuffer> soundSource::unqueueBuffer()
 
 void soundSource::play()
 {
+    context->makeCurrent();
+
     alSourcePlay(source);
 }
 
 void soundSource::stop()
 {
+    context->makeCurrent();
+
     alSourceStop(source);
 }
 
 unsigned int soundSource::numProcessedBuffers()
 {
+    context->makeCurrent();
+
     int count;
     alGetSourcei(source, AL_BUFFERS_PROCESSED, &count);
 

@@ -26,16 +26,11 @@
 #define SOUND_OPENAL_DEVICE_HPP
 
 // Include the OpenAL libraries
-#include <AL/al.h>
 #include <AL/alc.h>
 
-#include <map>
 #include <vector>
 #include <string>
 #include <boost/smart_ptr.hpp>
-
-#include "../types.h"
-#include "context.hpp"
 
 class soundDevice
 {
@@ -53,14 +48,10 @@ class soundDevice
         soundDevice(const std::string deviceName);
         ~soundDevice();
 
-        /** Creates a sound rendering context
-         *  \return a unique ID number which is to be used as a handle to the soundContext class
-         */
-        sndContextID createContext();
-
-        /** Return a pointer to the context
-         */
-        const boost::shared_ptr<soundContext> getContext(sndContextID context);
+        inline ALCdevice* getALCDeviceID()
+        {
+            return sndDevice;
+        }
 
     public:
         /** Returns a reference to a vector containing a list of devices available for opening
@@ -70,12 +61,6 @@ class soundDevice
     private:
         // Identifier towards OpenAL
         ALCdevice* sndDevice;
-
-        // Internal data
-        std::map<sndContextID, boost::shared_ptr<soundContext> > sndContexts;
-
-        // Internal state
-        sndContextID nextContextID;
 };
 
 #endif // SOUND_OPENAL_DEVICE_HPP

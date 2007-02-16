@@ -35,9 +35,9 @@ class soundStream
     public:
 
         /** Creates and sets up all resources required for a sound stream
-         *  \param b2D wether to play as a 2D sound (without distance attenuation, doppler effect, etc.)
+         *  \param PCM class to provide decoded sound data on request
          */
-        soundStream(boost::shared_ptr<soundDecoding> PCM, bool b2D = false);
+        soundStream(boost::shared_ptr<soundSource> sndSource, boost::shared_ptr<soundDecoding> PCM);
         ~soundStream();
 
         /** Returns a handle to the OpenAL source which is being streamed from

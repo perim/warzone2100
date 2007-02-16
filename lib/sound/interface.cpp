@@ -26,29 +26,42 @@
  *  This file provides an interface so that C-code is capable of using the soundlibrary.
  */
 
+// Declares library C-interface
 #include "sound.h"
+
+// Internal library includes
 #include "openal/device.hpp"
 #include "openal/context.hpp"
-#include <AL/al.h>
-#include <AL/alc.h>
+#include "stream.hpp"
+
+#include <map>
 #include <vector>
 #include <string>
 #include <exception>
+
 #include <boost/smart_ptr.hpp>
+
+// Needed by sound_DeviceList() for memcpy
 #include <string.h>
 
 // Library initialization status
 static bool Initialized = false;
 
 // OpenAL device specific stuff
-static soundDevice* sndDevice = NULL;
+static boost::shared_ptr<soundDevice> sndDevice;
 static boost::shared_array<char*> DeviceList;
 
 // OpenAL rendering contexts (can be rendered in parallel)
-static sndContextID sndContext = 0;
+static boost::shared_ptr<soundContext> sndContext;
 
 // Forward declarations of internal functions
 static void clearDeviceList();
+
+// Some containers of exported objects (through ID numbers
+static std::map<sndStreamID, boost::shared_ptr<soundStream> > sndStreams;
+
+// The ID numbers
+static sndStreamID nextStreamID = 0;
 
 BOOL sound_InitLibrary()
 {
@@ -66,9 +79,9 @@ BOOL sound_InitLibraryWithDevice(unsigned int deviceNum)
     try
     {
         // Open device (default dev (0) usually is "Generic Hardware")
-        sndDevice = new soundDevice(soundDevice::deviceList().at(deviceNum));
+        sndDevice = boost::shared_ptr<soundDevice>(new soundDevice(soundDevice::deviceList().at(deviceNum)));
 
-        sndContext = sndDevice->createContext();
+        sndContext = boost::shared_ptr<soundContext>(new soundContext(sndDevice));
 
         Initialized = true;
     }
@@ -91,11 +104,10 @@ BOOL sound_InitLibraryWithDevice(unsigned int deviceNum)
 
 void sound_ShutdownLibrary()
 {
-    if (sndDevice != NULL)
-    {
-        delete sndDevice;
-        sndDevice = NULL;
-    }
+    sndStreams.clear();
+
+    sndContext.reset();
+    sndDevice.reset();
 
     clearDeviceList();
 }
@@ -145,6 +157,29 @@ static void clearDeviceList()
     }
 }
 
+inline bool validStream(sndStreamID stream)
+{
+    if (stream == 0)
+    {
+        fprintf(stderr, "soundLib: ERROR Invalid StreamID: %d\n", stream);
+        return false;
+    }
+
+    if (stream > nextStreamID)
+    {
+        fprintf(stderr, "soundLib: ERROR Invalid StreamID: %d (out of bounds)\n", stream);
+        return false;
+    }
+
+    if (sndStreams[stream - 1].get() == NULL)
+    {
+        fprintf(stderr, "soundLib: ERROR Invalid StreamID: %d (NULL: probably destroyed stream)\n", stream);
+        return false;
+    }
+
+    return true;
+}
+
 sndStreamID sound_Create2DStream(char* path)
 {
     if (!sndDevice || !Initialized)
@@ -152,7 +187,18 @@ sndStreamID sound_Create2DStream(char* path)
 
     try
     {
-        return sndDevice->getContext(sndContext)->createSoundStream(std::string(path)) + 1;
+        // Construct decoder object and OpenAL source object
+        boost::shared_ptr<soundDecoding> decoder(new soundDecoding(path));
+        boost::shared_ptr<soundSource> source(new soundSource(sndContext, true));
+
+        // Construct streaming object
+        boost::shared_ptr<soundStream> stream(new soundStream(source, decoder));
+
+        // Insert the stream into the container for later reference/usage
+        sndStreams.insert(std::pair<sndStreamID, boost::shared_ptr<soundStream> >(nextStreamID, stream));
+
+        // First return current stream ID plus 1 (because we reserve 0 for an invalid/non-existent stream)
+        return nextStreamID++ + 1;
     }
     catch (std::string &e)
     {
@@ -171,13 +217,21 @@ sndStreamID sound_Create2DStream(char* path)
     }
 }
 
+void sound_Destroy2DStream(sndStreamID stream)
+{
+    sndStreams[stream - 1].reset();
+}
+
 BOOL sound_Play2DStream(sndStreamID stream, BOOL reset)
 {
     if (!Initialized || !stream) return FALSE;
 
     try
     {
-        return sndDevice->getContext(sndContext)->getStream(stream - 1)->play((reset == TRUE)) ? TRUE : FALSE;
+        if (validStream(stream))
+            return sndStreams[stream - 1]->play((reset == TRUE)) ? TRUE : FALSE;
+        else
+            return FALSE;
     }
     catch (std::string &e)
     {
@@ -203,7 +257,10 @@ BOOL sound_2DStreamIsPlaying(sndStreamID stream)
 
     try
     {
-        return sndDevice->getContext(sndContext)->getStream(stream - 1)->isPlaying() ? TRUE : FALSE;
+        if (validStream(stream))
+            return sndStreams[stream - 1]->isPlaying() ? TRUE : FALSE;
+        else
+            return FALSE;
     }
     catch (std::string &e)
     {
@@ -224,5 +281,8 @@ BOOL sound_2DStreamIsPlaying(sndStreamID stream)
 
 void sound_Update(void)
 {
-    sndDevice->getContext(sndContext)->updateStreams();
+    for (std::map<sndStreamID, boost::shared_ptr<soundStream> >::iterator i = sndStreams.begin(); i != sndStreams.end(); ++i)
+    {
+        i->second->update();
+    }
 }

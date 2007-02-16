@@ -29,10 +29,8 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 
-#include "../types.h"
-#include "../stream.hpp"
+#include "device.hpp"
 
-#include <map>
 #include <boost/smart_ptr.hpp>
 
 class soundContext
@@ -43,7 +41,7 @@ class soundContext
          *  and optionally intializes the sound device already.
          *  \param init whether the default (system/os default) sound device should be initialized at construction.
          */
-        soundContext(ALCdevice* sndDevice);
+        soundContext(boost::shared_ptr<soundDevice> sndDevice);
         ~soundContext();
 
         void setListenerPos(float x, float y, float z);
@@ -58,11 +56,6 @@ class soundContext
          */
         void setListenerRot(float pitch, float yaw, float roll);
 
-        /** updates all streams and keeps them filled
-         *  this function calls update() on every soundStream class
-         */
-        void updateStreams();
-
         /** makes this soundContext current
          *  Uses OpenAL function alcMakeContextCurrent to make this function current.
          *  This function and it's effect should be used as few as possible (if at all).
@@ -76,8 +69,8 @@ class soundContext
         // Identifier towards OpenAL
         ALCcontext* sndContext;
 
-        // Internal data
-        std::map<sndStreamID, boost::shared_ptr<soundStream> > sndStreams;
+        // Parent. This smart pointer is here only to keep the device alive while the context is.
+        boost::shared_ptr<soundDevice> device;
 };
 
 #endif // SOUND_OPENAL_CONTEXT_HPP

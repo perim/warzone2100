@@ -28,6 +28,7 @@
 #include <AL/al.h>
 #include <vector>
 #include <boost/smart_ptr.hpp>
+#include "context.hpp"
 #include "buffer.hpp"
 
 class soundSource
@@ -48,15 +49,17 @@ class soundSource
         // Constructors
 
         /** For the creation of a multibuffer, streaming, buffer
+         *  \param sndContext the context in which sound from this source should be rendered
          *  \param b2D wether to play as a 2D sound (without distance attenuation, doppler effect, etc.)
          */
-        soundSource(bool b2D = false);
+        soundSource(boost::shared_ptr<soundContext> sndContext, bool b2D = false);
 
         /** For the creation of a single-buffer source (mostly SFX, or other non-streaming sounds)
+         *  \param sndContext the context in which sound from this source should be rendered
          *  \param sndBuffer the buffer to play from
          *  \param b2D       wether to play as a 2D sound (without distance attenuation, doppler effect, etc.)
          */
-        soundSource(boost::shared_ptr<soundBuffer> sndBuffer, bool b2D = false);
+        soundSource(boost::shared_ptr<soundContext> sndContext, boost::shared_ptr<soundBuffer> sndBuffer, bool b2D = false);
 
         ~soundSource();
 
@@ -118,6 +121,7 @@ class soundSource
         ALuint source;
 
         // Internal data
+        boost::shared_ptr<soundContext> context;
         std::vector< boost::shared_ptr<soundBuffer> > buffers;
 
         // Internal state

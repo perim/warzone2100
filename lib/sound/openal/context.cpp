@@ -25,15 +25,15 @@
 #include "context.hpp"
 #include <string>
 
-soundContext::soundContext(ALCdevice* sndDevice)
+soundContext::soundContext(boost::shared_ptr<soundDevice> sndDevice) : device(sndDevice)
 {
-    alcGetError(sndDevice);
+    alcGetError(device->getALCDeviceID());
 
     // Create a new rendering context
-    sndContext = alcCreateContext(sndDevice, NULL);
+    sndContext = alcCreateContext(device->getALCDeviceID(), NULL);
     makeCurrent();
 
-    switch (alcGetError(sndDevice))
+    switch (alcGetError(device->getALCDeviceID()))
     {
         case ALC_NO_ERROR:
             return;
@@ -82,13 +82,4 @@ void soundContext::setListenerRot(float pitch, float yaw, float roll)
         // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
     }
     // else throw an exception
-}
-
-void soundContext::updateStreams()
-{
-    for ( std::map<sndStreamID, boost::shared_ptr<soundStream> >::iterator i = sndStreams.begin(); i != sndStreams.end(); ++i )
-    {
-        makeCurrent();
-        i->second->update();
-    }
 }
