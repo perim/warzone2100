@@ -28,5 +28,6 @@
 typedef unsigned int sndContextID;
 typedef unsigned int sndStreamID;
 typedef unsigned int sndSourceID;
+typedef unsigned int sndTrackID;
 
 #endif // SOUND_TYPES_H

@@ -30,13 +30,23 @@
 #include <string>
 #include <vorbis/vorbisfile.h>
 
+struct fileInfo
+{
+    // Internal identifier towards PhysFS
+    PHYSFS_file* fileHandle;
+
+    // Wether to allow seeking or not
+    bool         allowSeeking;
+};
+
 class soundDecoding
 {
     public:
         /** Constructor
          *  \param fileName file to decode from
+         *  \param Seekable if false this disables seeking, this is faster and adviseable for streams
          */
-        soundDecoding(std::string fileName);
+        soundDecoding(std::string fileName, bool Seekable);
 
         /** Destructor
          */
@@ -45,24 +55,43 @@ class soundDecoding
         /** Decode some audio
          *  decodes audio until the output buffer has reached the length bufferSize
          *  \param bufferSize the maximum output size of the returned buffer
-         *  \return a smart pointer to the output buffer (so that destruction is automatically dealt with)
+         *  \return the amount of data written into the output buffer
          */
-        unsigned int decode(boost::shared_array<char> buffer, unsigned int bufferSize);
+        unsigned int decode(char* buffer, unsigned int bufferSize);
+
+        /** Decode some audio
+         *  decodes audio until the output buffer has reached the length bufferSize
+         *  \param[in,out] bufferSize the maximum output size of the returned buffer, this is modified to the actual buffer size
+         *  \return an output buffer and a smart pointer to the output buffer
+         */
+        boost::shared_array<char> decode(unsigned int& bufferSize);
 
         /** Retrieve the channel count
          *  \return number of channels in the decoded stream
          */
-        unsigned int numChannels();
+        inline unsigned int getChannelCount()
+        {
+            return VorbisInfo->channels;
+        }
 
         /** Retrieve the sample frequency
-         *  \return sample frequency of the decoded stream
+         *  \return sample frequency of the decoded stream in Hertz (samples/second)
          */
         unsigned int frequency();
 
+        /** Retrieve the amount of samples
+         *  \return the amount of samples (samples/channel)
+         */
+        unsigned int getSampleCount();
+
     private:
-        // Internal identifier towards PhysFS
-        PHYSFS_file* fileHandle;
+        // Info used by the internal file reading callback mechanism
+        fileInfo fileHandle;
+
+        // Internal identifier towards VorbisFile
         OggVorbis_File oggVorbisStream;
+
+        // Internal data
         vorbis_info* VorbisInfo;
 };
 

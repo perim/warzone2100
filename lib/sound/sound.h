@@ -60,10 +60,10 @@ extern "C"
     const char** sound_DeviceList(void);
 
     /** Creates a 2D source and prepares for streaming specified audio from it
-     *  \param path the directory path to the file to start playing
+     *  \param fileName the file to play from
      *  \return the id number of the stream as used internally by the library
      */
-    sndStreamID sound_Create2DStream(char* path);
+    sndStreamID sound_Create2DStream(char* fileName);
 
     /** Initiates playing of a stream
      *  \param stream the stream to play
@@ -83,6 +83,12 @@ extern "C"
      *  \return TRUE if the stream is currently playing, FALSE if it is not or does not exist
      */
     BOOL sound_2DStreamIsPlaying(sndStreamID stream);
+
+    /** Creates a trackbuffer by loading it from a file
+     *  \param fileName the file to load
+     *  \return the id number of the track as used internally by the library
+     */
+    sndTrackID sound_LoadTrackFromFile(char* fileName)
 
     /** Performs required update actions
      */

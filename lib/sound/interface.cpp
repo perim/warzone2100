@@ -57,11 +57,13 @@ static boost::shared_ptr<soundContext> sndContext;
 // Forward declarations of internal functions
 static void clearDeviceList();
 
-// Some containers of exported objects (through ID numbers
+// Some containers of exported objects (through ID numbers)
 static std::map<sndStreamID, boost::shared_ptr<soundStream> > sndStreams;
+static std::map<sndTrackID, boost::shared_ptr<soundBuffer> > sndTracks;
 
 // The ID numbers
 static sndStreamID nextStreamID = 0;
+static sndTrackID nextTrackID = 0;
 
 BOOL sound_InitLibrary()
 {
@@ -104,6 +106,7 @@ BOOL sound_InitLibraryWithDevice(unsigned int deviceNum)
 
 void sound_ShutdownLibrary()
 {
+    sndTracks.clear();
     sndStreams.clear();
 
     sndContext.reset();
@@ -180,15 +183,15 @@ inline bool validStream(sndStreamID stream)
     return true;
 }
 
-sndStreamID sound_Create2DStream(char* path)
+sndStreamID sound_Create2DStream(char* fileName)
 {
-    if (!sndDevice || !Initialized)
+    if (!Initialized)
         return 0;
 
     try
     {
         // Construct decoder object and OpenAL source object
-        boost::shared_ptr<soundDecoding> decoder(new soundDecoding(path));
+        boost::shared_ptr<soundDecoding> decoder(new soundDecoding(fileName, false));
         boost::shared_ptr<soundSource> source(new soundSource(sndContext, true));
 
         // Construct streaming object
@@ -224,14 +227,11 @@ void sound_Destroy2DStream(sndStreamID stream)
 
 BOOL sound_Play2DStream(sndStreamID stream, BOOL reset)
 {
-    if (!Initialized || !stream) return FALSE;
+    if (!Initialized || !validStream(stream)) return FALSE;
 
     try
     {
-        if (validStream(stream))
-            return sndStreams[stream - 1]->play((reset == TRUE)) ? TRUE : FALSE;
-        else
-            return FALSE;
+        return sndStreams[stream - 1]->play((reset == TRUE)) ? TRUE : FALSE;
     }
     catch (std::string &e)
     {
@@ -253,14 +253,11 @@ BOOL sound_Play2DStream(sndStreamID stream, BOOL reset)
 
 BOOL sound_2DStreamIsPlaying(sndStreamID stream)
 {
-    if (!Initialized || !stream) return FALSE;
+    if (!Initialized || !validStream(stream)) return FALSE;
 
     try
     {
-        if (validStream(stream))
-            return sndStreams[stream - 1]->isPlaying() ? TRUE : FALSE;
-        else
-            return FALSE;
+        return sndStreams[stream - 1]->isPlaying() ? TRUE : FALSE;
     }
     catch (std::string &e)
     {
@@ -285,4 +282,29 @@ void sound_Update(void)
     {
         i->second->update();
     }
+}
+
+sndTrackID sound_LoadTrackFromFile(char* fileName)
+{
+    // Construct decoder object
+    boost::shared_ptr<soundDecoding> decoder(new soundDecoding(fileName, true));
+
+    // Construct track/OpenAL buffer object
+    boost::shared_ptr<soundBuffer> track(new soundBuffer);
+
+    // Decode the track
+    unsigned int size = 0;
+    boost::shared_array<char> buffer(decoder->decode(size));
+
+    if (size == 0)
+        return 0;
+
+    // Insert the buffer into the OpenAL buffer
+    track->bufferData(decoder->getChannelCount(), decoder->frequency(), buffer, size);
+
+    // Insert the track into the container for later reference/usage
+    sndTracks.insert(std::pair<sndTrackID, boost::shared_ptr<soundBuffer> >(nextTrackID, track));
+
+    // First return current track ID plus 1 (because we reserve 0 for an invalid/non-existent stream)
+    return nextTrackID++ + 1;
 }
