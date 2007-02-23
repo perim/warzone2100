@@ -88,7 +88,7 @@ extern "C"
      *  \param fileName the file to load
      *  \return the id number of the track as used internally by the library
      */
-    sndTrackID sound_LoadTrackFromFile(char* fileName)
+    sndTrackID sound_LoadTrackFromFile(char* fileName);
 
     /** Performs required update actions
      */

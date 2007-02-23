@@ -160,23 +160,25 @@ static void clearDeviceList()
     }
 }
 
-inline bool validStream(sndStreamID stream)
+template <class TypeID, class TypeObject>
+inline bool validID(const TypeID& ID, const TypeID& nextID, std::map<TypeID, boost::shared_ptr<TypeObject> >& MapCont)
 {
-    if (stream == 0)
+    if (ID == 0)
     {
-        fprintf(stderr, "soundLib: ERROR Invalid StreamID: %d\n", stream);
+        fprintf(stderr, "soundLib: ERROR Invalid ID: 0\n");
         return false;
     }
 
-    if (stream > nextStreamID)
+    if (ID > nextID)
     {
-        fprintf(stderr, "soundLib: ERROR Invalid StreamID: %d (out of bounds)\n", stream);
+        fprintf(stderr, "soundLib: ERROR Invalid ID: %d (out of bounds)\n", ID);
         return false;
     }
 
-    if (sndStreams[stream - 1].get() == NULL)
+    if (MapCont[ID - 1].get() == NULL)
     {
-        fprintf(stderr, "soundLib: ERROR Invalid StreamID: %d (NULL: probably destroyed stream)\n", stream);
+        fprintf(stderr, "soundLib: ERROR Invalid ID: %d (NULL: probably destroyed object)\n", ID);
+        MapCont.erase(ID - 1);
         return false;
     }
 
@@ -227,7 +229,7 @@ void sound_Destroy2DStream(sndStreamID stream)
 
 BOOL sound_Play2DStream(sndStreamID stream, BOOL reset)
 {
-    if (!Initialized || !validStream(stream)) return FALSE;
+    if (!Initialized || !validID(stream, nextStreamID, sndStreams)) return FALSE;
 
     try
     {
@@ -253,7 +255,7 @@ BOOL sound_Play2DStream(sndStreamID stream, BOOL reset)
 
 BOOL sound_2DStreamIsPlaying(sndStreamID stream)
 {
-    if (!Initialized || !validStream(stream)) return FALSE;
+    if (!Initialized || !validID(stream, nextStreamID, sndStreams)) return FALSE;
 
     try
     {

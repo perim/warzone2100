@@ -25,7 +25,6 @@
 #ifndef SOUND_TYPES_H
 #define SOUND_TYPES_H
 
-typedef unsigned int sndContextID;
 typedef unsigned int sndStreamID;
 typedef unsigned int sndSourceID;
 typedef unsigned int sndTrackID;

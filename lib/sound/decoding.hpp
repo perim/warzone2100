@@ -30,14 +30,7 @@
 #include <string>
 #include <vorbis/vorbisfile.h>
 
-struct fileInfo
-{
-    // Internal identifier towards PhysFS
-    PHYSFS_file* fileHandle;
-
-    // Wether to allow seeking or not
-    bool         allowSeeking;
-};
+struct fileInfo;
 
 class soundDecoding
 {
@@ -80,13 +73,13 @@ class soundDecoding
         unsigned int frequency();
 
         /** Retrieve the amount of samples
-         *  \return the amount of samples (samples/channel)
+         *  \return the amount of samples (samples/channel), or zero if it can't be determined
          */
         unsigned int getSampleCount();
 
     private:
         // Info used by the internal file reading callback mechanism
-        fileInfo fileHandle;
+        boost::shared_ptr<fileInfo> fileHandle;
 
         // Internal identifier towards VorbisFile
         OggVorbis_File oggVorbisStream;

@@ -27,6 +27,15 @@
 #include "stringconv.hpp"
 #include <vorbis/vorbisfile.h>
 
+struct fileInfo
+{
+    // Internal identifier towards PhysFS
+    PHYSFS_file* fileHandle;
+
+    // Wether to allow seeking or not
+    bool         allowSeeking;
+};
+
 static size_t ovB_read(void *ptr, size_t size, size_t nmemb, void *datasource)
 {
     PHYSFS_file* fileHandle = reinterpret_cast<fileInfo*>(datasource)->fileHandle;
@@ -91,18 +100,18 @@ static ov_callbacks oggVorbis_callbacks = {
 	ovB_tell
 };
 
-soundDecoding::soundDecoding(std::string fileName, bool Seekable)
+soundDecoding::soundDecoding(std::string fileName, bool Seekable) : fileHandle(new fileInfo)
 {
-    fileHandle.allowSeeking = Seekable;
+    fileHandle->allowSeeking = Seekable;
 
     if (!PHYSFS_exists(fileName.c_str()))
         throw std::string("decoding: PhysFS: File Not Found");
 
-    fileHandle.fileHandle = PHYSFS_openRead(fileName.c_str());
-    if (fileHandle.fileHandle == NULL)
+    fileHandle->fileHandle = PHYSFS_openRead(fileName.c_str());
+    if (fileHandle->fileHandle == NULL)
         throw std::string("decoding: PhysFS returned NULL upon PHYSFS_openRead call");
 
-    int error = ov_open_callbacks(&fileHandle, &oggVorbisStream, NULL, 0, oggVorbis_callbacks);
+    int error = ov_open_callbacks(fileHandle.get(), &oggVorbisStream, NULL, 0, oggVorbis_callbacks);
     if (error < 0)
         throw std::string("decoding: VorbisFile returned an error while opening; errorcode: " + to_string(error));
 
@@ -111,7 +120,7 @@ soundDecoding::soundDecoding(std::string fileName, bool Seekable)
 
 soundDecoding::~soundDecoding()
 {
-    PHYSFS_close(fileHandle.fileHandle);
+    PHYSFS_close(fileHandle->fileHandle);
 }
 
 unsigned int soundDecoding::decode(char* buffer, unsigned int bufferSize)
@@ -138,7 +147,7 @@ unsigned int soundDecoding::decode(char* buffer, unsigned int bufferSize)
 boost::shared_array<char> soundDecoding::decode(unsigned int& bufferSize)
 {
     // If a maximum buffer size is specified check wether it isn't larger than the needed size
-    if (((bufferSize == 0) || (bufferSize > getSampleCount())) && (getSampleCount() != OV_EINVAL) )
+    if (((bufferSize == 0) || (bufferSize > getSampleCount())) && (getSampleCount() != 0) )
         bufferSize = getSampleCount();
 
     boost::shared_array<char> buffer(new char[bufferSize]);
@@ -170,5 +179,10 @@ unsigned int soundDecoding::frequency()
 
 unsigned int soundDecoding::getSampleCount()
 {
-    return ov_pcm_total(&oggVorbisStream, -1);;
+    int numSamples = ov_pcm_total(&oggVorbisStream, -1);
+
+    if (numSamples == OV_EINVAL)
+        return 0;
+    else
+        return numSamples;
 }
