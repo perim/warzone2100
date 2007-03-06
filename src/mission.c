@@ -67,7 +67,6 @@
 
 #include "data.h"
 #include "multiplay.h"
-#include "lib/ivis_common/rendmode.h"		// for downloadbuffer
 #include "lib/ivis_common/piefunc.h"
 #include "lib/ivis_common/pieblitfunc.h"
 #include "environ.h"
@@ -81,7 +80,7 @@
 #include "selection.h"
 #include "scores.h"
 #include "keymap.h"
-
+#include "lib/ivis_common/bitimage.h"
 
 #include "cdspan.h"
 
@@ -3247,7 +3246,6 @@ void intRemoveTransporterTimer(void)
 
 void intDisplayMissionBackDrop(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
 {
-//	iV_DownloadDisplayBuffer(pMissionBackDrop->bmp);
 	scoreDataToScreen();
 }
 

@@ -71,7 +71,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="SDL.lib SDLmain.lib SDL_net.lib jpeg.lib png.lib zlib.lib ogg.lib vorbis.lib vorbisfile.lib mad.lib  physfs.lib OpenAL32.lib OpenGL32.lib GLU32.lib shfolder.lib winmm.lib wsock32.lib"
+				AdditionalDependencies="SDL.lib SDLmain.lib SDL_net.lib jpeg.lib png.lib zlib.lib ogg.lib vorbis.lib vorbisfile.lib mad.lib  physfs.lib OpenAL32.lib OpenGL32.lib GLU32.lib shfolder.lib winmm.lib wsock32.lib dbghelp.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-Dbg.exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;__DEVPKG__\lib&quot;"
@@ -124,6 +124,7 @@
 			/>
 			<Tool
 				Name="BisonParser"
+				Defines="true"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -137,7 +138,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)\..&quot;;&quot;__DEVPKG__\include&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;YY_NO_UNISTD_H;VERSION=\&quot;TRUNK\&quot;"
+				PreprocessorDefinitions="WIN32;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;YY_NO_UNISTD_H;VERSION=\&quot;TRUNK\&quot;"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -155,7 +156,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="SDL.lib SDLmain.lib SDL_net.lib jpeg.lib png.lib zlib.lib ogg.lib vorbis.lib vorbisfile.lib mad.lib  physfs.lib OpenAL32.lib OpenGL32.lib GLU32.lib shfolder.lib winmm.lib wsock32.lib"
+				AdditionalDependencies="SDL.lib SDLmain.lib SDL_net.lib jpeg.lib png.lib zlib.lib ogg.lib vorbis.lib vorbisfile.lib mad.lib  physfs.lib OpenAL32.lib OpenGL32.lib GLU32.lib shfolder.lib winmm.lib wsock32.lib dbghelp.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;__DEVPKG__\lib&quot;"
 				IgnoreDefaultLibraryNames="libcmt.lib"
@@ -285,10 +286,6 @@
 			</File>
 			<File
 				RelativePath="..\src\bucket3d.c"
-				>
-			</File>
-			<File
-				RelativePath="..\lib\ivis_common\bug.c"
 				>
 			</File>
 			<File
@@ -429,6 +426,10 @@
 			</File>
 			<File
 				RelativePath="..\lib\script\evntsave.c"
+				>
+			</File>
+			<File
+				RelativePath="..\lib\framework\exceptionhandler.c"
 				>
 			</File>
 			<File
@@ -1116,10 +1117,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\lib\ivis_common\bug.h"
-				>
-			</File>
-			<File
 				RelativePath="..\src\buildpos.h"
 				>
 			</File>
@@ -1445,10 +1442,6 @@
 			</File>
 			<File
 				RelativePath="..\lib\ivis_common\ivi.h"
-				>
-			</File>
-			<File
-				RelativePath="..\lib\ivis_opengl\ivis02.h"
 				>
 			</File>
 			<File

@@ -1034,7 +1034,7 @@ static void intDoScreenRefresh(void)
 			if (psFlag != NULL)
 			{
 				// need to restart the delivery point position
-				StartDeliveryPosition((OBJECT_POSITION *)psFlag,FALSE);
+				StartDeliveryPosition( (OBJECT_POSITION *)psFlag );
 			}
 
 			// make sure the commander order screen is in the right state
@@ -3121,7 +3121,7 @@ static void intProcessStats(UDWORD id)
 			psFlag = FindFactoryDelivery(psStruct);
 			if (psFlag)
 			{
-				StartDeliveryPosition((OBJECT_POSITION *)psFlag,FALSE);
+				StartDeliveryPosition( (OBJECT_POSITION *)psFlag );
 			}
 		}
 	}
@@ -3400,19 +3400,8 @@ void intDisplayWidgets(void)
 		if (!bMultiPlayer)
 		{
 			screen_RestartBackDrop();
-			// Download buffer in system memory to the display back buffer.
-			pie_DownloadDisplayBuffer(DisplayBuffer);
 
-	//			DISP_WIDTH, DISP_HEIGHT);
 			/*Add the radar to the design screen - only if player has HQ*/
-			/*bPlayerHasHQ=FALSE;
-			for(psStructure=apsStructLists[selectedPlayer]; psStructure && !bPlayerHasHQ; psStructure = psStructure->psNext)
-			{
-				if(psStructure->pStructureType->type == REF_HQ)
-				{
-					bPlayerHasHQ = TRUE;
-				}
-			}*/
 			bPlayerHasHQ = radarCheckForHQ(selectedPlayer);
 
 

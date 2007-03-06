@@ -57,7 +57,7 @@ LDFLAGS+=-L$(DEVDIR)/lib
 # Setup build environment with config values
 
 ifeq ($(strip $(MODE)),debug)
-CFLAGS+=-g -O0 -DDEBUG -Wall
+CFLAGS+=-g -O0 -DDEBUG -Wall -Wno-unused-label
 else
 CFLAGS+=-DNDEBUG
 endif
@@ -100,10 +100,10 @@ LDFLAGS+=-lSDL -lSDL_net -ljpeg -lpng -lphysfs -lz -lmad -lvorbisfile -lvorbis -
 # Additional platform-dependend libs
 
 ifeq ($(strip $(PLATFORM)),windows)
-LDFLAGS+=-lshfolder -lwinmm -lwsock32 -lglu32 -lopengl32 -lopenal32
+LDFLAGS+=-ldbghelp -lshfolder -lwinmm -lwsock32 -lglu32 -lopengl32 -lopenal32
 else
 ifeq ($(strip $(PLATFORM)),mingw32)
-LDFLAGS+=-lshfolder -lwinmm -lwsock32 -lglu32 -lopengl32 -lopenal32
+LDFLAGS+=-L. -ldbghelp -lshfolder -lwinmm -lwsock32 -lglu32 -lopengl32 -lopenal32
 else
 LDFLAGS+=-lGLU -lGL -lopenal
 endif

@@ -451,15 +451,6 @@ void startSinglePlayerMenu(void)
 	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, STR_FE_RETURN,IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 }
 
-#ifdef PSX_DIFFICULTY_MENU
-static void endSinglePlayerMenu( void )
-{
-	removeTopForm();
-	removeBottomForm();
-	removeBackdrop();
-}
-#endif
-
 static void frontEndNewGame( void )
 {
 	switch(StartWithGame) {
@@ -526,12 +517,6 @@ BOOL runSinglePlayerMenu(void)
 				break;
 
 			case FRONTEND_LOADCAM2:
- #ifdef PSX_DIFFICULTY_MENU
-				StartMenuDepth = 1;
-				StartWithGame = 2;
-				endSinglePlayerMenu();
-				startDifficultyMenu();
- #else
 				strcpy(pLevelName,"CAM_2A");
 				changeTitleMode(STARTGAME);
  #ifdef LOADINGBACKDROPS
@@ -539,23 +524,15 @@ BOOL runSinglePlayerMenu(void)
  #else
 				initLoadingScreen(TRUE);
  #endif
- #endif
 				break;
 
 			case FRONTEND_LOADCAM3:
- #ifdef PSX_DIFFICULTY_MENU
-				StartMenuDepth = 1;
-				StartWithGame = 3;
-				endSinglePlayerMenu();
-				startDifficultyMenu();
- #else
 				strcpy(pLevelName,"CAM_3A");
 				changeTitleMode(STARTGAME);
  #ifdef LOADINGBACKDROPS
 				AddLoadingBackdrop(TRUE);
  #else
 				initLoadingScreen(TRUE);
- #endif
  #endif
 				break;
 			case FRONTEND_LOADGAME:
@@ -816,19 +793,6 @@ BOOL startGameOptions2Menu(void)
 		addTextButton(FRONTEND_FOGTYPE_R,FRONTEND_POS4M-55,FRONTEND_POS4Y, strresGetString(psStringRes,STR_FE_GOODFOG),TRUE,FALSE);
 	}
 
-/*	////////////
-	// fog
-	addTextButton(FRONTEND_FOG,		FRONTEND_POS5X-15,FRONTEND_POS5Y, strresGetString(psStringRes, STR_FE_FOG),TRUE,FALSE);
-	if (war_GetFog())
-	{
-		addTextButton(FRONTEND_FOG_R,	FRONTEND_POS5M-55,	FRONTEND_POS5Y, strresGetString(psStringRes,STR_FE_ON),TRUE,FALSE);
-	}
-	else
-	{
-		addTextButton(FRONTEND_FOG_R,	FRONTEND_POS5M-55,	FRONTEND_POS5Y, strresGetString(psStringRes,STR_FE_OFF),TRUE,FALSE);
-	}
-*/
-
 //	////////////
 //	//sequence mode.
 	addTextButton(FRONTEND_SEQUENCE,	FRONTEND_POS6X-35,FRONTEND_POS6Y, strresGetString(psStringRes, STR_SEQ_PLAYBACK),TRUE,FALSE);
@@ -843,22 +807,6 @@ BOOL startGameOptions2Menu(void)
 	{
 		addTextButton(FRONTEND_SEQUENCE_R,	FRONTEND_POS6M-55,FRONTEND_POS6Y, strresGetString(psStringRes,STR_SEQ_MINIMAL),TRUE,FALSE);
 	}
-
-//	////////////
-//	//translucency mode.
-//	addTextButton(FRONTEND_TRANSPARENCY,	FRONTEND_POS5X-15,FRONTEND_POS5Y, strresGetString(psStringRes, STR_FE_TRANSPARENCY),TRUE,FALSE);
-//	if (!war_GetTranslucent())
-//	{
-//		addTextButton(FRONTEND_TRANSPARENCY_R,	FRONTEND_POS5M-55,FRONTEND_POS5Y, strresGetString(psStringRes,STR_FE_OFF),TRUE,FALSE);
-//	}
-//	else if (!war_GetAdditive())
-//	{
-//	addTextButton(FRONTEND_TRANSPARENCY_R,	FRONTEND_POS5M-55,FRONTEND_POS5Y, strresGetString(psStringRes,STR_COMPATIBLE),TRUE,FALSE);
-//	}
-//	else
-//	{
-//	addTextButton(FRONTEND_TRANSPARENCY_R,	FRONTEND_POS5M-55,FRONTEND_POS5Y, strresGetString(psStringRes,STR_FE_ON),TRUE,FALSE);
-//	}
 
 	////////////
 	//subtitle mode.
@@ -934,14 +882,16 @@ BOOL runGameOptions2Menu(void)
 
 	case FRONTEND_FOGTYPE:
 	case FRONTEND_FOGTYPE_R:
-	if( war_GetFog()	)
+	if (war_GetFog())
 	{	// turn off crap fog, turn on vis fog.
+		debug(LOG_FOG, "runGameOptions2Menu: Fog of war ON, visual fog OFF");
 		war_SetFog(FALSE);
 		avSetStatus(TRUE);
 		widgSetString(psWScreen,FRONTEND_FOGTYPE_R, strresGetString(psStringRes,STR_FE_GOODFOG));
 	}
 	else
 	{	// turn off vis fog, turn on normal crap fog.
+		debug(LOG_FOG, "runGameOptions2Menu: Fog of war OFF, visual fog ON");
 		avSetStatus(FALSE);
 		war_SetFog(TRUE);
 		widgSetString(psWScreen,FRONTEND_FOGTYPE_R, strresGetString(psStringRes,STR_FE_CRAPFOG));
@@ -966,44 +916,6 @@ BOOL runGameOptions2Menu(void)
 		}
 		break;
 
-
-/*	case FRONTEND_FOG:
-	case FRONTEND_FOG_R:
-		if (war_GetFog())
-		{
-			war_SetFog(FALSE);
-			widgSetString(psWScreen,FRONTEND_FOG_R,strresGetString(psStringRes,STR_FE_OFF));
-		}
-		else
-		{
-			war_SetFog(TRUE);
-			widgSetString(psWScreen,FRONTEND_FOG_R,strresGetString(psStringRes,STR_FE_ON));
-		}
-		break;
-*/
-
-
-//	case FRONTEND_TRANSPARENCY:
-//	case FRONTEND_TRANSPARENCY_R:
-//		if (!war_GetTranslucent())
-//		{
-//			war_SetTranslucent(TRUE);
-//			war_SetAdditive(FALSE);
-//			widgSetString(psWScreen,FRONTEND_TRANSPARENCY_R, strresGetString(psStringRes,STR_COMPATIBLE));
-//		}
-//		else if (!war_GetAdditive())
-//		{
-//			war_SetTranslucent(TRUE);
-//			war_SetAdditive(TRUE);
-//			widgSetString(psWScreen,FRONTEND_TRANSPARENCY_R,strresGetString(psStringRes,STR_FE_ON));
-//		}
-//		else
-//		{
-//			war_SetTranslucent(FALSE);
-//			war_SetAdditive(FALSE);
-//			widgSetString(psWScreen,FRONTEND_TRANSPARENCY_R,strresGetString(psStringRes,STR_FE_OFF));
-//		}
-//		break;
 	case FRONTEND_SEQUENCE:
 	case FRONTEND_SEQUENCE_R:
 		if( war_GetSeqMode() == SEQ_FULL )

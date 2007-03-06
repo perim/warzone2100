@@ -160,31 +160,6 @@ TITLECODE titleLoop(void)
 
 			changeTitleMode(QUIT);
 		}
-		else if(gameSpy.bGameSpy)
-		{
-			// set host
-			if (NetPlay.bHost)
-			{
-				ingame.bHostSetup = TRUE;
-			}
-			else
-			{
-				ingame.bHostSetup = FALSE;
-			}
-			// set protocol
-			// set address
-			// if host goto options.
-			// if client goto game find.
-			if(NetPlay.bHost)
-			{
-				changeTitleMode(MULTIOPTION);
-			}
-			else
-			{
-				changeTitleMode(GAMEFIND);
-			}
-		}
-
 	}
 
 	switch(titleMode)								// run relevant title screen code.
@@ -377,8 +352,6 @@ void initLoadingScreen( BOOL drawbdrop )
 		loadScreenCallNo = 0;
 		return;
 	}
-
-	pie_ResetBackDrop();
 
 	pie_SetFogStatus(FALSE);
 	pie_ScreenFlip(CLEAR_BLACK);//init loading

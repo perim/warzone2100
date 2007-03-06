@@ -781,7 +781,19 @@ BOOL eventSetContextVar(SCRIPT_CONTEXT *psContext, UDWORD index, INTERP_VAL *dat
 	}
 
 	// Store the data
-	memcpy(psVal, data, sizeof(INTERP_VAL));
+	if(data->type == VAL_STRING)
+	{
+		ASSERT(data->v.sval != NULL,
+			"eventSetContextVar: ininitialized source string pointer");
+
+		strcpy(psVal->v.sval, data->v.sval);
+
+		FREE(data->v.sval);		//not needed anymore
+	}
+	else
+	{
+		memcpy(psVal, data, sizeof(INTERP_VAL));
+	}
 
 	return TRUE;
 }
@@ -1294,9 +1306,11 @@ BOOL eventSetTrigger(void)
 		return FALSE;
 	}
 
+#ifdef REALLY_DEBUG_THIS
 	DB_TRACE(("eventSetTrigger %s %s\n",
 		eventGetEventID(psFiringTrigger->psContext->psCode, event),
 		eventGetTriggerID(psFiringTrigger->psContext->psCode, trigger)),2);
+#endif
 
 	// See if this is the event that is running
 	psContext = psFiringTrigger->psContext;

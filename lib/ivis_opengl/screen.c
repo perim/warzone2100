@@ -54,6 +54,7 @@ extern "C" {
 #include "lib/framework/frame.h"
 #include "lib/framework/frameint.h"
 #include "lib/ivis_common/piestate.h"
+#include "lib/ivis_common/pieblitfunc.h"
 #include "screen.h"
 
 /* The Current screen size and bit depth */
@@ -64,8 +65,6 @@ UDWORD		screenDepth = 0;
 SDL_Surface     *screen;
 
 //backDrop
-#define BACKDROP_WIDTH	640
-#define BACKDROP_HEIGHT	480
 UWORD*  pBackDropData = NULL;
 BOOL    bBackDrop = FALSE;
 BOOL    bUpload = FALSE;
@@ -93,7 +92,8 @@ BOOL screenInitialise(
 			)
 {
 	static int video_flags = 0;
-	int bpp = 0;
+	int bpp = 0, value;
+	GLint glval;
 
 	/* Store the screen information */
 	screenWidth = width;
@@ -170,9 +170,21 @@ BOOL screenInitialise(
 	}
 
 	screen = SDL_SetVideoMode(width, height, bpp, video_flags);
-	if (!screen) {
-		debug( LOG_ERROR, "Error: SDL_SetVideoMode failed (%s).\n", SDL_GetError() );
+	if ( !screen ) {
+		debug( LOG_ERROR, "Error: SDL_SetVideoMode failed (%s).", SDL_GetError() );
 		return FALSE;
+	}
+	if ( SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &value) == -1) 
+	{
+		debug( LOG_ERROR, "OpenGL initialization did not give double buffering!" );
+	}
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &glval);
+	debug( LOG_TEXTURE, "Maximum texture size: %dx%d", (int)glval, (int)glval );
+	if ( glval < 512 ) // FIXME: Replace by a define that gives us the real maximum
+	{
+		debug( LOG_ERROR, "OpenGL reports a texture size (%d) that is less than required!", (int)glval );
+		debug( LOG_ERROR, "This is either a bug in OpenGL or your graphics card is really old!" );
+		debug( LOG_ERROR, "Trying to run the game anyway..." );
 	}
 
 	glViewport(0, 0, width, height);
@@ -267,7 +279,7 @@ static void my_error_exit(j_common_ptr cinfo)
   longjmp(myerr->setjmp_buffer, 1);
 }
 
-METHODDEF(void) init_source(j_decompress_ptr cinfo) {}
+METHODDEF(void) init_source( WZ_DECL_UNUSED j_decompress_ptr cinfo ) {}
 
 METHODDEF(boolean) fill_input_buffer(j_decompress_ptr cinfo)
 {
@@ -280,7 +292,7 @@ METHODDEF(boolean) fill_input_buffer(j_decompress_ptr cinfo)
   return TRUE;
 }
 
-METHODDEF(void) skip_input_data(j_decompress_ptr cinfo, long num_bytes)
+METHODDEF(void) skip_input_data( j_decompress_ptr cinfo, long num_bytes )
 {
 	if (num_bytes > 0) {
 		while (num_bytes > (long) cinfo->src->bytes_in_buffer) {
@@ -292,7 +304,7 @@ METHODDEF(void) skip_input_data(j_decompress_ptr cinfo, long num_bytes)
 	}
 }
 
-METHODDEF(void) term_source(j_decompress_ptr cinfo) {}
+METHODDEF(void) term_source( WZ_DECL_UNUSED j_decompress_ptr cinfo ) {}
 
 BOOL image_load_from_jpg(pie_image* image, const char* filename)
 {
@@ -397,69 +409,71 @@ static GLuint image_create_texture(char* filename) {
 
 void screen_SetBackDropFromFile(char* filename)
 {
-   	// HACK : We should use a resource handler here!
-    char *extension;
+	// HACK : We should use a resource handler here!
+	char *extension = strrchr(filename, '.');// determine the filetype
 
-    // determine the filetype
-    extension = strrchr(filename, '.');
-    if(!extension)
+	if(!extension)
 	{
-        debug(LOG_ERROR, "Image without extension: \"%s\"!", filename);
-        return; // filename without extension... don't bother
-    }
+		debug(LOG_ERROR, "Image without extension: \"%s\"!", filename);
+		return; // filename without extension... don't bother
+	}
 
-    if( strcmp(extension,".jpg") == 0 || strcmp(extension,".jpeg") == 0 )
-	{ 
+	// Make sure the current texture page is reloaded after we are finished
+	// Otherwise WZ will think it is still loaded and not load it again
+	pie_SetTexturePage(-1);
+
+	if( strcmp(extension,".jpg") == 0 || strcmp(extension,".jpeg") == 0 )
+	{
 		pie_image image;
 
-	    image_init(&image);
+		image_init(&image);
 
-    	if (!image_load_from_jpg(&image, filename)) {
-	    	if (~backDropTexture == 0)
-	    		glGenTextures(1, &backDropTexture);
-    
-	    	glBindTexture(GL_TEXTURE_2D, backDropTexture);
-	    	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-	    		     image.width, image.height,
-	    		     0, GL_RGB, GL_UNSIGNED_BYTE, image.data);
-	    	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	    	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	    	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	    	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	    	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	    }
+		if (!image_load_from_jpg(&image, filename)) {
+			if (~backDropTexture == 0)
+				glGenTextures(1, &backDropTexture);
 
-	    image_delete(&image);
-        return;
-    }
-    else if( strcmp(extension,".png") == 0 )
+			glBindTexture(GL_TEXTURE_2D, backDropTexture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+					image.width, image.height,
+					0, GL_RGB, GL_UNSIGNED_BYTE, image.data);
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		}
+
+		image_delete(&image);
+		return;
+	}
+	else if( strcmp(extension,".png") == 0 )
 	{
 		iSprite imagePNG;
 		char * buffer = NULL;
 		unsigned int dummy = 0;
 
-	    if (loadFile( filename, &buffer, &dummy ) && pie_PNGLoadMem( buffer, &imagePNG ) )
-	    {
-	    	if (~backDropTexture == 0)
-	    		glGenTextures(1, &backDropTexture);
-    
-	    	glBindTexture(GL_TEXTURE_2D, backDropTexture);
-	    	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-	    		     imagePNG.width, imagePNG.height,
-	    		     0, GL_RGBA, GL_UNSIGNED_BYTE, imagePNG.bmp);
-	    	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	    	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	    	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	    	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	    	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-    
-	    	free(imagePNG.bmp);
-	    }
-    	FREE(buffer);
-        return;
-    }
+		if (loadFile( filename, &buffer, &dummy ) && pie_PNGLoadMem( buffer, &imagePNG ) )
+		{
+			if (~backDropTexture == 0)
+				glGenTextures(1, &backDropTexture);
+
+			glBindTexture(GL_TEXTURE_2D, backDropTexture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+					imagePNG.width, imagePNG.height,
+					0, GL_RGBA, GL_UNSIGNED_BYTE, imagePNG.bmp);
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+
+			free(imagePNG.bmp);
+		}
+		FREE(buffer);
+		return;
+	}
 	else
-	    debug(LOG_ERROR, "Unknown extension \"%s\" for image \"%s\"!", extension, filename);
+		debug(LOG_ERROR, "Unknown extension \"%s\" for image \"%s\"!", extension, filename);
 }
 //===================================================================
 
@@ -479,8 +493,8 @@ BOOL screen_GetBackDrop(void)
 }
 //******************************************************************
 //slight hack to display maps (or whatever) in background.
-//bitmap MUST be 512x512 for now.  -Q
-void screen_Upload(UWORD* newBackDropBmp)
+//bitmap MUST be (BACKDROP_HACK_WIDTH * BACKDROP_HACK_HEIGHT) for now.
+void screen_Upload(char *newBackDropBmp)
 {
 	if(newBackDropBmp != NULL)
 	{
@@ -488,7 +502,7 @@ void screen_Upload(UWORD* newBackDropBmp)
 		pie_SetTexturePage(-1);
 		glBindTexture(GL_TEXTURE_2D, backDropTexture);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-			512,512,//backDropWidth, backDropHeight,
+			BACKDROP_HACK_WIDTH, BACKDROP_HACK_HEIGHT,
 			0, GL_RGB, GL_UNSIGNED_BYTE, newBackDropBmp);
 
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -500,6 +514,11 @@ void screen_Upload(UWORD* newBackDropBmp)
 
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);
+
+	// Make sure the current texture page is reloaded after we are finished
+	// Otherwise WZ will think it is still loaded and not load it again
+	pie_SetTexturePage(-1);
+
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, backDropTexture);
 	glColor3f(1, 1, 1);
@@ -569,7 +588,7 @@ void screenDoDumpToDiskIfRequired(void)
 	struct jpeg_error_mgr jerr;
 	my_jpeg_destination_mgr jdest;
 	JSAMPROW row_pointer[1];
-	int row_stride;
+	unsigned int row_stride;
 
 	if (!screendump_required) return;
 

@@ -120,12 +120,36 @@ static BOOL eventSaveContext(char *pBuffer, UDWORD *pSize)
 				size += sizeof(SWORD);
 
 				// store the variable value
-				if (psVal->type < VAL_USERTYPESTART)
+				if (psVal->type == VAL_STRING)
 				{
-					// internal type - just store the DWORD value
+					UDWORD stringLen = 0;
+
+					if(psVal->v.sval != NULL && strlen(psVal->v.sval) > 0)
+					{
+						stringLen = strlen(psVal->v.sval) + 1;
+					}
+
 					if (pBuffer != NULL)
 					{
-/* FIXME: this does not work for VAL_OBJ_GETSET, VAL_FUNC_EXTERN, or VAL_STRING */
+						*((UDWORD *)pPos) = stringLen;
+						endian_udword((UDWORD *)pPos);
+						pPos += sizeof(UDWORD);
+
+						if(stringLen > 0)
+						{
+							strcpy((char *)pPos, psVal->v.sval);
+						}
+						pPos += stringLen;
+					}
+
+					size += sizeof(UDWORD) + stringLen;
+				}
+				else if (psVal->type < VAL_USERTYPESTART)
+				{
+					// internal type
+					if (pBuffer != NULL)
+					{
+/* FIXME: this does not work for VAL_OBJ_GETSET, VAL_FUNC_EXTERN */
 						*((UDWORD *)pPos) = (UDWORD)psVal->v.ival;
 						endian_udword((UDWORD*)pPos);
 						
@@ -193,15 +217,16 @@ static BOOL eventSaveContext(char *pBuffer, UDWORD *pSize)
 }
 
 // load the context information for the script system
-static BOOL eventLoadContext(SDWORD version, char *pBuffer, UDWORD *pSize)
+static BOOL eventLoadContext(SDWORD version, char *pBuffer, UDWORD *pSize, BOOL bHashed)
 {
-	UDWORD				size, valSize;
+	UDWORD				size, valSize,stringLen;
 	SDWORD				numVars, i, numContext, context;
 	SCRIPT_CONTEXT		*psCCont;
 	INTERP_TYPE			type;
 	SCR_VAL_LOAD		loadFunc;
 	char				*pPos;
 	char				*pScriptID;
+	UDWORD				hashedName;
 	SCRIPT_CODE			*psCode;
 	CONTEXT_RELEASE			release;
 	INTERP_VAL			*psVal, data;
@@ -218,16 +243,21 @@ static BOOL eventLoadContext(SDWORD version, char *pBuffer, UDWORD *pSize)
 	// go through the contexts
 	for(context=0; context < numContext; context += 1)
 	{
-		// get the script code
-		pScriptID = (char *)pPos;
-		psCode = (SCRIPT_CODE*)resGetData("SCRIPT", pScriptID);
-		pPos += strlen(pScriptID) + 1;
-
+	    if(bHashed) {
+    		endian_udword((UDWORD*)pPos);
+    		hashedName = *((UDWORD*)pPos);
+    		psCode = (SCRIPT_CODE*)resGetDataFromHash("SCRIPT", hashedName);
+    		pPos += sizeof(UDWORD);
+	    } else {
+    		// get the script code
+    		pScriptID = (char *)pPos;
+    		psCode = (SCRIPT_CODE*)resGetData("SCRIPT", pScriptID);
+    		pPos += strlen(pScriptID) + 1;
+    	}
 		// check the number of variables
-		numVars = psCode->numGlobals + psCode->arraySize;
-
 		endian_sword((SWORD*)pPos);
-
+   		numVars = psCode->numGlobals + psCode->arraySize;
+        
 		if (numVars != *((SWORD*)pPos))
 		{
 			debug( LOG_ERROR, "eventLoadContext: number of context variables does not match the script code" );
@@ -248,7 +278,11 @@ static BOOL eventLoadContext(SDWORD version, char *pBuffer, UDWORD *pSize)
 		// bit of a hack this - note the id of the context to link it to the triggers
 		psContList->id = (SWORD)context;
 
-		size += strlen(pScriptID) + 1 + sizeof(SWORD) + sizeof(UBYTE);
+        if(bHashed) {
+            size += sizeof(UDWORD) + sizeof(SWORD) + sizeof(UBYTE);
+        } else {
+		    size += strlen(pScriptID) + 1 + sizeof(SWORD) + sizeof(UBYTE);
+		}
 
 		// set the context variables
 		for(i=0; i < numVars; i+= 1)
@@ -267,217 +301,56 @@ static BOOL eventLoadContext(SDWORD version, char *pBuffer, UDWORD *pSize)
 				endian_udword((UDWORD*)pPos);
 
 				switch (type) {
-					case VAL_BOOL:
-						data.v.bval = *((BOOL*)pPos);
-						pPos += sizeof(BOOL);
-						size += sizeof(BOOL);
-						break;
-					case VAL_FLOAT:
-						data.v.fval = *((float*)pPos);
-						pPos += sizeof(float);
-						size += sizeof(float);
-						break;
-					case VAL_INT:
-					case VAL_TRIGGER:
-					case VAL_EVENT:
-					case VAL_VOID:
-					case VAL_OPCODE:
-					case VAL_PKOPCODE:
-						data.v.ival = *((UDWORD *)pPos);
-						pPos += sizeof(UDWORD);
-						size += sizeof(UDWORD);
-						break;
-					case VAL_STRING:
-/* FIXME: this would never work */
-						data.v.sval = pPos;
-						pPos += sizeof(char*);
-						size += sizeof(char*);
-						break;
-					case VAL_OBJ_GETSET:
-/* FIXME: saving pointer on disk! */
-						data.v.pObjGetSet = *((SCRIPT_VARFUNC*)pPos);
-						pPos += sizeof(SCRIPT_VARFUNC);
-						size += sizeof(SCRIPT_VARFUNC);
-						break;
-					case VAL_FUNC_EXTERN:
-/* FIXME: saving pointer on disk! */
-						data.v.pFuncExtern = *((SCRIPT_FUNC*)pPos);
-						pPos += sizeof(SCRIPT_FUNC);
-						size += sizeof(SCRIPT_FUNC);
-						break;
-					default:
-						ASSERT( FALSE, "eventLoadContext: invalid internal type" );
-				}
-
-				// set the value in the context
-				if (!eventSetContextVar(psCCont, (UDWORD)i, &data))
-				{
-					debug( LOG_ERROR, "eventLoadContext: couldn't set variable value" );
-					abort();
-					return FALSE;
-				}
-			}
-			else
-			{
-				// user defined type
-				loadFunc = asScrTypeTab[type - VAL_USERTYPESTART].loadFunc;
-
-				ASSERT( loadFunc != NULL,
-					"eventLoadContext: no load function for type %d\n", type );
-
-				endian_uword((UWORD*)pPos);
-				valSize = *((UWORD *)pPos);
-
-				pPos += sizeof(UWORD);
-				size += sizeof(UWORD);
-
-				// get the value pointer so that the loadFunc can write directly
-				// into the variables data space.
-				if (!eventGetContextVal(psCCont, (UDWORD)i, &psVal))
-				{
-					debug( LOG_ERROR, "eventLoadContext: couldn't find variable in context" );
-					abort();
-					return FALSE;
-				}
-
-				if (!loadFunc(version, psVal, pPos, valSize))
-				{
-					debug( LOG_ERROR, "eventLoadContext: couldn't get variable value" );
-					abort();
-					return FALSE;
-				}
-
-				pPos += valSize;
-				size += valSize;
-			}
-		}
-	}
-
-	*pSize = size;
-
-	return TRUE;
-}
-
-// load the context information for the script system
-static BOOL eventLoadContextHashed(SDWORD version, char *pBuffer, UDWORD *pSize)
-{
-	UDWORD				size, valSize;
-	SDWORD				numVars, i, numContext, context;
-	SWORD				savedNumVars;
-	SCRIPT_CONTEXT		*psCCont;
-	INTERP_TYPE			type;
-	SCR_VAL_LOAD		loadFunc;
-	char				*pPos;
-//not hashed	char				*pScriptID;
-	UDWORD				hashedName;
-	SCRIPT_CODE			*psCode;
-	CONTEXT_RELEASE			release;
-	INTERP_VAL			*psVal, data;
-
-	size = 0;
-	pPos = pBuffer;
-
-	// get the number of contexts in the save file
-	endian_sword((SWORD *)pPos);
-	numContext = *((SWORD *)pPos);
-	pPos += sizeof(SWORD);
-	size += sizeof(SWORD);
-
-	// go through the contexts
-	for(context=0; context < numContext; context += 1)
-	{
-		// get the script code
-//notHashed		pScriptID = (char *)pPos;
-//notHashed		psCode = resGetData("SCRIPT", pScriptID);
-//notHashed		pPos += strlen(pScriptID) + 1;
-		endian_udword((UDWORD*)pPos);
-		hashedName = *((UDWORD*)pPos);
-		pPos += sizeof(UDWORD);
-		psCode = (SCRIPT_CODE*)resGetDataFromHash("SCRIPT", hashedName);
-
-
-		// check the number of variables
-		numVars = psCode->numGlobals + psCode->arraySize;
-		endian_sword((SWORD*)pPos);
-		savedNumVars = *((SWORD*)pPos);
-		if (numVars != savedNumVars)
-		{
-			debug( LOG_ERROR, "eventLoadContext: number of context variables does not match the script code" );
-			abort();
-			return FALSE;
-		}
-		pPos += sizeof(SWORD);
-
-		release = (CONTEXT_RELEASE)*pPos;
-		pPos += sizeof(UBYTE);
-
-		// create the context
-		if (!eventNewContext(psCode, release, &psCCont))
-		{
-			return FALSE;
-		}
-
-		// bit of a hack this - note the id of the context to link it to the triggers
-		psContList->id = (SWORD)context;
-
-		size += sizeof(UDWORD) + sizeof(SWORD) + sizeof(UBYTE);
-
-		// set the context variables
-		for(i=0; i < numVars; i+= 1)
-		{
-			// get the variable type
-			endian_sword((SWORD*)pPos);
-			type = (INTERP_TYPE) *((SWORD*)pPos);
-			pPos += sizeof(SWORD);
-			size += sizeof(SWORD);
-
-			// get the variable value
-			if (type < VAL_USERTYPESTART)
-			{
-				data.type = type;
-
-				endian_udword((UDWORD*)pPos);
-
-				switch (type) {
-				  case VAL_BOOL:
+				case VAL_BOOL:
 					data.v.bval = *((BOOL*)pPos);
 					pPos += sizeof(BOOL);
 					size += sizeof(BOOL);
 					break;
-				  case VAL_FLOAT:
+				case VAL_FLOAT:
 					data.v.fval = *((float*)pPos);
 					pPos += sizeof(float);
 					size += sizeof(float);
 					break;
-				  case VAL_INT:
-				  case VAL_TRIGGER:
-				  case VAL_EVENT:
-				  case VAL_VOID:
-				  case VAL_OPCODE:
-				  case VAL_PKOPCODE:
+				case VAL_INT:
+				case VAL_TRIGGER:
+				case VAL_EVENT:
+				case VAL_VOID:
+				case VAL_OPCODE:
+				case VAL_PKOPCODE:
 					data.v.ival = *((UDWORD *)pPos);
 					pPos += sizeof(UDWORD);
 					size += sizeof(UDWORD);
 					break;
-				  case VAL_STRING:
-/* FIXME: this would never work! */
-					data.v.sval = pPos;
-					pPos += sizeof(char*);
-					size += sizeof(char*);
+				case VAL_STRING:
+					data.v.sval = (char*)MALLOC(MAXSTRLEN);
+					strcpy(data.v.sval, "\0");
+
+					stringLen = *((UDWORD *)pPos);	//read string length
+					
+					pPos += sizeof(UDWORD);
+					size += sizeof(UDWORD);
+
+					//load string
+					if(stringLen > 0)
+					{
+						strncpy(data.v.sval, (char *)pPos, stringLen);
+						pPos += stringLen;
+						size += stringLen;
+					}
 					break;
-				  case VAL_OBJ_GETSET:
+				case VAL_OBJ_GETSET:
 /* FIXME: saving pointer on disk! */
 					data.v.pObjGetSet = *((SCRIPT_VARFUNC*)pPos);
 					pPos += sizeof(SCRIPT_VARFUNC);
 					size += sizeof(SCRIPT_VARFUNC);
 					break;
-				  case VAL_FUNC_EXTERN:
-/* TODO: saving pointer on disk! */
+				case VAL_FUNC_EXTERN:
+/* FIXME: saving pointer on disk! */
 					data.v.pFuncExtern = *((SCRIPT_FUNC*)pPos);
 					pPos += sizeof(SCRIPT_FUNC);
 					size += sizeof(SCRIPT_FUNC);
 					break;
-				  default:
+				default:
 					ASSERT( FALSE, "eventLoadContext: invalid internal type" );
 				}
 
@@ -812,19 +685,9 @@ BOOL eventLoadState(char *pBuffer, UDWORD fileSize, BOOL bHashed)
 
 
 	// load the event contexts
-	if (bHashed)
+	if (!eventLoadContext(version, pPos, &size, bHashed))
 	{
-		if (!eventLoadContextHashed(version, pPos, &size))
-		{
-			return FALSE;
-		}
-	}
-	else
-	{
-		if (!eventLoadContext(version, pPos, &size))
-		{
-			return FALSE;
-		}
+		return FALSE;
 	}
 
 	pPos += size;

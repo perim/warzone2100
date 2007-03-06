@@ -77,8 +77,6 @@ SDWORD						player2dpid[MAX_PLAYERS]	={0,0,0,0,0,0,0,0};		//stores dpids of each
 BOOL						openchannels[MAX_PLAYERS]={TRUE};
 UBYTE						bDisplayMultiJoiningStatus;
 
-GAMESPY						gameSpy;
-
 MULTIPLAYERGAME				game;									//info to describe game.
 MULTIPLAYERINGAME			ingame;
 
@@ -500,35 +498,7 @@ char *getPlayerName(UDWORD player)
 			if(strcmp(NetPlay.players[i].name,"") == 0)
 			{
 				// make up a name for this player.
-				switch(getPlayerColour(player))
-				{
-				case 0:
-					strcpy(tempString,strresGetString(psStringRes, STR_FE_GREEN));
-					break;
-				case 1:
-					strcpy(tempString,strresGetString(psStringRes, STR_FE_ORANGE));
-					break;
-				case 2:
-					strcpy(tempString,strresGetString(psStringRes, STR_FE_GREY));
-					break;
-				case 3:
-					strcpy(tempString,strresGetString(psStringRes, STR_FE_BLACK));
-					break;
-				case 4:
-					strcpy(tempString,strresGetString(psStringRes, STR_FE_RED));
-					break;
-				case 5:
-					strcpy(tempString,strresGetString(psStringRes, STR_FE_BLUE));
-					break;
-				case 6:
-					strcpy(tempString,strresGetString(psStringRes, STR_FE_PINK));
-					break;
-				case 7:
-					strcpy(tempString,strresGetString(psStringRes, STR_FE_CYAN));
-					break;
-				}
-//				sprintf(tempString,"%d",player);
-				return tempString;
+				return getPlayerColourName(player);
 			}
 
 			return (char*)&NetPlay.players[i].name;

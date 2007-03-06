@@ -212,7 +212,7 @@ void CancelObjectOrbit(void);
 
 extern void FinishDeliveryPosition(UDWORD xPos,UDWORD yPos,void *UserData);
 extern void CancelDeliveryRepos(void);
-extern void StartDeliveryPosition(OBJECT_POSITION *psLocation,BOOL driveActive);
+extern void StartDeliveryPosition( OBJECT_POSITION *psLocation );
 extern BOOL GetDeliveryRepos(UDWORD *xPos,UDWORD *yPos);
 extern BOOL DeliveryReposValid(void);
 
@@ -224,7 +224,7 @@ extern BOOL	getRotActive( void );
 extern SDWORD	getDesiredPitch( void );
 extern void	setDesiredPitch(SDWORD pitch);
 
-#define MAX_PLAYER_X_ANGLE	(-14)
+#define MAX_PLAYER_X_ANGLE	(-7)
 #define MIN_PLAYER_X_ANGLE	(-50)
 
 #define	HIDDEN_FRONTEND_WIDTH	(640)

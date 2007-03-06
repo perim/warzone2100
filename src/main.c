@@ -401,6 +401,7 @@ int main(int argc, char *argv[])
 # endif //DEBUG
 #endif // WZ_CC_MSVC
 
+	setupExceptionHandler(argv[0]);
 
 	debug_init();
 	atexit( debug_exit );
@@ -455,7 +456,7 @@ init://jump here from the end if re_initialising
 
 	bDisableLobby = FALSE;
 
-	loadConfig(FALSE);
+	loadConfig();
 	atexit( closeConfig );
 
 	// parse the command line

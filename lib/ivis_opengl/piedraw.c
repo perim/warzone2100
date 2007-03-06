@@ -641,7 +641,7 @@ static void pie_ShadowDrawLoop(float pos_lgt0[4])
 {
 	float invmat[9];
 	fVector light;
-	int i;
+	unsigned int i;
 
 	for (i = 0; i < nb_scshapes; i++)
 	{
@@ -687,7 +687,7 @@ static void pie_DrawShadows(void)
 		glStencilOp(GL_KEEP, GL_KEEP, GL_INCR_WRAP_EXT);
 		glStencilFunc(GL_ALWAYS, 0, ~0);
 
-		pie_ShadowDrawLoop(&pos_lgt0);
+		pie_ShadowDrawLoop(pos_lgt0);
 		glDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
 
 	} else {
@@ -702,14 +702,14 @@ static void pie_DrawShadows(void)
 		glCullFace(GL_BACK);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
 
-		pie_ShadowDrawLoop(&pos_lgt0);
+		pie_ShadowDrawLoop(pos_lgt0);
 
 		// Setup stencil for front faces.
 		glCullFace(GL_FRONT);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_DECR);
 
 		// Draw shadows again
-		pie_ShadowDrawLoop(&pos_lgt0);
+		pie_ShadowDrawLoop(pos_lgt0);
 	}
 
 	glEnable(GL_CULL_FACE);
@@ -821,7 +821,7 @@ void pie_DrawImage(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style)
  *
  ***************************************************************************/
 
-void pie_DrawImage270(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style)
+void pie_DrawImage270( PIEIMAGE *image, PIERECT *dest )
 {
 	PIELIGHT colour;
 
@@ -845,29 +845,6 @@ void pie_DrawImage270(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style)
 }
 
 /***************************************************************************
- * pie_DrawLine
- *
- * universal line function for hardware
- *
- * Assumes render mode set up externally
- *
- ***************************************************************************/
-
-void pie_DrawLine(SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1, UDWORD colour, BOOL bClip)
-{
-	polyCount++;
-
-	pie_SetTexturePage(-1);
-	pie_SetColourKeyedBlack(FALSE);
-	pie_SetColour(colour);
-
-	glBegin(GL_LINE_STRIP);
-	glVertex3f(x0, y0, INTERFACE_DEPTH);
-	glVertex3f(x1, y1, INTERFACE_DEPTH);
-	glEnd();
-}
-
-/***************************************************************************
  * pie_DrawRect
  *
  * universal rectangle function for hardware
@@ -876,7 +853,7 @@ void pie_DrawLine(SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1, UDWORD colour, BOO
  *
  ***************************************************************************/
 
-void pie_DrawRect(SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1, UDWORD colour, BOOL bClip)
+void pie_DrawRect( SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1, UDWORD colour )
 {
 	PIELIGHT c;
 	polyCount++;
@@ -968,7 +945,7 @@ int	uFrame, vFrame, j, framesPerLine;
  ***************************************************************************/
 
 //ivis style draw function
-void pie_DrawTriangle(iVertex *pv, iTexture* texPage, UDWORD renderFlags, iPoint *offset)
+void pie_DrawTriangle( iVertex *pv )
 {
 	UDWORD	i;
 
@@ -981,9 +958,10 @@ void pie_DrawTriangle(iVertex *pv, iTexture* texPage, UDWORD renderFlags, iPoint
 	glEnd();
 }
 
-void pie_DrawPoly(SDWORD numVrts, PIEVERTEX *aVrts, SDWORD texPage, void* psEffects)
+void pie_DrawTexTriangle(PIEVERTEX *aVrts, SDWORD texPage, void* psEffects)
 {
-	FRACT		offset = 0;
+	GLfloat	offset = 0;
+	int i;
 
 	/*	Since this is only used from within source for the terrain draw - we can backface cull the
 		polygons.
@@ -991,22 +969,29 @@ void pie_DrawPoly(SDWORD numVrts, PIEVERTEX *aVrts, SDWORD texPage, void* psEffe
 	tileCount++;
 	pie_SetTexturePage(texPage);
 	pie_SetFogStatus(TRUE);
-	if (psEffects == NULL)//jps 15apr99 translucent water code
+	if (psEffects == NULL)
 	{
-		pie_SetRendMode(REND_GOURAUD_TEX);//jps 15apr99 old solid water code
+		/* Solid terrain */
+		pie_SetRendMode(REND_GOURAUD_TEX);
 		pie_SetColourKeyedBlack(TRUE);
 	}
-	else//jps 15apr99 translucent water code
+	else
 	{
-		pie_SetRendMode(REND_ALPHA_TEX);//jps 15apr99 old solid water code
+		/* Translucent water with animation */
+		pie_SetRendMode(REND_ALPHA_TEX);
 		pie_SetColourKeyedBlack(FALSE);
-		offset = *((float*)psEffects);
+		offset = *((GLfloat*)psEffects);
 	}
 	pie_SetBilinear(TRUE);
 
-	if (numVrts >= 3) {
-		pie_Polygon(numVrts, aVrts, offset, FALSE);
+	glBegin(GL_TRIANGLE_FAN);
+	for ( i = 0; i < 3; i++ )
+	{
+		glColor4ub( aVrts[i].light.byte.r, aVrts[i].light.byte.g, aVrts[i].light.byte.b, aVrts[i].light.byte.a );
+		glTexCoord2f( aVrts[i].tu, aVrts[i].tv + offset );
+		glVertex3f( aVrts[i].sx, aVrts[i].sy, aVrts[i].sz );
 	}
+	glEnd();
 }
 
 void pie_GetResetCounts(SDWORD* pPieCount, SDWORD* pTileCount, SDWORD* pPolyCount, SDWORD* pStateCount)

@@ -23,6 +23,8 @@
 #ifndef _frame_h
 #define _frame_h
 
+#include <string.h>
+
 #include "platform.h"
 #include "macros.h"
 
@@ -198,5 +200,6 @@ static inline void endian_fract(FRACT *fract) {
 # define endian_fract(x)
 #endif
 
+void setupExceptionHandler(char * programCommand);
 
 #endif

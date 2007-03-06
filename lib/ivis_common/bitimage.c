@@ -66,14 +66,13 @@ UWORD iV_GetImageCenterY(IMAGEFILE *ImageFile, UWORD ID)
 	return ImageFile->ImageDefs[ID].YOffset + ImageFile->ImageDefs[ID].Height/2;
 }
 
-IMAGEFILE *iV_LoadImageFile(char *FileData, UDWORD FileSize)
+IMAGEFILE *iV_LoadImageFile(char *FileData, WZ_DECL_UNUSED UDWORD FileSize)
 {
 	char *Ptr;
 	IMAGEHEADER *Header;
 	IMAGEFILE *ImageFile;
 	IMAGEDEF *ImageDef;
 	int i;
-
 
 	Ptr = FileData;
 

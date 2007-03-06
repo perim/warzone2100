@@ -7,10 +7,6 @@ AM_INIT_AUTOMAKE([1.8])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([lib/framework/frame.c])
 
-if test "x$docdir" = "x" ; then
-	AC_SUBST(docdir, $(datarootdir)/doc/$(AC_PACKAGE_TARNAME))
-fi
-
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_RANLIB
@@ -35,8 +31,26 @@ if test x$host_os = xmingw32 ; then
 		if test x$WINDRES = xno ; then
 			AC_MSG_ERROR([windres not found])
 		fi
-#		WIN32_LIBS="-L\$(srcdir) -ldbghelp -lshfolder -lwinmm -lwsock32"
-		WIN32_LIBS="-lshfolder -lwinmm -lwsock32"
+		WIN32_LIBS="-L\$(srcdir) -ldbghelp -lshfolder -lwinmm -lwsock32"
+fi
+
+
+# Installation directories
+
+AC_ARG_WITH(icondir,
+[AS_HELP_STRING([--with-icondir=DIR],[icon files [DATADIR/icons]])],
+[ icondir=$withval ], [ icondir=$datadir/icons ])
+
+
+AC_ARG_WITH(applicationdir,
+[AS_HELP_STRING([--with-applicationdir=DIR],[application files [DATADIR/applications]])],
+[ applicationdir=$withval ], [ applicationdir=$datadir/applications ])
+
+
+AC_SUBST(icondir, $icondir)
+AC_SUBST(applicationdir, $applicationdir)
+if test "x$docdir" = "x" ; then
+	AC_SUBST(docdir, $datarootdir/doc/$AC_PACKAGE_TARNAME)
 fi
 
 
@@ -98,20 +112,26 @@ if test "x$installer" = "xyes" ; then
 		AC_SUBST(INSTALLER_LIBDIR, $installer_libdir)
 	fi
 fi
-  
 
+
+# -O0 turns off all optimizations; this is necessary for accurate debugging
+# -Wno-unused-label is necessary because flex produces unused labels that we cannot fix
+# Add later for stricter checking: -Wextra -Wmissing-declarations -Wstrict-prototypes
 AC_ARG_ENABLE(debug,
-[AS_HELP_STRING([--enable-debug],[Compile debug version])],
+[AS_HELP_STRING([--enable-debug[=strict/yes/relaxed/no]],[Compile debug version [no]])],
 [ debug=$enableval ], [ debug=no ])
 AC_MSG_CHECKING([whether to compile in debug mode])
 AC_MSG_RESULT([$debug])
 if test "x$debug" = "xyes" ; then
-  # -O0 turns off all optimizations; this is necessary for accurate debugging
-  WZ_CFLAGS="${WZ_CFLAGS} -g -O0 -DDEBUG -Wall"
-# add these when the code is ready for them
-# -Wextra -Wwrite-strings -Wcast-qual -Wmissing-declarations -Wstrict-prototypes -Wold-style-definition"
+  WZ_CFLAGS="${WZ_CFLAGS} -g -DDEBUG -Wall -Wno-unused-label"
+  WZ_OVERRIDE="-O0"
+elif test "x$debug" = "xstrict" ; then
+  WZ_CFLAGS="${WZ_CFLAGS} -g -DDEBUG -Wall -Wno-unused-label -Werror"
+  WZ_OVERRIDE="-O0"
+elif test "x$debug" = "xrelaxed" ; then
+  WZ_CFLAGS="${WZ_CFLAGS} -g -DDEBUG -Wall -Wno-unused-label -Wextra"
 else
-  WZ_CFLAGS="${WZ_CFLAGS} -DNDEBUG"
+  WZ_CFLAGS="${WZ_CFLAGS} -g -DNDEBUG"
 fi
 
 
@@ -193,7 +213,6 @@ AC_MSG_CHECKING([OpenGL])
 if test "x$opengl" = "xyes" ; then
 	AC_DEFINE(WZ_OPENGL, 1, [OpenGL acceleration])
 	WZ_LIBS="${WZ_LIBS} ${GLLIB} ${GLULIB}"
-	AC_SUBST(RENDERER, "ivis_opengl")
 	AC_MSG_RESULT([yes])
 else
 	AC_MSG_RESULT([no])
@@ -284,15 +303,12 @@ else
   AC_DEFINE(WZ_NOMP3, 1, [Disable mp3 support])
 fi
 
-
 # add some required C flags here
 # -DYY_STATIC is required by flex
 WZ_CFLAGS="${WZ_CFLAGS} -DYY_STATIC -DDEFAULT_DATADIR=\\\"${datadir}/warzone2100\\\""
 
-# only now set the LIBS/CFLAGS/CPPFLAGS lines, if set earlier it will give
-# strange error messages when something is wrong
+CFLAGS="${WZ_CFLAGS} ${CFLAGS} ${WZ_OVERRIDE}"
 LIBS="${LIBS} ${WZ_LIBS} ${WIN32_LIBS}"
-CFLAGS="${CFLAGS} ${WZ_CFLAGS}"
 
 AC_CONFIG_HEADER([lib/framework/config.h])
 AC_CONFIG_FILES([Makefile

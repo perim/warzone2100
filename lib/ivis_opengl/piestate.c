@@ -94,7 +94,6 @@ void pie_SetFogStatus(BOOL val)
 		if (rendStates.fog != val)
 		{
 			rendStates.fog = val;
-
 			if (rendStates.fog) {
 				fog.argb = pie_GetFogColour();
 				fog_colour[0] = fog.byte.r/255.0f;

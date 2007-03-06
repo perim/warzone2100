@@ -977,8 +977,6 @@ BOOL systemInitialise(void)
 		return FALSE;
 	}
 
-	pie_SetTranslucent(war_GetTranslucent());
-	pie_SetAdditive(war_GetAdditive());
 	pie_SetGammaValue((float)gammaValue / 20.0f);
 
 	displayBufferSize = pie_GetVideoBufferWidth()*pie_GetVideoBufferHeight()*2;
@@ -1054,7 +1052,7 @@ BOOL systemInitialise(void)
 	arrowInit();
 #endif
 
-	iV_Reset(TRUE);								// Reset the IV library.
+	iV_Reset();								// Reset the IV library.
 	initLoadingScreen(TRUE);
 
 	return TRUE;
@@ -1170,7 +1168,7 @@ BOOL frontendInitialise(const char *ResourceFile)
 		return FALSE;
 	}
 
-	iV_Reset(TRUE);								// Reset the IV library.
+	iV_Reset();								// Reset the IV library.
 
 	if (!scrTabInitialise())				// Initialise the script system
 	{
@@ -1231,8 +1229,6 @@ BOOL frontendInitialise(const char *ResourceFile)
 	{
 		return FALSE;
 	}
-
-	loadConfig(TRUE);// get favourite settings from the registry
 
 	// keymappings
 	// clear out any existing mappings
@@ -1338,7 +1334,7 @@ BOOL stageOneInitialise(void)
 		return FALSE;
 	}
 
-	iV_Reset(FALSE);			// Reset the IV library. (but not the palette)
+	iV_Reset();			// Reset the IV library
 
 	if (!stringsInitialise())	/* Initialise the string system */
 	{

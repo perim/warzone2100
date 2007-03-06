@@ -727,7 +727,7 @@ BOOL dataIMDBufferLoad(char *pBuffer, UDWORD size, void **ppData)
 	iIMDShape	*psIMD;
 	char *pBufferPosition = pBuffer;
 
-	psIMD = iV_ProcessIMD(&pBufferPosition, pBufferPosition + size, "", "", FALSE);
+	psIMD = iV_ProcessIMD( &pBufferPosition, pBufferPosition + size );
 	if (psIMD == NULL) {
 		debug( LOG_ERROR, "IMD load failed - %s", GetLastResourceFilename() );
 		abort();
@@ -847,9 +847,6 @@ void dataIMGRelease(void *pData)
 }
 
 
-#define TEXTUREWIDTH (256)
-#define TEXTUREHEIGHT (256)
-
 /* Load a texturepage into memory */
 BOOL bufferTexPageLoad(char *pBuffer, UDWORD size, void **ppData)
 {
@@ -858,7 +855,6 @@ BOOL bufferTexPageLoad(char *pBuffer, UDWORD size, void **ppData)
 	iSprite		*psSprite;
 	char		texfile[255];
 	SDWORD		i, id;
-//	BOOL		bFound = FALSE;
 
 	// generate a texture page name in "page-xx" format
 	strncpy(texfile, GetLastResourceFilename(), 254);
@@ -867,27 +863,13 @@ BOOL bufferTexPageLoad(char *pBuffer, UDWORD size, void **ppData)
 
 	debug(LOG_TEXTURE, "bufferTexPageLoad: %s texturepage ...", texfile);
 
-	if (war_GetAdditive())//(war_GetTranslucent())
+	//hardware
+	if (strstr(texfile, "soft") != NULL) // and this is a software textpage
 	{
-		//hardware
-		if (strstr(texfile,"soft") != NULL)//and this is a software textpage
-		{
-			//so dont load it
-			*ppData = NULL;
-			return TRUE;
-		}
+		//so dont load it
+		*ppData = NULL;
+		return TRUE;
 	}
-	else
-	{
-		//software or old d3d card
-		if (strstr(texfile,"hard") != NULL)//and this is a hardware textpage
-		{
-			//so dont load it
-			*ppData = NULL;
-			return TRUE;
-		}
-	}
-
 
 	if (strncmp(texfile, "page-", 5) == 0)
 	{
@@ -989,36 +971,26 @@ void dataTexPageRelease(void *pData)
 /* Load an audio file */
 BOOL dataAudioLoad(char *pBuffer, UDWORD size, void **ppData)
 {
-	TRACK	*psTrack;
-
 	if ( audio_Disabled() == TRUE )
 	{
 		*ppData = NULL;
+		// No error occurred (sound is just disabled), so we return TRUE
 		return TRUE;
 	}
-	else if ( (psTrack = audio_LoadTrackFromBuffer( pBuffer, size )) == NULL )
-	{
-		return FALSE;
-	}
+    // Load the track from a file
+	*ppData = sound_LoadTrackFromBuffer( pBuffer, size );
 
-	/* save track data */
-	*ppData = psTrack;
-
-	return TRUE;
+	return *ppData != NULL;
 }
 
 void dataAudioRelease( void *pData )
 {
-	if (audio_Disabled() == FALSE)
-	{
-		TRACK	*psTrack = (TRACK *) pData;
+	TRACK	*psTrack = (TRACK *) pData;
 
-		ASSERT( PTRVALID(psTrack, sizeof(TRACK)),
-				"dataAudioRelease: invalid track pointer" );
+	ASSERT( PTRVALID(psTrack, sizeof(TRACK)),
+			"dataAudioRelease: invalid track pointer" );
 
-		audio_ReleaseTrack( psTrack );
-		FREE( psTrack );
-	}
+	audio_ReleaseTrack( psTrack );
 }
 
 
@@ -1294,6 +1266,3 @@ BOOL dataInitLoadFuncs(void)
 
 	return TRUE;
 }
-
-
-
