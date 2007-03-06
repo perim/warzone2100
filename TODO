@@ -5,10 +5,15 @@ Some things that are to be done on the sound-system (in no particular order):
    * TODO: create a list of all sound related functions used by the codebase, then list the purpose of the function (i.e. what it does, not how it does that)
 
  * Probably two sound rendering contexts needed, one for ingame and one for the GUI (outside of the game)
-
- * Provide some abstracted method for the managment of the `OpenAL Listener` object (e.g. a class)
+   -> Won't work on every sound card, so instead individual soundSources will have to be marked as being 2D and such
   * Needs to be regularly updated for distance attenuation
   * Doppler effect implementation through Listener velocity as well maybe? (would require that "scrolling around" the map is passed through to the sound lib)
   * Provide conversion functions for listener orientation (uses two vectors rather than just a rotation angle) and position (can probably be implemented by simply copying the current OpenGL x,y,z coords from the "camera")
 
+
+Done:
+
  * Enable sounddevice enumeration
+   =) Done! Implemented by `const char** sound_DeviceList(void);` as an array of C-strings.
+ * Provide some abstracted method for the managment of the `OpenAL Listener` object (e.g. a class)
+   -> Is managed by the soundContext class (since there can only be one listener per context anyway)

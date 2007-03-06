@@ -10978,3 +10978,12 @@ BOOL scrGetTileStructure(void)
 
 	return TRUE;
 }
+
+/* Outputs script call stack
+ */
+BOOL scrPrintCallStack(void)
+{
+	scrOutputCallTrace();
+
+	return TRUE;
+}

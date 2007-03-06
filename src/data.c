@@ -24,6 +24,7 @@
  *
  */
 #include <string.h>
+#include <ctype.h>
 
 #include "lib/framework/frame.h"
 #include "lib/framework/strres.h"
@@ -786,17 +787,14 @@ BOOL dataHWTERTILESLoad(char *pBuffer, UDWORD size, void **ppData)
 		}
 	}
 
+	getTileRadarColours();
+	if (bTilesPCXLoaded)
 	{
-		getTileRadarColours();
-		// make several 256 * 256 pages
-		if (bTilesPCXLoaded)
-		{
-			remakeTileTexturePages(tilesPCX.width,tilesPCX.height,TILE_WIDTH, TILE_HEIGHT, tilesPCX.bmp);
-		}
-		else
-		{
-			makeTileTexturePages(tilesPCX.width,tilesPCX.height,TILE_WIDTH, TILE_HEIGHT, tilesPCX.bmp);
-		}
+		remakeTileTexturePages(tilesPCX.width,tilesPCX.height,TILE_WIDTH, TILE_HEIGHT, tilesPCX.bmp);
+	}
+	else
+	{
+		makeTileTexturePages(tilesPCX.width,tilesPCX.height,TILE_WIDTH, TILE_HEIGHT, tilesPCX.bmp);
 	}
 
 	if (bTilesPCXLoaded)
@@ -942,7 +940,7 @@ BOOL bufferTexPageLoad(char *pBuffer, UDWORD size, void **ppData)
 		NewTexturePage->Texture=psSprite;
 		NewTexturePage->Palette=psPal;
 
-		pie_AddBMPtoTexPages(psSprite, texfile, 1, FALSE, TRUE);
+		pie_AddBMPtoTexPages(psSprite, texfile, 1, TRUE);
 
 		*ppData = NewTexturePage;
 	}

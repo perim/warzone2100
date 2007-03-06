@@ -41,7 +41,6 @@
 #include "imd.h"	// for imd structures
 #include "rendmode.h"
 #include "ivispatch.h"
-#include "bug.h"
 #include "tex.h"		// texture page loading
 #include "bspfunc.h"	// for imd functions
 
@@ -61,22 +60,6 @@ static iIMDShape *_imd_load_level(char **FileData, char *FileDataEnd, int nlevel
                                   int texpage);
 static char *_imd_get_path(char *filename, char *path);
 BOOL CheckColourKey(iIMDShape *psShape);
-
-
-#ifndef WIN32
-// convert a string to lower case... by Tim ... dedicated to JS ... with love
-void strlwr(char *String)
-{
-	while (*String != 0) {
-		// loop around till we reach the end of the zero terminated string
-		if ((*String >= 'A') && (*String <= 'Z')) {
-			// if the current letter is in upper case...
-			*String += ('a'-'A');				// ... convert it to lower case
-		}
-		String++;							// move to the next letter
-	}
-}
-#endif
 
 
 static BOOL AtEndOfFile(char *CurPos, char *EndOfFile)
@@ -121,7 +104,6 @@ iIMDShape *iV_IMDLoad(char *filename, iBool palkeep)
 	iV_DEBUG1("imd[IMDLoad] = loading shape file '%s':",filename);
 
 	strcpy(_IMD_NAME,filename);
-	strlwr(_IMD_NAME);
 
 	_imd_get_path(filename,path);
 
@@ -278,8 +260,6 @@ iIMDShape *iV_ProcessIMD(char **ppFileData, char *FileDataEnd, char *IMDpath,
 #ifndef PIETOOL		// The BSP tool should not reduce the texture page name down (please)
 		// Super scrummy hack to reduce texture page names down to the page id
 		if (bTextured) {
-			//resToLower(texfile);
-//          printf("texfile cmp in imdload.c :%s\n", texfile);
 			if (strncasecmp(texfile, "page-", 5) == 0) {
 				for(i = 5; i < (SDWORD)strlen(texfile); i++) {
 					if (!isdigit(texfile[i])) {

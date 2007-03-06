@@ -1,12 +1,15 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.56)
-AC_INIT([Warzone 2100],[TRUNK],[http://wz2100.net/])
+AC_INIT([Warzone 2100],[TRUNK],[http://wz2100.net/],[warzone2100])
 AM_INIT_AUTOMAKE([1.8])
 
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([lib/framework/frame.c])
-AC_CONFIG_HEADER([lib/framework/config.h])
 
+if test "x$docdir" = "x" ; then
+	AC_SUBST(docdir, $(datarootdir)/doc/$(AC_PACKAGE_TARNAME))
+fi
 
 # Checks for programs.
 AC_PROG_CC
@@ -32,6 +35,7 @@ if test x$host_os = xmingw32 ; then
 		if test x$WINDRES = xno ; then
 			AC_MSG_ERROR([windres not found])
 		fi
+#		WIN32_LIBS="-L\$(srcdir) -ldbghelp -lshfolder -lwinmm -lwsock32"
 		WIN32_LIBS="-lshfolder -lwinmm -lwsock32"
 fi
 
@@ -103,7 +107,9 @@ AC_MSG_CHECKING([whether to compile in debug mode])
 AC_MSG_RESULT([$debug])
 if test "x$debug" = "xyes" ; then
   # -O0 turns off all optimizations; this is necessary for accurate debugging
-  WZ_CFLAGS="${WZ_CFLAGS} -O0 -DDEBUG -Wall -Wextra -Wwrite-strings -Wcast-qual -Wmissing-declarations -Wstrict-prototypes -Wold-style-definition"
+  WZ_CFLAGS="${WZ_CFLAGS} -g -O0 -DDEBUG -Wall"
+# add these when the code is ready for them
+# -Wextra -Wwrite-strings -Wcast-qual -Wmissing-declarations -Wstrict-prototypes -Wold-style-definition"
 else
   WZ_CFLAGS="${WZ_CFLAGS} -DNDEBUG"
 fi
@@ -288,6 +294,7 @@ WZ_CFLAGS="${WZ_CFLAGS} -DYY_STATIC -DDEFAULT_DATADIR=\\\"${datadir}/warzone2100
 LIBS="${LIBS} ${WZ_LIBS} ${WIN32_LIBS}"
 CFLAGS="${CFLAGS} ${WZ_CFLAGS}"
 
+AC_CONFIG_HEADER([lib/framework/config.h])
 AC_CONFIG_FILES([Makefile
 		data/Makefile
 		nsis/Makefile
