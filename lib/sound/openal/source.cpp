@@ -58,13 +58,6 @@ inline void soundSource::createSource()
             throw std::string("alGenSources(): no context available to create sources in");
         }
     }
-
-    // Default initialization
-    alSource3f(source, AL_POSITION,        0.0, 0.0, 0.0);
-    alSource3f(source, AL_VELOCITY,        0.0, 0.0, 0.0);
-    alSource3f(source, AL_DIRECTION,       0.0, 0.0, 0.0);
-    alSourcef (source, AL_ROLLOFF_FACTOR,  0.0          );
-    alSourcei (source, AL_SOURCE_RELATIVE, AL_TRUE      );
 }
 
 void soundSource::setBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
@@ -90,6 +83,8 @@ void soundSource::setBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
             throw std::string("alSource(): not enough non-memory resources, or invalid pointer");
         }
     }
+
+    buffer = sndBuffer;
 }
 
 soundSource::~soundSource()
@@ -131,7 +126,7 @@ soundSource::sourceState soundSource::getState()
 void soundSource::queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
 {
     if (!bIsStream)
-        throw std::string("soundSource: attempt to (un)queue buffer to/from non-stream source");
+        throw std::string("soundSource: attempt to queue buffer on non-stream source");
 
     context->makeCurrent();
 
@@ -148,7 +143,7 @@ void soundSource::queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
             case AL_INVALID_VALUE:
                 throw std::string("alSourceQueueBuffers(): OpenAL: specified buffer is invalid or does not exist.");
             case AL_INVALID_OPERATION:
-                throw std::string("alSourceQueueBuffers(): no current context or buffer format mismatched with the rest of queue (i.e. mono8/mono16/stereo8/stereo16)");
+                throw std::string("alSourceQueueBuffers(): buffer format mismatched with the rest of queue (i.e. mono8/mono16/stereo8/stereo16 or bad samplerate)");
         }
     }
 
@@ -158,7 +153,7 @@ void soundSource::queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
 boost::shared_ptr<soundBuffer> soundSource::unqueueBuffer()
 {
     if (!bIsStream)
-        throw std::string("soundSource: attempt to (un)queue buffer to/from non-stream source");
+        throw std::string("soundSource: attempt to unqueue buffer from non-stream source");
 
     context->makeCurrent();
 
@@ -212,4 +207,28 @@ unsigned int soundSource::numProcessedBuffers()
     alGetSourcei(source, AL_BUFFERS_PROCESSED, &count);
 
     return count;
+}
+
+void soundSource::setPos(float x, float y, float z)
+{
+    context->makeCurrent();
+    alSource3f(source, AL_POSITION, x, y, z);
+}
+
+void soundSource::setPos(int x, int y, int z)
+{
+    context->makeCurrent();
+    alSource3i(source, AL_POSITION, x, y, z);
+}
+
+void soundSource::getPos(float& x, float& y, float& z)
+{
+    context->makeCurrent();
+    alGetSource3f(source, AL_POSITION, &x, &y, &z);
+}
+
+void soundSource::getPos(int& x, int& y, int& z)
+{
+    context->makeCurrent();
+    alGetSource3i(source, AL_POSITION, &x, &y, &z);
 }

@@ -36,11 +36,11 @@ soundStream::~soundStream()
 {
 }
 
-boost::weak_ptr<soundSource> soundStream::getSource()
+boost::shared_ptr<soundSource> soundStream::getSource()
 {
     if (source->is2D())
         throw std::string("soundStream: can't retrieve source if stream is 2D");
-    return boost::weak_ptr<soundSource>(source);
+    return source;
 }
 
 bool soundStream::update()
@@ -64,11 +64,9 @@ bool soundStream::update()
 
 bool soundStream::stream(boost::shared_ptr<soundBuffer> buffer)
 {
-    // Allocate memory for a buffer
-    boost::shared_array<char> pcm(new char[bufferSize]);
-
     // Fill the buffer with decoded PCM data
-    unsigned int size = decoder->decode(pcm.get(), bufferSize);
+    unsigned int size = bufferSize;
+    boost::shared_array<char> pcm(decoder->decode(size));
 
     if (size == 0)
         return false;

@@ -44,7 +44,7 @@ class soundStream
          *  This should only be used to set positional, directional and doppler data with
          *  \return a pointer to the soundSource used by this stream if the stream isn't 2D, throws an exception otherwise
          */
-        boost::weak_ptr<soundSource> getSource();
+        boost::shared_ptr<soundSource> getSource();
 
         /** keep all required buffers filled
          *  needs to be called more often if buffer size is smaller, and less often if larger

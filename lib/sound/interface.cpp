@@ -161,7 +161,7 @@ static void clearDeviceList()
 }
 
 template <class TypeID, class TypeObject>
-inline bool validID(const TypeID& ID, const TypeID& nextID, std::map<TypeID, boost::shared_ptr<TypeObject> >& MapCont)
+inline bool validID(TypeID& ID, const TypeID& nextID, std::map<TypeID, boost::shared_ptr<TypeObject> >& MapCont)
 {
     if (ID == 0)
     {
@@ -175,10 +175,12 @@ inline bool validID(const TypeID& ID, const TypeID& nextID, std::map<TypeID, boo
         return false;
     }
 
-    if (MapCont[ID - 1].get() == NULL)
+    ID -= 1;
+
+    if (MapCont[ID].get() == NULL)
     {
         fprintf(stderr, "soundLib: ERROR Invalid ID: %d (NULL: probably destroyed object)\n", ID);
-        MapCont.erase(ID - 1);
+        MapCont.erase(ID);
         return false;
     }
 
@@ -224,7 +226,9 @@ sndStreamID sound_Create2DStream(char* fileName)
 
 void sound_Destroy2DStream(sndStreamID stream)
 {
-    sndStreams[stream - 1].reset();
+    if (!Initialized || !validID(stream, nextStreamID, sndStreams)) return;
+
+    sndStreams[stream].reset();
 }
 
 BOOL sound_Play2DStream(sndStreamID stream, BOOL reset)
@@ -233,7 +237,7 @@ BOOL sound_Play2DStream(sndStreamID stream, BOOL reset)
 
     try
     {
-        return sndStreams[stream - 1]->play((reset == TRUE)) ? TRUE : FALSE;
+        return sndStreams[stream]->play((reset == TRUE)) ? TRUE : FALSE;
     }
     catch (std::string &e)
     {
@@ -259,7 +263,7 @@ BOOL sound_2DStreamIsPlaying(sndStreamID stream)
 
     try
     {
-        return sndStreams[stream - 1]->isPlaying() ? TRUE : FALSE;
+        return sndStreams[stream]->isPlaying() ? TRUE : FALSE;
     }
     catch (std::string &e)
     {
@@ -280,9 +284,9 @@ BOOL sound_2DStreamIsPlaying(sndStreamID stream)
 
 void sound_Update(void)
 {
-    for (std::map<sndStreamID, boost::shared_ptr<soundStream> >::iterator i = sndStreams.begin(); i != sndStreams.end(); ++i)
+    for (std::map<sndStreamID, boost::shared_ptr<soundStream> >::iterator stream = sndStreams.begin(); stream != sndStreams.end(); ++stream)
     {
-        i->second->update();
+        stream->second->update();
     }
 }
 

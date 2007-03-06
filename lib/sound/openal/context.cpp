@@ -25,13 +25,12 @@
 #include "context.hpp"
 #include <string>
 
-soundContext::soundContext(boost::shared_ptr<soundDevice> sndDevice) : device(sndDevice)
+soundContext::soundContext(boost::shared_ptr<soundDevice> sndDevice) : listener(this), device(sndDevice)
 {
     alcGetError(device->getALCDeviceID());
 
     // Create a new rendering context
     sndContext = alcCreateContext(device->getALCDeviceID(), NULL);
-    makeCurrent();
 
     switch (alcGetError(device->getALCDeviceID()))
     {
@@ -54,32 +53,42 @@ soundContext::~soundContext()
     }
 }
 
-void soundContext::setListenerPos(float x, float y, float z)
+soundContext::soundListener::soundListener(soundContext* sndContext) : context(sndContext)
 {
-    if (sndContext)
-    {
-        makeCurrent();
-        alListener3f( AL_POSITION, x, y, z );
-    }
-    // else throw an exception
 }
 
-void soundContext::setListenerVel(float x, float y, float z)
+void soundContext::soundListener::setPos(float x, float y, float z)
 {
-    if (sndContext)
-    {
-        makeCurrent();
-        alListener3f( AL_VELOCITY, x, y, z );
-    }
-    // else throw an exception
+    context->makeCurrent();
+    alListener3f( AL_POSITION, x, y, z );
 }
 
-void soundContext::setListenerRot(float pitch, float yaw, float roll)
+void soundContext::soundListener::setPos(int x, int y, int z)
 {
-    if (sndContext)
-    {
-        makeCurrent();
-        // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
-    }
-    // else throw an exception
+    context->makeCurrent();
+    alListener3i( AL_POSITION, x, y, z );
+}
+
+void soundContext::soundListener::getPos(float& x, float& y, float& z)
+{
+    context->makeCurrent();
+    alGetListener3f( AL_POSITION, &x, &y, &z );
+}
+
+void soundContext::soundListener::getPos(int& x, int& y, int& z)
+{
+    context->makeCurrent();
+    alGetListener3i( AL_POSITION, &x, &y, &z );
+}
+
+void soundContext::soundListener::setVel(float x, float y, float z)
+{
+    makeCurrent();
+    alListener3f( AL_VELOCITY, x, y, z );
+}
+
+void soundContext::soundListener::setRot(float pitch, float yaw, float roll)
+{
+    makeCurrent();
+    // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
 }

@@ -30,8 +30,9 @@
 #include <boost/smart_ptr.hpp>
 #include "context.hpp"
 #include "buffer.hpp"
+#include "../bases/vertex.hpp"
 
-class soundSource
+class soundSource : public Vertex
 {
     public:
 
@@ -110,6 +111,22 @@ class soundSource
 
         unsigned int numProcessedBuffers();
 
+        /** Sets the position of the source
+         *  \param x X-coordinate of source
+         *  \param y Y-coordinate of source
+         *  \param z Z-coordinate of source
+         */
+        virtual void setPos(float x, float y, float z);
+        virtual void setPos(int x, int y, int z);
+
+        /** Retrieves the position of the source
+         *  \param x this will be used to return the X-coordinate in
+         *  \param y this will be used to return the Y-coordinate in
+         *  \param z this will be used to return the Z-coordinate in
+         */
+        virtual void getPos(float& x, float& y, float& z);
+        virtual void getPos(int& x, int& y, int& z);
+
     private:
         /** Handles the creation of the source
          *  Makes sure an OpenAL source is created and related errors are dealt with
@@ -122,6 +139,7 @@ class soundSource
 
         // Internal data
         boost::shared_ptr<soundContext> context;
+        boost::shared_ptr<soundBuffer>  buffer;
         std::vector< boost::shared_ptr<soundBuffer> > buffers;
 
         // Internal state

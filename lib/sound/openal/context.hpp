@@ -32,6 +32,7 @@
 #include "device.hpp"
 
 #include <boost/smart_ptr.hpp>
+#include "../bases/vertex.hpp"
 
 class soundContext
 {
@@ -44,17 +45,6 @@ class soundContext
         soundContext(boost::shared_ptr<soundDevice> sndDevice);
         ~soundContext();
 
-        void setListenerPos(float x, float y, float z);
-        void setListenerVel(float x, float y, float z);
-
-        /** Sets the listener orientation.
-         *  Sets the orientation of the listener to "look" at a certain direction,
-         *  see http://en.wikipedia.org/wiki/Flight_dynamics for more information.
-         *  \param pitch the "height" the listener is pointed at (i.e. in on screen terms)
-         *  \param yaw the orientation to the "left and right" (rotation about vertical axis)
-         *  \param roll just see the wikipedia article ;-) it has a nice pic explaining this way better
-         */
-        void setListenerRot(float pitch, float yaw, float roll);
 
         /** makes this soundContext current
          *  Uses OpenAL function alcMakeContextCurrent to make this function current.
@@ -64,6 +54,45 @@ class soundContext
         {
             alcMakeContextCurrent(sndContext);
         }
+
+    public:
+        class soundListener : public Vertex
+        {
+            public:
+                soundListener(soundContext* sndContext);
+
+                /** Sets the position of the listener
+                 *  \param x X-coordinate of listener
+                 *  \param y Y-coordinate of listener
+                 *  \param z Z-coordinate of listener
+                 */
+                virtual void setPos(float x, float y, float z);
+                virtual void setPos(int x, int y, int z);
+
+                /** Retrieves the position of the listener
+                 *  \param x this will be used to return the X-coordinate in
+                 *  \param y this will be used to return the Y-coordinate in
+                 *  \param z this will be used to return the Z-coordinate in
+                 */
+                virtual void getPos(float& x, float& y, float& z);
+                virtual void getPos(int& x, int& y, int& z);
+
+                /** Sets the listener orientation.
+                 *  Sets the orientation of the listener to "look" at a certain direction,
+                 *  see http://en.wikipedia.org/wiki/Flight_dynamics for more information.
+                 *  \param pitch the "height" the listener is pointed at (i.e. in on screen terms)
+                 *  \param yaw the orientation to the "left and right" (rotation about vertical axis)
+                 *  \param roll just see the wikipedia article ;-) it has a nice pic explaining this way better
+                 */
+                void setRot(float pitch, float yaw, float roll);
+
+                void setVel(float x, float y, float z);
+
+            private:
+                soundContext* context;
+        };
+
+        soundListener listener;
 
     private:
         // Identifier towards OpenAL

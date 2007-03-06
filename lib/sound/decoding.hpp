@@ -47,13 +47,6 @@ class soundDecoding
 
         /** Decode some audio
          *  decodes audio until the output buffer has reached the length bufferSize
-         *  \param bufferSize the maximum output size of the returned buffer
-         *  \return the amount of data written into the output buffer
-         */
-        unsigned int decode(char* buffer, unsigned int bufferSize);
-
-        /** Decode some audio
-         *  decodes audio until the output buffer has reached the length bufferSize
          *  \param[in,out] bufferSize the maximum output size of the returned buffer, this is modified to the actual buffer size
          *  \return an output buffer and a smart pointer to the output buffer
          */
@@ -76,6 +69,11 @@ class soundDecoding
          *  \return the amount of samples (samples/channel), or zero if it can't be determined
          */
         unsigned int getSampleCount();
+
+        /** Retrieve the current sample
+         *  \return the next sample to be decoded
+         */
+        unsigned int getCurrentSample();
 
     private:
         // Info used by the internal file reading callback mechanism

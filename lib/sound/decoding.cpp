@@ -123,32 +123,11 @@ soundDecoding::~soundDecoding()
     PHYSFS_close(fileHandle->fileHandle);
 }
 
-unsigned int soundDecoding::decode(char* buffer, unsigned int bufferSize)
-{
-    unsigned int size = 0;
-    while(size < bufferSize)
-    {
-        int section;
-        int result = ov_read(&oggVorbisStream, buffer + size, bufferSize - size, 0, 2, 1, &section);
-
-        if(result > 0)
-            size += result;
-        else
-            if(result < 0)
-                //throw errorString(result);
-                throw std::string("error decoding OggVorbis stream; errorcode: " + to_string(result) + " with buffersize: " + to_string(bufferSize));
-            else
-                break;
-    }
-
-    return size;
-}
-
 boost::shared_array<char> soundDecoding::decode(unsigned int& bufferSize)
 {
     // If a maximum buffer size is specified check wether it isn't larger than the needed size
     if (((bufferSize == 0) || (bufferSize > getSampleCount())) && (getSampleCount() != 0) )
-        bufferSize = getSampleCount();
+        bufferSize = getSampleCount() - getCurrentSample();
 
     boost::shared_array<char> buffer(new char[bufferSize]);
 
@@ -185,4 +164,14 @@ unsigned int soundDecoding::getSampleCount()
         return 0;
     else
         return numSamples;
+}
+
+unsigned int soundDecoding::getCurrentSample()
+{
+    int samplePos = ov_pcm_tell(&oggVorbisStream);
+
+    if (samplePos == OV_EINVAL)
+        throw std::string("soundDecoding::getCurrentSample: ov_pcm_tell: invalid argument");
+    else
+        return samplePos;
 }
