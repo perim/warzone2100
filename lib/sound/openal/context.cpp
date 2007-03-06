@@ -83,12 +83,12 @@ void soundContext::soundListener::getPos(int& x, int& y, int& z)
 
 void soundContext::soundListener::setVel(float x, float y, float z)
 {
-    makeCurrent();
+    context->makeCurrent();
     alListener3f( AL_VELOCITY, x, y, z );
 }
 
 void soundContext::soundListener::setRot(float pitch, float yaw, float roll)
 {
-    makeCurrent();
+    context->makeCurrent();
     // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
 }
