@@ -47,7 +47,7 @@ soundContext::~soundContext()
 {
     if ( sndContext != NULL )
     {
-        makeCurrent();
+        alcMakeContextCurrent(NULL);
         alcDestroyContext(sndContext);
         sndContext = NULL;
     }
