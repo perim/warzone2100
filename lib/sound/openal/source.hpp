@@ -116,30 +116,82 @@ class soundSource : public Geometry
          *  \param y Y-coordinate of source
          *  \param z Z-coordinate of source
          */
-        virtual void setPosition(float x, float y, float z);
-        virtual void setPosition(int x, int y, int z);
+        inline virtual void setPosition(float x, float y, float z)
+        {
+            context->makeCurrent();
+            alSource3f(source, AL_POSITION, x, y, z);
+        }
+
+        inline virtual void setPosition(int x, int y, int z)
+        {
+            context->makeCurrent();
+            alSource3i(source, AL_POSITION, x, y, z);
+        }
 
         /** Retrieves the position of the source
          *  \param x this will be used to return the X-coordinate in
          *  \param y this will be used to return the Y-coordinate in
          *  \param z this will be used to return the Z-coordinate in
          */
-        virtual void getPosition(float& x, float& y, float& z);
-        virtual void getPosition(int& x, int& y, int& z);
+        inline virtual void getPosition(float& x, float& y, float& z)
+        {
+            context->makeCurrent();
+            alGetSource3f(source, AL_POSITION, &x, &y, &z);
+        }
+        inline virtual void getPosition(int& x, int& y, int& z)
+        {
+            context->makeCurrent();
+            alGetSource3i(source, AL_POSITION, &x, &y, &z);
+        }
 
         // Functions for setting/getting rotation
-        virtual void setRotation(float pitch, float yaw, float roll);
-        virtual void setRotation(int pitch, int yaw, int roll);
+        // * Is this implementation of setting/getting AL_DIRECTION correct?
+        // * Honestly I can't tell, because the OpenAL specification neglects
+        // * to mention how the vector of 3 values is used for specifying direction
+        inline virtual void setRotation(float pitch, float yaw, float roll)
+        {
+            context->makeCurrent();
+            alSource3f(source, AL_DIRECTION, pitch, yaw, roll);
+        }
+        inline virtual void setRotation(int pitch, int yaw, int roll)
+        {
+            context->makeCurrent();
+            alSource3i(source, AL_DIRECTION, pitch, yaw, roll);
+        }
 
-        virtual void getRotation(float& pitch, float& yaw, float& roll);
-        virtual void getRotation(int& pitch, int& yaw, int& roll);
+        inline virtual void getRotation(float& pitch, float& yaw, float& roll)
+        {
+            context->makeCurrent();
+            alGetSource3f(source, AL_DIRECTION, &pitch, &yaw, &roll);
+        }
+        inline virtual void getRotation(int& pitch, int& yaw, int& roll)
+        {
+            context->makeCurrent();
+            alGetSource3i(source, AL_DIRECTION, &pitch, &yaw, &roll);
+        }
 
         // Functions for setting/getting velocity
-        virtual void setVelocity(float x, float y, float z);
-        virtual void setVelocity(int x, int y, int z);
+        inline virtual void setVelocity(float x, float y, float z)
+        {
+            context->makeCurrent();
+            alSource3f(source, AL_VELOCITY, x, y, z);
+        }
+        inline virtual void setVelocity(int x, int y, int z)
+        {
+            context->makeCurrent();
+            alSource3i(source, AL_VELOCITY, x, y, z);
+        }
 
-        virtual void getVelocity(float& x, float& y, float& z);
-        virtual void getVelocity(int& x, int& y, int& z);
+        inline virtual void getVelocity(float& x, float& y, float& z)
+        {
+            context->makeCurrent();
+            alGetSource3f(source, AL_VELOCITY, &x, &y, &z);
+        }
+        inline virtual void getVelocity(int& x, int& y, int& z)
+        {
+            context->makeCurrent();
+            alGetSource3i(source, AL_VELOCITY, &x, &y, &z);
+        }
 
     private:
         /** Handles the creation of the source

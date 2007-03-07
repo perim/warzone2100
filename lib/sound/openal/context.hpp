@@ -66,16 +66,32 @@ class soundContext
                  *  \param y Y-coordinate of listener
                  *  \param z Z-coordinate of listener
                  */
-                virtual void setPosition(float x, float y, float z);
-                virtual void setPosition(int x, int y, int z);
+                inline virtual void setPosition(float x, float y, float z)
+                {
+                    context->makeCurrent();
+                    alListener3f(AL_POSITION, x, y, z);
+                }
+                inline virtual void setPosition(int x, int y, int z)
+                {
+                    context->makeCurrent();
+                    alListener3i(AL_POSITION, x, y, z);
+                }
 
                 /** Retrieves the position of the listener
                  *  \param x this will be used to return the X-coordinate in
                  *  \param y this will be used to return the Y-coordinate in
                  *  \param z this will be used to return the Z-coordinate in
                  */
-                virtual void getPosition(float& x, float& y, float& z);
-                virtual void getPosition(int& x, int& y, int& z);
+                inline virtual void getPosition(float& x, float& y, float& z)
+                {
+                    context->makeCurrent();
+                    alGetListener3f(AL_POSITION, &x, &y, &z);
+                }
+                inline virtual void getPosition(int& x, int& y, int& z)
+                {
+                    context->makeCurrent();
+                    alGetListener3i(AL_POSITION, &x, &y, &z);
+                }
 
                 /** Sets the listener orientation.
                  *  Sets the orientation of the listener to "look" at a certain direction,
@@ -91,11 +107,27 @@ class soundContext
                 virtual void getRotation(int& pitch, int& yaw, int& roll);
 
 
-                virtual void setVelocity(float x, float y, float z);
-                virtual void setVelocity(int x, int y, int z);
+                inline virtual void setVelocity(float x, float y, float z)
+                {
+                    context->makeCurrent();
+                    alListener3f(AL_VELOCITY, x, y, z);
+                }
+                inline virtual void setVelocity(int x, int y, int z)
+                {
+                    context->makeCurrent();
+                    alListener3i(AL_VELOCITY, x, y, z);
+                }
 
-                virtual void getVelocity(float& x, float& y, float& z);
-                virtual void getVelocity(int& x, int& y, int& z);
+                inline virtual void getVelocity(float& x, float& y, float& z)
+                {
+                    context->makeCurrent();
+                    alGetListener3f(AL_VELOCITY, &x, &y, &z);
+                }
+                inline virtual void getVelocity(int& x, int& y, int& z)
+                {
+                    context->makeCurrent();
+                    alGetListener3i(AL_VELOCITY, &x, &y, &z);
+                }
 
             private:
                 soundContext* context;
