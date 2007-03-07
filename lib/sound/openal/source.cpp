@@ -24,7 +24,7 @@
 
 #include "source.hpp"
 #include <string>
-#include "stringconv.hpp"
+#include "../stringconv.hpp"
 
 soundSource::soundSource(boost::shared_ptr<soundContext> sndContext, bool b2D) : context(sndContext), bIs2D(b2D), bIsStream(true)
 {
@@ -209,26 +209,77 @@ unsigned int soundSource::numProcessedBuffers()
     return count;
 }
 
-void soundSource::setPos(float x, float y, float z)
+void soundSource::setPosition(float x, float y, float z)
 {
     context->makeCurrent();
     alSource3f(source, AL_POSITION, x, y, z);
 }
 
-void soundSource::setPos(int x, int y, int z)
+void soundSource::setPosition(int x, int y, int z)
 {
     context->makeCurrent();
     alSource3i(source, AL_POSITION, x, y, z);
 }
 
-void soundSource::getPos(float& x, float& y, float& z)
+void soundSource::getPosition(float& x, float& y, float& z)
 {
     context->makeCurrent();
     alGetSource3f(source, AL_POSITION, &x, &y, &z);
 }
 
-void soundSource::getPos(int& x, int& y, int& z)
+void soundSource::getPosition(int& x, int& y, int& z)
 {
     context->makeCurrent();
     alGetSource3i(source, AL_POSITION, &x, &y, &z);
+}
+
+// Is this implementation of setting/getting AL_DIRECTION correct?
+// Honestly I can't tell, because the OpenAL specification neglects
+// to mention how the vector of 3 values is used for specifying direction
+void soundSource::setRotation(float pitch, float yaw, float roll)
+{
+    context->makeCurrent();
+    alSource3f(source, AL_DIRECTION, pitch, yaw, roll);
+}
+
+void soundSource::setRotation(int pitch, int yaw, int roll)
+{
+    context->makeCurrent();
+    alSource3i(source, AL_DIRECTION, pitch, yaw, roll);
+}
+
+void soundSource::getRotation(float& pitch, float& yaw, float& roll)
+{
+    context->makeCurrent();
+    alGetSource3f(source, AL_DIRECTION, &pitch, &yaw, &roll);
+}
+
+void soundSource::getRotation(int& pitch, int& yaw, int& roll)
+{
+    context->makeCurrent();
+    alGetSource3i(source, AL_DIRECTION, &pitch, &yaw, &roll);
+}
+
+void soundSource::setVelocity(float x, float y, float z)
+{
+    context->makeCurrent();
+    alSource3f(source, AL_VELOCITY, x, y, z);
+}
+
+void soundSource::setVelocity(int x, int y, int z)
+{
+    context->makeCurrent();
+    alSource3i(source, AL_VELOCITY, x, y, z);
+}
+
+void soundSource::getVelocity(float& x, float& y, float& z)
+{
+    context->makeCurrent();
+    alGetSource3f(source, AL_VELOCITY, &x, &y, &z);
+}
+
+void soundSource::getVelocity(int& x, int& y, int& z)
+{
+    context->makeCurrent();
+    alGetSource3i(source, AL_VELOCITY, &x, &y, &z);
 }

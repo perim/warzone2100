@@ -30,9 +30,9 @@
 #include <boost/smart_ptr.hpp>
 #include "context.hpp"
 #include "buffer.hpp"
-#include "../bases/vertex.hpp"
+#include "../bases/geometry.hpp"
 
-class soundSource : public Vertex
+class soundSource : public Geometry
 {
     public:
 
@@ -116,16 +116,30 @@ class soundSource : public Vertex
          *  \param y Y-coordinate of source
          *  \param z Z-coordinate of source
          */
-        virtual void setPos(float x, float y, float z);
-        virtual void setPos(int x, int y, int z);
+        virtual void setPosition(float x, float y, float z);
+        virtual void setPosition(int x, int y, int z);
 
         /** Retrieves the position of the source
          *  \param x this will be used to return the X-coordinate in
          *  \param y this will be used to return the Y-coordinate in
          *  \param z this will be used to return the Z-coordinate in
          */
-        virtual void getPos(float& x, float& y, float& z);
-        virtual void getPos(int& x, int& y, int& z);
+        virtual void getPosition(float& x, float& y, float& z);
+        virtual void getPosition(int& x, int& y, int& z);
+
+        // Functions for setting/getting rotation
+        virtual void setRotation(float pitch, float yaw, float roll);
+        virtual void setRotation(int pitch, int yaw, int roll);
+
+        virtual void getRotation(float& pitch, float& yaw, float& roll);
+        virtual void getRotation(int& pitch, int& yaw, int& roll);
+
+        // Functions for setting/getting velocity
+        virtual void setVelocity(float x, float y, float z);
+        virtual void setVelocity(int x, int y, int z);
+
+        virtual void getVelocity(float& x, float& y, float& z);
+        virtual void getVelocity(int& x, int& y, int& z);
 
     private:
         /** Handles the creation of the source

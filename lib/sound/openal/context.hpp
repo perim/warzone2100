@@ -32,7 +32,7 @@
 #include "device.hpp"
 
 #include <boost/smart_ptr.hpp>
-#include "../bases/vertex.hpp"
+#include "../bases/geometry.hpp"
 
 class soundContext
 {
@@ -56,7 +56,7 @@ class soundContext
         }
 
     public:
-        class soundListener : public Vertex
+        class soundListener : public Geometry
         {
             public:
                 soundListener(soundContext* sndContext);
@@ -66,16 +66,16 @@ class soundContext
                  *  \param y Y-coordinate of listener
                  *  \param z Z-coordinate of listener
                  */
-                virtual void setPos(float x, float y, float z);
-                virtual void setPos(int x, int y, int z);
+                virtual void setPosition(float x, float y, float z);
+                virtual void setPosition(int x, int y, int z);
 
                 /** Retrieves the position of the listener
                  *  \param x this will be used to return the X-coordinate in
                  *  \param y this will be used to return the Y-coordinate in
                  *  \param z this will be used to return the Z-coordinate in
                  */
-                virtual void getPos(float& x, float& y, float& z);
-                virtual void getPos(int& x, int& y, int& z);
+                virtual void getPosition(float& x, float& y, float& z);
+                virtual void getPosition(int& x, int& y, int& z);
 
                 /** Sets the listener orientation.
                  *  Sets the orientation of the listener to "look" at a certain direction,
@@ -84,9 +84,18 @@ class soundContext
                  *  \param yaw the orientation to the "left and right" (rotation about vertical axis)
                  *  \param roll just see the wikipedia article ;-) it has a nice pic explaining this way better
                  */
-                void setRot(float pitch, float yaw, float roll);
+                virtual void setRotation(float pitch, float yaw, float roll);
+                virtual void setRotation(int pitch, int yaw, int roll);
 
-                void setVel(float x, float y, float z);
+                virtual void getRotation(float& pitch, float& yaw, float& roll);
+                virtual void getRotation(int& pitch, int& yaw, int& roll);
+
+
+                virtual void setVelocity(float x, float y, float z);
+                virtual void setVelocity(int x, int y, int z);
+
+                virtual void getVelocity(float& x, float& y, float& z);
+                virtual void getVelocity(int& x, int& y, int& z);
 
             private:
                 soundContext* context;

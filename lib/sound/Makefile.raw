@@ -1,7 +1,11 @@
 MAKERULES=../../makerules
 include $(MAKERULES)/configure.mk
 
-SRC=constants.cpp \
+SRC=openal/buffer.cpp \
+	openal/source.cpp \
+	openal/context.cpp \
+	openal/device.cpp \
+	constants.cpp \
 	decoding.cpp \
 	stream.cpp \
 	interface.cpp
