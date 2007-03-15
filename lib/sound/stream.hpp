@@ -37,14 +37,8 @@ class soundStream
         /** Creates and sets up all resources required for a sound stream
          *  \param PCM class to provide decoded sound data on request
          */
-        soundStream(boost::shared_ptr<soundSource> sndSource, boost::shared_ptr<soundDecoding> PCM);
+        soundStream(boost::shared_ptr<soundContext> sndContext, boost::shared_ptr<soundDecoding> PCM);
         ~soundStream();
-
-        /** Returns a handle to the OpenAL source which is being streamed from
-         *  This should only be used to set positional, directional and doppler data with
-         *  \return a pointer to the soundSource used by this stream if the stream isn't 2D, throws an exception otherwise
-         */
-        boost::shared_ptr<soundSource> getSource();
 
         /** keep all required buffers filled
          *  needs to be called more often if buffer size is smaller, and less often if larger
@@ -57,7 +51,7 @@ class soundStream
          */
         inline bool isPlaying()
         {
-            return (source->getState() == soundSource::playing);
+            return (source.getState() == soundSource::playing);
         }
 
         /** initiates playing of the stream
@@ -77,6 +71,8 @@ class soundStream
          */
         unsigned int getBufferSize();
 
+        soundSource source;         // sound source (i.e. in-game)
+
     private:
 
         /** fill buffer with the next data
@@ -85,7 +81,6 @@ class soundStream
          */
         bool stream(boost::shared_ptr<soundBuffer> buffer);
 
-        boost::shared_ptr<soundSource> source;        // sound source (i.e. in-game)
         boost::shared_ptr<soundDecoding> decoder;
 
         // Internal state

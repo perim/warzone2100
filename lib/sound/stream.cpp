@@ -28,19 +28,12 @@
 #include <string>
 #include "constants.hpp"
 
-soundStream::soundStream(boost::shared_ptr<soundSource> sndSource, boost::shared_ptr<soundDecoding> PCM) : source(sndSource), decoder(PCM), bufferSize(OpenAL_BufferSize)
+soundStream::soundStream(boost::shared_ptr<soundContext> sndContext, boost::shared_ptr<soundDecoding> PCM) : source(sndContext), decoder(PCM), bufferSize(OpenAL_BufferSize)
 {
 }
 
 soundStream::~soundStream()
 {
-}
-
-boost::shared_ptr<soundSource> soundStream::getSource()
-{
-    if (source->is2D())
-        throw std::string("soundStream: can't retrieve source if stream is 2D");
-    return source;
 }
 
 bool soundStream::update()
@@ -49,14 +42,14 @@ bool soundStream::update()
 
     bool buffersFull = true;
 
-    for (unsigned int update = source->numProcessedBuffers() ; update != 0 ; --update)
+    for (unsigned int update = source.numProcessedBuffers() ; update != 0 ; --update)
     {
-        boost::shared_ptr<soundBuffer> buffer(source->unqueueBuffer());
+        boost::shared_ptr<soundBuffer> buffer(source.unqueueBuffer());
 
         buffersFull = stream(buffer);
 
         if (buffersFull)
-            source->queueBuffer(buffer);
+            source.queueBuffer(buffer);
     }
 
     return buffersFull;
@@ -82,9 +75,9 @@ bool soundStream::play(bool reset)
         return true;
     else if (isPlaying() && reset)
     {
-        source->stop();
-        for (unsigned int i = source->numProcessedBuffers(); i != 0; --i)
-            source->unqueueBuffer();
+        source.stop();
+        for (unsigned int i = source.numProcessedBuffers(); i != 0; --i)
+            source.unqueueBuffer();
     }
 
     // Create two streaming buffers
@@ -96,12 +89,12 @@ bool soundStream::play(bool reset)
         return false;
     bool buffer2Filled = stream(buf2);
 
-    source->queueBuffer(buf1);
+    source.queueBuffer(buf1);
     // Only queue the second buffer if it is filled (i.e. there was enough data to fill it with)
     if (buffer2Filled)
-        source->queueBuffer(buf2);
+        source.queueBuffer(buf2);
 
-    source->play();
+    source.play();
 
     return isPlaying();
 }

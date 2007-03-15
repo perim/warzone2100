@@ -26,12 +26,12 @@
 #include <string>
 #include "../stringconv.hpp"
 
-soundSource::soundSource(boost::shared_ptr<soundContext> sndContext, bool b2D) : context(sndContext), bIs2D(b2D), bIsStream(true)
+soundSource::soundSource(boost::shared_ptr<soundContext> sndContext) : context(sndContext), bIs2D(false), bIsStream(true)
 {
     createSource();
 }
 
-soundSource::soundSource(boost::shared_ptr<soundContext> sndContext, boost::shared_ptr<soundBuffer> sndBuffer, bool b2D) : context(sndContext), bIs2D(b2D), bIsStream(false)
+soundSource::soundSource(boost::shared_ptr<soundContext> sndContext, boost::shared_ptr<soundBuffer> sndBuffer) : context(sndContext), bIs2D(false), bIsStream(false)
 {
     createSource();
     setBuffer(sndBuffer);

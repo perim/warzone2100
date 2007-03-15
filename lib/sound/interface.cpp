@@ -194,12 +194,11 @@ sndStreamID sound_Create2DStream(char* fileName)
 
     try
     {
-        // Construct decoder object and OpenAL source object
+        // Construct decoder object
         boost::shared_ptr<soundDecoding> decoder(new soundDecoding(fileName, false));
-        boost::shared_ptr<soundSource> source(new soundSource(sndContext, true));
 
         // Construct streaming object
-        boost::shared_ptr<soundStream> stream(new soundStream(source, decoder));
+        boost::shared_ptr<soundStream> stream(new soundStream(sndContext, decoder));
 
         // Insert the stream into the container for later reference/usage
         sndStreams.insert(std::pair<sndStreamID, boost::shared_ptr<soundStream> >(nextStreamID, stream));
