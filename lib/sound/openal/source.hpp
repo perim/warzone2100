@@ -103,13 +103,38 @@ class soundSource : public Geometry
 
         /** Tells OpenAL to start playing
          */
-        void play();
+        inline virtual bool play()
+        {
+            context->makeCurrent();
+
+            // Clear current error state
+            alGetError();
+
+            alSourcePlay(source);
+
+            if(alGetError() != AL_NO_ERROR)
+                return false;
+
+            return true;
+        }
 
         /** Tells OpenAL to stop playing
          */
-        void stop();
+        inline virtual void stop()
+        {
+            context->makeCurrent();
+            alSourceStop(source);
+        }
 
-        unsigned int numProcessedBuffers();
+        inline unsigned int numProcessedBuffers()
+        {
+            context->makeCurrent();
+
+            int count;
+            alGetSourcei(source, AL_BUFFERS_PROCESSED, &count);
+
+            return count;
+        }
 
         /** Sets the position of the source
          *  \param x X-coordinate of source

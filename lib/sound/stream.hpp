@@ -30,7 +30,7 @@
 #include <boost/smart_ptr.hpp>
 #include "decoding.hpp"
 
-class soundStream
+class soundStream : public soundSource
 {
     public:
 
@@ -51,7 +51,7 @@ class soundStream
          */
         inline bool isPlaying()
         {
-            return (source.getState() == soundSource::playing);
+            return (soundSource::getState() == soundSource::playing);
         }
 
         /** initiates playing of the stream
@@ -59,7 +59,7 @@ class soundStream
          *  \param reset whether we should restart (start playing from the beginning) or not, if this is the first call it will start from the beginning anyway
          *  \return true on succes, false otherwise
          */
-        bool play(bool reset = false);
+        virtual bool play();
 
         /** sets the buffersize for the streaming buffers
          *  \param size size of the buffers in bytes, minimum is 4096, which is still not recommended, 4096 is very likely to introduce clipping
@@ -70,8 +70,6 @@ class soundStream
          *  \return the currently used buffer size in bytes
          */
         unsigned int getBufferSize();
-
-        soundSource source;         // sound source (i.e. in-game)
 
     private:
 

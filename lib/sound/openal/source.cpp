@@ -184,27 +184,3 @@ boost::shared_ptr<soundBuffer> soundSource::unqueueBuffer()
 
     throw std::string("alSourceUnqueueBuffers(): no buffers to unqueue");
 }
-
-void soundSource::play()
-{
-    context->makeCurrent();
-
-    alSourcePlay(source);
-}
-
-void soundSource::stop()
-{
-    context->makeCurrent();
-
-    alSourceStop(source);
-}
-
-unsigned int soundSource::numProcessedBuffers()
-{
-    context->makeCurrent();
-
-    int count;
-    alGetSourcei(source, AL_BUFFERS_PROCESSED, &count);
-
-    return count;
-}
