@@ -236,7 +236,10 @@ BOOL sound_Play2DStream(sndStreamID stream, BOOL reset)
 
     try
     {
-        return sndStreams[stream]->play((reset == TRUE)) ? TRUE : FALSE;
+//        if (reset)
+//            sndStreams[stream]->stop(); // stop function still needs implementing
+
+        return sndStreams[stream]->play();
     }
     catch (std::string &e)
     {
