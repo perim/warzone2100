@@ -35,7 +35,6 @@
 #include "stream.hpp"
 
 #include <map>
-#include <vector>
 #include <string>
 #include <exception>
 
