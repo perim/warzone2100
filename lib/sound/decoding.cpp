@@ -123,6 +123,17 @@ soundDecoding::~soundDecoding()
     PHYSFS_close(fileHandle->fileHandle);
 }
 
+void soundDecoding::reset()
+{
+    PHYSFS_seek(fileHandle->fileHandle, 0);
+
+    int error = ov_open_callbacks(fileHandle.get(), &oggVorbisStream, NULL, 0, oggVorbis_callbacks);
+    if (error < 0)
+        throw std::string("decoding: VorbisFile returned an error while opening; errorcode: " + to_string(error));
+
+    VorbisInfo = ov_info(&oggVorbisStream, -1);
+}
+
 boost::shared_array<char> soundDecoding::decode(unsigned int& bufferSize)
 {
     unsigned int sizeEstimate = getSampleCount() * getChannelCount() * 2; // The 2 is for the assumption that samples are 16 bit large

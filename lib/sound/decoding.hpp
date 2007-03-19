@@ -75,6 +75,10 @@ class soundDecoding
          */
         unsigned int getCurrentSample();
 
+        /** Resets the decoder to starting position
+         */
+        void reset();
+
     private:
         // Info used by the internal file reading callback mechanism
         boost::shared_ptr<fileInfo> fileHandle;

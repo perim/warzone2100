@@ -56,10 +56,13 @@ class soundStream : public soundSource
 
         /** initiates playing of the stream
          *  starts playing the stream or continues it
-         *  \param reset whether we should restart (start playing from the beginning) or not, if this is the first call it will start from the beginning anyway
          *  \return true on succes, false otherwise
          */
         virtual bool play();
+
+        /** stops playing of the stream and resets the stream back to the beginning
+         */
+        virtual void stop();
 
         /** sets the buffersize for the streaming buffers
          *  \param size size of the buffers in bytes, minimum is 4096, which is still not recommended, 4096 is very likely to introduce clipping

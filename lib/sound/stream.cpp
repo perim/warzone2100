@@ -93,6 +93,19 @@ bool soundStream::play()
     return isPlaying();
 }
 
+void soundStream::stop()
+{
+    // First stop playback
+    soundSource::stop();
+
+    // Now destroy all buffers
+    for (unsigned int i = numProcessedBuffers(); i != 0; --i)
+        unqueueBuffer();
+
+    // Reset decoder
+    decoder->reset();
+}
+
 void soundStream::setBufferSize(unsigned int size)
 {
     bufferSize = size;
