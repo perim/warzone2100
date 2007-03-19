@@ -125,9 +125,11 @@ soundDecoding::~soundDecoding()
 
 boost::shared_array<char> soundDecoding::decode(unsigned int& bufferSize)
 {
+    unsigned int sizeEstimate = getSampleCount() * getChannelCount() * 2; // The 2 is for the assumption that samples are 16 bit large
+
     // If a maximum buffer size is specified check wether it isn't larger than the needed size
-    if (((bufferSize == 0) || (bufferSize > getSampleCount())) && (getSampleCount() != 0) )
-        bufferSize = getSampleCount() - getCurrentSample();
+    if (((bufferSize == 0) || (bufferSize > sizeEstimate)) && (sizeEstimate != 0) )
+        bufferSize = (getSampleCount() - getCurrentSample()) * getChannelCount() * 2;
 
     boost::shared_array<char> buffer(new char[bufferSize]);
 
