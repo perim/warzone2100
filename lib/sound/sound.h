@@ -90,6 +90,11 @@ extern "C"
      */
     sndTrackID sound_LoadTrackFromFile(char* fileName);
 
+    /** Immediately starts playing a track
+     *  \param track the track to play
+     */
+    void sound_PlayTrack(sndTrackID track);
+
     /** Performs required update actions
      */
     void sound_Update(void);

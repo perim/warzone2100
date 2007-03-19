@@ -35,6 +35,7 @@
 #include "stream.hpp"
 
 #include <map>
+#include <list>
 #include <string>
 #include <exception>
 
@@ -59,6 +60,9 @@ static void clearDeviceList();
 // Some containers of exported objects (through ID numbers)
 static std::map<sndStreamID, boost::shared_ptr<soundStream> > sndStreams;
 static std::map<sndTrackID, boost::shared_ptr<soundBuffer> > sndTracks;
+
+// Makes sure sound sources are kept alive until they're not needed anymore
+static std::list<boost::shared_ptr<soundSource> > sndSamples;
 
 // The ID numbers
 static sndStreamID nextStreamID = 0;
@@ -105,6 +109,7 @@ BOOL sound_InitLibraryWithDevice(unsigned int deviceNum)
 
 void sound_ShutdownLibrary()
 {
+    sndSamples.clear();
     sndTracks.clear();
     sndStreams.clear();
 
@@ -289,6 +294,21 @@ void sound_Update(void)
     {
         stream->second->update();
     }
+
+    // We're not using a for loop here because we need to have control over the iterator's increment operation.
+    // This is because as soon as we erase an iterator it becomes invalid that includes its increment operator
+    std::list<boost::shared_ptr<soundSource> >::iterator sample = sndSamples.begin();
+    while (sample != sndSamples.end())
+    {
+        if ((*sample)->getState() == soundSource::stopped)
+        {
+            std::list<boost::shared_ptr<soundSource> >::iterator tmp = sample;
+            ++sample;
+            sndSamples.erase(tmp);
+        }
+        else
+            ++sample;
+    }
 }
 
 sndTrackID sound_LoadTrackFromFile(char* fileName)
@@ -314,4 +334,15 @@ sndTrackID sound_LoadTrackFromFile(char* fileName)
 
     // First return current track ID plus 1 (because we reserve 0 for an invalid/non-existent stream)
     return nextTrackID++ + 1;
+}
+
+void sound_PlayTrack(sndTrackID track)
+{
+    if (!Initialized || !validID(track, nextTrackID, sndTracks)) return;
+
+    boost::shared_ptr<soundSource> source(new soundSource(sndContext, sndTracks[track]));
+
+    source->play();
+
+    sndSamples.push_back(source);
 }
