@@ -23,6 +23,7 @@
 */
 
 #include "source.hpp"
+#include "buffer.hpp"
 #include <string>
 #include "../stringconv.hpp"
 
@@ -70,7 +71,7 @@ void soundSource::setBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
     // Clear current error state
     alGetError();
 
-    alSourcei(source, AL_BUFFER, sndBuffer->getALBufferID());
+    alSourcei(source, AL_BUFFER, sndBuffer->buffer);
 
     ALenum alErrNo = alGetError();
     if (alErrNo != AL_NO_ERROR)
@@ -132,7 +133,7 @@ void soundSource::queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
 
     alGetError();   // clear current error state
 
-    ALuint tmpBuffer = sndBuffer->getALBufferID();
+    ALuint tmpBuffer = sndBuffer->buffer;
     alSourceQueueBuffers(source, 1, &tmpBuffer);
 
     ALenum alErrNo = alGetError();
@@ -176,7 +177,7 @@ boost::shared_ptr<soundBuffer> soundSource::unqueueBuffer()
 
     for (std::vector< boost::shared_ptr<soundBuffer> >::iterator i = buffers.begin(); i != buffers.end(); ++i)
     {
-        if ((*i)->getALBufferID() == bufferID)
+        if ((*i)->buffer == bufferID)
         {
             return *i;
         }

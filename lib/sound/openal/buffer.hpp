@@ -28,6 +28,9 @@
 #include <AL/al.h>
 #include <boost/smart_ptr.hpp>
 
+// Needed to be able to declare this class a friend of soundBuffer
+class soundSource;
+
 class soundBuffer
 {
     public:
@@ -45,17 +48,12 @@ class soundBuffer
          */
         void bufferData(unsigned int channels, unsigned int frequency, boost::shared_array<char> data, unsigned int size);
 
-        /** returns the internal OpenAL buffer handle as used by OpenAL functions
-         *  \return internal OpenAL buffer handle
-         */
-        inline const ALuint getALBufferID()
-        {
-            return buffer;
-        }
-
     private:
         // Internal identifier towards OpenAL
         ALuint buffer;
+
+        // Needed so that soundSource can attach (or queue/unqueue) soundBuffer's OpenAL buffer to its OpenAL source
+        friend class soundSource;
 };
 
 #endif // SOUND_OPENAL_BUFFER_HPP
