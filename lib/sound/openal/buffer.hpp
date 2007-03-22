@@ -26,7 +26,6 @@
 #define SOUND_OPENAL_BUFFER_HPP
 
 #include <AL/al.h>
-#include <boost/smart_ptr.hpp>
 
 // Needed to be able to declare this class a friend of soundBuffer
 class soundSource;
@@ -46,7 +45,12 @@ class soundBuffer
          *  \param data a pointer to an array containing the sound data
          *  \param size the size of the data array in bytes
          */
-        void bufferData(unsigned int channels, unsigned int frequency, boost::shared_array<char> data, unsigned int size);
+        void bufferData(unsigned int channels, unsigned int frequency, const char* data, unsigned int size);
+
+    private:
+        // Private copy constructor and copy assignment operator ensures this class cannot be copied
+        soundBuffer( const soundBuffer& );
+        const soundBuffer& operator=( const soundBuffer& );
 
     private:
         // Internal identifier towards OpenAL

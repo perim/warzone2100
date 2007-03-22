@@ -28,9 +28,7 @@
 // Include the OpenAL libraries
 #include <AL/alc.h>
 
-#include <vector>
 #include <string>
-#include <boost/smart_ptr.hpp>
 
 class soundDevice
 {
@@ -53,10 +51,10 @@ class soundDevice
             return sndDevice;
         }
 
-    public:
-        /** Returns a reference to a vector containing a list of devices available for opening
-         */
-        static std::vector<std::string>& deviceList();
+    private:
+        // Private copy constructor and copy assignment operator ensures this class cannot be copied
+        soundDevice( const soundDevice& );
+        const soundDevice& operator=( const soundDevice& );
 
     private:
         // Identifier towards OpenAL

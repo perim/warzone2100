@@ -227,6 +227,11 @@ class soundSource : public Geometry
         inline void createSource();
 
     private:
+        // Private copy constructor and copy assignment operator ensures this class cannot be copied
+        soundSource( const soundSource& );
+        const soundSource& operator=( const soundSource& );
+
+    private:
         // Identifier towards OpenAL
         ALuint source;
 

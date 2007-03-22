@@ -5,6 +5,7 @@ SRC=openal/buffer.cpp \
 	openal/source.cpp \
 	openal/context.cpp \
 	openal/device.cpp \
+	openal/devicelist.cpp \
 	constants.cpp \
 	decoding.cpp \
 	stream.cpp \

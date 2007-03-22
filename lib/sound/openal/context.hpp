@@ -136,6 +136,11 @@ class soundContext
         soundListener listener;
 
     private:
+        // Private copy constructor and copy assignment operator ensures this class cannot be copied
+        soundContext( const soundContext& );
+        const soundContext& operator=( const soundContext& );
+
+    private:
         // Identifier towards OpenAL
         ALCcontext* sndContext;
 

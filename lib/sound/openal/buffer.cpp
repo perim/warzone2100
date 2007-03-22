@@ -41,12 +41,12 @@ soundBuffer::~soundBuffer()
     alDeleteBuffers(1, &buffer);
 }
 
-void soundBuffer::bufferData(unsigned int channels, unsigned int frequency, boost::shared_array<char> data, unsigned int size)
+void soundBuffer::bufferData(unsigned int channels, unsigned int frequency, const char* data, unsigned int size)
 {
     // Clear error state
     alGetError();
 
-    alBufferData(buffer, ((channels == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16), data.get(), size, frequency);
+    alBufferData(buffer, ((channels == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16), data, size, frequency);
 
     switch (alGetError())
     {

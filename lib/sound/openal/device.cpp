@@ -48,39 +48,3 @@ soundDevice::~soundDevice()
 {
     alcCloseDevice(sndDevice);
 }
-
-// Device enumeration stuff
-static std::vector<std::string> Devices;
-std::vector<std::string>& soundDevice::deviceList()
-{
-    if (Devices.empty())
-    {
-        // This function call should never fail according to the OpenAL specs (not with these params)
-        // So as long as std::vector doesn't throw any exceptions there should occur no problems
-        const char* DeviceList = static_cast<const char*>(alcGetString(NULL, ALC_DEVICE_SPECIFIER));
-
-        // Default NULL device
-        Devices.push_back(std::string());
-
-        if (DeviceList == NULL)
-        {
-            fprintf(stderr, "soundLib: alcGetString returning NULL; ALC_ERROR: %d\n", alcGetError(NULL));
-        }
-        else
-        {
-            // The returned C-string DeviceList has its entries separated by one NUL char (0x00),
-            // and the list itself is terminated by two NUL chars.
-            while (*DeviceList != 0x00)
-            {
-                // Append the current list entry to the list
-                Devices.push_back(std::string(DeviceList));
-
-                // Move to the next entry in the list
-                // strlen really only detects the position of the first NUL char in the array
-                DeviceList += strlen(DeviceList) + 1;
-            }
-        }
-    }
-
-    return Devices;
-}

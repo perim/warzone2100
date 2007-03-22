@@ -64,7 +64,7 @@ bool soundStream::stream(boost::shared_ptr<soundBuffer> buffer)
     if (size == 0)
         return false;
 
-    buffer->bufferData(decoder->getChannelCount(), decoder->frequency(), pcm, size);
+    buffer->bufferData(decoder->getChannelCount(), decoder->frequency(), pcm.get(), size);
 
     return true;
 }

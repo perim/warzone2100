@@ -30,6 +30,7 @@
 #include "sound.h"
 
 // Internal library includes
+#include "openal/devicelist.hpp"
 #include "openal/device.hpp"
 #include "openal/context.hpp"
 #include "stream.hpp"
@@ -54,9 +55,6 @@ static boost::shared_array<char*> DeviceList;
 // OpenAL rendering contexts (can be rendered in parallel)
 static boost::shared_ptr<soundContext> sndContext;
 
-// Forward declarations of internal functions
-static void clearDeviceList();
-
 // Some containers of exported objects (through ID numbers)
 static std::map<sndStreamID, boost::shared_ptr<soundStream> > sndStreams;
 static std::map<sndTrackID, boost::shared_ptr<soundBuffer> > sndTracks;
@@ -75,18 +73,18 @@ BOOL sound_InitLibrary()
 
 BOOL sound_InitLibraryWithDevice(unsigned int deviceNum)
 {
-    // Always clear this list to make sure we're not using memory only necessary once
-    clearDeviceList();
-
     // check wether the library has already been previously initialized
     if (Initialized) return FALSE;
 
     try
     {
         // Open device (default dev (0) usually is "Generic Hardware")
-        sndDevice = boost::shared_ptr<soundDevice>(new soundDevice(soundDevice::deviceList().at(deviceNum)));
+        sndDevice = boost::shared_ptr<soundDevice>(new soundDevice(soundDeviceList::Instance().at(deviceNum)));
 
         sndContext = boost::shared_ptr<soundContext>(new soundContext(sndDevice));
+
+        // Always clear this list to make sure we're not using memory only necessary once
+        soundDeviceList::DestroyInstance();
 
         Initialized = true;
     }
@@ -116,52 +114,12 @@ void sound_ShutdownLibrary()
     sndContext.reset();
     sndDevice.reset();
 
-    clearDeviceList();
+    soundDeviceList::DestroyInstance();
 }
 
 const char** sound_DeviceList()
 {
-    if (DeviceList.get() == NULL)
-    {
-        // Allocate memory
-        DeviceList = boost::shared_array<char*>(new char*[soundDevice::deviceList().size() + 1]);
-
-        // Mark the end of the array
-        DeviceList[soundDevice::deviceList().size()] = NULL;
-
-        for (unsigned int i = 0; i != soundDevice::deviceList().size(); ++i)
-        {
-            // Allocate memory
-            DeviceList[i] = new char[soundDevice::deviceList()[i].length() + 1];
-
-            // Mark the end of the C-string
-            DeviceList[i][soundDevice::deviceList()[i].length()] = 0;
-
-            // Insert data
-            memcpy(DeviceList[i], soundDevice::deviceList()[i].c_str(), soundDevice::deviceList()[i].length());
-        }
-    }
-
-    return const_cast<const char**>(DeviceList.get());
-}
-
-/** Clears out and destroys the memory used by the enumeration array
- */
-static void clearDeviceList()
-{
-    if (DeviceList.get() != NULL)
-    {
-        // Run through list and delete its contents (i.e. free memory of its contents)
-        unsigned int i = 0;
-        while (DeviceList[i] != NULL)
-        {
-            delete [] DeviceList[i];
-            ++i;
-        }
-
-        // Destroy the list itself and automatically reset its pointer to NULL
-        DeviceList.reset();
-    }
+    return soundDeviceList::Instance().CArray();
 }
 
 template <class TypeID, class TypeObject>
@@ -231,7 +189,7 @@ void sound_Destroy2DStream(sndStreamID stream)
 {
     if (!Initialized || !validID(stream, nextStreamID, sndStreams)) return;
 
-    sndStreams[stream].reset();
+    sndStreams.erase(stream);
 }
 
 BOOL sound_Play2DStream(sndStreamID stream, BOOL reset)
@@ -327,7 +285,7 @@ sndTrackID sound_LoadTrackFromFile(char* fileName)
         return 0;
 
     // Insert the buffer into the OpenAL buffer
-    track->bufferData(decoder->getChannelCount(), decoder->frequency(), buffer, size);
+    track->bufferData(decoder->getChannelCount(), decoder->frequency(), buffer.get(), size);
 
     // Insert the track into the container for later reference/usage
     sndTracks.insert(std::pair<sndTrackID, boost::shared_ptr<soundBuffer> >(nextTrackID, track));
