@@ -35,8 +35,6 @@
 class soundDeviceList : public std::vector<std::string>
 {
     public:
-        ~soundDeviceList();
-
         /** Provides a reference to an instance of soundDeviceList
          *  If there currently exists no instance of soundDeviceList it creates one
          *  \return a reference to a singleton instance of soundDeviceList
@@ -47,28 +45,8 @@ class soundDeviceList : public std::vector<std::string>
          */
         static void DestroyInstance();
 
-        inline const char** CArray() const
-        {
-            return _cArray->arr();
-        }
-
     protected:
         soundDeviceList();
-
-        class _CArray
-        {
-            public:
-                _CArray(std::vector<std::string>& _arr);
-                ~_CArray();
-
-                inline const char** arr()
-                {
-                    return _cArray;
-                }
-
-            private:
-                const char** _cArray;
-        };
 
     private:
         // Private copy constructor and copy assignment operator ensures this class cannot be copied
@@ -78,9 +56,6 @@ class soundDeviceList : public std::vector<std::string>
     private:
         // Singleton instance pointer
         static soundDeviceList* _instance;
-
-        // C style array of strings
-        _CArray* _cArray;
 };
 
 #endif // SOUND_OPENAL_DEVICELIST_HPP

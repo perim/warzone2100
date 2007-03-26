@@ -28,7 +28,7 @@
 soundDeviceList* soundDeviceList::_instance = 0;
 
 // Device enumeration stuff
-soundDeviceList::soundDeviceList() : _cArray(0)
+soundDeviceList::soundDeviceList()
 {
     // This function call should never fail according to the OpenAL specs (not with these params)
     // So as long as std::vector doesn't throw any exceptions there should occur no problems
@@ -55,14 +55,6 @@ soundDeviceList::soundDeviceList() : _cArray(0)
     {
         //fprintf(stderr, "soundLib: alcGetString returning NULL; ALC_ERROR: %d\n", alcGetError(NULL));
     }
-
-    _cArray = new _CArray(*this);
-}
-
-soundDeviceList::~soundDeviceList()
-{
-    if (_cArray)
-        delete _cArray;
 }
 
 const soundDeviceList& soundDeviceList::Instance()
@@ -82,37 +74,4 @@ void soundDeviceList::DestroyInstance()
         delete _instance;
         _instance = 0;
     }
-}
-
-soundDeviceList::_CArray::_CArray(std::vector<std::string>& _arr) : _cArray(new const char*[_arr.size() + 1])
-{
-    // Allocate memory
-    //char** tmpArray = new char*[_arr.size() + 1];
-
-    // Mark the end of the array
-    _cArray[_arr.size()] = NULL;
-
-    std::vector<std::string>::iterator sourceIter;
-    const char** targetIter;
-    for (sourceIter = _arr.begin(), targetIter = _cArray; sourceIter != _arr.end() && *targetIter != NULL; ++sourceIter, ++targetIter)
-    {
-        // Allocate memory
-        *targetIter = new char[sourceIter->length() + 1];
-
-        // Mark the end of the C-string
-        const_cast<char*>(*targetIter)[sourceIter->length()] = 0;
-
-        // Insert data
-        memcpy(const_cast<char*>(*targetIter), sourceIter->c_str(), sourceIter->length());
-    }
-}
-
-soundDeviceList::_CArray::~_CArray()
-{
-    // Run through list and delete its contents (i.e. free memory of its contents)
-    for (const char** iter = _cArray; *iter != NULL; ++iter)
-        delete [] *iter;
-
-    delete [] _cArray;
-    _cArray = 0;
 }

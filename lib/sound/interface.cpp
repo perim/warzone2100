@@ -35,6 +35,9 @@
 #include "openal/context.hpp"
 #include "stream.hpp"
 
+// C-interface helper utility classes
+#include "interface/stringarray.hpp"
+
 #include <map>
 #include <list>
 #include <string>
@@ -119,7 +122,9 @@ void sound_ShutdownLibrary()
 
 const char** sound_DeviceList()
 {
-    return soundDeviceList::Instance().CArray();
+    static interfaceUtil::CArray CArray(soundDeviceList::Instance());
+
+    return CArray;
 }
 
 template <class TypeID, class TypeObject>
