@@ -10,6 +10,7 @@ SRC=openal/buffer.cpp \
 	decoding.cpp \
 	stream.cpp \
 	interface/stringarray.cpp \
+	interface/devicelist.cpp \
 	interface.cpp
 
 LIB=sound

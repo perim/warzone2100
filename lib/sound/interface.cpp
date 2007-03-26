@@ -30,13 +30,13 @@
 #include "sound.h"
 
 // Internal library includes
-#include "openal/devicelist.hpp"
 #include "openal/device.hpp"
 #include "openal/context.hpp"
 #include "stream.hpp"
 
 // C-interface helper utility classes
 #include "interface/stringarray.hpp"
+#include "interface/devicelist.hpp"
 
 #include <map>
 #include <list>
@@ -82,12 +82,12 @@ BOOL sound_InitLibraryWithDevice(unsigned int deviceNum)
     try
     {
         // Open device (default dev (0) usually is "Generic Hardware")
-        sndDevice = boost::shared_ptr<soundDevice>(new soundDevice(soundDeviceList::Instance().at(deviceNum)));
+        sndDevice = boost::shared_ptr<soundDevice>(new soundDevice(interfaceUtil::DeviceList::Instance().at(deviceNum)));
 
         sndContext = boost::shared_ptr<soundContext>(new soundContext(sndDevice));
 
         // Always clear this list to make sure we're not using memory only necessary once
-        soundDeviceList::DestroyInstance();
+        interfaceUtil::DeviceList::DestroyInstance();
 
         Initialized = true;
     }
@@ -117,14 +117,12 @@ void sound_ShutdownLibrary()
     sndContext.reset();
     sndDevice.reset();
 
-    soundDeviceList::DestroyInstance();
+    interfaceUtil::DeviceList::DestroyInstance();
 }
 
 const char** sound_DeviceList()
 {
-    static interfaceUtil::CArray CArray(soundDeviceList::Instance());
-
-    return CArray;
+    return interfaceUtil::DeviceList::Instance();
 }
 
 template <class TypeID, class TypeObject>
