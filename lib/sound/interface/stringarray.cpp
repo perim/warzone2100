@@ -23,21 +23,18 @@
 */
 
 #include "stringarray.hpp"
+#include "../templates.hpp"
 
-// FIXME: global, get rid of it (probably a functor/function-object will do best)
-static const char** targetIter;
-static inline void _Append(const std::string& source)
+static inline void _Append(const std::string& source, char*& target)
 {
     // Allocate memory
-    *targetIter = new char[source.length() + 1];
+    target = new char[source.length() + 1];
 
     // Mark the end of the C-string
-    const_cast<char*>(*targetIter)[source.length()] = 0;
+    target[source.length()] = 0;
 
     // Insert data
-    memcpy(const_cast<char*>(*targetIter), source.c_str(), source.length());
-
-    ++targetIter;
+    memcpy(target, source.c_str(), source.length());
 }
 
 interfaceUtil::CArray::CArray(const std::vector<std::string>& _arr) : _cArray(new const char*[_arr.size() + 1])
@@ -45,8 +42,7 @@ interfaceUtil::CArray::CArray(const std::vector<std::string>& _arr) : _cArray(ne
     // Mark the end of the array
     _cArray[_arr.size()] = NULL;
 
-    targetIter = _cArray;
-    for_each(_arr.begin(), _arr.end(), _Append);
+    for_each2(_arr.begin(), _arr.end(), const_cast<char**>(_cArray), const_cast<char**>(&(_cArray[_arr.size()])), _Append);
 }
 
 interfaceUtil::CArray::~CArray()

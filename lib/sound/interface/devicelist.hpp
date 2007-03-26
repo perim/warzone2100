@@ -60,4 +60,4 @@ namespace interfaceUtil
 
 }
 
-#endif // SOUND_OPENAL_DEVICELIST_HPP
+#endif // SOUND_INTERFACE_DEVICELIST_HPP

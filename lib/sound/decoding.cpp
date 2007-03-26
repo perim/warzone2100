@@ -24,7 +24,7 @@
 
 #include "decoding.hpp"
 #include "constants.hpp"
-#include "stringconv.hpp"
+#include "templates.hpp"
 #include <vorbis/vorbisfile.h>
 
 struct fileInfo
@@ -94,10 +94,10 @@ static long ovB_tell(void *datasource) {
 }
 
 static ov_callbacks oggVorbis_callbacks = {
-	ovB_read,
-	ovB_seek,
-	ovB_close,
-	ovB_tell
+        ovB_read,
+        ovB_seek,
+        ovB_close,
+        ovB_tell
 };
 
 soundDecoding::soundDecoding(std::string fileName, bool Seekable) : fileHandle(new fileInfo)

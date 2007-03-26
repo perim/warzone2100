@@ -25,7 +25,7 @@
 #include "source.hpp"
 #include "buffer.hpp"
 #include <string>
-#include "../stringconv.hpp"
+#include "../templates.hpp"
 
 soundSource::soundSource(boost::shared_ptr<soundContext> sndContext) : context(sndContext), bIs2D(false), bIsStream(true)
 {

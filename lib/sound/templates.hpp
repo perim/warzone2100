@@ -31,3 +31,16 @@ inline std::string to_string (const T& t)
     ss << t;
     return ss.str();
 }
+
+/** Dual iterating for_each implementation
+ *  This implementation maintains two separate iterators and increments them simultaniously.
+ *  Further it passes both to the provided function
+ *  \return object of type Function (can be a function pointer, or in case of a functor the object itself)
+ */
+template<class InputIterator, class OutputIterator, class Function>
+Function for_each2(InputIterator inFirst, InputIterator inLast, OutputIterator outFirst, OutputIterator outLast, Function f)
+{
+    while ( inFirst != inLast && outFirst != outLast)
+        f(*inFirst++, *outFirst++);
+    return f;
+}
