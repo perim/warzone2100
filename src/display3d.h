@@ -28,9 +28,9 @@
 #include "objectdef.h"
 #include "message.h"
 
-extern BOOL	xInOrder,yInOrder,yBeforeX,spinScene;
+extern BOOL xInOrder, yInOrder, yBeforeX, spinScene;
 
-extern UDWORD	mapX,mapY;
+extern UDWORD mapX,mapY;
 extern void	setViewAngle(SDWORD angle);
 extern UDWORD getViewDistance(void);
 extern void	setViewDistance(UDWORD dist);
@@ -79,18 +79,15 @@ extern BOOL	clipXY ( SDWORD x, SDWORD y);
 extern BOOL init3DView(void);
 extern void initViewPosition(void);
 extern iView player,camera;
-extern iVector	imdRot;
 extern UDWORD	distance;
 extern UDWORD  terrainOutline;
-extern SDWORD mouseTileX;
-extern SDWORD mouseTileY;
 extern UDWORD xOffset,yOffset;
 extern BOOL	selectAttempt;
 extern BOOL draggingTile;
 extern struct iIMDShape *g_imd;
 extern BOOL	droidSelected;
 extern UDWORD terrainMidX,terrainMidY;
-extern int32 playerXTile, playerZTile, rx, rz;
+extern Sint32 playerXTile, playerZTile, rx, rz;
 
 extern SDWORD scrollSpeed;
 extern iBitmap	**tilesRAW;
@@ -99,7 +96,6 @@ extern iPalette	gamePal;
 //extern void	assignSensorTarget( DROID *psDroid );
 extern void	assignSensorTarget( BASE_OBJECT *psObj );
 extern void	assignDestTarget( void );
-extern void	processSensorTarget( void );
 extern void	setEnergyBarDisplay( BOOL val );
 extern UDWORD getWaterTileNum( void);
 extern void	setUnderwaterTile(UDWORD num);
@@ -110,7 +106,7 @@ extern SDWORD	getCentreX( void );
 extern SDWORD	getCentreZ( void );
 
 
-extern SDWORD	mouseTileX,mouseTileY;
+extern SDWORD mouseTileX, mouseTileY;
 extern BOOL	yBeforeX;
 extern UDWORD numDroidsSelected;
 extern UDWORD	intensity1,intensity2,intensity3;
@@ -171,6 +167,8 @@ extern void showRangeAtPos(SDWORD centerX, SDWORD centerY, SDWORD radius);
 #define BAR_NONE	3
 
 extern UDWORD	barMode;
-
 extern UDWORD	geoOffset;
+
+extern void     draw3dLine(Vector3i *src, Vector3i *dest, UBYTE col);
+
 #endif

@@ -39,7 +39,6 @@
 #include "loop.h"
 #include "lib/gamelib/gtime.h"
 #include "lib/sound/sound.h"
-#include "audio_id.h"
 #include "geometry.h"
 #include "lib/gamelib/animobj.h"
 #include "anim_id.h"
@@ -107,7 +106,7 @@ DROID *psDrivenDroid = NULL;		// The droid that's being driven.
 static BOOL bDriveMode = FALSE;
 static SDWORD driveDir;					// Driven droid's direction.
 static SDWORD driveSpeed;				// Driven droid's speed.
-static int driveBumpTime;				// Time that followers get a kick up the ass.
+static UDWORD driveBumpTime;				// Time that followers get a kick up the ass.
 static BOOL	DoFollowRangeCheck = TRUE;
 static BOOL AllInRange = TRUE;
 static BOOL	ClearFollowRangeCheck = FALSE;
@@ -271,14 +270,8 @@ BOOL StartDriverMode(DROID *psOldDroid)
 	return FALSE;
 }
 
-void StopEngineNoise(void)
-{
 
-	DrivingAudioTrack=-1;
-}
-
-
-void ChangeDriver(void)
+static void ChangeDriver(void)
 {
 	DROID *psDroid;
 
@@ -417,20 +410,6 @@ BOOL driveDroidKilled(DROID *psDroid)
 	}
 
 	return TRUE;
-}
-
-
-
-BOOL driveDroidIsBusy(DROID *psDroid)
-{
-	if( DroidIsBuilding(psDroid) ||
-		DroidGoingToBuild(psDroid) ||
-		DroidIsDemolishing(psDroid) ) {
-
-		return TRUE;
-	}
-
-	return FALSE;
 }
 
 
@@ -634,8 +613,6 @@ void driveUpdate(void)
 
 	if(DirectControl) {
 		if(psDrivenDroid != NULL) {
-
-
 			if(bMultiPlayer && (driveBumpTime < gameTime))	// send latest info about driven droid.
 			{
 				SendDroidInfo(psDrivenDroid,DORDER_MOVE,psDrivenDroid->x,psDrivenDroid->y, NULL);
@@ -789,15 +766,6 @@ void driveDisableInterface(void)
 }
 
 
-// Get rid of the reticule.
-//
-void driveDisableInterface2(void)
-{
-
-	DriveInterfaceEnabled = FALSE;
-}
-
-
 // Return TRUE if the reticule is up.
 //
 BOOL driveInterfaceEnabled(void)
@@ -836,22 +804,6 @@ void driveStartBuild(void)
 	DriveInterfaceEnabled = FALSE;
 //	driveDisableInterface();
 	driveEnableControl();
-}
-
-
-void driveStartDemolish(void)
-{
-
-	intRemoveReticule();
-	DriveInterfaceEnabled = FALSE;
-	driveEnableControl();
-}
-
-
-// Stop structure placement for drive mode.
-//
-void driveStopBuild(void)
-{
 }
 
 

@@ -37,7 +37,7 @@
 #include "lib/gamelib/gtime.h"
 #include "power.h"
 #include "lib/sound/sound.h"
-#include "audio_id.h"
+#include "lib/sound/audio_id.h"
 #include "objects.h"
 #include "display.h"
 #include "console.h"
@@ -211,14 +211,10 @@ BOOL loadFeatureStats(char *pFeatureData, UDWORD bufferSize)
 		psFeature->baseBreadth=(UWORD)Breadth;
 
 
-#ifdef HASH_NAMES
-		psFeature->NameHash=HashString(featureName);
-#else
 		if (!allocateName(&psFeature->pName, featureName))
 		{
 			return FALSE;
 		}
-#endif
 
 		//determine the feature type
 		featureType(psFeature, type);
@@ -243,11 +239,7 @@ BOOL loadFeatureStats(char *pFeatureData, UDWORD bufferSize)
 		psFeature->psImd = (iIMDShape *) resGetData("IMD", GfxFile);
 		if (psFeature->psImd == NULL)
 		{
-#ifdef HASH_NAMES
-			debug( LOG_ERROR, "Cannot find the feature PIE for record %s",  strresGetString( NULL, psFeature->NameHash ) );
-#else
 			debug( LOG_ERROR, "Cannot find the feature PIE for record %s",  getName( psFeature->pName ) );
-#endif
 			abort();
 			return FALSE;
 		}
@@ -964,7 +956,7 @@ void removeFeature(FEATURE *psDel)
 	UDWORD		mapX, mapY, width,breadth, player;
 	MAPTILE		*psTile;
 	MESSAGE		*psMessage;
-	iVector		pos;
+	Vector3i pos;
 
 //	iVector		dv;
 //	UWORD		uwFlameCycles, uwFlameAnims, i;
@@ -995,9 +987,7 @@ void removeFeature(FEATURE *psDel)
 	{
 		for (breadth = 0; breadth < psDel->psStats->baseBreadth; breadth++)
 		{
-	 //psor		mapTile(mapX+width, mapY+breadth)->psObject = NULL;
 			psTile = mapTile(mapX+width, mapY+breadth);
-		  //	psTile->tileInfoBits = (UBYTE)(psTile->tileInfoBits & BITS_STRUCTURE_MASK);
 			/* Don't need to worry about clearing structure bits - they should not be there! */
 			SET_TILE_EMPTY(psTile);
 			CLEAR_TILE_NODRAW(psTile);
@@ -1064,7 +1054,7 @@ void destroyFeature(FEATURE *psDel)
 {
 	UDWORD			widthScatter,breadthScatter,heightScatter, i;
 	EFFECT_TYPE		explosionSize;
-	iVector			pos;
+	Vector3i pos;
 	UDWORD			width,breadth;
 	UDWORD			mapX,mapY;
 	MAPTILE			*psTile;
@@ -1181,10 +1171,6 @@ SDWORD getFeatureStatFromName( char *pName )
 	UDWORD			inc;
 	FEATURE_STATS	*psStat;
 
-#ifdef HASH_NAMES
-	UDWORD		HashedName=HashString(pName);
-#endif
-
 #ifdef RESOURCE_NAMES
 
 	if (!getResourceName(pName))
@@ -1197,11 +1183,7 @@ SDWORD getFeatureStatFromName( char *pName )
 	for (inc = 0; inc < numFeatureStats; inc++)
 	{
 		psStat = &asFeatureStats[inc];
-#ifdef HASH_NAMES
-		if (psStat->NameHash==HashedName)
-#else
 		if (!strcmp(psStat->pName, pName))
-#endif
 		{
 			return inc;
 		}

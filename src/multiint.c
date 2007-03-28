@@ -87,6 +87,8 @@
 #include "multirecv.h"
 #include "multimenu.h"
 
+#include "warzoneconfig.h"
+
 #include "init.h"
 #include "levels.h"
 
@@ -2312,6 +2314,7 @@ static void processMultiopWidgets(UDWORD id)
 
 		// set the fog correctly..
 		setRevealStatus(game.fog);
+		war_SetFog(!game.fog);
 
 	if(bWhiteBoardUp)
 	{
@@ -2547,6 +2550,7 @@ void frontendMultiMessages(void)
 
 				// set the fog correctly..
 				setRevealStatus(game.fog);
+				war_SetFog(!game.fog);
 
 				bMultiPlayer = TRUE;
 				if(bWhiteBoardUp)
@@ -4144,7 +4148,7 @@ BOOL addMultiBut(W_SCREEN *screen,UDWORD formid,UDWORD id,UDWORD x, UDWORD y,
 
 void displayForceDroid(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
 {
-	iVector			Rotation,Position;
+	Vector3i		Rotation,Position;
 	UDWORD			x			= psWidget->x+xOffset;
 	UDWORD			y			= psWidget->y+yOffset;
 	UDWORD tlx,tly,brx,bry;

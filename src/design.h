@@ -158,5 +158,4 @@ extern void resetDesignPauseState(void);
 
 extern void reverseTemplateList(DROID_TEMPLATE **ppsList);
 
-
 #endif

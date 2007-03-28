@@ -61,7 +61,7 @@
 #include "display.h"
 #include "ai.h"
 #include "warcam.h"
-#include "audio_id.h"
+#include "lib/sound/audio_id.h"
 #include "fpath.h"
 #include "display3d.h"
 #include "combat.h"
@@ -139,7 +139,7 @@ static void clearTargets(DROID * psDroid)
 
 //FIXME: unit doesn't shoot while returning to the guard position
 // check whether a droid has to move back to the thing it is guarding
-void orderCheckGuardPosition(DROID *psDroid, SDWORD range)
+static void orderCheckGuardPosition(DROID *psDroid, SDWORD range)
 {
 	SDWORD		xdiff, ydiff;
 	UDWORD		x,y;
@@ -1382,7 +1382,7 @@ void orderUpdateDroid(DROID *psDroid)
 
 
 /* Give a command group an order */
-void orderCmdGroupBase(DROID_GROUP *psGroup, DROID_ORDER_DATA *psData)
+static void orderCmdGroupBase(DROID_GROUP *psGroup, DROID_ORDER_DATA *psData)
 {
 	DROID	*psCurr, *psChosen;
 	SDWORD	xdiff,ydiff, currdist, mindist;
@@ -1434,8 +1434,7 @@ void orderCmdGroupBase(DROID_GROUP *psGroup, DROID_ORDER_DATA *psData)
 
 // check the position of units giving fire support to this unit and tell
 // them to pull back if the sensor is going to move through them
-
-void orderCheckFireSupportPos(DROID *psSensor, DROID_ORDER_DATA *psOrder)
+WZ_DECL_UNUSED static void orderCheckFireSupportPos(DROID *psSensor, DROID_ORDER_DATA *psOrder)
 {
 	SDWORD		fsx,fsy, fsnum, sensorVX,sensorVY, fsVX,fsVY;
 	FRACT		sensorAngle, fsAngle, adiff;
@@ -2835,7 +2834,7 @@ BOOL bOrderEffectDisplayed = FALSE;
 void orderDroidAdd(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 {
 
-	iVector		position;
+	Vector3i position;
 
 	ASSERT( PTRVALID(psDroid, sizeof(DROID)),
 		"orderUnitAdd: invalid unit pointer" );
@@ -3021,7 +3020,7 @@ void orderCheckList(DROID *psDroid)
 
 
 // add a location order to a droids order list
-BOOL orderDroidLocAdd(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWORD y)
+static BOOL orderDroidLocAdd(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWORD y)
 {
 	DROID_ORDER_DATA	sOrder;
 
@@ -3042,7 +3041,7 @@ BOOL orderDroidLocAdd(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWORD y)
 
 
 // add an object order to a droids order list
-BOOL orderDroidObjAdd(DROID *psDroid, DROID_ORDER order, BASE_OBJECT *psObj[DROID_MAXWEAPS])
+static BOOL orderDroidObjAdd(DROID *psDroid, DROID_ORDER order, BASE_OBJECT *psObj[DROID_MAXWEAPS])
 {
 	DROID_ORDER_DATA	sOrder;
 	UBYTE	i;
@@ -3491,7 +3490,7 @@ DROID_ORDER chooseOrderObj(DROID *psDroid, BASE_OBJECT *psObj)
 	return order;
 }
 
-void orderPlayOrderObjAudio( UDWORD player, BASE_OBJECT *psObj )
+static void orderPlayOrderObjAudio( UDWORD player, BASE_OBJECT *psObj )
 {
 	DROID	*psDroid;
 
@@ -3670,7 +3669,7 @@ DROID *FindATransporter(void)
 
 // See if the player has access to a factory in this map.
 //
-STRUCTURE *FindAFactory(UDWORD player, UDWORD factoryType)
+static STRUCTURE *FindAFactory(UDWORD player, UDWORD factoryType)
 {
 	STRUCTURE *psStruct;
 
@@ -3691,7 +3690,7 @@ STRUCTURE *FindAFactory(UDWORD player, UDWORD factoryType)
 
 // See if the player has access to a repair facility in this map.
 //
-STRUCTURE *FindARepairFacility(void)
+static STRUCTURE *FindARepairFacility(void)
 {
 	STRUCTURE *psStruct;
 
@@ -4323,7 +4322,7 @@ BOOL secondaryGotPrimaryOrder(DROID *psDroid, DROID_ORDER order)
 
 
 // set the state of a numeric group
-void secondarySetGroupState(UDWORD player, UDWORD group, SECONDARY_ORDER sec, SECONDARY_STATE state)
+static void secondarySetGroupState(UDWORD player, UDWORD group, SECONDARY_ORDER sec, SECONDARY_STATE state)
 {
 	DROID	*psCurr;
 	SECONDARY_STATE	currState;
@@ -4339,7 +4338,7 @@ void secondarySetGroupState(UDWORD player, UDWORD group, SECONDARY_ORDER sec, SE
 }
 
 // get the average secondary state of a numeric group
-SECONDARY_STATE secondaryGetAverageGroupState(UDWORD player, UDWORD group, UDWORD mask)
+static SECONDARY_STATE secondaryGetAverageGroupState(UDWORD player, UDWORD group, UDWORD mask)
 {
 #define MAX_STATES		5
 	struct { UDWORD state, num; } aStateCount[MAX_STATES];

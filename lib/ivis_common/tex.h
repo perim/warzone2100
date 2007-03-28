@@ -32,9 +32,6 @@
 
 //*************************************************************************
 
-#define iV_TEXTEX(i)	((iTexture *) (&_TEX_PAGE[(i)].tex))
-#define iV_TEXPAGE(i)	((iTexPage *) (&_TEX_PAGE[(i)]))
-#define iV_TEXBMP(i)	((iBitmap *) (&_TEX_PAGE[(i)].tex.bmp))
 #define iV_TEXWIDTH(i)	(_TEX_PAGE[(i)].tex.width)
 #define iV_TEXHEIGHT(i) (_TEX_PAGE[(i)].tex.height)
 #define iV_TEXNAME(i)	((char *) (&_TEX_PAGE[(i)].name))
@@ -46,7 +43,7 @@
 typedef struct
 {
 	iTexture	tex;
-	uint8		type;
+	Uint8		type;
 	char		name[80];
 	unsigned int textPage3dfx;
 	int		bResource;	// Was page provided by resource handler?
@@ -61,8 +58,8 @@ extern iTexPage	_TEX_PAGE[iV_TEX_MAX];
 
 int iV_GetTexture(char *filename);
 extern int pie_ReloadTexPage(char *filename, char *pBuffer);
-extern int pie_AddBMPtoTexPages(iSprite* s, const char *filename, int type, iBool bResource);
-void pie_ChangeTexPage(int tex_index, iSprite* s, int type, iBool bResource);
+extern int pie_AddBMPtoTexPages(iTexture* s, const char *filename, int type, BOOL bResource);
+void pie_ChangeTexPage(int tex_index, iTexture* s, int type, BOOL bResource);
 extern void pie_TexInit(void);
 
 //*************************************************************************

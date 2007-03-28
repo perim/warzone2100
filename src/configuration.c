@@ -65,10 +65,7 @@ BOOL loadConfig(void)
 	SDWORD	val;
 	char	sBuf[255];
 
-	if(!openWarzoneKey())
-	{
-		return FALSE;
-	}
+	openWarzoneKey();
 
 	//  options screens.
 	// //////////////////////////
@@ -318,8 +315,8 @@ BOOL loadConfig(void)
 	}
 	else
 	{
-		strcpy(game.name, strresGetString(psStringRes, STR_GAME_NAME));
-		setWarzoneKeyString("gameName", game.name);
+		//strcpy(game.name, strresGetString(psStringRes, STR_GAME_NAME));
+		setWarzoneKeyString("gameName", "My Game");
 	}
 
 	// player name
@@ -329,8 +326,8 @@ BOOL loadConfig(void)
 	}
 	else
 	{
-		strcpy((char*)sPlayer, strresGetString(psStringRes, STR_PLAYER_NAME));
-		setWarzoneKeyString("playerName",(char*)sPlayer);
+		//strcpy((char*)sPlayer, strresGetString(psStringRes, STR_PLAYER_NAME));
+		setWarzoneKeyString("playerName","Player");
 	}
 
 	// map name

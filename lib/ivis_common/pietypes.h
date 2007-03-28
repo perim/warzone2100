@@ -38,36 +38,22 @@
  *	Global Type Definitions
  */
 /***************************************************************************/
-typedef Sint8 int8;
-typedef Sint16 int16;
-typedef Sint32 int32;
-typedef Uint8 uint8;
-typedef Uint16 uint16;
-typedef Uint32 uint32;
-
 //*************************************************************************
 //
 // Simple derived types
 //
 //*************************************************************************
-typedef struct { Sint32 left, top, right, bottom; } iClip;
-typedef char iBitmap;
+typedef struct { Sint32 x, y; } Vector2i;
+typedef struct { Sint32 x, y, z; } Vector3i;
+typedef struct { float x, y, z; } Vector3f;
+
+typedef struct { Vector3i p, r; } iView;
+typedef struct { Sint32 x, y, z, u, v; Uint8 g; } iVertex;
+
 typedef struct { Uint8 r, g, b; } iColour;
-typedef BOOL iBool;
-typedef struct { Sint32 x, y; } iPoint;
-typedef struct { Uint32 width, height, depth; iBitmap *bmp; } iSprite;
 typedef iColour iPalette[256];
-typedef struct { Uint8 r, g, b, p; } iRGB8;
-typedef struct { Uint16 r, g, b, p; } iRGB16;
-typedef struct { Uint32 r, g, b, p; } iRGB32;
-typedef struct { Sint8 x, y; } iPoint8;
-typedef struct { Sint16 x, y; } iPoint16;
-typedef struct { Sint32 x, y; } iPoint32;
-typedef struct { Sint32 x, y, z; } iVector;
-typedef struct { double x, y, z; } iVectorf;
+
+typedef char iBitmap;
 typedef struct { Sint32 width, height; iBitmap *bmp; } iTexture;
-typedef struct { Sint32 x, y, z, u, v; uint8 g; } iVertex;
-typedef struct { float x,y,z; } PIEVECTORF;
-typedef struct { iVector p, r; } iView;
 
 #endif // _pieTypes_h

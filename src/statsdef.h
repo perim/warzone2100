@@ -27,17 +27,10 @@
 #define _statsdef_h
 
 
-#ifdef HASH_NAMES
-/* Elements common to all stats structures */
-#define STATS_BASE \
-	UDWORD			ref;			/* Unique ID of the item */ \
-	UDWORD			NameHash	/* unique hash value of the item (hashed version of pName below) */
-#else
 /* Elements common to all stats structures */
 #define STATS_BASE \
 	UDWORD			ref;			/* Unique ID of the item */ \
 	char			*pName			/* pointer to the text id name (i.e. short language-independant name) */
-#endif
 
 /* Stats common to all stats structs */
 typedef struct _base_stats
@@ -410,7 +403,7 @@ typedef struct _weapon_stats
 	UDWORD			longHit;			// Chance to hit at long range
 	UDWORD			firePause;			// Time between each weapon fire
 	UDWORD			numExplosions;		// The number of explosions per shot
-	UBYTE			numRounds;			// The number of rounds per salvo
+	UBYTE			numRounds;			// The number of rounds per salvo(magazine)
 	UDWORD			reloadTime;			// Time to reload the round of ammo (salvo fire)
 	UDWORD			damage;				// How much damage the weapon causes
 	UDWORD			radius;				// Basic blast radius of weapon
@@ -482,11 +475,9 @@ typedef enum _travel_medium
 typedef struct _propulsion_types
 {
 	//Name isn't used anymore - AB 16/06/98
-/*#ifdef HASH_NAMES
-	UDWORD	NameHash;
-#else
+/*
 	char	*pName;				// Text name of the component
-#endif*/
+*/
 	UWORD				powerRatioMult;		// Multiplier for the calculated power ratio of
 											// the droid
 	UDWORD				travel;				// Which medium the propulsion travels in

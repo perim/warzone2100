@@ -120,7 +120,7 @@ typedef enum
 }LAND_LIGHT_SPEC;
 
 
-#define MAX_EFFECTS	2500
+#define MAX_EFFECTS	500
 
 #define	GRAVITON_GRAVITY	((FRACT)-800)
 #define	EFFECT_X_FLIP		0x1
@@ -195,7 +195,6 @@ typedef enum
 
 typedef struct	_effect_def
 {
-UBYTE			status;			// what status is the present effect - active/inactive/dormant
 UBYTE			control;		// Controls the bits above - essential,flips etc
 UBYTE			group;			// what	group is it - explosion, building effect etc....
 UBYTE			type;			// what type is it within the group?
@@ -203,10 +202,10 @@ UBYTE			frameNumber;	// what frame number is the imd on?
 UWORD			size;			// Size in terms of percent of original imd.
 UBYTE			baseScale;		// if scaled, what's bottom line?
 UBYTE			specific;		// how many times has it bounced?
-PIEVECTORF		position;		// world coordinates of the effect - floats on the PC.
-PIEVECTORF		velocity;		// movement values per update
-iVector			rotation;		// current rotation - only for gravitons
-iVector			spin;			// rotation info for spinning things.
+Vector3f		position;		// world coordinates of the effect - floats on the PC.
+Vector3f		velocity;		// movement values per update
+Vector3i			rotation;		// current rotation - only for gravitons
+Vector3i			spin;			// rotation info for spinning things.
 UDWORD			birthTime;		// what time was it introduced into the world?
 UDWORD			lastFrame;		// when did we last update the frame?
 UWORD			frameDelay;		// how many game ticks between each frame?
@@ -215,9 +214,6 @@ UWORD			radius;			// Used for area effects
 struct iIMDShape		*imd;			// pointer to the imd the effect uses.
 } EFFECT;
 
-#define KILL_EFFECT(x)	(x)->status = ES_INACTIVE; \
-						(x)->control = (UBYTE) 0
-
 /* Maximum number of effects in the world - need to investigate what this should be */
 /* EXTERNAL REFERENCES */
 extern void	effectGiveAuxVar		( UDWORD var); // naughty
@@ -225,12 +221,11 @@ extern void	effectGiveAuxVarSec		( UDWORD var); // and so's this
 
 extern void	initEffectsSystem		( void );
 extern void	processEffects			( void );
-extern void	addEffect				( iVector *pos, EFFECT_GROUP group,
+extern void	addEffect				( Vector3i *pos, EFFECT_GROUP group,
 										EFFECT_TYPE type, BOOL specified, struct iIMDShape *imd, BOOL lit );
-extern void	addMultiEffect			( iVector *basePos, iVector *scatter,EFFECT_GROUP group,
+extern void	addMultiEffect			( Vector3i *basePos, Vector3i *scatter,EFFECT_GROUP group,
 									EFFECT_TYPE type,BOOL specified, struct iIMDShape *imd, UDWORD number, BOOL lit, UDWORD size );
 
-extern void drawEffects				( void );
 extern void	renderEffect			( EFFECT *psEffect );
 extern UDWORD getNumEffects			( void );
 extern UDWORD	getFreeEffect		( void );

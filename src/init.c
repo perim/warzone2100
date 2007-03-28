@@ -43,7 +43,7 @@
 #include "advvis.h"
 #include "astar.h"
 #include "atmos.h"
-#include "audio_id.h"
+#include "lib/sound/audio_id.h"
 #include "cluster.h"
 #include "cmddroid.h"
 #include "component.h"
@@ -1722,7 +1722,7 @@ BOOL stageThreeInitialise(void)
 //UDWORD	i,j;
 
 	STRUCTURE *psStr;
-	SDWORD i;
+	UDWORD i;
 	DROID		*psDroid;
 
 	debug(LOG_MAIN, "stageThreeInitalise");

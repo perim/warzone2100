@@ -72,7 +72,7 @@ static UBYTE		aByteScale[256][256];
 
 /* ---------------------------------------------------------------------------------- */
 
-void	pie_DrawViewingWindow(iVector *v, UDWORD x1, UDWORD y1, UDWORD x2, UDWORD y2, UDWORD colour)
+void	pie_DrawViewingWindow(Vector3i *v, UDWORD x1, UDWORD y1, UDWORD x2, UDWORD y2, UDWORD colour)
 {
 	SDWORD clip, i;
 
@@ -159,7 +159,6 @@ void pie_DrawSkybox(iView player, iView camera, float rotation, int texpage, int
 	BOOL oldAlphaTestState = glIsEnabled(GL_ALPHA_TEST);
 
 	// set up matrices and textures
-	//pie_SetGeometricOffset((iV_SCREEN_WIDTH >> 1), geoOffset);
 	pie_PerspectiveBegin();
 
 	// Push identity matrix onto stack
@@ -220,18 +219,18 @@ void pie_DrawSkybox(iView player, iView camera, float rotation, int texpage, int
 		glTexCoord2i(u + w * 6, v + h);	glVertex3f(-r, 0, -r); // bottom right
 		glTexCoord2i(u + w * 6, v); 	glVertex3f(-r, r, -r); // top right
 
-		// Left	
+		// Left
 		glTexCoord2i(u + w * 8, v + h);	glVertex3f(-r, 0, r); // bottom r
 		glTexCoord2i(u + w * 8, v); 	glVertex3f(-r, r, r); // top r
 	glEnd();
- 	
+
 	// Load Saved State
 	pie_MatEnd();
 	pie_PerspectiveEnd();
 
 	if (oldFogState)
 	{
-		glEnable(GL_FOG); 
+		glEnable(GL_FOG);
 	}
 	if (oldAlphaTestState)
 	{

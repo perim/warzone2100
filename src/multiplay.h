@@ -234,13 +234,13 @@ extern DROID_TEMPLATE	*IdToTemplate(UDWORD tempId,UDWORD player);
 extern DROID_TEMPLATE	*NameToTemplate(const char *sName,UDWORD player);
 
 extern char *getPlayerName	(UDWORD player);
-extern BOOL setPlayerName		(UDWORD player, char *sName);
+extern BOOL setPlayerName		(UDWORD player, const char *sName);
 extern char *getPlayerColourName(SDWORD player);
 extern BOOL isHumanPlayer		(UDWORD player);				//to tell if the player is a computer or not.
 extern BOOL myResponsibility	(UDWORD player);
 extern BOOL responsibleFor		(UDWORD player, UDWORD playerinquestion);
 extern UDWORD whosResponsible	(UDWORD player);
-extern iVector cameraToHome		(UDWORD player,BOOL scroll);
+extern Vector3i cameraToHome		(UDWORD player,BOOL scroll);
 extern SDWORD dpidToPlayer		(SDWORD dpid);
 extern char		playerName[MAX_PLAYERS][MAX_NAME_SIZE];	//Array to store all player names (humans and AIs)
 

@@ -41,7 +41,7 @@
 #include "lib/gamelib/gtime.h"
 #include "effects.h"
 #include "lib/sound/sound.h"
-#include "audio_id.h"			// for samples.
+#include "lib/sound/audio_id.h"			// for samples.
 #include "wrappers.h"			// for gameover..
 #include "lib/script/script.h"
 #include "scripttabs.h"
@@ -673,7 +673,7 @@ void addLoserGifts(void)
 {
 //	DROID			*psD;
 //	DROID_TEMPLATE	*psTempl;
-//	iVector			position;
+//	Vector3i			position;
 	static UDWORD	lastgift=0;
 	UDWORD			i,x,y,quantity,count;
 	UWORD			nx,ny;
@@ -933,7 +933,7 @@ void processMultiPlayerArtifacts(void)
 	static UDWORD lastCall;
 	FEATURE	*pF,*pFN;
 	UDWORD	x,y,pl;
-	iVector position;
+	Vector3i position;
 	BOOL	found=FALSE;
 
 	// only do this every now and again.

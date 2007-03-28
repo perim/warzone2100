@@ -35,7 +35,7 @@
 #include "keybind.h"
 #include "mechanics.h"
 #include "lib/sound/sound.h"
-#include "audio_id.h"
+#include "lib/sound/audio_id.h"
 #include "lighting.h"
 #include "power.h"
 #include "hci.h"
@@ -709,18 +709,11 @@ FRACT	zoomInterval;
 	fraction = MAKEFRACT(frameTime2)/GAME_TICKS_PER_SEC;
 	zoomInterval = fraction * MAP_ZOOM_RATE;
 	distance += MAKEINT(zoomInterval);
-	/* If we're debugging, limit to a bit more */
-
-
-#ifndef JOHN
+	if(distance>MAXDISTANCE)
 	{
-		if(distance>MAXDISTANCE)
-		{
-			distance = MAXDISTANCE;
-		}
+		distance = MAXDISTANCE;
 	}
-#endif
-
+	UpdateFogDistance(distance);
 }
 
 // --------------------------------------------------------------------------
@@ -768,7 +761,7 @@ FRACT	zoomInterval;
 	{
 		distance = MINDISTANCE;
 	}
-
+	UpdateFogDistance(distance);
 }
 
 // --------------------------------------------------------------------------
@@ -2385,13 +2378,13 @@ void kf_ScriptTest( void )
 // --------------------------------------------------------------------------
 void kf_TriggerShockWave( void )
 {
-iVector	pos;
+	Vector3i pos;
 
-		pos.x = mouseTileX*TILE_UNITS + TILE_UNITS/2;
-		pos.z = mouseTileY*TILE_UNITS + TILE_UNITS/2;
-		pos.y = map_Height(pos.x,pos.z) + SHOCK_WAVE_HEIGHT;
+	pos.x = mouseTileX*TILE_UNITS + TILE_UNITS/2;
+	pos.z = mouseTileY*TILE_UNITS + TILE_UNITS/2;
+	pos.y = map_Height(pos.x,pos.z) + SHOCK_WAVE_HEIGHT;
 
-		addEffect(&pos,EFFECT_EXPLOSION,EXPLOSION_TYPE_SHOCKWAVE,FALSE,NULL,0);
+	addEffect(&pos,EFFECT_EXPLOSION,EXPLOSION_TYPE_SHOCKWAVE,FALSE,NULL,0);
 }
 // --------------------------------------------------------------------------
 void	kf_ToggleMouseInvert( void )

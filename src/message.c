@@ -33,7 +33,7 @@
 #include "text.h"
 #include "console.h"
 #include "lib/sound/sound.h"
-#include "audio_id.h"
+#include "lib/sound/audio_id.h"
 #include "hci.h"
 #include "lib/ivis_common/piedef.h"
 #include "objmem.h"
@@ -159,7 +159,7 @@ extern UDWORD selectedPlayer;
         } \
 	}
 
-void add_msg(MESSAGE *list[MAX_PLAYERS], MESSAGE *msg, UDWORD player)
+static void add_msg(MESSAGE *list[MAX_PLAYERS], MESSAGE *msg, UDWORD player)
 {
 	ASSERT( PTRVALID((msg), sizeof(MESSAGE)),
 		"addMessage: Invalid message pointer" );
@@ -534,7 +534,7 @@ BOOL initMessage(void)
 	return TRUE;
 }
 
-BOOL addToViewDataList(VIEWDATA *psViewData, UBYTE numData)
+static BOOL addToViewDataList(VIEWDATA *psViewData, UBYTE numData)
 {
 	VIEWDATA_LIST		*psAdd;
 
@@ -871,7 +871,7 @@ VIEWDATA *loadViewData(char *pViewMsgData, UDWORD bufferSize)
 			}
 			else
 			{
-				if ( audioID_GetIDFromStr( audioName, &audioID ) == FALSE )
+				if ( (audioID = audio_GetIDFromStr( audioName )) == NO_SOUND )
 				{
 					debug( LOG_ERROR, "loadViewData: couldn't get ID %d for weapon sound %s", audioID, audioName );
 					abort();

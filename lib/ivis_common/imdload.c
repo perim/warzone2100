@@ -46,14 +46,13 @@
 
 
 // Static variables
-static uint32 	_IMD_FLAGS;
+static Uint32 	_IMD_FLAGS;
 static char		_IMD_NAME[MAX_FILE_PATH];
-static int32 	_IMD_VER;
+static Sint32 	_IMD_VER;
 static VERTEXID 	vertexTable[iV_IMD_MAX_POINTS];
-static char		imagePath[MAX_FILE_PATH] = {""};
 
 // kludge
-extern void pie_SurfaceNormal(iVector *p1, iVector *p2, iVector *p3, iVector *v);
+extern void pie_SurfaceNormal(Vector3i *p1, Vector3i *p2, Vector3i *p3, Vector3i *v);
 
 // local prototypes
 static iIMDShape *_imd_load_level(char **FileData, char *FileDataEnd, int nlevels,
@@ -231,7 +230,7 @@ iIMDShape *iV_ProcessIMD( char **ppFileData, char *FileDataEnd )
 	s = _imd_load_level(&pFileData,FileDataEnd,nlevels,texpage);
 
 	// load texture page if specified
-	if ( (s != NULL) && (_IMD_FLAGS & iV_IMD_XTEX)) 
+	if ( (s != NULL) && (_IMD_FLAGS & iV_IMD_XTEX))
 	{
 		if(bTextured) {
 			texpage = iV_GetTexture(texfile);
@@ -271,12 +270,12 @@ iIMDShape *iV_ProcessIMD( char **ppFileData, char *FileDataEnd )
 //* returns	FALSE on error (memory allocation failure/bad file format)
 //*
 //******
-static iBool _imd_load_polys( char **ppFileData, iIMDShape *s )
+static BOOL _imd_load_polys( char **ppFileData, iIMDShape *s )
 {
 	char *pFileData = *ppFileData;
 	int cnt;
 	int i, j; //, anim;
-	iVector p0, p1, p2, *points;
+	Vector3i p0, p1, p2, *points;
 	iIMDPoly *poly;
 	int	nFrames,pbRate,tWidth,tHeight;
 
@@ -395,7 +394,7 @@ static iBool _imd_load_polys( char **ppFileData, iIMDShape *s )
 		// PC texture coord routine
 			if (poly->vrt && (poly->flags & (iV_IMD_TEX|iV_IMD_PSXTEX))) {
 				for (j=0; j<poly->npnts; j++) {
-					int32 VertexU,VertexV;
+					Sint32 VertexU, VertexV;
 					if (sscanf(pFileData, "%d %d%n", &VertexU, &VertexV, &cnt) != 2) {
 						iV_Error(0xff,"(_load_polys) [poly %d] error reading tex outline",i);
 						return FALSE;
@@ -429,7 +428,7 @@ static iBool _imd_load_polys( char **ppFileData, iIMDShape *s )
 
 #define GETBSPTRIANGLE(polyid) (&(s->polys[(polyid)]))
 
-static iBool _imd_load_bsp( char **ppFileData, iIMDShape *s, UWORD BSPNodeCount )
+static BOOL _imd_load_bsp( char **ppFileData, iIMDShape *s, UWORD BSPNodeCount )
 {
 	char *pFileData = *ppFileData;
 	int cnt;
@@ -578,7 +577,7 @@ static BOOL ReadPoints( char **ppFileData, iIMDShape *s )
 	char *pFileData = *ppFileData;
 	int cnt;
 	int i;
-	iVector *p;
+	Vector3i *p;
 	int lastPoint,match,j;
 	SDWORD newX,newY,newZ;
 
@@ -649,23 +648,23 @@ static BOOL ReadPoints( char **ppFileData, iIMDShape *s )
 //* returns	FALSE on error (memory allocation failure/bad file format)
 //*
 //******
-static iBool _imd_load_points( char **ppFileData, iIMDShape *s )
+static BOOL _imd_load_points( char **ppFileData, iIMDShape *s )
 {
 	int i ;
-	iVector *p;
-	int32 tempXMax,tempXMin,tempZMax,tempZMin,extremeX,extremeZ;
-	int32 xmax, ymax, zmax;
+	Vector3i *p;
+	Sint32 tempXMax, tempXMin, tempZMax, tempZMin, extremeX, extremeZ;
+	Sint32 xmax, ymax, zmax;
 	double dx, dy, dz, rad_sq, rad, old_to_p_sq, old_to_p, old_to_new;
 	double xspan, yspan, zspan, maxspan;
-	iVectorf dia1, dia2, cen;
-	iVectorf vxmin = { 0, 0, 0 }, vymin = { 0, 0, 0 }, vzmin = { 0, 0, 0 },
+	Vector3f dia1, dia2, cen;
+	Vector3f vxmin = { 0, 0, 0 }, vymin = { 0, 0, 0 }, vzmin = { 0, 0, 0 },
 	         vxmax = { 0, 0, 0 }, vymax = { 0, 0, 0 }, vzmax = { 0, 0, 0 };
 
 	//load the points then pass through a second time to setup bounding datavalues
 
 	IMDPoints+=s->npoints;
 
-	s->points = p = (iVector *) iV_HeapAlloc(sizeof(iVector) * s->npoints);
+	s->points = p = (Vector3i *) iV_HeapAlloc(sizeof(Vector3i) * s->npoints);
 	if (p == NULL) {
 		return FALSE;
 	}
@@ -858,33 +857,33 @@ static iBool _imd_load_points( char **ppFileData, iIMDShape *s )
 				cen.x = (rad*cen.x + old_to_new*p->x) / old_to_p;
 				cen.y = (rad*cen.y + old_to_new*p->y) / old_to_p;
 				cen.z = (rad*cen.z + old_to_new*p->z) / old_to_p;
-				iV_DEBUG4("NEW SPHERE: cen,rad = %d %d %d,  %d\n",(int32) cen.x, (int32) cen.y, (int32) cen.z, (int32) rad);
+				iV_DEBUG4("NEW SPHERE: cen,rad = %d %d %d,  %d\n",(Sint32) cen.x, (Sint32) cen.y, (inSint32t32) cen.z, (Sint32) rad);
 			}
 		}
 
-		s->ocen.x = (int32) cen.x;
-		s->ocen.y = (int32) cen.y;
-		s->ocen.z = (int32) cen.z;
-		s->oradius = (int32) rad;
-		iV_DEBUG2("radius, sradius, %d, %d\n",s->radius,s->sradius);
-		iV_DEBUG4("SPHERE: cen,rad = %d %d %d,  %d\n",s->ocen.x,s->ocen.y,s->ocen.z,s->oradius);
+		s->ocen.x = (Sint32) cen.x;
+		s->ocen.y = (Sint32) cen.y;
+		s->ocen.z = (Sint32) cen.z;
+		s->oradius = (Sint32) rad;
+		iV_DEBUG2("radius, sradius, %d, %d\n", s->radius, s->sradius);
+		iV_DEBUG4("SPHERE: cen,rad = %d %d %d,  %d\n", s->ocen.x, s->ocen.y, s->ocen.z, s->oradius);
 
 // END: tight bounding sphere
 	return TRUE;
 }
 
 
-static iBool _imd_load_connectors(char **ppFileData, iIMDShape *s)
+static BOOL _imd_load_connectors(char **ppFileData, iIMDShape *s)
 {
 	char *pFileData = *ppFileData;
 	int cnt;
 	int i;
-	iVector *p;
+	Vector3i *p;
 	SDWORD newX,newY,newZ;
 
 	IMDConnectors+=s->nconnectors;
 
-	if ((s->connectors = (iVector *) iV_HeapAlloc(sizeof(iVector) * s->nconnectors)) == NULL)
+	if ((s->connectors = (Vector3i *) iV_HeapAlloc(sizeof(Vector3i) * s->nconnectors)) == NULL)
 	{
 		iV_Error(0xff,"(_load_connectors) iV_HeapAlloc fail");
 		return FALSE;
@@ -949,6 +948,9 @@ static iIMDShape *_imd_load_level(char **ppFileData, char *FileDataEnd, int nlev
 		s->connectors = NULL;
 		s->texanims = NULL;
 		s->next=NULL;
+
+		s->shadowEdgeList = NULL;
+		s->nShadowEdges = 0;
 
 // if we can be sure that there is no bsp ... the we check for level number at this point
 #ifndef BSPIMD
@@ -1083,15 +1085,3 @@ static iIMDShape *_imd_load_level(char **ppFileData, char *FileDataEnd, int nlev
 }
 
 
-BOOL iV_setImagePath(char *path)
-{
-	int i;
-	strcpy(imagePath,path);
-	i = strlen(imagePath);
-	if (imagePath[i] != '/')
-	{
-		imagePath[i] = '/';
-		imagePath[i+1] = '\0';
-	}
-	return TRUE;
-}

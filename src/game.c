@@ -17,9 +17,6 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
-	ALL PSX, HASH_NAMES AND WIN32 excluded stuff removed - Alex M.
-*/
 
 /* Standard library headers */
 #include <physfs.h>
@@ -54,7 +51,7 @@
 #include "init.h"
 #include "mission.h"
 #include "scores.h"
-#include "audio_id.h"
+#include "lib/sound/audio_id.h"
 #include "anim_id.h"
 #include "design.h"
 #include "lighting.h"
@@ -1155,7 +1152,7 @@ typedef struct _save_flag_v18
 	UDWORD			screenR;
 	UDWORD			player;				/*which player the Position belongs to*/
 	BOOL			selected;			/*flag to indicate whether the Position */
-	iVector		coords;							//the world coords of the Position
+	Vector3i		coords;							//the world coords of the Position
 	UBYTE		factoryInc;						//indicates whether the first, second etc factory
 	UBYTE		factoryType;					//indicates whether standard, cyborg or vtol factory
 	UBYTE		dummyNOTUSED;						//sub value. needed to order production points.
@@ -1171,7 +1168,7 @@ typedef struct _save_flag
 	UDWORD			screenR;
 	UDWORD			player;				/*which player the Position belongs to*/
 	BOOL			selected;			/*flag to indicate whether the Position */
-	iVector		coords;							//the world coords of the Position
+	Vector3i		coords;							//the world coords of the Position
 	UBYTE		factoryInc;						//indicates whether the first, second etc factory
 	UBYTE		factoryType;					//indicates whether standard, cyborg or vtol factory
 	UBYTE		dummyNOTUSED;						//sub value. needed to order production points.
@@ -4713,26 +4710,15 @@ static DROID* buildDroidFromSaveDroidV11(SAVE_DROID_V11* psSaveDroid)
 		return NULL;
 	}
 	psTemplate->numWeaps = psSaveDroid->numWeaps;
-
-	found = TRUE;
 	for (i=0; i < psSaveDroid->numWeaps; i++)
 	{
-
-		psTemplate->asWeaps[i] = getCompFromName(COMP_WEAPON, psSaveDroid->asWeaps[i].name);
-
-		if (psTemplate->asWeaps[i] < 0)
+		int weapon = getCompFromName(COMP_WEAPON, psSaveDroid->asWeaps[i].name);
+		if( weapon < 0)
 		{
-
-			debug( LOG_ERROR, "This component no longer exists - %s, the droid will be deleted", psSaveDroid->asWeaps[i].name );
-			abort();
-			found = FALSE;
-			break;
-		}
-	}
-	if (!found)
-	{
-		//ignore this record
-		return NULL;
+			ASSERT(FALSE, "This component does not exist : %s", psSaveDroid->asWeaps[i].name );
+			return NULL;
+		}			
+		psTemplate->asWeaps[i] = weapon;
 	}
 
 	psTemplate->buildPoints = calcTemplateBuild(psTemplate);
@@ -4836,27 +4822,19 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 		return NULL;
 	}
 	psTemplate->numWeaps = psSaveDroid->numWeaps;
-	found = TRUE;
+
 	if (psSaveDroid->numWeaps > 0)
 	{
 		for(i = 0;i < psTemplate->numWeaps;i++)
 		{
-			psTemplate->asWeaps[i] = getCompFromName(COMP_WEAPON, psSaveDroid->asWeaps[i].name);
-
-			if (psTemplate->asWeaps[i] < 0)
+			int weapon = getCompFromName(COMP_WEAPON, psSaveDroid->asWeaps[i].name);
+			if( weapon < 0)
 			{
-
-				debug( LOG_ERROR, "This component no longer exists - %s, the droid will be deleted", psSaveDroid->asWeaps[i].name );
-				abort();
-				found = FALSE;
-			}
+				ASSERT(FALSE, "This component does not exist : %s", psSaveDroid->asWeaps[i].name );
+				return NULL;
+			}			
+			psTemplate->asWeaps[i] = weapon;
 		}
-	}
-	if (!found)
-	{
-		//ignore this record
-		ASSERT( found,"buildUnitFromSavedUnit; failed to find weapon" );
-		return NULL;
 	}
 
 	psTemplate->buildPoints = calcTemplateBuild(psTemplate);
@@ -4973,7 +4951,7 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 		else
 	 	{
 			id = getStructStatFromName(psSaveDroidV14->tarStatName);
-			if (id != -1)
+			if (id != (UDWORD)-1)
 			{
 				psDroid->psTarStats[0] = (BASE_STATS*)&asStructureStats[id];
 			}
@@ -5009,7 +4987,7 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 		else
 		{
 			id = getStructStatFromName(psSaveDroid->tarStatName);
-			if (id != -1)
+			if (id != (UDWORD)-1)
 			{
 				psDroid->psTarStats[0] = (BASE_STATS*)&asStructureStats[id];
 			}
@@ -5099,26 +5077,18 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 		return NULL;
 	}
 	psTemplate->numWeaps = psSaveDroid->numWeaps;
-	found = TRUE;
 	if (psSaveDroid->numWeaps > 0)
 	{
 		for(i = 0;i < psTemplate->numWeaps;i++)
 		{
-			psTemplate->asWeaps[i] = getCompFromName(COMP_WEAPON, psSaveDroid->asWeaps[i].name);
-
-			if (psTemplate->asWeaps[i] < 0)
+			int weapon = getCompFromName(COMP_WEAPON, psSaveDroid->asWeaps[i].name);
+			if( weapon < 0)
 			{
-				debug( LOG_ERROR, "This component no longer exists - %s, the droid will be deleted", psSaveDroid->asWeaps[i].name );
-				abort();
-				found = FALSE;
-			}
+				ASSERT(FALSE, "This component does not exist : %s", psSaveDroid->asWeaps[i].name );
+				return NULL;
+			}			
+			psTemplate->asWeaps[i] = weapon;
 		}
-	}
-	if (!found)
-	{
-		//ignore this record
-		ASSERT( found,"buildUnitFromSavedUnit; failed to find weapon" );
-		return NULL;
 	}
 
 	psTemplate->buildPoints = calcTemplateBuild(psTemplate);
@@ -5236,7 +5206,7 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 	else
 	{
 		id = getStructStatFromName(psSaveDroid->tarStatName);
-		if (id != -1)
+		if (id != (UDWORD)-1)
 		{
 			psDroid->psTarStats[0] = (BASE_STATS*)&asStructureStats[id];
 		}
@@ -5965,11 +5935,7 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			//psSaveDroid->numWeaps = psCurr->numWeaps;
 			/*for (i=0; i < psCurr->numWeaps; i++)
 			{
-#ifdef HASH_NAMES
-				if (!getHashFromComp(COMP_WEAPON, &psSaveDroid->asWeaps[i].NameHash, psCurr->asWeaps[i].nStat))
-#else
 				if (!getNameFromComp(COMP_WEAPON, psSaveDroid->asWeaps[i].name, psCurr->asWeaps[i].nStat))
-#endif
 				{
 					//ignore this record
 					//continue;
@@ -6155,11 +6121,7 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			psSaveDroid->numProgs = psCurr->numProgs;
 			for (i=0; i < psCurr->numProgs; i++)
 			{
-#ifdef HASH_NAMES
-				if (!getHashFromComp(COMP_PROGRAM, & psSaveDroid->HashProgs[i], psCurr->asProgs[i].psStats - asProgramStats))
-#else
 				if (!getNameFromComp(COMP_PROGRAM, psSaveDroid->asProgs[i], psCurr->asProgs[i].psStats - asProgramStats))
-#endif
 				{
 					//ignore this record
 					continue;
@@ -6595,14 +6557,14 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
 
         //check not trying to build too near the edge
     	if(((psSaveStructure->x >> TILE_SHIFT) < TOO_NEAR_EDGE) || ((
-            psSaveStructure->x >> TILE_SHIFT) > (SDWORD)(mapWidth - TOO_NEAR_EDGE)))
+            psSaveStructure->x >> TILE_SHIFT) > (mapWidth - TOO_NEAR_EDGE)))
         {
 			debug( LOG_ERROR, "Structure %s, x coord too near the edge of the map. id - %d", getSaveStructNameV19((SAVE_STRUCTURE_V17*)psSaveStructure), psSaveStructure->id );
 			abort();
             continue;
         }
     	if(((psSaveStructure->y >> TILE_SHIFT) < TOO_NEAR_EDGE) || ((
-            psSaveStructure->y >> TILE_SHIFT) > (SDWORD)(mapHeight - TOO_NEAR_EDGE)))
+            psSaveStructure->y >> TILE_SHIFT) > (mapHeight - TOO_NEAR_EDGE)))
         {
 			debug( LOG_ERROR, "Structure %s, y coord too near the edge of the map. id - %d", getSaveStructNameV19((SAVE_STRUCTURE_V17*)psSaveStructure), psSaveStructure->id );
 			abort();
@@ -6682,7 +6644,7 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
 				((RESEARCH_FACILITY *)psStructure->pFunctionality)->researchPoints =
 					psSaveStructure->output;
 				((RESEARCH_FACILITY *)psStructure->pFunctionality)->timeStarted = (psSaveStructure->timeStarted);
-				if (psSaveStructure->subjectInc != -1)
+				if (psSaveStructure->subjectInc != (UDWORD)-1)
 				{
 					((RESEARCH_FACILITY *)psStructure->pFunctionality)->psSubject = (BASE_STATS *)
 						(asResearch + psSaveStructure->subjectInc);
@@ -6882,14 +6844,14 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
         }*/
         //check not trying to build too near the edge
     	if(((psSaveStructure->x >> TILE_SHIFT) < TOO_NEAR_EDGE) || ((
-            psSaveStructure->x >> TILE_SHIFT) > (SDWORD)(mapWidth - TOO_NEAR_EDGE)))
+            psSaveStructure->x >> TILE_SHIFT) > (mapWidth - TOO_NEAR_EDGE)))
         {
 			debug( LOG_ERROR, "Structure %s, x coord too near the edge of the map. id - %d", getSaveStructNameV19((SAVE_STRUCTURE_V17*)psSaveStructure), psSaveStructure->id );
 			abort();
             continue;
         }
     	if(((psSaveStructure->y >> TILE_SHIFT) < TOO_NEAR_EDGE) || ((
-            psSaveStructure->y >> TILE_SHIFT) > (SDWORD)(mapHeight - TOO_NEAR_EDGE)))
+            psSaveStructure->y >> TILE_SHIFT) > (mapHeight - TOO_NEAR_EDGE)))
         {
 			debug( LOG_ERROR, "Structure %s, y coord too near the edge of the map. id - %d", getSaveStructNameV19((SAVE_STRUCTURE_V17*)psSaveStructure), psSaveStructure->id );
 			abort();
@@ -7330,14 +7292,14 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
         }*/
         //check not trying to build too near the edge
     	if(((psSaveStructure->x >> TILE_SHIFT) < TOO_NEAR_EDGE) || ((
-            psSaveStructure->x >> TILE_SHIFT) > (SDWORD)(mapWidth - TOO_NEAR_EDGE)))
+            psSaveStructure->x >> TILE_SHIFT) > (mapWidth - TOO_NEAR_EDGE)))
         {
 			debug( LOG_ERROR, "Structure %s, x coord too near the edge of the map. id - %d", getSaveStructNameV((SAVE_STRUCTURE*)psSaveStructure), psSaveStructure->id );
 			abort();
             continue;
         }
     	if(((psSaveStructure->y >> TILE_SHIFT) < TOO_NEAR_EDGE) || ((
-            psSaveStructure->y >> TILE_SHIFT) > (SDWORD)(mapHeight - TOO_NEAR_EDGE)))
+            psSaveStructure->y >> TILE_SHIFT) > (mapHeight - TOO_NEAR_EDGE)))
         {
 			debug( LOG_ERROR, "Structure %s, y coord too near the edge of the map. id - %d", getSaveStructNameV((SAVE_STRUCTURE*)psSaveStructure), psSaveStructure->id );
 			abort();
@@ -8077,118 +8039,6 @@ BOOL loadSaveFeature(char *pFileData, UDWORD filesize)
 	return TRUE;
 }
 
-// -----------------------------------------------------------------------------------------
-#ifdef ALLOWOLDSAVEGAMES
-/* code specific to version 2 of a save feature */
-BOOL loadSaveFeatureV2(char *pFileData, UDWORD filesize, UDWORD numFeatures)
-{
-	SAVE_FEATURE_V2			*psSaveFeature;
-	FEATURE					*pFeature;
-	UDWORD					count, statInc;
-	FEATURE_STATS			*psStats = NULL;
-	BOOL					found;
-
-
-	if ((sizeof(SAVE_FEATURE_V2) * numFeatures + FEATURE_HEADER_SIZE) >
-		filesize)
-	{
-		debug( LOG_ERROR, "featureLoad: unexpected end of file" );
-		abort();
-		return FALSE;
-	}
-
-	/* Load in the feature data */
-	for (count = 0; count < numFeatures; count ++,
-									pFileData += sizeof(SAVE_FEATURE_V2))
-	{
-		psSaveFeature = (SAVE_FEATURE_V2 *) pFileData;
-
-		/* SAVE_FEATURE_V2 is FEATURE_SAVE_V2 */
-		/* FEATURE_SAVE_V2 includes OBJECT_SAVE_V19 */
-		endian_udword(&psSaveFeature->id);
-		endian_udword(&psSaveFeature->x);
-		endian_udword(&psSaveFeature->y);
-		endian_udword(&psSaveFeature->z);
-		endian_udword(&psSaveFeature->direction);
-		endian_udword(&psSaveFeature->player);
-		endian_udword(&psSaveFeature->burnStart);
-		endian_udword(&psSaveFeature->burnDamage);
-
-		//'old' user save games have the translated name saved as a stat
-		if (gameType == GTYPE_SAVE_START)
-		{
-
-			statInc = getStatFromNamePreV7(TRUE, psSaveFeature->name);
-
-			if (statInc < 0 || statInc > numFeatureStats)
-			{
-
-				debug( LOG_ERROR, "This feature no longer exists - %s, it will be deleted", psSaveFeature->name );
-				abort();
-
-				continue;
-			}
-			psStats = asFeatureStats + statInc;
-		}
-		else
-		{
-			//get the stats for this feature
-			found = FALSE;
-
-
-
-			if (!getSaveObjectName(psSaveFeature->name))
-			{
-				continue;
-			}
-
-
-			for (statInc = 0; statInc < numFeatureStats; statInc++)
-			{
-				psStats = asFeatureStats + statInc;
-
-				//loop until find the same name
-
-				if (!strcmp(psStats->pName, psSaveFeature->name))
-
-				{
-					found = TRUE;
-					break;
-				}
-			}
-			//if haven't found the feature - ignore this record!
-			if (!found)
-			{
-
-				debug( LOG_ERROR, "This feature no longer exists - %s", psSaveFeature->name );
-				abort();
-
-				continue;
-			}
-		}
-
-		//create the Feature
-		//buildFeature(asFeatureStats + psSaveFeature->featureInc,
-		//	psSaveFeature->x, psSaveFeature->y);
-		pFeature = buildFeature(psStats, psSaveFeature->x, psSaveFeature->y,TRUE);
-		//will be added to the top of the linked list
-		//pFeature = apsFeatureLists[0];
-		if (!pFeature)
-		{
-			ASSERT( FALSE, "loadSaveFeature:Unable to create feature" );
-			return FALSE;
-		}
-
-		//restore values
-		pFeature->id = psSaveFeature->id;
-		pFeature->direction = (UWORD)psSaveFeature->direction;
-		pFeature->inFire = psSaveFeature->inFire;
-		pFeature->burnDamage = psSaveFeature->burnDamage;
-	}
-
-	return TRUE;
-}
-#endif //ALLOWOLDSAVEGAMES
 
 // -----------------------------------------------------------------------------------------
 /* code for all version 8 - 14 save features */
@@ -9581,11 +9431,7 @@ static BOOL writeCompListFile(char *pFileName)
 		/*for(i = 0; i < numProgramStats; i++)
 		{
 			psStats = (COMP_BASE_STATS *)(asProgramStats + i);
-#ifdef HASH_NAMES
-			psSaveCompList->NameHash=psStats->NameHash;
-#else
 			strcpy(psSaveCompList->name, psStats->pName);
-#endif
 			psSaveCompList->type = COMP_PROGRAM;
 			psSaveCompList->player = (UBYTE)player;
 			psSaveCompList->state = apCompLists[player][COMP_PROGRAM][i];
@@ -11606,157 +11452,6 @@ UDWORD getSaveGameType(void)
 	return gameType;
 }
 
-// -----------------------------------------------------------------------------------------
-SDWORD getCompFromNamePreV7(UDWORD compType, char *pName)
-{
-
-#ifndef RESOURCE_NAMES
-
-	BASE_STATS	*psStats = NULL;
-	UDWORD		numStats = 0, count, statSize = 0, id;
-	char		*pTranslatedName;
-
-	switch (compType)
-	{
-	case COMP_BODY:
-		psStats = (BASE_STATS*)asBodyStats;
-		numStats = numBodyStats;
-		statSize = sizeof(BODY_STATS);
-		break;
-	case COMP_BRAIN:
-		psStats = (BASE_STATS*)asBrainStats;
-		numStats = numBrainStats;
-		statSize = sizeof(BRAIN_STATS);
-		break;
-	case COMP_PROPULSION:
-		psStats = (BASE_STATS*)asPropulsionStats;
-		numStats = numPropulsionStats;
-		statSize = sizeof(PROPULSION_STATS);
-		break;
-	case COMP_REPAIRUNIT:
-		psStats = (BASE_STATS*)asRepairStats;
-		numStats = numRepairStats;
-		statSize = sizeof(REPAIR_STATS);
-		break;
-	case COMP_ECM:
-		psStats = (BASE_STATS*)asECMStats;
-		numStats = numECMStats;
-		statSize = sizeof(ECM_STATS);
-		break;
-	case COMP_SENSOR:
-		psStats = (BASE_STATS*)asSensorStats;
-		numStats = numSensorStats;
-		statSize = sizeof(SENSOR_STATS);
-		break;
-	case COMP_CONSTRUCT:
-		psStats = (BASE_STATS*)asConstructStats;
-		numStats = numConstructStats;
-		statSize = sizeof(CONSTRUCT_STATS);
-		break;
-	/*case COMP_PROGRAM:
-		psStats = (BASE_STATS*)asProgramStats;
-		numStats = numProgramStats;
-		statSize = sizeof(PROGRAM_STATS);
-		break;*/
-	case COMP_WEAPON:
-		psStats = (BASE_STATS*)asWeaponStats;
-		numStats = numWeaponStats;
-		statSize = sizeof(WEAPON_STATS);
-		break;
-	default:
-		//COMP_UNKNOWN should be an error
-		debug( LOG_ERROR, "Invalid component type - game.c" );
-		abort();
-	}
-
-	//find the stat with the same name
-	for(count = 0; count < numStats; count++)
-	{
-
-		//get the translated name from the stat
-		if (!strresGetIDNum(psStringRes, psStats->pName, &id))
-		{
-			debug( LOG_ERROR, "Unable to find string resource for %s", getStatName(psStats) );
-			abort();
-			return -1;
-		}
-		//get the string from the id
-		pTranslatedName = strresGetString(psStringRes, id);
-
-		if (!strcmp(pTranslatedName, pName))
-		{
-			return count;
-		}
-		psStats = (BASE_STATS *)((char*)psStats + statSize);
-	}
-
-	//return -1 if record not found or an invalid component type is passed in
-	return -1;
-
-
-#else
-
-	return getCompFromName(compType, pName);
-
-#endif
-}
-
-// -----------------------------------------------------------------------------------------
-SDWORD getStatFromNamePreV7(BOOL isFeature, char *pName)
-{
-
-#ifndef RESOURCE_NAMES
-
-	BASE_STATS	*psStats;
-	UDWORD		numStats = 0, count, statSize, id;
-	char		*pTranslatedName;
-
-	if (isFeature)
-	{
-		psStats = (BASE_STATS*)asFeatureStats;
-		numStats = numFeatureStats;
-		statSize = sizeof(FEATURE_STATS);
-	}
-	else
-	{
-		psStats = (BASE_STATS*)asStructureStats;
-		numStats = numStructureStats;
-		statSize = sizeof(STRUCTURE_STATS);
-	}
-
-	//find the stat with the same name
-	for(count = 0; count < numStats; count++)
-	{
-
-		//get the translated name from the stat
-		if (!strresGetIDNum(psStringRes, psStats->pName, &id))
-		{
-			debug( LOG_ERROR, "Unable to find string resource for %s", getStatName(psStats) );
-			abort();
-			return -1;
-		}
-
-//get the string from the id
-		pTranslatedName = strresGetString(psStringRes, id);
-
-
-		if (!strcmp(pTranslatedName, pName))
-		{
-			return count;
-		}
-		psStats = (BASE_STATS *)((char*)psStats + statSize);
-	}
-
-	//return -1 if record not found or an invalid component type is passed in
-	return -1;
-
-
-#else
-
-	return getCompFromName(compType, pName);
-
-#endif
-}
 
 // -----------------------------------------------------------------------------------------
 //copies a Stat name into a destination string for a given stat type and index
@@ -11809,7 +11504,7 @@ static BOOL getNameFromComp(UDWORD compType, char *pDest, UDWORD compIndex)
 
 
 // draws the structures onto a completed map preview sprite.
-BOOL plotStructurePreview(iSprite *backDropSprite,UBYTE scale,UDWORD offX,UDWORD offY)
+BOOL plotStructurePreview(iTexture *backDropSprite, UBYTE scale, UDWORD offX, UDWORD offY)
 {
 	SAVE_STRUCTURE				sSave;  // close eyes now.
 	SAVE_STRUCTURE				*psSaveStructure = &sSave; // assumes save_struct is larger than all previous ones...

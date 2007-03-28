@@ -56,7 +56,7 @@
 #include "lib/script/script.h"
 #include "scripttabs.h"
 #include "lib/sound/sound.h"
-#include "audio_id.h"
+#include "lib/sound/audio_id.h"
 #include "cmddroid.h"
 #include "warcam.h"
 #include "wrappers.h"
@@ -3905,7 +3905,7 @@ void setNoGoArea(UBYTE x1, UBYTE y1, UBYTE x2, UBYTE y2, UBYTE area)
 
 void addLandingLights( UDWORD x, UDWORD y)
 {
-iVector	pos;
+	Vector3i pos;
 
 	pos.x = x;
 	pos.z = y;

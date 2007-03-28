@@ -58,7 +58,6 @@
 #include "game.h"
 #include "power.h"
 #include "lib/sound/sound.h"
-#include "audio_id.h"
 #include "lib/framework/fractions.h"
 #include "order.h"
 #include "frontend.h"
@@ -2416,20 +2415,6 @@ SDWORD GetObjectBuffer(void)
 	return -1;
 }
 
-SDWORD GetTopicBuffer(void)
-{
-	SDWORD i;
-
-	for(i=0; i<NUM_TOPICBUFFERS; i++) {
-		if( IsBufferInUse(&TopicBuffers[i])==FALSE )
-		{
-			return i;
-		}
-	}
-
-	return -1;
-}
-
 void ClearStatBuffers(void)
 {
 	UDWORD i;
@@ -2559,11 +2544,10 @@ void ClearButton(BOOL Down,UDWORD Size, UDWORD buttonType)
 
 // Create a button by rendering an IMD object into it.
 //
-void CreateIMDButton(IMAGEFILE *ImageFile,UWORD ImageID,void *Object,UDWORD Player,RENDERED_BUTTON *Buffer,BOOL Down,
-					 UDWORD IMDType,UDWORD buttonType)
+void CreateIMDButton(IMAGEFILE *ImageFile, UWORD ImageID, void *Object, UDWORD Player, RENDERED_BUTTON *Buffer, BOOL Down, UDWORD IMDType, UDWORD buttonType)
 {
 	UDWORD Size;
-	iVector Rotation,Position, NullVector;
+	Vector3i Rotation, Position, NullVector;
 	UDWORD ox,oy;
 	BUTTON_SURFACE *ButSurf;
 	UDWORD Radius;

@@ -28,11 +28,12 @@
 #include "lib/framework/frame.h"
 #include "lib/framework/strres.h"
 #include "lib/framework/frameresource.h"
+#include "lib/gamelib/gtime.h"
 #include "objects.h"
 #include "stats.h"
 #include "map.h"
 #include "winmain.h"
-#include "audio_id.h"
+#include "lib/sound/audio_id.h"
 #include "projectile.h"
 #include "text.h"
 #define WEAPON_TIME		100
@@ -114,6 +115,7 @@ UDWORD      maxConstPoints;
 UDWORD      maxRepairPoints;
 UDWORD      maxWeaponRange;
 UDWORD      maxWeaponDamage;
+UDWORD      maxWeaponROF;
 UDWORD      maxPropulsionSpeed;
 
 
@@ -138,6 +140,7 @@ static void setMaxConstPoints(UDWORD points);
 static void setMaxRepairPoints(UDWORD repair);
 static void setMaxWeaponRange(UDWORD range);
 static void setMaxWeaponDamage(UDWORD damage);
+static void setMaxWeaponROF(UDWORD rof);
 static void setMaxPropulsionSpeed(UDWORD speed);
 
 //determine the effect this upgrade would have on the max values
@@ -260,12 +263,7 @@ void statsDealloc(COMP_BASE_STATS* pStats, UDWORD listSize, UDWORD structureSize
 
 static BOOL allocateStatName(BASE_STATS* pStat, char *Name)
 {
-#ifdef HASH_NAMES
-		pStat->NameHash=HashString(Name);
-		return(TRUE);
-#else
 		return (allocateName(&pStat->pName, Name));
-#endif
 }
 
 
@@ -478,11 +476,7 @@ char *getStatName(void * Stat)
 {
 	BASE_STATS *psStats=(BASE_STATS * )Stat;
 
-#ifdef HASH_NAMES
-	return(strresGetString(NULL,psStats->NameHash));
-#else
 	return(getName(psStats->pName));
-#endif
 }
 
 
@@ -772,11 +766,7 @@ BOOL loadWeaponStats(char *pWeaponData, UDWORD bufferSize)
 			return FALSE;
 		}
 
-#ifdef HASH_NAMES
-		StatsName=NULL;
-#else
 		StatsName=psStats->pName;
-#endif
 
 		//covered by the movement model now - AB 15/06/98
 		//set the homing round
@@ -934,6 +924,7 @@ BOOL loadWeaponStats(char *pWeaponData, UDWORD bufferSize)
         {
             setMaxWeaponRange(psStats->longRange);
             setMaxWeaponDamage(psStats->damage);
+            setMaxWeaponROF(weaponROF(psStats));
             setMaxComponentWeight(psStats->weight);
         }
 
@@ -1510,7 +1501,7 @@ BOOL loadPropulsionStats(char *pPropulsionData, UDWORD bufferSize)
 					//check stat is designable
 					if (asPropulsionStats[NumPropulsion].design)
 					{
-						setMaxComponentWeight(asPropulsionStats[NumPropulsion].weight 
+						setMaxComponentWeight(asPropulsionStats[NumPropulsion].weight
 						                      * asBodyStats[i].weight / 100);
 					}
 				}
@@ -2188,9 +2179,7 @@ BOOL loadPropulsionTypes(char *pPropTypeData, UDWORD bufferSize)
 			(char*)&PropulsionName, (char*)&flightName, &multiplier);
 
 		//allocate storage for the name
-/*#ifdef HASH_NAMES
-		asPropulsionTypes->NameHash=HashString(PropulsionName);
-#else
+/*
 		asPropulsionTypes->pName = (char *)MALLOC((strlen(PropulsionName))+1);
 		if (asPropulsionTypes->pName == NULL)
 		{
@@ -2198,7 +2187,6 @@ BOOL loadPropulsionTypes(char *pPropTypeData, UDWORD bufferSize)
 			return FALSE;
 		}
 		strcpy(asPropulsionTypes->pName,PropulsionName);
-#endif
 */
 		//set the pointer for this record based on the name
 		type = getPropulsionType(PropulsionName);
@@ -2395,9 +2383,7 @@ BOOL loadBodyPropulsionIMDs(char *pData, UDWORD bufferSize)
 						leftIMD[MAX_NAME_SIZE], rightIMD[MAX_NAME_SIZE];
 	iIMDShape			**startIMDs;
 	BOOL				found;
-#ifdef HASH_NAMES
-	UDWORD				HashedName;
-#endif
+
 	//check that the body and propulsion stats have already been read in
 
 	ASSERT( asBodyStats != NULL, "Body Stats have not been set up" );
@@ -2447,19 +2433,11 @@ BOOL loadBodyPropulsionIMDs(char *pData, UDWORD bufferSize)
 		{
 			return FALSE;
 		}
-#ifdef HASH_NAMES
-		HashedName=HashString(bodyName);
-#endif
-
 
 		for (numStats = 0; numStats < numBodyStats; numStats++)
 		{
 			psBodyStat = &asBodyStats[numStats];
-#ifdef HASH_NAMES
-			if (psBodyStat->NameHash==HashedName)
-#else
 			if (!strcmp(psBodyStat->pName, bodyName))
-#endif
 			{
 				found = TRUE;
 				break;
@@ -2479,18 +2457,10 @@ BOOL loadBodyPropulsionIMDs(char *pData, UDWORD bufferSize)
 			return FALSE;
 		}
 
-#ifdef HASH_NAMES
-		HashedName=HashString(propulsionName);
-#endif
-
 		for (numStats = 0; numStats < numPropulsionStats; numStats++)
 		{
 			psPropulsionStat = &asPropulsionStats[numStats];
-#ifdef HASH_NAMES
-			if (psPropulsionStat->NameHash==HashedName)
-#else
 			if (!strcmp(psPropulsionStat->pName, propulsionName))
-#endif
 			{
 				found = TRUE;
 				break;
@@ -2560,7 +2530,7 @@ statsGetAudioIDFromString( char *szStatName, char *szWavName, SDWORD *piWavID )
 	}
 	else
 	{
-		if ( audioID_GetIDFromStr( szWavName, piWavID ) == FALSE )
+		if ( (*piWavID = audio_GetIDFromStr(szWavName)) == NO_SOUND )
 		{
 			debug( LOG_ERROR, "statsGetAudioIDFromString: couldn't get ID %d for sound %s", *piWavID, szWavName );
 			abort();
@@ -2586,13 +2556,7 @@ BOOL loadWeaponSounds(char *pSoundData, UDWORD bufferSize)
 	//SBYTE			*pData;
 	SDWORD			NumRecords = 0, i, weaponSoundID, explosionSoundID, inc, iDum;
 	char			WeaponName[MAX_NAME_SIZE];
-
 	char			szWeaponWav[MAX_NAME_SIZE],	szExplosionWav[MAX_NAME_SIZE];
-
-
-#ifdef HASH_NAMES
-	UDWORD			HashedName;
-#endif
 	BOOL 	Ok = TRUE;
 
 	NumRecords = numCR(pSoundData, bufferSize);
@@ -2625,18 +2589,9 @@ BOOL loadWeaponSounds(char *pSoundData, UDWORD bufferSize)
 			return FALSE;
 		}
 
-#ifdef HASH_NAMES
-		HashedName=HashString(WeaponName);
-#endif
-
-
 		for (inc = 0; inc < (SDWORD)numWeaponStats; inc++)
 		{
-#ifdef HASH_NAMES
-			if (asWeaponStats[inc].NameHash==HashedName)
-#else
 			if (!strcmp(asWeaponStats[inc].pName, WeaponName))
-#endif
 			{
 				asWeaponStats[inc].iAudioFireID = weaponSoundID;
 				asWeaponStats[inc].iAudioImpactID = explosionSoundID;
@@ -3051,12 +3006,12 @@ void deallocPropulsionTypes(void)
 	//UBYTE inc;
 //	PROPULSION_TYPES* pList = asPropulsionTypes;
 
-/*#ifndef HASH_NAMES
+/*
 	for (inc=0; inc < numPropulsionTypes; inc++, pList++)
 	{
 		FREE(pList->pName);
 	}
-#endif*/
+*/
 	FREE (asPropulsionTypes);
 }
 
@@ -3445,41 +3400,6 @@ SDWORD	getCompFromName(UDWORD compType, char *pName)
 }
 
 
-
-
-
-#ifdef HASH_NAMES
-//get the component Inc for a stat based on the name and type
-//returns -1 if record not found
-SDWORD	getCompFromHash(UDWORD compType, UDWORD HashedName)
-{
-	BASE_STATS	*psStats = NULL;
-	UDWORD		numStats = 0, count, statSize = 0;
-
-
-
-	getStatsDetails(compType, &psStats,&numStats,&statSize);
-
-	//find the stat with the same name
-
-//	DBPRINTF(("hunting %d stats for hash %x\n",numStats,HashedName);
-
-	for(count = 0; count < numStats; count++)
-	{
-//	DBPRINTF(("%x ",psStats->NameHash);
-		if (HashedName==psStats->NameHash)
-		{
-//			DBPRINTF(("found at %d\n",count);
-			return count;
-		}
-		psStats = (BASE_STATS *)((void*)psStats + statSize);
-	}
-//	DBPRINTF(("not found\n");
-	//return -1 if record not found or an invalid component type is passed in
-	return -1;
-}
-#endif
-
 //converts the name read in from Access into the name which is used in the Stat lists
 BOOL getResourceName(char *pName)
 {
@@ -3593,11 +3513,7 @@ BOOL setTechLevel(BASE_STATS *psStats, char *pLevel)
 	}
 	else
 	{
-#ifdef HASH_NAMES
-		ASSERT( FALSE, "Invalid stat id for %x", psStats->NameHash );
-#else
 		ASSERT( FALSE, "Invalid stat id for %s", psStats->pName );
-#endif
 		return FALSE;
 	}
 	return TRUE;
@@ -3781,8 +3697,6 @@ WEAPON_EFFECT	getWeaponEffect(char *pWeaponEffect)
 	}
 }
 
-#ifndef HASH_NAMES	   // don't allocate name
-
 /*
 looks up the name to get the resource associated with it - or allocates space
 and stores the name. Eventually ALL names will be 'resourced' for translation
@@ -3830,9 +3744,6 @@ BOOL allocateName(char **ppStore, char *pName)
 #endif
 }
 
-
-
-#endif
 
 /*Access functions for the upgradeable stats of a weapon*/
 UDWORD	weaponFirePause(WEAPON_STATS *psStats, UBYTE player)
@@ -3954,6 +3865,31 @@ UDWORD	bodyArmour(BODY_STATS *psStats, UBYTE player, UBYTE bodyType,
 	return 0;	// Should never get here.
 }
 
+//calculates the weapons ROF based on the fire pause and the salvos
+UWORD weaponROF(WEAPON_STATS *psStat)
+{
+	UWORD rof = 0;
+
+	//if there are salvos
+	if (psStat->numRounds)
+	{
+		if (psStat->reloadTime != 0)
+		{
+			// Rounds per salvo multiplied with the number of salvos per minute
+			rof = (UWORD)(psStat->numRounds * 60 * GAME_TICKS_PER_SEC  / psStat->reloadTime);
+		}
+	}
+	if (rof == 0)
+	{
+		rof = (UWORD)weaponFirePause(psStat, (UBYTE)selectedPlayer);
+		if (rof != 0)
+		{
+			rof = (UWORD)(60 * GAME_TICKS_PER_SEC / rof);
+		}
+		//else leave it at 0
+	}
+	return rof;
+}
 
 //Access functions for the max values to be used in the Design Screen
 void setMaxComponentWeight(UDWORD weight)
@@ -4086,6 +4022,18 @@ void setMaxWeaponDamage(UDWORD damage)
 UDWORD getMaxWeaponDamage(void)
 {
     return maxWeaponDamage;
+}
+
+void setMaxWeaponROF(UDWORD rof)
+{
+    if (rof > maxWeaponROF)
+    {
+        maxWeaponROF = rof;
+    }
+}
+UDWORD getMaxWeaponROF(void)
+{
+    return maxWeaponROF;
 }
 
 void setMaxPropulsionSpeed(UDWORD speed)

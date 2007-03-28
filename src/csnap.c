@@ -34,7 +34,6 @@
 #include "lib/ivis_common/pieclip.h"
 
 #include "csnap.h"
-#include "audio_id.h"
 
 #define V_BIAS 8
 #define H_BIAS 8
@@ -227,25 +226,6 @@ static BOOL widgGetScreenExtents(UDWORD ID,int *sx,int *sy,int *sw,int *sh)
 	}
 
 	return FALSE;
-}
-
-
-// Given a widget form id, make the snap that matches it the current one next frame.
-//
-void SetCurrentSnapFormID(CURSORSNAP *SnapBuffer,UDWORD FormID)
-{
-	{
-		int x,y,w,h;
-		SnapBuffer->NewCurrentFormID = FormID;
-
-		if(FormID) {
-			// Get the screen extents of the specified form and move the mouse there.
-			if(widgGetScreenExtents(FormID,&x,&y,&w,&h) == TRUE) {
-		//		DBPRINTF(("%d %d,%d %d\n",x,y,w,h);
-				SetMousePos(x + w / 2, y + h / 2);
-			}
-		}
-	}
 }
 
 

@@ -44,8 +44,8 @@
 #include "atmos.h"
 
 
-#define NUM_BUCKETS		8000
-#define NUM_OBJECTS		4000
+#define NUM_BUCKETS		1000
+#define NUM_OBJECTS		1000
 #define BUCKET_OFFSET	0
 #define BUCKET_RANGE	32000
 
@@ -345,8 +345,8 @@ SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
 {
 	SDWORD				z = 0, radius;
 	SDWORD				px, pz;
-	iPoint				pixel;
-	iVector				position;
+	Vector2i				pixel;
+	Vector3i				position;
 	UDWORD				droidSize;
 	DROID				*psDroid;
 	BODY_STATS			*psBStats;

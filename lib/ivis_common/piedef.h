@@ -74,35 +74,18 @@
 #define pie_DROID_BRIGHT_LEVEL 192
 
 //Render style flags for all pie draw functions
-#define pie_FLAG_MASK			0xffff
-#define pie_FLAT			0x1
-#define pie_TRANSLUCENT			0x2
-#define pie_ADDITIVE			0x4
-#define pie_NO_BILINEAR			0x8
-#define pie_HEIGHT_SCALED		0x10
-#define pie_RAISE			0x20
-#define pie_BUTTON			0x40
+#define pie_FLAG_MASK           0xffff
+#define pie_FLAT                0x1
+#define pie_TRANSLUCENT         0x2
+#define pie_ADDITIVE            0x4
+#define pie_NO_BILINEAR         0x8
+#define pie_HEIGHT_SCALED       0x10
+#define pie_RAISE               0x20
+#define pie_BUTTON              0x40
+#define pie_SHADOW              0x80
+#define pie_STATIC_SHADOW       0x100
 
 #define pie_RAISE_SCALE			256
-
-#define pie_BAND			0x80
-#define pie_BAND_RED			0x90
-#define pie_BAND_GREEN			0xa0
-#define pie_BAND_YELLOW			0xb0
-#define pie_BAND_BLUE			0xc0
-
-#define pie_DRAW_DISC			0x800
-#define pie_DRAW_DISC_RED		0x900
-#define pie_DRAW_DISC_GREEN		0xa00
-#define pie_DRAW_DISC_YELLOW		0xb00
-#define pie_DRAW_DISC_BLUE		0xc00
-
-#define pie_GLOW			0x8000
-#define pie_GLOW_RED			0x9000
-#define pie_GLOW_GREEN			0xa000
-#define pie_GLOW_YELLOW			0xb000
-#define pie_GLOW_BLUE			0xc000
-#define pie_GLOW_STRENGTH		63
 
 #define pie_MAX_POINTS			512
 #define pie_MAX_POLYS			512
@@ -159,12 +142,12 @@ typedef struct {SDWORD texPage; SWORD tu, tv, tw, th;} PIEIMAGE; //an area of te
 typedef struct {UDWORD pieFlag; PIELIGHT colour, specular; UBYTE light, trans, scale, height;} PIESTYLE; //render style for pie draw functions
 
 typedef struct {long n; char msge[240];} iError;
-typedef int32 fixed;
+typedef Sint32 fixed;
 
 // This is the new resource loaded structure (TEXPAGE)
 typedef struct
 {
-	iSprite *Texture;
+	iTexture *Texture;
 	iPalette *Palette;
 } TEXTUREPAGE;
 
@@ -206,7 +189,7 @@ extern void SetBSPCameraPos(SDWORD x,SDWORD y,SDWORD z);
  * \param sprite Sprite to read into
  * \return TRUE on success, FALSE otherwise
  */
-BOOL pie_PNGLoadMem(char *pngimage, iSprite *sprite);
+BOOL pie_PNGLoadMem(char *pngimage, iTexture *sprite);
 
 void SetBSPObjectRot(SDWORD Yaw, SDWORD Pitch);
 

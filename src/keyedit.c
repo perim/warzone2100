@@ -46,7 +46,7 @@
 #include "intimage.h"
 #include "lib/ivis_common/bitimage.h"
 #include "intdisplay.h"
-#include "audio_id.h"
+#include "lib/sound/audio_id.h"
 #include "lib/ivis_common/pieblitfunc.h"
 #include "multiint.h"
 
@@ -528,7 +528,7 @@ BOOL saveKeyMap(void)
 #define WRITE(var, size)                                               \
 	if (PHYSFS_write(pfile, var, 1, size) != size) {                     \
 		debug(LOG_ERROR, "saveKeyMap: could not write to %s %d bytes: %s", \
-		      KeyMapPath, size, PHYSFS_getLastError());                    \
+		      KeyMapPath, (int)size, PHYSFS_getLastError());                    \
 		assert(FALSE);                                                     \
 		return FALSE;                                                      \
 	}

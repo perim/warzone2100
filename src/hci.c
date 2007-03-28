@@ -35,7 +35,7 @@
 #include "lib/script/script.h"
 
 #include "action.h"
-#include "audio_id.h"
+#include "lib/sound/audio_id.h"
 #include "console.h"
 #include "design.h"
 #include "display.h"
@@ -4773,19 +4773,11 @@ static BOOL intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected,B
 						ASSERT( FALSE, "intAddObject: invalid structure type" );
 				}
 
-	#ifdef HASH_NAMES
-				sBFormInit.pTip = strresGetString(NULL,(((STRUCTURE *)psObj)->pStructureType->NameHash));
-	#else
 				sBFormInit.pTip = getName(((STRUCTURE *)psObj)->pStructureType->pName);
-	#endif
 				break;
 
 			case OBJ_FEATURE:
-	#ifdef HASH_NAMES
-				sBFormInit.pTip = strresGetString(NULL,(((FEATURE *)psObj)->psStats->NameHash));
-	#else
 				sBFormInit.pTip = getName(((FEATURE *)psObj)->psStats->pName);
-	#endif
 				break;
 
 			default:
@@ -4874,11 +4866,7 @@ static BOOL intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected,B
 				}
 				else
 				{
-	#ifdef HASH_NAMES
-					sBFormInit2.pTip = strresGetString(NULL,psStats->NameHash);
-	#else
 					sBFormInit2.pTip = getName(psStats->pName);
-	#endif
 				}
 
 
@@ -5245,7 +5233,7 @@ void HandleClosingWindows(void)
 		Widg = widgGetFromID(psWScreen,IDOBJ_FORM);
 		if(Widg) {
 // Has the window finished closing?
-			if( ((UDWORD)Widg->pUserData) ) {
+			if( Widg->pUserData ) {
 				widgDelete(psWScreen, IDOBJ_FORM);
 				ClosingObject = FALSE;
 			}
@@ -5258,7 +5246,7 @@ void HandleClosingWindows(void)
 		Widg = widgGetFromID(psWScreen,IDSTAT_FORM);
 		if(Widg) {
 // Has the window finished closing?
-			if( ((UDWORD)Widg->pUserData) ) {
+			if( Widg->pUserData ) {
 				widgDelete(psWScreen, IDSTAT_FORM);
 				ClosingStats = FALSE;
 			}
@@ -5270,7 +5258,7 @@ void HandleClosingWindows(void)
 		Widg = widgGetFromID(psWScreen,IDINTMAP_MSGVIEW);
 		if(Widg) {
 // Has the window finished closing?
-			if( ((UDWORD)Widg->pUserData) ) {
+			if( Widg->pUserData ) {
 				widgDelete(psWScreen, IDINTMAP_MSGVIEW);
 				ClosingMessageView = FALSE;
 			}
@@ -5282,7 +5270,7 @@ void HandleClosingWindows(void)
 		Widg = widgGetFromID(psWScreen,IDINTMAP_FORM);
 		if(Widg) {
 // Has the window finished closing?
-			if( ((UDWORD)Widg->pUserData) ) {
+			if( Widg->pUserData ) {
 				widgDelete(psWScreen, IDINTMAP_FORM);
 				ClosingIntelMap = FALSE;
 			}
@@ -5295,7 +5283,7 @@ void HandleClosingWindows(void)
 		Widg = widgGetFromID(psWScreen,IDORDER_FORM);
 		if(Widg) {
 // Has the window finished closing?
-			if( ((UDWORD)Widg->pUserData) ) {
+			if( Widg->pUserData ) {
 				widgDelete(psWScreen, IDORDER_FORM);
 				ClosingOrder = FALSE;
 			}
@@ -5307,7 +5295,7 @@ void HandleClosingWindows(void)
 		Widg = widgGetFromID(psWScreen,IDTRANS_FORM);
 		if(Widg) {
 // Has the window finished closing?
-			if( ((UDWORD)Widg->pUserData) ) {
+			if( Widg->pUserData ) {
 				widgDelete(psWScreen, IDTRANS_FORM);
 				ClosingTrans = FALSE;
 			}
@@ -5319,7 +5307,7 @@ void HandleClosingWindows(void)
 		Widg = widgGetFromID(psWScreen,IDTRANS_CONTENTFORM);
 		if(Widg) {
 // Has the window finished closing?
-			if( ((UDWORD)Widg->pUserData) ) {
+			if( Widg->pUserData ) {
 				widgDelete(psWScreen, IDTRANS_CONTENTFORM);
 				ClosingTransCont = FALSE;
 			}
@@ -5331,7 +5319,7 @@ void HandleClosingWindows(void)
 		Widg = widgGetFromID(psWScreen,IDTRANS_DROIDS);
 		if(Widg) {
 // Has the window finished closing?
-			if( ((UDWORD)Widg->pUserData) ) {
+			if( Widg->pUserData ) {
 				widgDelete(psWScreen, IDTRANS_DROIDS);
 				ClosingTransDroids = FALSE;
 			}
@@ -5344,7 +5332,7 @@ void HandleClosingWindows(void)
 		Widg = widgGetFromID(psWScreen,INTINGAMEOP);
 		if(Widg) {
 // Has the window finished closing?
-			if( ((UDWORD)Widg->pUserData) ) {
+			if( Widg->pUserData ) {
 				widgDelete(psWScreen, INTINGAMEOP);
 				ClosingInGameOp = FALSE;
 			}
@@ -5373,7 +5361,7 @@ void HandleClosingWindows(void)
 		Widg = widgGetFromID(psWScreen,MULTIMENU_FORM);
 		if(Widg) {
 // Has the window finished closing?
-			if( ((UDWORD)Widg->pUserData) ) {
+			if( Widg->pUserData ) {
 				widgDelete(psWScreen, MULTIMENU_FORM);
 				ClosingMultiMenu = FALSE;
 			}
@@ -5499,11 +5487,7 @@ static void intSetStats(UDWORD id, BASE_STATS *psStats)
 		}
 		else
 		{
-#ifdef HASH_NAMES
-			sFormInit.pTip = strresGetString(NULL,psStats->NameHash);
-#else
 			sFormInit.pTip = getName(psStats->pName);
-#endif
 		}
 
 		BufferID = (sFormInit.id-IDOBJ_STATSTART)*2+1;
@@ -5930,11 +5914,7 @@ static BOOL intAddStats(BASE_STATS **ppsStatsList, UDWORD numStats,
 		}
 		else
 		{
-#ifdef HASH_NAMES
-			sBFormInit.pTip = strresGetString(NULL,ppsStatsList[i]->NameHash);
-#else
 			sBFormInit.pTip = getName(ppsStatsList[i]->pName);
-#endif
 		}
 		BufferID = i;
 		ASSERT( BufferID < NUM_STATBUFFERS,"BufferID > NUM_STATBUFFERS" );
@@ -7184,10 +7164,9 @@ DROID* intCheckForDroid(UDWORD droidType)
 	DROID	*psDroid, *psSel = NULL;
 
 //	clearSelection();
-	for (psDroid = apsDroidLists[selectedPlayer]; psDroid != NULL; psDroid =
-		psDroid->psNext)
+	for (psDroid = apsDroidLists[selectedPlayer]; psDroid != NULL; psDroid = psDroid->psNext)
 	{
-		if (psDroid->selected && psDroid->droidType == (SDWORD)droidType)
+		if (psDroid->selected && psDroid->droidType == droidType)
 		{
 			if (psSel != NULL)
 			{
@@ -7220,7 +7199,7 @@ SDWORD intNumSelectedDroids(UDWORD droidType)
 	num = 0;
 	for(psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
 	{
-		if (psDroid->selected && psDroid->droidType == (SDWORD)droidType)
+		if (psDroid->selected && psDroid->droidType == droidType)
 		{
 			num += 1;
 		}

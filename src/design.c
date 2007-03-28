@@ -54,7 +54,6 @@
 #include "game.h"
 #include "power.h"
 #include "lib/sound/sound.h"
-#include "audio_id.h"
 #include "lib/widget/widgint.h"
 #include "lib/widget/bar.h"
 #include "lib/widget/form.h"
@@ -99,8 +98,6 @@
 
 /***************************************************************************************/
 /*                  Max values for the design bar graphs                               */
-
-#define DBAR_WEAPMAXROF				240 //700//3500	// maximum shots per minute???
 
 //these are calculated now when the game gets loaded up
 //#define DBAR_MAXWEIGHT				3500			// maximum weight for a component
@@ -395,8 +392,6 @@ static BOOL intCheckValidWeaponForProp(void);
 
 static BOOL checkTemplateIsVtol(DROID_TEMPLATE *psTemplate);
 
-static UWORD weaponROF(WEAPON_STATS *psStat);
-
 /* save the current Template if valid. Return TRUE if stored */
 BOOL saveTemplate(void);
 
@@ -439,8 +434,7 @@ void intDisplayViewForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD
 void intDisplayTemplateButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
 void intDisplayComponentButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
 
-extern void RenderCompositeDroid(UDWORD Index,iVector *Rotation,iVector *Position,iVector *TurretRotation,
-								 DROID *psDroid,BOOL RotXYZ);
+extern void RenderCompositeDroid(UDWORD Index, Vector3i *Rotation, Vector3i *Position, Vector3i *TurretRotation, DROID *psDroid, BOOL RotXYZ);
 
 extern BOOL bRender3DOnly;
 
@@ -527,18 +521,14 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	if (psCurrTemplate != NULL)
 	{
 		memcpy(&sCurrDesign, psCurrTemplate, sizeof(DROID_TEMPLATE));
-#ifndef HASH_NAMES
 		strncpy(aCurrName, getStatName( psCurrTemplate ), WIDG_MAXSTR - 1);
 		strcpy( sCurrDesign.aName, aCurrName );
-#endif
 	}
 	else
 	{
 		memcpy(&sCurrDesign, &sDefaultDesignTemplate, sizeof(DROID_TEMPLATE));
 		strcpy(aCurrName, strresGetString(psStringRes, STR_DES_NEWVEH));
-#ifndef HASH_NAMES
 		strcpy( sCurrDesign.aName, aCurrName );
-#endif
 	}
 
 	/* Add the design templates form */
@@ -1130,11 +1120,7 @@ BOOL intAddTemplateButtons(UDWORD formID, UDWORD formWidth, UDWORD formHeight,
 
 
 			// On the playstation the tips are additionaly setup when they are displayed ... because we only have one text name buffer
-#ifdef HASH_NAMES
-			strncpy(aButText, "TempTip", DES_COMPBUTMAXCHAR);
-#else
 			strncpy(aButText, getTemplateName( psTempl ), DES_COMPBUTMAXCHAR);
-#endif
 			sButInit.pTip = getTemplateName(psTempl);
 
 			BufferID = GetStatBuffer();
@@ -1552,8 +1538,7 @@ intChooseSystemStats( DROID_TEMPLATE *psTemplate )
 /* set SHOWTEMPLATENAME to 0 to show template components in edit box */
 #define SHOWTEMPLATENAME	0
 
-//Watermelon:added "hydra" prefix to multi-turret droids
-char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
+static char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 {
 	COMP_BASE_STATS		*psStats;
 	char				*pStr;
@@ -1562,7 +1547,7 @@ char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 	*/
 	if(psTemplate->droidType == DROID_TRANSPORTER)
 	{
-		return strresGetString(NULL,HashString("Transporter"));
+		return _("Transporter");
 	}
 	/*
 		Now get the normal default droid name based on its components
@@ -2018,7 +2003,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		}
 		sBarInit.id = IDDES_WEAPROF;
 		sBarInit.y = DES_STATBAR_Y3;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
-		sBarInit.iRange = DBAR_WEAPMAXROF;
+		sBarInit.iRange = getMaxWeaponROF();
 		sBarInit.pTip = strresGetString(psStringRes, STR_DES_ROF);
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
@@ -3419,8 +3404,6 @@ static void intSetRepairShadowStats(REPAIR_STATS *psStats)
 /* Set the bar graphs for the Weapon stats */
 static void intSetWeaponStats(WEAPON_STATS *psStats)
 {
-	UDWORD	size;
-
 	ASSERT( PTRVALID(psStats, sizeof(WEAPON_STATS)),
 		"intSetWeaponStats: Invalid stats pointer" );
 	ASSERT( (psStats->ref >= REF_WEAPON_START) &&
@@ -3430,25 +3413,8 @@ static void intSetWeaponStats(WEAPON_STATS *psStats)
 	/* range */
 	widgSetBarSize(psWScreen, IDDES_WEAPRANGE, proj_GetLongRange(psStats,0));
 	/* rate of fire */
-	/*size = (DBAR_WEAPMAXROF - (psStats->firePause + (psStats->
-		firePause *	asWeaponUpgrade[selectedPlayer][psStats->weaponSubClass].
-		firePause)/100));*/
-	//size = DBAR_WEAPMAXROF - weaponFirePause(psStats, (UBYTE)selectedPlayer);
-	//size = weaponFirePause(psStats, (UBYTE)selectedPlayer);
-    size = weaponROF(psStats);
-	/*if (size != 0)
-	{
-		size = ONEMIN / size;
-	}*/
-    //This Hack not needed anymore!!!
-	/* Hack to set the ROF to zero for the NULL weapon */
-	/*if (psStats == asWeaponStats)
-	{
-		size = 0;
-	}*/
-	widgSetBarSize(psWScreen, IDDES_WEAPROF, size);
+	widgSetBarSize(psWScreen, IDDES_WEAPROF, weaponROF(psStats));
 	/* damage */
-	//widgSetBarSize(psWScreen, IDDES_WEAPDAMAGE, psStats->damage);
 	widgSetBarSize(psWScreen, IDDES_WEAPDAMAGE, (UWORD)weaponDamage(psStats,
 		(UBYTE)selectedPlayer));
 	/* weight */
@@ -3458,8 +3424,6 @@ static void intSetWeaponStats(WEAPON_STATS *psStats)
 /* Set the shadow bar graphs for the Weapon stats */
 static void intSetWeaponShadowStats(WEAPON_STATS *psStats)
 {
-	UDWORD	size;
-
 	ASSERT( psStats == NULL || PTRVALID(psStats, sizeof(WEAPON_STATS)),
 		"intSetWeaponShadowStats: Invalid stats pointer" );
 	ASSERT( psStats == NULL ||
@@ -3472,26 +3436,8 @@ static void intSetWeaponShadowStats(WEAPON_STATS *psStats)
 		/* range */
 		widgSetMinorBarSize(psWScreen, IDDES_WEAPRANGE, proj_GetLongRange(psStats,0));
 		/* rate of fire */
-		/*size = (DBAR_WEAPMAXROF - (psStats->firePause + (psStats->
-			firePause *	asWeaponUpgrade[selectedPlayer][psStats->weaponSubClass].
-			firePause)/100));*/
-		//size = DBAR_WEAPMAXROF - weaponFirePause(psStats, (UBYTE)selectedPlayer);
-		//widgSetMinorBarSize(psWScreen, IDDES_WEAPROF, size);
-		/*size = weaponFirePause(psStats, (UBYTE)selectedPlayer);
-		if (size != 0)
-		{
-			size = ONEMIN / size;
-		}*/
-        size = weaponROF(psStats);
-        //This Hack not needed anymore!!!
-    	/* Hack to set the ROF to zero for the NULL weapon */
-	    /*if (psStats == asWeaponStats)
-	    {
-		    size = 0;
-	    }*/
-		widgSetMinorBarSize(psWScreen, IDDES_WEAPROF, size);
+		widgSetMinorBarSize(psWScreen, IDDES_WEAPROF, weaponROF(psStats));
 		/* damage */
-		//widgSetMinorBarSize(psWScreen, IDDES_WEAPDAMAGE, psStats->damage);
 		widgSetMinorBarSize(psWScreen, IDDES_WEAPDAMAGE, (UWORD)weaponDamage(
 			psStats, (UBYTE)selectedPlayer));
 		/* weight */
@@ -3609,7 +3555,7 @@ static void intSetDesignPower(DROID_TEMPLATE *psTemplate)
 }
 
 // work out current system component
-static UDWORD getSystemType(DROID_TEMPLATE* template) 
+static UDWORD getSystemType(DROID_TEMPLATE* template)
 {
 	if (template->asParts[COMP_ECM]) {
 		return COMP_ECM;
@@ -3648,7 +3594,7 @@ static void intSetTemplatePowerShadowStats(COMP_BASE_STATS *psStats)
 		/*if type = BODY or PROPULSION can do a straight comparison but if the new stat is
 		a 'system' stat then need to find out which 'system' is currently in place so the
 		comparison is meaningful*/
-		if (desCompMode == IDES_SYSTEM) 
+		if (desCompMode == IDES_SYSTEM)
 		{
 			type = getSystemType(&sCurrDesign);
 		}
@@ -3688,7 +3634,7 @@ static void intSetTemplatePowerShadowStats(COMP_BASE_STATS *psStats)
     	/* propulsion power points are a percentage of the bodys' power points */
     	power += (propulsionPower *
     		bodyPower) / 100;
-    		
+
      	//add weapon power
         // FIXME: Only takes first weapon into account
         power += weaponPower;
@@ -3774,7 +3720,7 @@ static void intSetTemplateBodyShadowStats(COMP_BASE_STATS *psStats)
     	/* propulsion power points are a percentage of the bodys' power points */
     	body += (propulsionBody *
     		bodyBody) / 100;
-    		
+
      	//add weapon power
         // FIXME: Only takes first weapon into account
         body += weaponBody;
@@ -4095,18 +4041,9 @@ static BOOL intValidTemplate(DROID_TEMPLATE *psTempl)
 	psTempl->droidType = droidTemplateType(psTempl);
 
 	/* copy current name into template */
-#ifndef HASH_NAMES
 	strcpy( sCurrDesign.aName, aCurrName );
-#endif
 
 	return TRUE;
-}
-
-
-// ajl. above function is static. A quick wrapper for the net stuff
-BOOL  MultiPlayValidTemplate(DROID_TEMPLATE *psTempl)
-{
-	return(intValidTemplate(psTempl) );
 }
 
 void desCreateDefaultTemplate( void )
@@ -4165,7 +4102,6 @@ static void intSetButtonFlash( UDWORD id, BOOL bFlash )
 #endif
 }
 
-#ifndef HASH_NAMES
 /*
  * desTemplateNameCustomised
  *
@@ -4185,7 +4121,6 @@ static BOOL desTemplateNameCustomised( DROID_TEMPLATE *psTemplate )
 		return TRUE;
 	}
 }
-#endif
 
 /* Process return codes from the design screen */
 void intProcessDesign(UDWORD id)
@@ -4195,9 +4130,7 @@ void intProcessDesign(UDWORD id)
 	UDWORD			currID;
 //	DES_COMPMODE	currCompMode;
 	UDWORD			i;
-#ifndef HASH_NAMES
 	BOOL			bTemplateNameCustomised;
-#endif
 
 //	if (pie_GetRenderEngine() == ENGINE_GLIDE)
 //	{
@@ -4218,12 +4151,7 @@ void intProcessDesign(UDWORD id)
 
 			strncpy(aCurrName, strresGetString(psStringRes, STR_DES_NEWVEH),
 				WIDG_MAXSTR-1);
-#ifdef HASH_NAMES
-//			sCurrDesign.NameHash=HashString(aCurrName);
-			sCurrDesign.NameHash=0;	// As we are creating a new design the name must be NULL - This is needed for the save games
-#else
 			strcpy( sCurrDesign.aName, aCurrName );
-#endif
 //			strncpy(aCurrName, strresGetString(psStringRes, STR_DES_NEWVEH),
 //				WIDG_MAXSTR-1);
 
@@ -4264,12 +4192,9 @@ void intProcessDesign(UDWORD id)
 			{
 				/* Set the new template */
 				memcpy(&sCurrDesign, psTempl, sizeof(DROID_TEMPLATE));
-#ifdef HASH_NAMES
-				strncpy(aCurrName, strresGetString(NULL,psTempl->NameHash), WIDG_MAXSTR-1);
-#else
 				//strcpy( sCurrDesign.aName, aCurrName );
 				strncpy( aCurrName, getTemplateName(psTempl), WIDG_MAXSTR-1);
-#endif
+
 				/* reveal body and propulsion component buttons */
 				widgReveal( psWScreen, IDDES_BODYBUTTON );
 				widgReveal( psWScreen, IDDES_PROPBUTTON );
@@ -4357,9 +4282,7 @@ void intProcessDesign(UDWORD id)
 	else if (id >= IDDES_COMPSTART && id <= IDDES_COMPEND)
 	{
 		/* check whether can change template name */
-#ifndef HASH_NAMES
 		bTemplateNameCustomised = desTemplateNameCustomised( &sCurrDesign );
-#endif
 
 		/* Component stats button has been pressed - clear the old button */
 		if (desCompID != 0)
@@ -4584,13 +4507,11 @@ void intProcessDesign(UDWORD id)
 		intSetBodyPoints(&sCurrDesign);
 
 		/* update name if not customised */
-#ifndef HASH_NAMES
 		if ( bTemplateNameCustomised == FALSE )
 		{
 			strcpy( sCurrDesign.aName,
 					GetDefaultTemplateName(&sCurrDesign) );
 		}
-#endif
 
 		/* Update the name in the edit box */
 		intSetEditBoxTextFromTemplate( &sCurrDesign );
@@ -4647,9 +4568,7 @@ void intProcessDesign(UDWORD id)
 	else if (id >= IDDES_EXTRASYSSTART && id <= IDDES_EXTRASYSEND)
 	{
 		/* check whether can change template name */
-#ifndef HASH_NAMES
 		bTemplateNameCustomised = desTemplateNameCustomised( &sCurrDesign );
-#endif
 
 		// Extra component stats button has been pressed - clear the old button
 		if (desCompID != 0)
@@ -4753,13 +4672,12 @@ void intProcessDesign(UDWORD id)
 		intSetBodyPoints(&sCurrDesign);
 
 		/* update name if not customised */
-#ifndef HASH_NAMES
 		if ( bTemplateNameCustomised == FALSE )
 		{
 			strcpy( sCurrDesign.aName,
 					GetDefaultTemplateName(&sCurrDesign) );
 		}
-#endif
+
 		/* Update the name in the edit box */
 		intSetEditBoxTextFromTemplate( &sCurrDesign );
 
@@ -4810,12 +4728,9 @@ void intProcessDesign(UDWORD id)
 			break;
 			/* The name edit box */
 		case IDDES_NAMEBOX:
-#ifdef HASH_NAMES
-#else
 			strncpy(sCurrDesign.aName, widgGetString(psWScreen, IDDES_NAMEBOX),
 						DROID_MAXNAME);
 			strncpy(aCurrName, sCurrDesign.aName,WIDG_MAXSTR-1);
-#endif
 			break;
 		case IDDES_BIN:
 			/* Find the template for the current button */
@@ -4897,12 +4812,9 @@ void intProcessDesign(UDWORD id)
 
 				/* Set the new template */
 				memcpy(&sCurrDesign, psTempl, sizeof(DROID_TEMPLATE));
-#ifdef HASH_NAMES
-				strncpy(aCurrName, strresGetString(NULL,psTempl->NameHash), WIDG_MAXSTR-1);
-#else
 				//strcpy( sCurrDesign.aName, aCurrName );
 				strncpy( aCurrName, getTemplateName(psTempl), WIDG_MAXSTR-1);
-#endif
+
 				intSetEditBoxTextFromTemplate( psTempl );
 
 				intSetDesignStats(&sCurrDesign);
@@ -5334,7 +5246,7 @@ void intRunDesign(void)
 }*/
 
 
-extern void BoxBlueWash(UWORD x,UWORD y,UWORD w,UWORD h,BOOL Animate);
+extern void BoxBlueWash(UWORD x, UWORD y, UWORD w, UWORD h, BOOL Animate);
 
 void intDisplayStatForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
 {
@@ -5343,7 +5255,7 @@ void intDisplayStatForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD
 	static UDWORD	iRY = 45;
 //	BOOL			Hilight = FALSE;
 	BASE_STATS		*psStats;
-	iVector			Rotation,Position;
+	Vector3i			Rotation,Position;
 	SWORD			templateRadius;
 	SDWORD			falseScale;
 
@@ -5398,7 +5310,7 @@ void intDisplayViewForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD
 	W_FORM			*Form = (W_FORM*)psWidget;
 	UDWORD			x0,y0,x1,y1;
 	static UDWORD	iRY = 45;
-	iVector			Rotation,Position;
+	Vector3i			Rotation, Position;
 	SWORD			templateRadius;
 	SDWORD			falseScale;
 
@@ -5578,12 +5490,8 @@ BOOL saveTemplate(void)
 
 		/* Copy the template */
 		memcpy(psTempl, &sCurrDesign, sizeof(DROID_TEMPLATE));
-#ifdef HASH_NAMES
-			// NameHash already copied
-#else
 		strncpy(psTempl->aName, aCurrName, DROID_MAXNAME);
 		psTempl->aName[DROID_MAXNAME - 1] = 0;
-#endif
 
 		/* Now update the droid template form */
 		widgDelete(psWScreen, IDDES_TEMPLFORM);
@@ -5768,29 +5676,3 @@ void reverseTemplateList(DROID_TEMPLATE **ppsList)
     *ppsList = psPrev;
 }
 
-//calculates the weapons ROF based on the fire pause and the salvos
-static UWORD weaponROF(WEAPON_STATS *psStat)
-{
-    UWORD   rof = 0;
-
-    //if there are salvos
-    if (psStat->numRounds)
-    {
-        if (psStat->reloadTime != 0)
-        {
-            rof = (UWORD)(60 * GAME_TICKS_PER_SEC / psStat->reloadTime);
-            //multiply by the number of salvos/shot
-            rof = (UWORD)(rof * psStat->numRounds);
-        }
-    }
-    if (!rof)
-    {
-        rof = (UWORD)weaponFirePause(psStat, (UBYTE)selectedPlayer);
-        if (rof != 0)
-        {
-            rof = (UWORD)(60 * GAME_TICKS_PER_SEC / rof);
-        }
-        //else leave it at 0
-    }
-    return rof;
-}

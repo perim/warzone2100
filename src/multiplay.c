@@ -46,7 +46,7 @@
 #include "component.h"
 #include "frontend.h"
 #include "lib/sound/sound.h"
-#include "audio_id.h"
+#include "lib/sound/audio_id.h"
 #include "levels.h"
 #include "selection.h"
 
@@ -108,8 +108,6 @@ SDWORD msgStackPos = -1;				//top element pointer
 
 // ////////////////////////////////////////////////////////////////////////////
 // Remote Prototypes
-extern BOOL MultiPlayValidTemplate(DROID_TEMPLATE *psTempl);	// for templates.
-
 extern RESEARCH*			asResearch;							//list of possible research items.
 extern PLAYER_RESEARCH*		asPlayerResList[MAX_PLAYERS];
 
@@ -131,7 +129,7 @@ BOOL	isHumanPlayer		(UDWORD player);				// determine if human
 BOOL	myResponsibility	(UDWORD player);				// this pc has comms responsibility
 BOOL	responsibleFor		(UDWORD player,UDWORD player2);	// has player responsibility for player2
 UDWORD	whosResponsible		(UDWORD player);				// returns player responsible for 'player'
-iVector	cameraToHome		(UDWORD player,BOOL scroll);
+Vector3i	cameraToHome		(UDWORD player,BOOL scroll);
 BOOL	DirectPlaySystemMessageHandler(void * msg);			// interpret DP messages
 BOOL	recvMessage			(void);							// process an incoming message
 BOOL	SendResearch		(UBYTE player,UDWORD index);	// send/recv Research issues
@@ -193,8 +191,8 @@ BOOL turnOffMultiMsg(BOOL bDoit)
 // throw a pary when you win!
 BOOL multiplayerWinSequence(BOOL firstCall)
 {
-	static		iVector pos;
-	iVector		pos2;
+	static Vector3i pos;
+	Vector3i pos2;
 	static UDWORD last=0;
 	FRACT		fraction;
 	FRACT		rotAmount;
@@ -242,9 +240,9 @@ BOOL multiplayerWinSequence(BOOL firstCall)
 		pos2.x +=  (rand()%(8<<TILE_SHIFT))-(4<<TILE_SHIFT);
 		pos2.z +=  (rand()%(8<<TILE_SHIFT))-(4<<TILE_SHIFT);
 		if(pos2.x <0) pos2.x =128;
-		if(pos2.x >mapWidth<<TILE_SHIFT) pos2.x =mapWidth<<TILE_SHIFT;
+		if((unsigned)pos2.x > mapWidth<<TILE_SHIFT) pos2.x =mapWidth<<TILE_SHIFT;
 		if(pos2.z <0) pos2.z =128;
-		if(pos2.z >mapHeight<<TILE_SHIFT) pos2.z =mapHeight<<TILE_SHIFT;
+		if((unsigned)pos2.z >mapHeight<<TILE_SHIFT) pos2.z =mapHeight<<TILE_SHIFT;
 
 		addEffect(&pos2,EFFECT_FIREWORK,FIREWORK_TYPE_LAUNCHER,FALSE,NULL,0);	// throw up some fire works.
 	}
@@ -483,7 +481,7 @@ char *getPlayerName(UDWORD player)
 {
 	UDWORD i;
 
-	ASSERT((player >= 0) && (player < MAX_PLAYERS), "getPlayerName: wrong player index: %d", player);
+	ASSERT( player < MAX_PLAYERS , "getPlayerName: wrong player index: %d", player);
 
 	//Try NetPlay.playerName first (since supports AIs)
 	if(game.type != CAMPAIGN)
@@ -493,7 +491,7 @@ char *getPlayerName(UDWORD player)
 	//Use the ordinary way if failed
 	for(i=0;i<MAX_PLAYERS;i++)
 	{
-		if(player2dpid[player] == NetPlay.players[i].dpid)
+		if(player2dpid[player] == (unsigned int)NetPlay.players[i].dpid)
 		{
 			if(strcmp(NetPlay.players[i].name,"") == 0)
 			{
@@ -508,9 +506,9 @@ char *getPlayerName(UDWORD player)
 	return NetPlay.players[0].name;
 }
 
-BOOL setPlayerName(UDWORD player, char *sName)
+BOOL setPlayerName(UDWORD player, const char *sName)
 {
-	if(player < 0 || player > MAX_PLAYERS)
+	if(player > MAX_PLAYERS)
 	{
 		ASSERT(FALSE, "setPlayerName: wrong player index (%d)", player);
 		return FALSE;
@@ -525,7 +523,7 @@ BOOL setPlayerName(UDWORD player, char *sName)
 // to determine human/computer players and responsibilities of each..
 BOOL isHumanPlayer(UDWORD player)
 {
-	if (player < 0 || player >= MAX_PLAYERS)
+	if (player >= MAX_PLAYERS)
 		return FALSE;
 
 	return (BOOL) (player2dpid[player] != 0);
@@ -608,9 +606,9 @@ BOOL responsibleFor(UDWORD player, UDWORD playerinquestion)
 
 // ////////////////////////////////////////////////////////////////////////////
 // probably temporary. Places the camera on the players 1st droid or struct.
-iVector cameraToHome(UDWORD player,BOOL scroll)
+Vector3i cameraToHome(UDWORD player,BOOL scroll)
 {
-	iVector res;
+	Vector3i res;
 	UDWORD x,y;
 	STRUCTURE	*psBuilding;
 
@@ -1318,7 +1316,7 @@ void displayAIMessage(char *pStr, SDWORD from, SDWORD to)
 // Write a message to the console.
 BOOL recvTextMessage(NETMSG *pMsg)
 {
-	UDWORD	dpid;
+	SDWORD	dpid;
 	UDWORD	i;
 	char	msg[MAX_CONSOLE_STRING_LENGTH];
 	UDWORD  player=MAX_PLAYERS,j;		//console callback - player who sent the message
@@ -1336,7 +1334,7 @@ BOOL recvTextMessage(NETMSG *pMsg)
 		}
 	}
 
-	ASSERT(player != MAX_PLAYERS, "recvTextMessage: failed to find owner of dpid %d", dpid); 
+	ASSERT(player != MAX_PLAYERS, "recvTextMessage: failed to find owner of dpid %d", dpid);
 
 	//sprintf(msg, "%d", i);
 	strcpy(msg,NetPlay.players[i].name);

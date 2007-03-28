@@ -80,7 +80,7 @@ POINT		rectVerts[4];
  *	Source
  */
 /***************************************************************************/
-void pie_Line(int x0, int y0, int x1, int y1, uint32 colour)
+void pie_Line(int x0, int y0, int x1, int y1, Uint32 colour)
 {
 //	PIELIGHT light;
 
@@ -96,7 +96,7 @@ void pie_Line(int x0, int y0, int x1, int y1, uint32 colour)
 }
 /***************************************************************************/
 
-void pie_Box(int x0,int y0, int x1, int y1, uint32 colour)
+void pie_Box(int x0,int y0, int x1, int y1, Uint32 colour)
 {
 //	PIELIGHT light;
 //	iColour* psPalette;
@@ -159,7 +159,7 @@ void pie_BoxFillIndex(int x0,int y0, int x1, int y1, UBYTE colour)
 	pie_DrawRect( x0, y0, x1, y1, light.argb );
 }
 
-void pie_BoxFill(int x0,int y0, int x1, int y1, uint32 colour)
+void pie_BoxFill(int x0,int y0, int x1, int y1, Uint32 colour)
 {
 	pie_SetRendMode(REND_FLAT);
 	pie_SetTexturePage(-1);
@@ -449,7 +449,7 @@ void pie_DownLoadRadar( unsigned char *buffer )
 		}
 	}
 	pie_SetTexturePage(radarTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 128, 128, 0,
+	glTexImage2D(GL_TEXTURE_2D, 0, wz_texture_compression, 128, 128, 0,
 		     GL_RGBA, GL_UNSIGNED_BYTE, radarBitmap);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

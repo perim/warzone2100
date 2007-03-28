@@ -65,6 +65,8 @@
 #define RADAR_TRIANGLE_HEIGHT	RADAR_TRIANGLE_SIZE
 #define RADAR_TRIANGLE_WIDTH	(RADAR_TRIANGLE_SIZE/2)
 
+#define RADAR_FRAME_SKIP 10
+
 static UDWORD	sweep;
 static UBYTE	colBlack,colWhite,colRadarBorder,colGrey;
 static UBYTE	colRadarAlly[NUM_RADAR_MODES-1],colRadarMe[NUM_RADAR_MODES-1],
@@ -448,6 +450,7 @@ static void CalcRadarScroll(UWORD boxSizeH,UWORD boxSizeV)
 void drawRadar(void)
 {
 	UWORD	boxSizeH,boxSizeV;
+	static int frameSkip = 0;
 
 #ifdef TESTRADAR
 	godMode = TRUE;
@@ -468,7 +471,12 @@ void drawRadar(void)
 	DrawRadarTiles(radarBuffer,RADWIDTH,boxSizeH,boxSizeV);
 	DrawRadarObjects(radarBuffer,RADWIDTH,boxSizeH,boxSizeV);
 
-	pie_DownLoadRadar( radarBuffer );
+	if(frameSkip<=0)
+	{
+		pie_DownLoadRadar( radarBuffer );
+		frameSkip=RADAR_FRAME_SKIP;
+	}
+	frameSkip--;
 
 	iV_TransBoxFill( RADTLX,RADTLY, RADTLX + RADWIDTH, RADTLY + RADHEIGHT);
 
@@ -477,11 +485,6 @@ void drawRadar(void)
 	UpdateRadar(boxSizeH,boxSizeV);
 
 	RadarRedraw = FALSE;
-}
-
-void	downloadAtStartOfFrame( void )
-{
-	pie_DownLoadRadar( radarBuffer );
 }
 
 static void UpdateRadar(UWORD boxSizeH,UWORD boxSizeV)
@@ -976,15 +979,15 @@ static void DrawRadarObjects(UBYTE *screen,UDWORD Modulus,UWORD boxSizeH,UWORD b
 
 // Rotate an array of 2d vectors about a given angle, also translates them after rotating.
 //
-static void RotateVector2D(iVector *Vector,iVector *TVector,iVector *Pos,int Angle,int Count)
+static void RotateVector2D(Vector3i *Vector, Vector3i *TVector, Vector3i *Pos, int Angle, int Count)
 {
 	int Cos = COS(Angle);
 	int Sin = SIN(Angle);
 	int ox = 0;
 	int oy = 0;
 	int i;
-	iVector *Vec = Vector;
-	iVector *TVec = TVector;
+	Vector3i *Vec = Vector;
+	Vector3i *TVec = TVector;
 
 	if(Pos) {
 		ox = Pos->x;
@@ -1040,14 +1043,14 @@ SDWORD	dif;
 
 
 /* Draws a Myth/FF7 style viewing window */
-static void drawViewingWindow( UDWORD x, UDWORD y, UDWORD boxSizeH,UDWORD boxSizeV )
+static void drawViewingWindow( UDWORD x, UDWORD y, UDWORD boxSizeH, UDWORD boxSizeV )
 {
-iVector	v[4],tv[4],centre;
-UDWORD	shortX,longX,yDrop,yDropVar;
-SDWORD	dif = getDistanceAdjust();
-SDWORD	dif2 = getLengthAdjust();
-UDWORD	colour = 0;
-UDWORD	camNumber;
+	Vector3i v[4], tv[4], centre;
+	UDWORD	shortX,longX,yDrop,yDropVar;
+	SDWORD	dif = getDistanceAdjust();
+	SDWORD	dif2 = getLengthAdjust();
+	UDWORD	colour = 0;
+	UDWORD	camNumber;
 
 	shortX = ((visibleXTiles/4)-(dif/6)) * boxSizeH;
 	longX = ((visibleXTiles/2)-(dif/4)) * boxSizeH;
