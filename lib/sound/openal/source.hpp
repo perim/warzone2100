@@ -28,7 +28,7 @@
 #include <vector>
 #include <boost/smart_ptr.hpp>
 #include "context.hpp"
-#include "../bases/geometry.hpp"
+#include "../general/geometry.hpp"
 
 // Needed to declare pointers for soundBuffer
 class soundBuffer;

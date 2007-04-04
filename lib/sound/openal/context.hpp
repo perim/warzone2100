@@ -31,7 +31,7 @@
 #include "device.hpp"
 
 #include <boost/smart_ptr.hpp>
-#include "../bases/geometry.hpp"
+#include "../general/geometry.hpp"
 
 class soundContext
 {

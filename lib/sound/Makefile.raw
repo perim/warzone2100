@@ -1,7 +1,8 @@
 MAKERULES=../../makerules
 include $(MAKERULES)/configure.mk
 
-SRC=openal/buffer.cpp \
+SRC=general/databuffer.cpp \
+	openal/buffer.cpp \
 	openal/source.cpp \
 	openal/context.cpp \
 	openal/device.cpp \
@@ -9,6 +10,7 @@ SRC=openal/buffer.cpp \
 	constants.cpp \
 	decoding.cpp \
 	stream.cpp \
+	track.cpp \
 	interface/stringarray.cpp \
 	interface/devicelist.cpp \
 	interface.cpp
