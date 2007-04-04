@@ -32,6 +32,7 @@
 #include "openal/device.hpp"
 #include "openal/context.hpp"
 #include "stream.hpp"
+#include "track.hpp"
 
 // C-interface helper utility classes
 #include "interface/stringarray.hpp"
@@ -46,6 +47,7 @@
 
 // Needed by sound_DeviceList() for memcpy
 #include <string.h>
+#include <iostream>
 
 // Library initialization status
 static bool Initialized = false;
@@ -59,7 +61,7 @@ static boost::shared_ptr<soundContext> sndContext;
 
 // Some containers of exported objects (through ID numbers)
 static std::map<sndStreamID, boost::shared_ptr<soundStream> > sndStreams;
-static std::map<sndTrackID, boost::shared_ptr<soundBuffer> > sndTracks;
+static std::map<sndTrackID, boost::shared_ptr<soundTrack> > sndTracks;
 
 // Makes sure sound sources are kept alive until they're not needed anymore
 static std::list<boost::shared_ptr<soundSource> > sndSamples;
@@ -250,6 +252,8 @@ BOOL sound_2DStreamIsPlaying(sndStreamID stream)
 
 void sound_Update(void)
 {
+    sndContext->listener.setPosition(0,0,0);
+
     for (std::map<sndStreamID, boost::shared_ptr<soundStream> >::iterator stream = sndStreams.begin(); stream != sndStreams.end(); ++stream)
     {
         stream->second->update();
@@ -274,23 +278,19 @@ void sound_Update(void)
 sndTrackID sound_LoadTrackFromFile(char* fileName)
 {
     // Construct decoder object
-    boost::shared_ptr<soundDecoding> decoder(new soundDecoding(fileName, true));
-
-    // Construct track/OpenAL buffer object
-    boost::shared_ptr<soundBuffer> track(new soundBuffer);
+    soundDecoding decoder(fileName, true);
 
     // Decode the track
-    unsigned int size = 0;
-    boost::shared_array<char> buffer(decoder->decode(size));
+    soundDataBuffer buffer(decoder.decode());
 
-    if (size == 0)
+    if (buffer.empty())
         return 0;
 
-    // Insert the buffer into the OpenAL buffer
-    track->bufferData(decoder->getChannelCount(), decoder->frequency(), buffer.get(), size);
+    // Construct track/OpenAL buffer object and insert the buffer into the OpenAL buffer
+    boost::shared_ptr<soundTrack> track(new soundTrack(buffer));
 
     // Insert the track into the container for later reference/usage
-    sndTracks.insert(std::pair<sndTrackID, boost::shared_ptr<soundBuffer> >(nextTrackID, track));
+    sndTracks.insert(std::pair<sndTrackID, boost::shared_ptr<soundTrack> >(nextTrackID, track));
 
     // First return current track ID plus 1 (because we reserve 0 for an invalid/non-existent stream)
     return nextTrackID++ + 1;
@@ -302,6 +302,18 @@ void sound_PlayTrack(sndTrackID track)
 
     boost::shared_ptr<soundSource> source(new soundSource(sndContext, sndTracks[track]));
 
+    source->play();
+
+    sndSamples.push_back(source);
+}
+
+void sound_PlayTrackPos(sndTrackID track, SDWORD iX, SDWORD iY, SDWORD iZ)
+{
+    if (!Initialized || !validID(track, nextTrackID, sndTracks)) return;
+
+    boost::shared_ptr<soundSource> source(new soundSource(sndContext, sndTracks[track]));
+
+    source->setPosition(iX, iY, iZ);
     source->play();
 
     sndSamples.push_back(source);

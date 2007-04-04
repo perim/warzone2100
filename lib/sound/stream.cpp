@@ -57,13 +57,12 @@ bool soundStream::update()
 bool soundStream::stream(boost::shared_ptr<soundBuffer> buffer)
 {
     // Fill the buffer with decoded PCM data
-    unsigned int size = bufferSize;
-    boost::shared_array<char> pcm(decoder->decode(size));
+    soundDataBuffer pcm = decoder->decode(bufferSize);
 
-    if (size == 0)
+    if (pcm.empty())
         return false;
 
-    buffer->bufferData(decoder->getChannelCount(), decoder->frequency(), pcm.get(), size);
+    buffer->bufferData(pcm);
 
     return true;
 }

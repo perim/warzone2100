@@ -1,7 +1,10 @@
 MAKERULES=../../makerules
 include $(MAKERULES)/configure.mk
 
-SRC=openal/buffer.cpp \
+CFLAGS+=-Werror
+
+SRC=general/databuffer.cpp \
+	openal/buffer.cpp \
 	openal/source.cpp \
 	openal/context.cpp \
 	openal/device.cpp \
@@ -9,10 +12,82 @@ SRC=openal/buffer.cpp \
 	constants.cpp \
 	decoding.cpp \
 	stream.cpp \
+	track.cpp \
 	interface/stringarray.cpp \
 	interface/devicelist.cpp \
 	interface.cpp
 
 LIB=sound
 
-include $(MAKERULES)/lib.mk
+all: ../lib$(LIB).a
+
+openal/source.hpp: openal/buffer.hpp
+openal/context.hpp: types.h stream.hpp
+
+constants.cpp: constants.hpp
+constants.hpp: types.h
+
+decoding.cpp: decoding.hpp
+
+stream.cpp: stream.hpp
+stream.hpp: openal/buffer.hpp openal/source.hpp decoding.hpp
+
+track.cpp: track.hpp
+track.hpp: openal/buffer.hpp
+
+interface.cpp: sound.h openal/context.hpp openal/devicelist.hpp
+sound.h: types.h
+
+general/databuffer.cpp: general/databuffer.hpp
+
+openal/buffer.cpp: openal/buffer.hpp
+
+openal/source.cpp: openal/source.hpp openal/buffer.hpp
+
+openal/context.cpp: openal/context.hpp
+
+openal/device.cpp: openal/device.hpp
+
+openal/devicelist.cpp: openal/devicelist.hpp
+
+interface/stringarray.cpp: interface/stringarray.hpp
+
+interface/devicelist.hpp: interface/stringarray.hpp openal/devicelist.hpp
+interface/devicelist.cpp: interface/devicelist.hpp
+
+constants.o: constants.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+decoding.o: decoding.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+stream.o: stream.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+track.o: track.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+interface.o: interface.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+
+general/databuffer.o: general/databuffer.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+openal/buffer.o: openal/buffer.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+openal/source.o: openal/source.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+openal/context.o: openal/context.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+openal/device.o: openal/device.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+openal/devicelist.o: openal/devicelist.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+interface/stringarray.o: interface/stringarray.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+interface/devicelist.o: interface/devicelist.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<
+
+DEPS=$(patsubst %.c,%.o, $(SRC:%.cpp=%.o))
+
+../lib$(LIB).a: $(DEPS) general/databuffer.o openal/buffer.o openal/source.o openal/context.o openal/device.o openal/devicelist.o interface/stringarray.o interface/devicelist.o
+	$(AR) rcv ../lib$(LIB).a $^
+	@echo $(DEPS)
+
+clean:
+	$(RMF) ..$(DIRSEP)lib$(LIB).a *.o openal$(DIRSEP)*.o interface$(DIRSEP)*.o

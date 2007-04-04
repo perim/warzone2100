@@ -25,6 +25,7 @@
 #define SOUND_OPENAL_BUFFER_HPP
 
 #include <AL/al.h>
+#include "../general/databuffer.hpp"
 
 // Needed to be able to declare this class a friend of soundBuffer
 class soundSource;
@@ -36,20 +37,28 @@ class soundBuffer
         /** Creates an OpenAL buffer
          */
         soundBuffer();
-        ~soundBuffer();
+        soundBuffer(const soundDataBuffer& data);
+        virtual ~soundBuffer();
 
         /** Fills the buffer with the provided data
-         *  \param channels the amount of channels provided in the data stream
-         *  \param frequency the sample frequency of the provided data
-         *  \param data a pointer to an array containing the sound data
-         *  \param size the size of the data array in bytes
+         *  \param data a buffer containing the sounddata
          */
-        void bufferData(unsigned int channels, unsigned int frequency, const char* data, unsigned int size);
+        void bufferData(const soundDataBuffer& data);
+
+        /** Retrieves the duration of this buffer
+         *  \return the duration of the sounddata in this buffer, expressed in seconds
+         */
+        inline float duration() const;
 
     private:
         // Private copy constructor and copy assignment operator ensures this class cannot be copied
         soundBuffer( const soundBuffer& );
         const soundBuffer& operator=( const soundBuffer& );
+
+        /** Handles the creation of the buffer
+         *  Makes sure an OpenAL buffer is created and related errors are dealt with
+         */
+        inline void createBuffer();
 
     private:
         // Internal identifier towards OpenAL
@@ -57,6 +66,9 @@ class soundBuffer
 
         // Needed so that soundSource can attach (or queue/unqueue) soundBuffer's OpenAL buffer to its OpenAL source
         friend class soundSource;
+
+    protected:
+        float _duration; // duration of sounddata in this buffer in seconds
 };
 
 #endif // SOUND_OPENAL_BUFFER_HPP

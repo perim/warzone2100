@@ -24,12 +24,10 @@
 #ifndef SOUND_DECODING_HPP
 #define SOUND_DECODING_HPP
 
-#include <boost/smart_ptr.hpp>
 #include <physfs.h>
 #include <string>
 #include <vorbis/vorbisfile.h>
-
-struct fileInfo;
+#include "general/databuffer.hpp"
 
 class soundDecoding
 {
@@ -45,18 +43,25 @@ class soundDecoding
         ~soundDecoding();
 
         /** Decode some audio
-         *  decodes audio until the output buffer has reached the length bufferSize
-         *  \param[in,out] bufferSize the maximum output size of the returned buffer, this is modified to the actual buffer size
-         *  \return an output buffer and a smart pointer to the output buffer
+         *  decodes audio into an output buffer
+         *  \param bufferSize the maximum output size of the returned buffer, 0
+         *         is interpreted as no maximum, don't use this when streaming
+         *  \return an output buffer
          */
-        boost::shared_array<char> decode(unsigned int& bufferSize);
+        const soundDataBuffer decode(std::size_t bufferSize);
+
+        /** Decode some audio
+         *  decodes audio into an output buffer
+         *  \return an output buffer
+         */
+        const soundDataBuffer decode();
 
         /** Retrieve the channel count
          *  \return number of channels in the decoded stream
          */
         inline unsigned int getChannelCount()
         {
-            return VorbisInfo->channels;
+            return _VorbisInfo->channels;
         }
 
         /** Retrieve the sample frequency
@@ -78,15 +83,35 @@ class soundDecoding
          */
         void reset();
 
+        /** Whether seeking is enabled
+         *  \return true if seeking is enabled, false if disabled
+         */
+        bool allowsSeeking();
+
+        /** Enable or disable seeking
+         *  \param bSeek true to enable seeking, false to disable it
+         */
+        void allowsSeeking(const bool& bSeek);
+
     private:
-        // Info used by the internal file reading callback mechanism
-        boost::shared_ptr<fileInfo> fileHandle;
+        static size_t ovB_read(void *ptr, size_t size, size_t nmemb, void *datasource);
+        static int ovB_seek(void *datasource, ogg_int64_t offset, int whence);
+        static int ovB_close(void *datasource);
+        static long ovB_tell(void *datasource);
+
+        static const ov_callbacks oggVorbis_callbacks;
+
+        // Internal identifier towards PhysicsFS
+        PHYSFS_file* _fileHandle;
+
+        // Wether to allow seeking or not
+        bool         _allowSeeking;
 
         // Internal identifier towards VorbisFile
-        OggVorbis_File oggVorbisStream;
+        OggVorbis_File _oggVorbisStream;
 
         // Internal data
-        vorbis_info* VorbisInfo;
+        vorbis_info* _VorbisInfo;
 };
 
 #endif // SOUND_DECODING_HPP

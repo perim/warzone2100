@@ -26,27 +26,19 @@
 #include "templates.hpp"
 #include <vorbis/vorbisfile.h>
 
-struct fileInfo
+size_t soundDecoding::ovB_read(void *ptr, size_t size, size_t nmemb, void *datasource)
 {
-    // Internal identifier towards PhysFS
-    PHYSFS_file* fileHandle;
-
-    // Wether to allow seeking or not
-    bool         allowSeeking;
-};
-
-static size_t ovB_read(void *ptr, size_t size, size_t nmemb, void *datasource)
-{
-    PHYSFS_file* fileHandle = reinterpret_cast<fileInfo*>(datasource)->fileHandle;
+    PHYSFS_file* fileHandle = reinterpret_cast<soundDecoding*>(datasource)->_fileHandle;
     return PHYSFS_read(fileHandle, ptr, 1, size*nmemb);
 }
 
-static int ovB_seek(void *datasource, ogg_int64_t offset, int whence) {
+int soundDecoding::ovB_seek(void *datasource, ogg_int64_t offset, int whence)
+{
     // check to see if seeking is allowed
-    if (!reinterpret_cast<fileInfo*>(datasource)->allowSeeking)
+    if (!reinterpret_cast<soundDecoding*>(datasource)->_allowSeeking)
         return -1;
 
-    PHYSFS_file* fileHandle = reinterpret_cast<fileInfo*>(datasource)->fileHandle;
+    PHYSFS_file* fileHandle = reinterpret_cast<soundDecoding*>(datasource)->_fileHandle;
 
     int curPos, fileSize, newPos;
 
@@ -83,57 +75,76 @@ static int ovB_seek(void *datasource, ogg_int64_t offset, int whence) {
         return -1;  // failure
 }
 
-static int ovB_close(void *datasource) {
+int soundDecoding::ovB_close(void *datasource)
+{
     return 0;
 }
 
-static long ovB_tell(void *datasource) {
-    PHYSFS_file* fileHandle = reinterpret_cast<fileInfo*>(datasource)->fileHandle;
+long soundDecoding::ovB_tell(void *datasource)
+{
+    PHYSFS_file* fileHandle = reinterpret_cast<soundDecoding*>(datasource)->_fileHandle;
     return PHYSFS_tell(fileHandle);
 }
 
-static ov_callbacks oggVorbis_callbacks = {
-        ovB_read,
-        ovB_seek,
-        ovB_close,
-        ovB_tell
+const ov_callbacks soundDecoding::oggVorbis_callbacks =
+{
+    ovB_read,
+    ovB_seek,
+    ovB_close,
+    ovB_tell
 };
 
-soundDecoding::soundDecoding(std::string fileName, bool Seekable) : fileHandle(new fileInfo)
+soundDecoding::soundDecoding(std::string fileName, bool Seekable)
 {
-    fileHandle->allowSeeking = Seekable;
+    _allowSeeking = Seekable;
 
     if (!PHYSFS_exists(fileName.c_str()))
         throw std::string("decoding: PhysFS: File Not Found");
 
-    fileHandle->fileHandle = PHYSFS_openRead(fileName.c_str());
-    if (fileHandle->fileHandle == NULL)
+    _fileHandle = PHYSFS_openRead(fileName.c_str());
+    if (!_fileHandle)
         throw std::string("decoding: PhysFS returned NULL upon PHYSFS_openRead call");
 
-    int error = ov_open_callbacks(fileHandle.get(), &oggVorbisStream, NULL, 0, oggVorbis_callbacks);
+    int error = ov_open_callbacks(this, &_oggVorbisStream, NULL, 0, oggVorbis_callbacks);
     if (error < 0)
         throw std::string("decoding: VorbisFile returned an error while opening; errorcode: " + to_string(error));
 
-    VorbisInfo = ov_info(&oggVorbisStream, -1);
+    _VorbisInfo = ov_info(&_oggVorbisStream, -1);
 }
 
 soundDecoding::~soundDecoding()
 {
-    PHYSFS_close(fileHandle->fileHandle);
+    PHYSFS_close(_fileHandle);
 }
 
 void soundDecoding::reset()
 {
-    PHYSFS_seek(fileHandle->fileHandle, 0);
+    PHYSFS_seek(_fileHandle, 0);
 
-    int error = ov_open_callbacks(fileHandle.get(), &oggVorbisStream, NULL, 0, oggVorbis_callbacks);
+    int error = ov_open_callbacks(this, &_oggVorbisStream, NULL, 0, oggVorbis_callbacks);
     if (error < 0)
         throw std::string("decoding: VorbisFile returned an error while opening; errorcode: " + to_string(error));
 
-    VorbisInfo = ov_info(&oggVorbisStream, -1);
+    _VorbisInfo = ov_info(&_oggVorbisStream, -1);
 }
 
-boost::shared_array<char> soundDecoding::decode(unsigned int& bufferSize)
+bool soundDecoding::allowsSeeking()
+{
+    return _allowSeeking;
+}
+
+void soundDecoding::allowsSeeking(const bool& bSeek)
+{
+    if (allowsSeeking() == bSeek)
+        return;
+
+    // If this is a state change, then reset the decoder
+    reset();
+
+    _allowSeeking = bSeek;
+}
+
+const soundDataBuffer soundDecoding::decode(std::size_t bufferSize)
 {
     unsigned int sizeEstimate = getSampleCount() * getChannelCount() * 2; // The 2 is for the assumption that samples are 16 bit large
 
@@ -141,13 +152,13 @@ boost::shared_array<char> soundDecoding::decode(unsigned int& bufferSize)
     if (((bufferSize == 0) || (bufferSize > sizeEstimate)) && (sizeEstimate != 0) )
         bufferSize = (getSampleCount() - getCurrentSample()) * getChannelCount() * 2;
 
-    boost::shared_array<char> buffer(new char[bufferSize]);
+    soundDataBuffer buffer(bufferSize, 16, getChannelCount(), frequency());
 
-    unsigned int size = 0;
+    std::size_t size = 0;
     while(size < bufferSize)
     {
         int section;
-        int result = ov_read(&oggVorbisStream, buffer.get() + size, bufferSize - size, 0, 2, 1, &section);
+        int result = ov_read(&_oggVorbisStream, &buffer[size], bufferSize - size, 0, 2, 1, &section);
 
         if(result > 0)
             size += result;
@@ -159,18 +170,25 @@ boost::shared_array<char> soundDecoding::decode(unsigned int& bufferSize)
                 break;
     }
 
-    bufferSize = size;
+    buffer.resize(size);
+
     return buffer;
+}
+
+const soundDataBuffer soundDecoding::decode()
+{
+    allowsSeeking(true);
+    return decode(0);
 }
 
 unsigned int soundDecoding::frequency()
 {
-    return VorbisInfo->rate;
+    return _VorbisInfo->rate;
 }
 
 unsigned int soundDecoding::getSampleCount()
 {
-    int numSamples = ov_pcm_total(&oggVorbisStream, -1);
+    int numSamples = ov_pcm_total(&_oggVorbisStream, -1);
 
     if (numSamples == OV_EINVAL)
         return 0;
@@ -180,7 +198,7 @@ unsigned int soundDecoding::getSampleCount()
 
 unsigned int soundDecoding::getCurrentSample()
 {
-    int samplePos = ov_pcm_tell(&oggVorbisStream);
+    int samplePos = ov_pcm_tell(&_oggVorbisStream);
 
     if (samplePos == OV_EINVAL)
         throw std::string("soundDecoding::getCurrentSample: ov_pcm_tell: invalid argument");

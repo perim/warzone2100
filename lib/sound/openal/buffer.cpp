@@ -24,7 +24,18 @@
 #include "buffer.hpp"
 #include <string>
 
-soundBuffer::soundBuffer()
+soundBuffer::soundBuffer() : _duration(0)
+{
+    createBuffer();
+}
+
+soundBuffer::soundBuffer(const soundDataBuffer& data) : _duration(0)
+{
+    createBuffer();
+    bufferData(data);
+}
+
+inline void soundBuffer::createBuffer()
 {
     // Clear error state
     alGetError();
@@ -40,18 +51,24 @@ soundBuffer::~soundBuffer()
     alDeleteBuffers(1, &buffer);
 }
 
-void soundBuffer::bufferData(unsigned int channels, unsigned int frequency, const char* data, unsigned int size)
+void soundBuffer::bufferData(const soundDataBuffer& data)
 {
     // Clear error state
     alGetError();
 
-    alBufferData(buffer, ((channels == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16), data, size, frequency);
+    alBufferData(buffer, ((data.channelCount() == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16), data, data.size(), data.frequency());
 
     switch (alGetError())
     {
-        case AL_NO_ERROR:
-            return;
         case AL_INVALID_VALUE:
             throw std::string("soundBuffer: alBufferData error: invalid size parameter, buffer is in use or NULL pointer passed as data");
     }
+
+    unsigned int samplecount = data.size() / data.channelCount() / data.bytesPerSample();
+    _duration = samplecount / data.frequency();
+}
+
+inline float soundBuffer::duration() const
+{
+    return _duration;
 }
