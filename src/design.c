@@ -297,7 +297,6 @@ char StringBuffer[STRING_BUFFER_SIZE];
 extern W_SCREEN		*psWScreen;
 
 /* the widget font */
-//extern PROP_FONT	*psWFont;
 extern int WFont;
 
 extern	UDWORD				objID;					// unique ID creation thing..
@@ -505,7 +504,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sEdInit.y = DES_NAMEBOXY;
 	sEdInit.width = DES_NAMEBOXWIDTH;
 	sEdInit.height = DES_NAMEBOXHEIGHT;
-	sEdInit.pText = strresGetString(psStringRes, STR_DES_NEWVEH);
+	sEdInit.pText = _("New Vehicle");
 	sEdInit.FontID = WFont;
 	sEdInit.pBoxDisplay = intDisplayEditBox;
 	if (!widgAddEditBox(psWScreen, &sEdInit))
@@ -527,7 +526,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	else
 	{
 		memcpy(&sCurrDesign, &sDefaultDesignTemplate, sizeof(DROID_TEMPLATE));
-		strcpy(aCurrName, strresGetString(psStringRes, STR_DES_NEWVEH));
+		strcpy(aCurrName, _("New Vehicle"));
 		strcpy( sCurrDesign.aName, aCurrName );
 	}
 
@@ -574,7 +573,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sButInit.y = DES_PARTSEPARATIONY;
 	sButInit.width = iV_GetImageWidth(IntImages, IMAGE_DES_BODY);
 	sButInit.height = iV_GetImageHeight(IntImages, IMAGE_DES_BODY);
-	sButInit.pTip = strresGetString(psStringRes, STR_DES_BODY);
+	sButInit.pTip = _("Vehicle Body");
 	sButInit.FontID = WFont;
 #ifdef FLASH_BUTTONS
 	sButInit.pDisplay = intDisplayButtonFlash;
@@ -596,7 +595,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 					2 * DES_PARTSEPARATIONY);
 	sButInit.width = iV_GetImageWidth(IntImages, IMAGE_DES_PROPULSION);
 	sButInit.height = iV_GetImageHeight(IntImages, IMAGE_DES_PROPULSION);
-	sButInit.pTip = strresGetString(psStringRes, STR_DES_PROPULSION);
+	sButInit.pTip = _("Vehicle Propulsion");
 	sButInit.FontID = WFont;
 #ifdef FLASH_BUTTONS
 	sButInit.pDisplay = intDisplayButtonFlash;
@@ -619,7 +618,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 				 3*DES_PARTSEPARATIONY);
 	sButInit.width = iV_GetImageWidth(IntImages, IMAGE_DES_TURRET);
 	sButInit.height = iV_GetImageHeight(IntImages, IMAGE_DES_TURRET);
-	sButInit.pTip = strresGetString(psStringRes, STR_DES_TURRET);
+	sButInit.pTip = _("Vehicle Turret");
 	sButInit.FontID = WFont;
 #ifdef FLASH_BUTTONS
 	sButInit.pDisplay = intDisplayButtonFlash;
@@ -644,7 +643,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 				 4*DES_PARTSEPARATIONY);
 	sButInit.width = iV_GetImageWidth(IntImages, IMAGE_DES_TURRET);
 	sButInit.height = iV_GetImageHeight(IntImages, IMAGE_DES_TURRET);
-	sButInit.pTip = strresGetString(psStringRes, STR_DES_TURRET);
+	sButInit.pTip = _("Vehicle Turret");
 	sButInit.FontID = WFont;
 #ifdef FLASH_BUTTONS
 	sButInit.pDisplay = intDisplayButtonFlash;
@@ -670,7 +669,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 				 5*DES_PARTSEPARATIONY);
 	sButInit.width = iV_GetImageWidth(IntImages, IMAGE_DES_TURRET);
 	sButInit.height = iV_GetImageHeight(IntImages, IMAGE_DES_TURRET);
-	sButInit.pTip = strresGetString(psStringRes, STR_DES_TURRET);
+	sButInit.pTip = _("Vehicle Turret");
 	sButInit.FontID = WFont;
 #ifdef FLASH_BUTTONS
 	sButInit.pDisplay = intDisplayButtonFlash;
@@ -691,7 +690,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sButInit.height = iV_GetImageHeight(IntImages, IMAGE_DES_BIN);
 	sButInit.x = DES_PARTSEPARATIONX;
 	sButInit.y = (UWORD)(DES_PARTFORMHEIGHT - sButInit.height - DES_PARTSEPARATIONY);
-	sButInit.pTip = strresGetString(psStringRes, STR_DES_DEL);
+	sButInit.pTip = _("Delete Design");
 	sButInit.FontID = WFont;
 	sButInit.pDisplay = intDisplayButtonHilight;
 	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_DES_BINH, IMAGE_DES_BIN);
@@ -745,7 +744,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sBarInit.sMinorCol.green = DES_CLICKBARMINORGREEN;
 	sBarInit.sMinorCol.blue = DES_CLICKBARMINORBLUE;
 	sBarInit.pDisplay = intDisplayStatsBar;
-	sBarInit.pTip = strresGetString(psStringRes, STR_DES_ARMOUR_KIN);
+	sBarInit.pTip = _("Kinetic Armour");
 	sBarInit.iRange = (UWORD)getMaxBodyArmour();//DBAR_BODYMAXARMOUR;
 	if (!widgAddBarGraph(psWScreen, &sBarInit))
 	{
@@ -754,7 +753,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 
 	sBarInit.id = IDDES_BODYARMOUR_H;
 	sBarInit.y  = DES_STATBAR_Y2;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
-	sBarInit.pTip = strresGetString(psStringRes, STR_DES_ARMOUR_HEAT);
+	sBarInit.pTip = _("Thermal Armour");
 	sBarInit.iRange = (UWORD)getMaxBodyArmour();//DBAR_BODYMAXARMOUR;
 	if (!widgAddBarGraph(psWScreen, &sBarInit))
 	{
@@ -770,7 +769,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	//}
 	sBarInit.id = IDDES_BODYPOWER;
 	sBarInit.y = DES_STATBAR_Y3;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
-	sBarInit.pTip = strresGetString(psStringRes, STR_DES_POWER);
+	sBarInit.pTip = _("Engine Output");
 	sBarInit.iRange = (UWORD)getMaxBodyPower();//DBAR_BODYMAXPOWER;
 	if (!widgAddBarGraph(psWScreen, &sBarInit))
 	{
@@ -778,7 +777,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	}
 	sBarInit.id = IDDES_BODYWEIGHT;
 	sBarInit.y = DES_STATBAR_Y4;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
-	sBarInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+	sBarInit.pTip = _("Weight");
 	sBarInit.iRange = (UWORD)getMaxComponentWeight();//DBAR_MAXWEIGHT;
 	if (!widgAddBarGraph(psWScreen, &sBarInit))
 	{
@@ -794,7 +793,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sLabInit.width = DES_CLICKBARNAMEWIDTH;
 	sLabInit.height = DES_CLICKBARHEIGHT;
 //	sLabInit.pText = "Armour against Kinetic weapons";
-	sLabInit.pTip = strresGetString(psStringRes, STR_DES_ARMOUR_KIN);
+	sLabInit.pTip = _("Kinetic Armour");
 	sLabInit.FontID = WFont;
 	sLabInit.pDisplay = intDisplayImage;
     //just to confuse things even more - the graphics were named incorrectly!
@@ -806,7 +805,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sLabInit.id = IDDES_BODYARMOURHLAB;
 	sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 //	sLabInit.pText = "Armour against Heat weapons";
-	sLabInit.pTip = strresGetString(psStringRes, STR_DES_ARMOUR_HEAT);
+	sLabInit.pTip = _("Thermal Armour");
 	sLabInit.pDisplay = intDisplayImage;
 	sLabInit.pUserData = (void*)IMAGE_DES_ARMOUR_KINETIC;//IMAGE_DES_ARMOUR_EXPLOSIVE;
 	if (!widgAddLabel(psWScreen, &sLabInit))
@@ -827,7 +826,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sLabInit.id = IDDES_BODYPOWERLAB;
 	sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 //	sLabInit.pText = "Power";
-	sLabInit.pTip = strresGetString(psStringRes, STR_DES_POWER);
+	sLabInit.pTip = _("Engine Output");
 	sLabInit.pDisplay = intDisplayImage;
 	sLabInit.pUserData = (void*)IMAGE_DES_POWER;
 	if (!widgAddLabel(psWScreen, &sLabInit))
@@ -837,7 +836,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sLabInit.id = IDDES_BODYWEIGHTLAB;
 	sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 //	sLabInit.pText = "Weight";
-	sLabInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+	sLabInit.pTip = _("Weight");
 	sLabInit.pDisplay = intDisplayImage;
 	sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
 	if (!widgAddLabel(psWScreen, &sLabInit))
@@ -868,7 +867,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sLabInit.id = IDDES_TEMPPOWERLAB;
 	sLabInit.x = DES_POWERX;
 	sLabInit.y = DES_POWERY;
-	sLabInit.pTip = strresGetString(psStringRes, STR_DES_TEMPPOWER);
+	sLabInit.pTip = _("Total Power Required");
 	sLabInit.pDisplay = intDisplayImage;
 	sLabInit.pUserData = (void*)IMAGE_DES_POWER;
 	if (!widgAddLabel(psWScreen, &sLabInit))
@@ -888,7 +887,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 					iV_GetImageWidth(IntImages,IMAGE_DES_BODYPOINTS));
 	sBarInit.height = iV_GetImageHeight(IntImages,IMAGE_DES_POWERBACK);
 	sBarInit.pDisplay = intDisplayDesignPowerBar;//intDisplayStatsBar;
-	sBarInit.pTip = strresGetString(psStringRes, STR_DES_TEMPPOWER);
+	sBarInit.pTip = _("Total Power Required");
 	sBarInit.iRange = DBAR_TEMPLATEMAXPOWER;//WBAR_SCALE;
 	if (!widgAddBarGraph(psWScreen, &sBarInit))
 	{
@@ -901,7 +900,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sLabInit.x = DES_POWERX;
 	sLabInit.y = (SWORD)(DES_POWERY + DES_POWERSEPARATIONY +
 						iV_GetImageHeight(IntImages,IMAGE_DES_BODYPOINTS));
-	sLabInit.pTip = strresGetString(psStringRes, STR_DES_TEMPBODY);
+	sLabInit.pTip = _("Total Body Points");
 	sLabInit.pDisplay = intDisplayImage;
 	sLabInit.pUserData = (void*)IMAGE_DES_BODYPOINTS;
 	if (!widgAddLabel(psWScreen, &sLabInit))
@@ -922,7 +921,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 					iV_GetImageWidth(IntImages,IMAGE_DES_BODYPOINTS));
 	sBarInit.height = iV_GetImageHeight(IntImages,IMAGE_DES_POWERBACK);
 	sBarInit.pDisplay = intDisplayDesignPowerBar;//intDisplayStatsBar;
-	sBarInit.pTip = strresGetString(psStringRes, STR_DES_TEMPBODY);
+	sBarInit.pTip = _("Total Body Points");
 	sBarInit.iRange = DBAR_TEMPLATEMAXPOINTS;//(UWORD)getMaxBodyPoints();//DBAR_BODYMAXPOINTS;
 	if (!widgAddBarGraph(psWScreen, &sBarInit))
 	{
@@ -1107,7 +1106,7 @@ BOOL intAddTemplateButtons(UDWORD formID, UDWORD formWidth, UDWORD formHeight,
 	sBarInit.sMinorCol.red = STAT_PROGBARMINORRED;
 	sBarInit.sMinorCol.green = STAT_PROGBARMINORGREEN;
 	sBarInit.sMinorCol.blue = STAT_PROGBARMINORBLUE;
-	sBarInit.pTip = strresGetString(psStringRes, STR_DES_POWERUSE);
+	sBarInit.pTip = _("Power Usage");
 
 	droidTemplID = 0;
 	for( i=0; i<MAXTEMPLATES; i++ )
@@ -1139,7 +1138,7 @@ BOOL intAddTemplateButtons(UDWORD formID, UDWORD formWidth, UDWORD formHeight,
 			sBarInit.size = (UWORD)(psTempl->powerPoints  / POWERPOINTS_DROIDDIV);
 			if(sBarInit.size > WBAR_SCALE) sBarInit.size = WBAR_SCALE;
 
-			sprintf(TempString,"%s - %d",strresGetString(psStringRes, STR_DES_POWERUSE),psTempl->powerPoints);
+			sprintf(TempString,"%s - %d",_("Power Usage"),psTempl->powerPoints);
 			ASSERT( BufferPos+strlen(TempString)+1 < STRING_BUFFER_SIZE,"String Buffer Overrun" );
 			strcpy(&StringBuffer[BufferPos],TempString);
 			sBarInit.pTip = &StringBuffer[BufferPos];
@@ -1767,7 +1766,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 	if (psStats->ref >= REF_SENSOR_START &&
 		psStats->ref < REF_SENSOR_START + REF_RANGE)
 	{
-		ASSERT( PTRVALID(psStats, sizeof(SENSOR_STATS)),
+		ASSERT( psStats != NULL,
 			"intAddSystemForm: Invalid sensor stats pointer" );
 		psSensor = (SENSOR_STATS *)psStats;
 
@@ -1797,7 +1796,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		/* Add the labels */
 		sLabInit.id = IDDES_SENSORRANGELAB;
 //		sLabInit.pText = "Sensor Range";
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_SENSOR_RANGE);
+		sLabInit.pTip = _("Sensor Range");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_RANGE;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -1807,7 +1806,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.id = IDDES_SENSORPOWERLAB;
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 //		sLabInit.pText = " Sensor Power";
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_SENSOR_POWER);
+		sLabInit.pTip = _("Sensor Power");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_POWER;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -1817,7 +1816,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.id = IDDES_SENSORWEIGHTLAB;
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 //		sLabInit.pText = "Weight";
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -1836,7 +1835,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 	else if (psStats->ref >= REF_ECM_START &&
 			 psStats->ref < REF_ECM_START + REF_RANGE)
 	{
-		ASSERT( PTRVALID(psStats, sizeof(ECM_STATS)),
+		ASSERT( psStats != NULL,
 			"intAddSystemForm: Invalid ecm stats pointer" );
 		psECM = (ECM_STATS *)psStats;
 
@@ -1858,7 +1857,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		/* Add the labels */
 		sLabInit.id = IDDES_ECMPOWERLAB;
 //		sLabInit.pText = "ECM Power";
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_ECM_POWER);
+		sLabInit.pTip = _("ECM Power");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_POWER;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -1868,7 +1867,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.id = IDDES_ECMWEIGHTLAB;
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 //		sLabInit.pText = "Weight";
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -1887,13 +1886,13 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 	else if (psStats->ref >= REF_CONSTRUCT_START &&
 			 psStats->ref < REF_CONSTRUCT_START + REF_RANGE)
 	{
-		ASSERT( PTRVALID(psStats, sizeof(CONSTRUCT_STATS)),
+		ASSERT( psStats != NULL,
 			"intAddSystemForm: Invalid constructor stats pointer" );
 		psConst = (CONSTRUCT_STATS *)psStats;
 
 		/* Add the bar graphs */
 		sBarInit.id = IDDES_CONSTPOINTS;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_BUILD_POINTS);
+		sBarInit.pTip = _("Build Points");
 		sBarInit.iRange = (UWORD)getMaxConstPoints();//DBAR_CONSTMAXPOINTS;
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
@@ -1901,7 +1900,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		}
 		sBarInit.id = IDDES_CONSTWEIGHT;
 		sBarInit.y = DES_STATBAR_Y2;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+		sBarInit.pTip = _("Weight");
 		sBarInit.iRange = (UWORD)getMaxComponentWeight();//DBAR_MAXWEIGHT;
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
@@ -1910,7 +1909,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 
 		/* Add the labels */
 		sLabInit.id = IDDES_CONSTPOINTSLAB;
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_BUILD_POINTS);
+		sLabInit.pTip = _("Build Points");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_BUILDRATE;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -1919,7 +1918,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		}
 		sLabInit.id = IDDES_CONSTWEIGHTLAB;
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -1938,13 +1937,13 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 	else if (psStats->ref >= REF_REPAIR_START &&
 			 psStats->ref < REF_REPAIR_START + REF_RANGE)
 	{
-		ASSERT( PTRVALID(psStats, sizeof(REPAIR_STATS)),
+		ASSERT( psStats != NULL,
 			"intAddSystemForm: Invalid repair stats pointer" );
 		psRepair = (REPAIR_STATS *)psStats;
 
 		/* Add the bar graphs */
 		sBarInit.id = IDDES_REPAIRPOINTS;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_BUILD_POINTS);
+		sBarInit.pTip = _("Build Points");
 		sBarInit.iRange = (UWORD)getMaxRepairPoints();//DBAR_REPAIRMAXPOINTS;
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
@@ -1952,7 +1951,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		}
 		sBarInit.id = IDDES_REPAIRWEIGHT;
 		sBarInit.y = DES_STATBAR_Y2;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+		sBarInit.pTip = _("Weight");
 		sBarInit.iRange = (UWORD)getMaxComponentWeight();//DBAR_MAXWEIGHT;
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
@@ -1961,7 +1960,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 
 		/* Add the labels */
 		sLabInit.id = IDDES_REPAIRPTLAB;
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_BUILD_POINTS);
+		sLabInit.pTip = _("Build Points");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_BUILDRATE;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -1970,7 +1969,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		}
 		sLabInit.id = IDDES_REPAIRWGTLAB;
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -1981,14 +1980,14 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 	else if (psStats->ref >= REF_WEAPON_START &&
 			 psStats->ref < REF_WEAPON_START + REF_RANGE)
 	{
-		ASSERT( PTRVALID(psStats, sizeof(WEAPON_STATS)),
+		ASSERT( psStats != NULL,
 			"intAddSystemForm: Invalid ecm stats pointer" );
 		psWeapon = (WEAPON_STATS *)psStats;
 
 		/* Add the bar graphs */
 		sBarInit.id = IDDES_WEAPRANGE;
 		sBarInit.iRange = (UWORD)getMaxWeaponRange();//DBAR_WEAPMAXRANGE;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_RANGE);
+		sBarInit.pTip = _("Range");
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
 			return FALSE;
@@ -1996,7 +1995,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sBarInit.id = IDDES_WEAPDAMAGE;
 		sBarInit.y = DES_STATBAR_Y2;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sBarInit.iRange = (UWORD)getMaxWeaponDamage();//DBAR_WEAPMAXDAMAGE;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_DAMAGE);
+		sBarInit.pTip = _("Damage");
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
 			return FALSE;
@@ -2004,7 +2003,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sBarInit.id = IDDES_WEAPROF;
 		sBarInit.y = DES_STATBAR_Y3;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sBarInit.iRange = getMaxWeaponROF();
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_ROF);
+		sBarInit.pTip = _("Rate-of-Fire");
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
 			return FALSE;
@@ -2012,7 +2011,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sBarInit.id = IDDES_WEAPWEIGHT;
 		sBarInit.y = DES_STATBAR_Y4;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sBarInit.iRange = (UWORD)getMaxComponentWeight();//DBAR_MAXWEIGHT;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+		sBarInit.pTip = _("Weight");
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
 			return FALSE;
@@ -2021,7 +2020,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		/* Add the labels */
 		sLabInit.id = IDDES_WEAPRANGELAB;
 //		sLabInit.pText = "Range";
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_RANGE);
+		sLabInit.pTip = _("Range");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_RANGE;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -2031,7 +2030,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.id = IDDES_WEAPDAMAGELAB;
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 //		sLabInit.pText = "Dam";
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_DAMAGE);
+		sLabInit.pTip = _("Damage");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_DAMAGE;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -2041,7 +2040,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.id = IDDES_WEAPROFLAB;
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 //		sLabInit.pText = "ROF";
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_ROF);
+		sLabInit.pTip = _("Rate-of-Fire");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_FIRERATE;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -2051,7 +2050,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.id = IDDES_WEAPWEIGHTLAB;
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 //		sLabInit.pText = "Weight";
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -2110,7 +2109,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 //	W_LABINIT		sTitleInit;
 	DES_PROPMODE	newPropMode=(DES_PROPMODE)0;
 
-	ASSERT( PTRVALID(psStats, sizeof(PROPULSION_STATS)),
+	ASSERT( psStats != NULL,
 		"intAddPropulsionForm: Invalid propulsion stats pointer" );
 
 	memset(&sFormInit, 0, sizeof(W_FORMINIT));
@@ -2201,7 +2200,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		/* Add the bar graphs */
 		sBarInit.id = IDDES_PROPAIR;
 		sBarInit.iRange = (UWORD)getMaxPropulsionSpeed();//DBAR_PROPMAXSPEED;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_AIR);
+		sBarInit.pTip = _("Air Speed");
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
 			return FALSE;
@@ -2209,7 +2208,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		sBarInit.id = IDDES_PROPWEIGHT;
 		sBarInit.y = DES_STATBAR_Y2;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sBarInit.iRange = (UWORD)getMaxComponentWeight();//DBAR_MAXWEIGHT;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+		sBarInit.pTip = _("Weight");
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
 			return FALSE;
@@ -2217,7 +2216,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 
 		/* Add the labels */
 		sLabInit.id = IDDES_PROPAIRLAB;
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_AIR);
+		sLabInit.pTip = _("Air Speed");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_HOVER;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -2226,7 +2225,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		}
 		sLabInit.id = IDDES_PROPWEIGHTLAB;
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -2245,7 +2244,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 	case IDES_GROUND:
 		/* Add the bar graphs */
 		sBarInit.id = IDDES_PROPROAD;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_ROAD);
+		sBarInit.pTip = _("Road Speed");
 		sBarInit.iRange = (UWORD)getMaxPropulsionSpeed();//DBAR_PROPMAXSPEED;
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
@@ -2253,7 +2252,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		}
 		sBarInit.id = IDDES_PROPCOUNTRY;
 		sBarInit.y = DES_STATBAR_Y2;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_OFFROAD);
+		sBarInit.pTip = _("Off-Road Speed");
 		sBarInit.iRange = (UWORD)getMaxPropulsionSpeed();//DBAR_PROPMAXSPEED;
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
@@ -2261,7 +2260,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		}
 		sBarInit.id = IDDES_PROPWATER;
 		sBarInit.y = DES_STATBAR_Y3;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_WATER);
+		sBarInit.pTip = _("Water Speed");
 		sBarInit.iRange = (UWORD)getMaxPropulsionSpeed();//DBAR_PROPMAXSPEED;
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
@@ -2269,7 +2268,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		}
 		sBarInit.id = IDDES_PROPWEIGHT;
 		sBarInit.y = DES_STATBAR_Y4;	//+= DES_CLICKBARHEIGHT + DES_CLICKGAP;
-		sBarInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+		sBarInit.pTip = _("Weight");
 		sBarInit.iRange = (UWORD)getMaxComponentWeight();//DBAR_MAXWEIGHT;
 		if (!widgAddBarGraph(psWScreen, &sBarInit))
 		{
@@ -2278,7 +2277,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 
 		/* Add the labels */
 		sLabInit.id = IDDES_PROPROADLAB;
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_ROAD);
+		sLabInit.pTip = _("Road Speed");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_ROAD;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -2287,7 +2286,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		}
 		sLabInit.id = IDDES_PROPCOUNTRYLAB;
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_OFFROAD);
+		sLabInit.pTip = _("Off-Road Speed");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_CROSSCOUNTRY;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -2296,7 +2295,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		}
 		sLabInit.id = IDDES_PROPWATERLAB;
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_WATER);
+		sLabInit.pTip = _("Water Speed");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_HOVER;	//WATER;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -2305,7 +2304,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		}
 		sLabInit.id = IDDES_PROPWEIGHTLAB;
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
-		sLabInit.pTip = strresGetString(psStringRes, STR_DES_WEIGHT);
+		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
 		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
@@ -2494,9 +2493,9 @@ static BOOL intAddComponentForm(UDWORD numButtons)
 	sFormInit.tabMajorGap = DES_TAB_SYSGAP;
 	sFormInit.tabMinorGap = 0;//DES_TAB_SYSGAP - 2;
 	sFormInit.numMajor = 3;
-	sFormInit.apMajorTips[IDES_MAINTAB] = strresGetString(psStringRes, STR_DES_WEAPONS);
-	sFormInit.apMajorTips[IDES_EXTRATAB] = strresGetString(psStringRes, STR_DES_OTHER);
-	sFormInit.apMajorTips[IDES_EXTRATAB2] = strresGetString(psStringRes, STR_DES_COMMAND);
+	sFormInit.apMajorTips[IDES_MAINTAB] = _("Weapons");
+	sFormInit.apMajorTips[IDES_EXTRATAB] = _("Systems");
+	sFormInit.apMajorTips[IDES_EXTRATAB2] = _("Command Turrets");
 	sFormInit.pFormDisplay = intDisplayObjectForm;
 	sFormInit.pUserData = (void*)&SystemTab;
 	sFormInit.pTabDisplay = intDisplaySystemTab;
@@ -2584,7 +2583,7 @@ static BOOL intAddSystemButtons(SDWORD mode)
 	sButInit.y = DES_SYSTEMBUTTON_Y;
 	sButInit.width = iV_GetImageWidth(IntImages, IMAGE_DES_WEAPONS);
 	sButInit.height = iV_GetImageHeight(IntImages, IMAGE_DES_WEAPONS);
-	sButInit.pTip = strresGetString(psStringRes, STR_DES_WEAPONS);
+	sButInit.pTip = _("Weapons");
 	sButInit.FontID = WFont;
 	sButInit.pDisplay = intDisplayButtonHilight;
 	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_DES_EXTRAHI , IMAGE_DES_WEAPONS);
@@ -2608,7 +2607,7 @@ static BOOL intAddSystemButtons(SDWORD mode)
 	    sButInit.y = DES_SYSTEMBUTTON_Y;
 	    sButInit.width = iV_GetImageWidth(IntImages, IMAGE_DES_SYSTEMS);
 	    sButInit.height = iV_GetImageHeight(IntImages, IMAGE_DES_SYSTEMS);
-	    sButInit.pTip = strresGetString(psStringRes, STR_DES_OTHER);
+	    sButInit.pTip = _("Systems");
 	    sButInit.FontID = WFont;
 	    sButInit.pDisplay = intDisplayButtonHilight;
 	    sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_DES_EXTRAHI , IMAGE_DES_SYSTEMS);
@@ -2627,7 +2626,7 @@ static BOOL intAddSystemButtons(SDWORD mode)
 	sButInit.y = 10;
 	sButInit.width = iV_GetImageWidth(IntImages, IMAGE_DES_COMMAND);
 	sButInit.height = iV_GetImageHeight(IntImages, IMAGE_DES_COMMAND);
-	sButInit.pTip = strresGetString(psStringRes, STR_DES_COMMAND);
+	sButInit.pTip = _("Command Turrets");
 	sButInit.FontID = WFont;
 	sButInit.pDisplay = intDisplayButtonHilight;
 	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_DES_EXTRAHI , IMAGE_DES_COMMAND);
@@ -2724,7 +2723,7 @@ static BOOL intAddComponentButtons(COMP_BASE_STATS *psStats, UDWORD size,
 		{
 			psPropStats = asPropulsionStats + sCurrDesign.
 				asParts[COMP_PROPULSION];
-			ASSERT( PTRVALID(psPropStats, sizeof(PROPULSION_STATS)),
+			ASSERT( psPropStats != NULL,
 				"intAddComponentButtons: invalid propulsion stats pointer" );
 			if (asPropulsionTypes[psPropStats->propulsionType].travel == AIR)
 			{
@@ -3084,7 +3083,7 @@ static void intSetSystemStats(COMP_BASE_STATS *psStats)
 {
 	W_FORM	*psForm;
 
-	ASSERT( PTRVALID(psStats, sizeof(COMP_BASE_STATS)),
+	ASSERT( psStats != NULL,
 //			 (((UBYTE *)psStats >= (UBYTE *)asCommandDroids) &&
 //			  ((UBYTE *)psStats < (UBYTE *)asCommandDroids + sizeof(asCommandDroids))),
 		"intSetSystemStats: Invalid stats pointer" );
@@ -3214,7 +3213,7 @@ static void intSetSystemShadowStats(COMP_BASE_STATS *psStats)
 /* Set the bar graphs for the sensor stats */
 static void intSetSensorStats(SENSOR_STATS *psStats)
 {
-	ASSERT( PTRVALID(psStats, sizeof(SENSOR_STATS)),
+	ASSERT( psStats != NULL,
 		"intSetSensorStats: Invalid stats pointer" );
 	ASSERT( (psStats->ref >= REF_SENSOR_START) &&
 			(psStats->ref < REF_SENSOR_START + REF_RANGE),
@@ -3235,8 +3234,6 @@ static void intSetSensorStats(SENSOR_STATS *psStats)
 /* Set the shadow bar graphs for the sensor stats */
 static void intSetSensorShadowStats(SENSOR_STATS *psStats)
 {
-	ASSERT( psStats == NULL || PTRVALID(psStats, sizeof(SENSOR_STATS)),
-		"intSetSensorShadowStats: Invalid stats pointer" );
 	ASSERT( psStats == NULL ||
 			((psStats->ref >= REF_SENSOR_START) &&
 			 (psStats->ref < REF_SENSOR_START + REF_RANGE)),
@@ -3268,7 +3265,7 @@ static void intSetSensorShadowStats(SENSOR_STATS *psStats)
 /* Set the bar graphs for the ECM stats */
 static void intSetECMStats(ECM_STATS *psStats)
 {
-	ASSERT( PTRVALID(psStats, sizeof(ECM_STATS)),
+	ASSERT( psStats != NULL,
 		"intSetECMStats: Invalid stats pointer" );
 	ASSERT( (psStats->ref >= REF_ECM_START) &&
 			(psStats->ref < REF_ECM_START + REF_RANGE),
@@ -3285,8 +3282,6 @@ static void intSetECMStats(ECM_STATS *psStats)
 /* Set the shadow bar graphs for the ECM stats */
 static void intSetECMShadowStats(ECM_STATS *psStats)
 {
-	ASSERT( psStats == NULL || PTRVALID(psStats, sizeof(ECM_STATS)),
-		"intSetECMShadowStats: Invalid stats pointer" );
 	ASSERT( psStats == NULL ||
 			((psStats->ref >= REF_ECM_START) &&
 			 (psStats->ref < REF_ECM_START + REF_RANGE)),
@@ -3313,10 +3308,10 @@ static void intSetECMShadowStats(ECM_STATS *psStats)
 /* Set the bar graphs for the Constructor stats */
 static void intSetConstructStats(CONSTRUCT_STATS *psStats)
 {
-	ASSERT( PTRVALID(psStats, sizeof(CONSTRUCT_STATS)),
+	ASSERT( psStats != NULL,
 		"intSetConstructStats: Invalid stats pointer" );
 	ASSERT( (psStats->ref >= REF_CONSTRUCT_START) &&
-			(psStats->ref < REF_CONSTRUCT_START + REF_RANGE),
+		(psStats->ref < REF_CONSTRUCT_START + REF_RANGE),
 		"intSetConstructStats: stats ref is out of range" );
 
 	/* power */
@@ -3331,8 +3326,6 @@ static void intSetConstructStats(CONSTRUCT_STATS *psStats)
 /* Set the shadow bar graphs for the Constructor stats */
 static void intSetConstructShadowStats(CONSTRUCT_STATS *psStats)
 {
-	ASSERT( psStats == NULL || PTRVALID(psStats, sizeof(CONSTRUCT_STATS)),
-		"intSetConstructShadowStats: Invalid stats pointer" );
 	ASSERT( psStats == NULL ||
 		    ((psStats->ref >= REF_CONSTRUCT_START) &&
 			 (psStats->ref < REF_CONSTRUCT_START + REF_RANGE)),
@@ -3358,7 +3351,7 @@ static void intSetConstructShadowStats(CONSTRUCT_STATS *psStats)
 /* Set the bar graphs for the Repair stats */
 static void intSetRepairStats(REPAIR_STATS *psStats)
 {
-	ASSERT( PTRVALID(psStats, sizeof(REPAIR_STATS)),
+	ASSERT( psStats != NULL,
 		"intSetRepairStats: Invalid stats pointer" );
 	ASSERT( (psStats->ref >= REF_REPAIR_START) &&
 			(psStats->ref < REF_REPAIR_START + REF_RANGE),
@@ -3376,8 +3369,6 @@ static void intSetRepairStats(REPAIR_STATS *psStats)
 /* Set the shadow bar graphs for the Repair stats */
 static void intSetRepairShadowStats(REPAIR_STATS *psStats)
 {
-	ASSERT( psStats == NULL || PTRVALID(psStats, sizeof(REPAIR_STATS)),
-		"intSetRepairShadowStats: Invalid stats pointer" );
 	ASSERT( psStats == NULL ||
 		    ((psStats->ref >= REF_REPAIR_START) &&
 			 (psStats->ref < REF_REPAIR_START + REF_RANGE)),
@@ -3404,7 +3395,7 @@ static void intSetRepairShadowStats(REPAIR_STATS *psStats)
 /* Set the bar graphs for the Weapon stats */
 static void intSetWeaponStats(WEAPON_STATS *psStats)
 {
-	ASSERT( PTRVALID(psStats, sizeof(WEAPON_STATS)),
+	ASSERT( psStats != NULL,
 		"intSetWeaponStats: Invalid stats pointer" );
 	ASSERT( (psStats->ref >= REF_WEAPON_START) &&
 			(psStats->ref < REF_WEAPON_START + REF_RANGE),
@@ -3424,8 +3415,6 @@ static void intSetWeaponStats(WEAPON_STATS *psStats)
 /* Set the shadow bar graphs for the Weapon stats */
 static void intSetWeaponShadowStats(WEAPON_STATS *psStats)
 {
-	ASSERT( psStats == NULL || PTRVALID(psStats, sizeof(WEAPON_STATS)),
-		"intSetWeaponShadowStats: Invalid stats pointer" );
 	ASSERT( psStats == NULL ||
 			((psStats->ref >= REF_WEAPON_START) &&
 			 (psStats->ref < REF_WEAPON_START + REF_RANGE)),
@@ -3458,7 +3447,7 @@ static void intSetBodyStats(BODY_STATS *psStats)
 {
 	W_FORM	*psForm;
 
-	ASSERT( PTRVALID(psStats, sizeof(BODY_STATS)),
+	ASSERT( psStats != NULL,
 		"intSetBodyStats: Invalid stats pointer" );
 	ASSERT( (psStats->ref >= REF_BODY_START) &&
 			(psStats->ref < REF_BODY_START + REF_RANGE),
@@ -3503,8 +3492,6 @@ static void intSetBodyStats(BODY_STATS *psStats)
 /* Set the shadow bar graphs for the Body stats */
 static void intSetBodyShadowStats(BODY_STATS *psStats)
 {
-	ASSERT( psStats == NULL || PTRVALID(psStats, sizeof(BODY_STATS)),
-		"intSetBodyShadowStats: Invalid stats pointer" );
 	ASSERT( psStats == NULL ||
 			((psStats->ref >= REF_BODY_START) &&
 			 (psStats->ref < REF_BODY_START + REF_RANGE)),
@@ -3772,7 +3759,7 @@ static void intSetPropulsionStats(PROPULSION_STATS *psStats)
 	W_FORM	    *psForm;
     UDWORD      weight;
 
-	ASSERT( PTRVALID(psStats, sizeof(PROPULSION_STATS)),
+	ASSERT( psStats != NULL,
 		"intSetPropulsionStats: Invalid stats pointer" );
 	ASSERT( (psStats->ref >= REF_PROPULSION_START) &&
 			(psStats->ref < REF_PROPULSION_START + REF_RANGE),
@@ -3830,8 +3817,6 @@ static void intSetPropulsionShadowStats(PROPULSION_STATS *psStats)
     UDWORD      weight;
 
 
-	ASSERT( psStats == NULL || PTRVALID(psStats, sizeof(PROPULSION_STATS)),
-		"intSetPropulsionShadowStats: Invalid stats pointer" );
 	ASSERT( psStats == NULL ||
 			((psStats->ref >= REF_PROPULSION_START) &&
 			 (psStats->ref < REF_PROPULSION_START + REF_RANGE)),
@@ -3913,28 +3898,6 @@ static void intSetPropulsionShadowStats(PROPULSION_STATS *psStats)
 }
 
 
-/* Return a program for a specific order */
-/*static UDWORD intGetProgram(PROGRAM_ORDERS order)
-{
-	UDWORD		index;
-
-	for (index = 0; index < numProgramStats; index++)
-	{
-		if (asProgramStats[index].order == (UDWORD)order)
-		{
-			break;
-		}
-	}
-
-	if (index == numProgramStats)
-	{
-		return 0;
-	}
-
-	return index;
-}*/
-
-
 /* Check whether a droid template is valid */
 static BOOL intValidTemplate(DROID_TEMPLATE *psTempl)
 {
@@ -3944,9 +3907,7 @@ static BOOL intValidTemplate(DROID_TEMPLATE *psTempl)
 	if (psTempl->asParts[COMP_BRAIN] != 0)
 	{
 		psTempl->numWeaps = 1;
-		psTempl->asWeaps[0] =
-			asBrainStats[psTempl->asParts[COMP_BRAIN]].psWeaponStat - asWeaponStats;
-//			asCommandDroids[selectedPlayer][psTempl->asParts[COMP_BRAIN]].nWeapStat;
+		psTempl->asWeaps[0] = asBrainStats[psTempl->asParts[COMP_BRAIN]].psWeaponStat - asWeaponStats;
 	}
 
 	/* Check all the components have been set */
@@ -4007,31 +3968,6 @@ static BOOL intValidTemplate(DROID_TEMPLATE *psTempl)
 	}
 
 	psTempl->ref = REF_TEMPLATE_START;
-
-	/* Set a default program */
-	/*psTempl->numProgs = 1;
-	psTempl->droidType = droidTemplateType(psTempl);
-	switch ( psTempl->droidType )
-	{
-	case DROID_WEAPON:
-	case DROID_PERSON:
-	case DROID_CYBORG:
-	case DROID_DEFAULT:
-		psTempl->asProgs[0] = intGetProgram(ORDER_ATTACK);
-		break;
-	case DROID_SENSOR:
-		psTempl->asProgs[0] = intGetProgram(ORDER_GUARD);
-		break;
-	case DROID_ECM:
-		psTempl->asProgs[0] = intGetProgram(ORDER_GUARD);
-		break;
-	case DROID_CONSTRUCT:
-		psTempl->asProgs[0] = intGetProgram(ORDER_BUILD);
-		break;
-	case DROID_REPAIR:
-		psTempl->asProgs[0] = intGetProgram(ORDER_REPAIR);
-		break;
-	}*/
 
 	/* Calculate build points */
 	psTempl->buildPoints = calcTemplateBuild(psTempl);
@@ -4149,10 +4085,10 @@ void intProcessDesign(UDWORD id)
 		{
 			desCreateDefaultTemplate();
 
-			strncpy(aCurrName, strresGetString(psStringRes, STR_DES_NEWVEH),
+			strncpy(aCurrName, _("New Vehicle"),
 				WIDG_MAXSTR-1);
 			strcpy( sCurrDesign.aName, aCurrName );
-//			strncpy(aCurrName, strresGetString(psStringRes, STR_DES_NEWVEH),
+//			strncpy(aCurrName, _("New Vehicle"),
 //				WIDG_MAXSTR-1);
 
 			/* hide body and system component buttons */

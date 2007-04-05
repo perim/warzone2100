@@ -34,11 +34,12 @@
 
 #include "heap.h"
 #include "treap.h"
-#include "block.h"
 
 #include "fractions.h"
 #include "trig.h"
 
+#include "gettext.h"
+#define _(string) gettext(string)
 
 /* Initialise the frame work library */
 extern BOOL frameInitialise(
@@ -200,6 +201,6 @@ static inline void endian_fract(FRACT *fract) {
 # define endian_fract(x)
 #endif
 
-void setupExceptionHandler(char * programCommand);
+void setupExceptionHandler(const char * programCommand);
 
 #endif

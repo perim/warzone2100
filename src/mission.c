@@ -2022,7 +2022,7 @@ void aiUpdateMissionStructure(STRUCTURE *psStructure)
 	DROID_TEMPLATE		*psNextTemplate;
 #endif
 
-	ASSERT( PTRVALID(psStructure, sizeof(STRUCTURE)),
+	ASSERT( psStructure != NULL,
 		"aiUpdateMissionStructure: invalid Structure pointer" );
 
 	ASSERT( (psStructure->pStructureType->type == REF_FACTORY  ||
@@ -2289,7 +2289,7 @@ void aiUpdateMissionStructure(STRUCTURE *psStructure)
 void missionStructureUpdate(STRUCTURE *psBuilding)
 {
 
-	ASSERT( PTRVALID(psBuilding, sizeof(STRUCTURE)),
+	ASSERT( psBuilding != NULL,
 		"structureUpdate: Invalid Structure pointer" );
 
 	//update the manufacture/research of the building
@@ -2311,7 +2311,7 @@ void missionStructureUpdate(STRUCTURE *psBuilding)
 Only interested in Transporters at present*/
 void missionDroidUpdate(DROID *psDroid)
 {
-	ASSERT( PTRVALID(psDroid, sizeof(DROID)),
+	ASSERT( psDroid != NULL,
 		"unitUpdate: Invalid unit pointer" );
 
     /*This is required for Transporters that are moved offWorld so the
@@ -2866,7 +2866,7 @@ BOOL intAddTransporterTimer(void)
 	sFormInit.y = TRAN_FORM_Y;
 	sFormInit.width = iV_GetImageWidth(IntImages,IMAGE_TRANSETA_UP);
 	sFormInit.height = iV_GetImageHeight(IntImages,IMAGE_TRANSETA_UP);
-	sFormInit.pTip = strresGetString(psStringRes, STR_INT_TRANSPORTER);
+	sFormInit.pTip = _("Load Transport");
 	sFormInit.pDisplay = intDisplayImageHilight;
 	sFormInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_TRANSETA_DOWN,
 		IMAGE_TRANSETA_UP);
@@ -2974,7 +2974,7 @@ BOOL intAddTransporterTimer(void)
 	sButInit.FontID = WFont;
 	sButInit.style = WBUT_PLAIN;
 	//sButInit.pText = "T";
-	sButInit.pTip = strresGetString(psStringRes, STR_INT_TRANSPORTER);
+	sButInit.pTip = _("Load Transport");
 	sButInit.pDisplay = intDisplayImageHilight;
 	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_TRANSETA_DOWN,
 		IMAGE_TRANSETA_UP);
@@ -3155,7 +3155,7 @@ void intUpdateTransporterTimer(WIDGET *psWidget, W_CONTEXT *psContext)
 	psTransporter = (DROID *)Label->pUserData;
 	if (psTransporter != NULL)
 	{
-		ASSERT( PTRVALID(psTransporter, sizeof(DROID)),
+		ASSERT( psTransporter != NULL,
 			"intUpdateTransporterTimer: invalid Droid pointer" );
 
 		if (psTransporter->action == DACTION_TRANSPORTIN ||
@@ -3347,13 +3347,13 @@ static BOOL _intAddMissionResult(BOOL result, BOOL bPlaySuccess)
         //don't bother adding the text if haven't played the audio
         if (bPlaySuccess)
         {
-		    sLabInit.pText = strresGetString(psStringRes,STR_MR_OBJECTIVE_ACHIEVED);//"Objective Achieved";
+		    sLabInit.pText = _("OBJECTIVE ACHIEVED");//"Objective Achieved";
         }
 
 	}
 	else
 	{
-	  	sLabInit.pText = strresGetString(psStringRes,STR_MR_OBJECTIVE_FAILED);//"Objective Failed;
+	  	sLabInit.pText = _("OBJECTIVE FAILED");//"Objective Failed;
 	}
 	sLabInit.FontID = WFont;
 	if (!widgAddLabel(psWScreen, &sLabInit))
@@ -3370,16 +3370,16 @@ static BOOL _intAddMissionResult(BOOL result, BOOL bPlaySuccess)
 	sButInit.pTip		= NULL;
 	sButInit.pDisplay	= displayTextOption;
     //if won or in debug mode
-	if(result || getDebugMappingStatus())
+	if(result || getDebugMappingStatus() || bMultiPlayer)
 	{
 		//continue
 		sButInit.x			= MISSION_2_X;
         // Won the game, so display "Quit to main menu"
-		if(testPlayerHasWon())
+		if(testPlayerHasWon() && !bMultiPlayer)
         {
 			sButInit.id			= IDMISSIONRES_QUIT;
 			sButInit.y			= MISSION_2_Y-8;
-			sButInit.pText		= strresGetString(psStringRes,STR_MR_QUIT_TO_MAIN);
+			sButInit.pText		= _("Quit To Main Menu");
 			widgAddButton(psWScreen, &sButInit);
 			intSetCurrentCursorPosition(&InterfaceSnap,sButInit.id);
 		}
@@ -3388,7 +3388,7 @@ static BOOL _intAddMissionResult(BOOL result, BOOL bPlaySuccess)
 			// Finished the mission, so display "Continue Game"
 			sButInit.y			= MISSION_2_Y;
 			sButInit.id			= IDMISSIONRES_CONTINUE;
-			sButInit.pText		= strresGetString(psStringRes,STR_MR_CONTINUE);//"Continue Game";
+			sButInit.pText		= _("Continue Game");//"Continue Game";
 			widgAddButton(psWScreen, &sButInit);
 			intSetCurrentCursorPosition(&InterfaceSnap,sButInit.id);
 		}
@@ -3396,13 +3396,13 @@ static BOOL _intAddMissionResult(BOOL result, BOOL bPlaySuccess)
 		/* Only add save option if in the game for real, ie, not fastplay.
         And the player hasn't just completed the whole game
         Don't add save option if just lost and in debug mode*/
-		if (!testPlayerHasWon() && !(testPlayerHasLost() && getDebugMappingStatus()))
+		if (!bMultiPlayer && !testPlayerHasWon() && !(testPlayerHasLost() && getDebugMappingStatus()))
 		{
 			//save
 			sButInit.id			= IDMISSIONRES_SAVE;
 			sButInit.x			= MISSION_1_X;
 			sButInit.y			= MISSION_1_Y;
-			sButInit.pText		= strresGetString(psStringRes,STR_MR_SAVE_GAME);//"Save Game";
+			sButInit.pText		= _("Save Game");//"Save Game";
 			widgAddButton(psWScreen, &sButInit);
 			intSetCurrentCursorPosition(&InterfaceSnap,sButInit.id);
 		}
@@ -3413,14 +3413,14 @@ static BOOL _intAddMissionResult(BOOL result, BOOL bPlaySuccess)
 		sButInit.id			= IDMISSIONRES_LOAD;
 		sButInit.x			= MISSION_1_X;
 		sButInit.y			= MISSION_1_Y;
-		sButInit.pText		= strresGetString(psStringRes,STR_MR_LOAD_GAME);//"Load Saved Game";
+		sButInit.pText		= _("Load Saved Game");//"Load Saved Game";
 		widgAddButton(psWScreen, &sButInit);
 		intSetCurrentCursorPosition(&InterfaceSnap,sButInit.id);
 		//quit
 		sButInit.id			= IDMISSIONRES_QUIT;
 		sButInit.x			= MISSION_2_X;
 		sButInit.y			= MISSION_2_Y;
-		sButInit.pText		= strresGetString(psStringRes,STR_MR_QUIT_TO_MAIN);//"Quit to Main Menu";
+		sButInit.pText		= _("Quit To Main Menu");//"Quit to Main Menu";
 		widgAddButton(psWScreen, &sButInit);
 	}
 
@@ -3499,7 +3499,7 @@ void intRunMissionResult(void)
 
 				{
 					saveGame(sRequestResult,GTYPE_SAVE_START);
-		            addConsoleMessage(strresGetString(psStringRes, STR_GAME_SAVED), LEFT_JUSTIFY);
+		            addConsoleMessage(_("GAME SAVED!"), LEFT_JUSTIFY);
 				}
 			}
 		}
@@ -3533,18 +3533,10 @@ static void missionContineButtonPressed( void )
 	}*/
 //	intRemoveMissionResultNoAnim();
 
-
-    //just being paranoid here - definately don't want this in the final build
-#ifdef DEBUG
-    //in the final build we won't be able to get here beciase the CONTINUE button will not be available
-    //if we're in debug mode and we've lost it is preferred if we just return to the game
-    if (getDebugMappingStatus() && testPlayerHasLost())
+    if (bMultiPlayer)
     {
         intRemoveMissionResultNoAnim();
     }
-#endif
-
-
 }
 
 void intProcessMissionResult(UDWORD id)
@@ -3557,10 +3549,10 @@ void intProcessMissionResult(UDWORD id)
 
 	case IDMISSIONRES_LOAD:
 		// throw up some filerequester
-		addLoadSave(LOAD_MISSIONEND,SaveGamePath,"gam",strresGetString(psStringRes,STR_MR_LOAD_GAME)/*"Load Game"*/);
+		addLoadSave(LOAD_MISSIONEND,SaveGamePath,"gam",_("Load Saved Game")/*"Load Game"*/);
 		break;
 	case IDMISSIONRES_SAVE:
-		addLoadSave(SAVE_MISSIONEND,SaveGamePath,"gam",strresGetString(psStringRes,STR_MR_SAVE_GAME)/*"Save Game"*/);
+		addLoadSave(SAVE_MISSIONEND,SaveGamePath,"gam",_("Save Game")/*"Save Game"*/);
 
 		if (widgGetFromID(psWScreen, IDMISSIONRES_QUIT) == NULL)
 		{
@@ -3576,7 +3568,7 @@ void intProcessMissionResult(UDWORD id)
 			sButInit.id			= IDMISSIONRES_QUIT;
 			sButInit.x			= MISSION_3_X;
 			sButInit.y			= MISSION_3_Y;
-			sButInit.pText		= strresGetString(psStringRes,STR_MR_QUIT_TO_MAIN);
+			sButInit.pText		= _("Quit To Main Menu");
 			widgAddButton(psWScreen, &sButInit);
 		}
 		break;

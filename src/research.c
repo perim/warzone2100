@@ -2011,7 +2011,7 @@ void researchResult(UDWORD researchIndex, UBYTE player, BOOL bDisplay)
 		{
 			audio_QueueTrack(ID_SOUND_MAJOR_RESEARCH);
 			//add console text message
-            addConsoleMessage(strresGetString(psStringRes, STR_INT_RESCOMPLETED), LEFT_JUSTIFY);
+            addConsoleMessage(_("Research Completed"), LEFT_JUSTIFY);
 		}
 
 		//check there is viewdata for the research topic - just don't add message if not!
@@ -2030,7 +2030,7 @@ void researchResult(UDWORD researchIndex, UBYTE player, BOOL bDisplay)
 		{
 			audio_QueueTrack(ID_SOUND_RESEARCH_COMPLETED);
 			//add console text message
-            addConsoleMessage(strresGetString(psStringRes, STR_INT_RESCOMPLETED), LEFT_JUSTIFY);
+            addConsoleMessage(_("Research Completed"), LEFT_JUSTIFY);
 		}
 	}
 
@@ -2635,13 +2635,6 @@ COMP_BASE_STATS * getComponentDetails(char *pName, char *pCompName)
 			quantity = numSensorStats;
 			break;
 		}
-		/*case COMP_PROGRAM:
-		{
-			pArtefact = (COMP_BASE_STATS*)asProgramStats;
-			size = sizeof(PROGRAM_STATS);
-			quantity = numProgramStats;
-			break;
-		}*/
 		case COMP_WEAPON:
 		{
 			pArtefact = (COMP_BASE_STATS*)asWeaponStats;
@@ -2712,12 +2705,10 @@ RESEARCH * getResearch(char *pName, BOOL resName)
 
 /* looks through the players lists of structures and droids to see if any are using
  the old component - if any then replaces them with the new component */
-void replaceComponent(COMP_BASE_STATS *pNewComponent, COMP_BASE_STATS *pOldComponent,
+static void replaceComponent(COMP_BASE_STATS *pNewComponent, COMP_BASE_STATS *pOldComponent,
 					  UBYTE player)
 {
-	//DROID			*psDroid;
 	DROID_TEMPLATE	*psTemplates;
-	//STRUCTURE		*psStructure;
 	UDWORD			inc, oldType, newType, oldCompInc, newCompInc;
 
 
@@ -2734,57 +2725,11 @@ void replaceComponent(COMP_BASE_STATS *pNewComponent, COMP_BASE_STATS *pOldCompo
 		return;
 	}
 
-    replaceDroidComponent(apsDroidLists[player], oldType, oldCompInc, newCompInc);
-    replaceDroidComponent(mission.apsDroidLists[player], oldType, oldCompInc, newCompInc);
-    replaceDroidComponent(apsLimboDroids[player], oldType, oldCompInc, newCompInc);
-	//check thru the droids
-	/*for (psDroid = apsDroidLists[player]; psDroid != NULL; psDroid = psDroid->psNext)
-	{
-		switch(oldType)
-		{
-			case COMP_BODY:
-			case COMP_BRAIN:
-			case COMP_PROPULSION:
-			case COMP_REPAIRUNIT:
-			case COMP_ECM:
-			case COMP_SENSOR:
-			case COMP_CONSTRUCT:
-				if (psDroid->asBits[oldType].nStat == oldCompInc)
-				{
-					psDroid->asBits[oldType].nStat = (UBYTE)newCompInc;
-				}
-				break;
-			//case COMP_PROGRAM:
-			//	for (inc=0; inc < psDroid->numProgs; inc++)
-			//	{
-			//		if ((psDroid->asProgs[inc].psStats->ref - REF_PROGRAM_START) ==
-			//			oldCompInc)
-			//		{
-			//			psDroid->asProgs[inc].psStats = (asProgramStats + newCompInc);
-			//		}
-			//	}
-			//	break;
-			case COMP_WEAPON:
-                //can only be one weapon now
-				//for (inc=0; inc < psDroid->numWeaps; inc++)
-                if (psDroid->asWeaps[0].nStat > 0)
-				{
-					//if (psDroid->asWeaps[inc].nStat == oldCompInc)
-                    if (psDroid->asWeaps[0].nStat == oldCompInc)
-					{
-						//psDroid->asWeaps[inc].nStat = newCompInc;
-                        psDroid->asWeaps[0].nStat = newCompInc;
-					}
-				}
-				break;
-			default:
-				//unknown comp type
-				DBERROR(("Unknown component type - invalid droid"));
-				return;
-		}
-	}*/
+	replaceDroidComponent(apsDroidLists[player], oldType, oldCompInc, newCompInc);
+	replaceDroidComponent(mission.apsDroidLists[player], oldType, oldCompInc, newCompInc);
+	replaceDroidComponent(apsLimboDroids[player], oldType, oldCompInc, newCompInc);
 
-    //check thru the templates
+	//check thru the templates
 	for (psTemplates = apsDroidTemplates[player]; psTemplates != NULL;
 		psTemplates = psTemplates->psNext)
 	{
@@ -2802,15 +2747,6 @@ void replaceComponent(COMP_BASE_STATS *pNewComponent, COMP_BASE_STATS *pOldCompo
 					psTemplates->asParts[oldType] = newCompInc;
 				}
 				break;
-			//case COMP_PROGRAM:
-			//	for (inc=0; inc < psTemplates->numProgs; inc++)
-			//	{
-			//		if (psTemplates->asProgs[inc] == oldCompInc)
-			//		{
-			//			psTemplates->asProgs[inc] = newCompInc;
-			//		}
-			//	}
-			//	break;
 			case COMP_WEAPON:
 				for (inc=0; inc < psTemplates->numWeaps; inc++)
 				{
@@ -2828,54 +2764,8 @@ void replaceComponent(COMP_BASE_STATS *pNewComponent, COMP_BASE_STATS *pOldCompo
 		}
 	}
 
-    replaceStructureComponent(apsStructLists[player], oldType, oldCompInc,
-        newCompInc, player);
-    replaceStructureComponent(mission.apsStructLists[player], oldType,
-        oldCompInc, newCompInc, player);
-
-	//check thru the structures
-	/*for (psStructure = apsStructLists[player]; psStructure != NULL; psStructure =
-		psStructure->psNext)
-	{
-		switch (oldType)
-		{
-			case COMP_ECM:
-				if (psStructure->pStructureType->pECM == (asECMStats + oldCompInc))
-				{
-					psStructure->ecmPower = (UWORD)(asECMStats + newCompInc)->power;
-				}
-				break;
-			case COMP_SENSOR:
-				if (psStructure->pStructureType->pSensor == (asSensorStats + oldCompInc))
-				{
-					//psStructure->sensorPower = (asSensorStats + newCompInc)->power;
-					psStructure->sensorPower = (UWORD)sensorPower(asSensorStats +
-						newCompInc,player);
-					//psStructure->sensorRange = (asSensorStats + newCompInc)->range;
-					psStructure->sensorRange = (UWORD)sensorRange(asSensorStats +
-						newCompInc,player);
-				}
-				break;
-			case COMP_WEAPON:
-				//for (inc=0; inc < psStructure->numWeaps; inc++)
-                //can only be one weapon now
-                if (psStructure->asWeaps[0].nStat > 0)
-				{
-					//if (psStructure->asWeaps[inc].nStat == oldCompInc)
-					//{
-					//	psStructure->asWeaps[inc].nStat = newCompInc;
-					//}
-					if (psStructure->asWeaps[0].nStat == oldCompInc)
-					{
-						psStructure->asWeaps[0].nStat = newCompInc;
-					}
-				}
-				break;
-			default:
-				//ignore all other component types
-				break;
-		}
-	}*/
+	replaceStructureComponent(apsStructLists[player], oldType, oldCompInc, newCompInc, player);
+	replaceStructureComponent(mission.apsStructLists[player], oldType, oldCompInc, newCompInc, player);
 }
 
 /*Looks through all the currently allocated stats to check the name is not
@@ -2983,18 +2873,18 @@ void researchReward(UBYTE losingPlayer, UBYTE rewardPlayer)
 		researchResult(rewardID, rewardPlayer, TRUE);
 		if (rewardPlayer == selectedPlayer)
 		{
-			//addConsoleMessage(strresGetString(psStringRes,STR_GAM_RESREWARD), DEFAULT_JUSTIFY);
+			//addConsoleMessage(_("Research Award"), DEFAULT_JUSTIFY);
             //name the actual reward
             //addConsoleMessage(asResearch[rewardID].pName, DEFAULT_JUSTIFY);
            	CONPRINTF(ConsoleString,(ConsoleString,"%s :- %s",
-        	    strresGetString(psStringRes,STR_GAM_RESREWARD),
+        	    _("Research Award"),
                 getName(asResearch[rewardID].pName)));
 		}
 	}
 	/* Not worth mentioning if nothing useful to gain?
     if (rewardPlayer == selectedPlayer)
 	{
-		addConsoleMessage(strresGetString(psStringRes,STR_GAM_RESREWARD), DEFAULT_JUSTIFY);
+		addConsoleMessage(_("Research Award"), DEFAULT_JUSTIFY);
 	}*/
 }
 
@@ -3139,8 +3029,7 @@ BOOL checkResearchStats(void)
 		{
 			for (inc=0; inc < asResearch[resInc].numArteResults; inc++)
 			{
-				ASSERT( PTRVALID(asResearch[resInc].pArtefactResults[inc],
-					sizeof(COMP_BASE_STATS*)),
+				ASSERT( asResearch[resInc].pArtefactResults[inc] != NULL,
 					"checkResearchStats: Invalid Comp Result for topic %s",
 					getResearchName(asResearch[resInc]) );
 			}
@@ -3159,8 +3048,7 @@ BOOL checkResearchStats(void)
 		{
 			for (inc=0; inc < asResearch[resInc].numRedArtefacts; inc++)
 			{
-				ASSERT( PTRVALID(asResearch[resInc].pRedArtefacts[inc],
-					sizeof(COMP_BASE_STATS*)),
+				ASSERT( asResearch[resInc].pRedArtefacts[inc] != NULL,
 					"checkResearchStats: Invalid Redundant Comp for topic %s",
 					getResearchName(asResearch[resInc]) );
 			}
@@ -3301,11 +3189,11 @@ void replaceStructureComponent(STRUCTURE *pList, UDWORD oldType, UDWORD oldCompI
 }
 
 /*swaps the old component for the new one for a specific droid*/
-void switchComponent(DROID *psDroid, UDWORD oldType, UDWORD oldCompInc,
-                     UDWORD newCompInc)
+static void switchComponent(DROID *psDroid, UDWORD oldType, UDWORD oldCompInc,
+                            UDWORD newCompInc)
 {
 
-    ASSERT( PTRVALID(psDroid, sizeof(DROID)),
+    ASSERT( psDroid != NULL,
         "switchComponent:invalid droid pointer" );
 
 	switch(oldType)
@@ -3322,16 +3210,6 @@ void switchComponent(DROID *psDroid, UDWORD oldType, UDWORD oldCompInc,
 				psDroid->asBits[oldType].nStat = (UBYTE)newCompInc;
 			}
 			break;
-		/*case COMP_PROGRAM:
-			for (inc=0; inc < psDroid->numProgs; inc++)
-			{
-				if ((psDroid->asProgs[inc].psStats->ref - REF_PROGRAM_START) ==
-					oldCompInc)
-				{
-					psDroid->asProgs[inc].psStats = (asProgramStats + newCompInc);
-				}
-			}
-			break;*/
 		case COMP_WEAPON:
             //can only be one weapon now
 			//for (inc=0; inc < psDroid->numWeaps; inc++)

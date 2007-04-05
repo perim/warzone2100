@@ -101,7 +101,7 @@ static INTERP_VAL	scrFunctionResult;	//function return value to be pushed to sta
 // If this is defined then check max number of units not reached before adding more.
 #define SCRIPT_CHECK_MAX_UNITS
 
-static SDWORD	playerFlag[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80};
+static SDWORD	bitMask[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80};
 static char		strParam1[MAXSTRLEN], strParam2[MAXSTRLEN];		//these should be used as string parameters for stackPopParams()
 
 // -----------------------------------------------------------------------------------------
@@ -873,7 +873,7 @@ BOOL scrAddDroidToMissionList(void)
 		return FALSE;
 	}
 
-	ASSERT( PTRVALID(psTemplate, sizeof(DROID_TEMPLATE)),
+	ASSERT( psTemplate != NULL,
 		"scrAddUnitToMissionList: Invalid template pointer" );
 
 #ifdef SCRIPT_CHECK_MAX_UNITS
@@ -926,7 +926,7 @@ BOOL scrAddDroid(void)
 		return FALSE;
 	}
 
-	ASSERT( PTRVALID(psTemplate, sizeof(DROID_TEMPLATE)),
+	ASSERT( psTemplate != NULL,
 		"scrAddUnit: Invalid template pointer" );
 
 #ifdef SCRIPT_CHECK_MAX_UNITS
@@ -977,9 +977,9 @@ BOOL scrAddDroidToTransporter(void)
         return TRUE;
     }
 
-	ASSERT( PTRVALID(psTransporter, sizeof(DROID)),
+	ASSERT( psTransporter != NULL,
 			"scrAddUnitToTransporter: invalid transporter pointer" );
-	ASSERT( PTRVALID(psDroid, sizeof(DROID)),
+	ASSERT( psDroid != NULL,
 			"scrAddUnitToTransporter: invalid unit pointer" );
 	ASSERT( psTransporter->droidType == DROID_TRANSPORTER,
 			"scrAddUnitToTransporter: invalid transporter type" );
@@ -1487,13 +1487,13 @@ BOOL scrBuildDroid(void)
 		return FALSE;
 	}
 
-	ASSERT( PTRVALID(psFactory, sizeof(STRUCTURE)),
+	ASSERT( psFactory != NULL,
 		"scrBuildUnit: Invalid structure pointer" );
 	ASSERT( (psFactory->pStructureType->type == REF_FACTORY ||
 		psFactory->pStructureType->type == REF_CYBORG_FACTORY ||
 		psFactory->pStructureType->type == REF_VTOL_FACTORY),
 		"scrBuildUnit: structure is not a factory" );
-	ASSERT( PTRVALID(psTemplate, sizeof(DROID_TEMPLATE)),
+	ASSERT( psTemplate != NULL,
 		"scrBuildUnit: Invalid template pointer" );
 
 	//check building the right sort of droid for the factory
@@ -1618,7 +1618,7 @@ BOOL scrDestroyFeature(void)
 
 	if (psFeature == NULL)
 	{
-		ASSERT( PTRVALID(psFeature, sizeof(FEATURE)),
+		ASSERT( psFeature != NULL,
 			"scrDestroyFeature: Invalid feature pointer" );
 	}
 
@@ -1866,7 +1866,7 @@ BOOL scrAddFeature(void)
 
 	psStat = (FEATURE_STATS *)(asFeatureStats + iFeat);
 
-	ASSERT( PTRVALID(psStat, sizeof(FEATURE_STATS)),
+	ASSERT( psStat != NULL,
 			"scrAddFeature: Invalid feature pointer" );
 
 	if ( psStat != NULL )
@@ -1925,7 +1925,7 @@ BOOL scrAddStructure(void)
 
 	psStat = (STRUCTURE_STATS *)(asStructureStats + iStruct);
 
-	ASSERT( PTRVALID(psStat, sizeof(STRUCTURE_STATS)),
+	ASSERT( psStat != NULL,
 			"scrAddStructure: Invalid feature pointer" );
 
 	if ( psStat != NULL )
@@ -1992,7 +1992,7 @@ BOOL scrDestroyStructure(void)
 
 	if (psStruct == NULL)
 	{
-		ASSERT( PTRVALID(psStruct, sizeof(STRUCTURE)),
+		ASSERT( psStruct != NULL,
 			"scrDestroyStructure: Invalid structure pointer" );
 	}
 
@@ -3243,6 +3243,8 @@ BOOL scrGameOverMessage(void)
 		return FALSE;
 	}
 
+	// stop the game time??
+	
 	//create the message
 	psMessage = addMessage(msgType, FALSE, player);
 
@@ -3266,8 +3268,9 @@ BOOL scrGameOverMessage(void)
 		}*/
 	}
 
-    //this now called when the video Quit is processed
-	//displayGameOver(gameOver);
+    // this should be called when the video Quit is processed
+    // not always is tough, so better be sure
+	displayGameOver(gameOver);
 
 	return TRUE;
 }
@@ -5569,7 +5572,7 @@ BOOL scrAddTemplate(void)
 		return FALSE;
 	}
 
-	ASSERT( PTRVALID(psTemplate, sizeof(DROID_TEMPLATE)),"scrAddTemplate: Invalid template pointer" );
+	ASSERT( psTemplate != NULL, "scrAddTemplate: Invalid template pointer" );
 
 	if(	addTemplate(player,psTemplate))
 	{
@@ -6038,7 +6041,7 @@ BOOL scrTakeOverSingleDroid(void)
         return FALSE;
     }
 
-	ASSERT( PTRVALID(psDroidToTake, sizeof(DROID)),
+	ASSERT( psDroidToTake != NULL,
 		"scrTakeOverSingleUnit: Invalid unit pointer" );
 
     psNewDroid = giftSingleDroid(psDroidToTake, playerToGain);
@@ -6154,7 +6157,7 @@ BOOL scrTakeOverSingleStructure(void)
         return FALSE;
     }
 
-	ASSERT( PTRVALID(psStructToTake, sizeof(STRUCTURE)),
+	ASSERT( psStructToTake != NULL,
 		"scrTakeOverSingleStructure: Invalid structure pointer" );
 
     structureInc = psStructToTake->pStructureType->ref - REF_STRUCTURE_START;
@@ -6800,7 +6803,7 @@ BOOL scrFactoryGetTemplate(void)
 		return FALSE;
 	}
 
-	ASSERT( PTRVALID(psStructure, sizeof(STRUCTURE)),
+	ASSERT( psStructure != NULL,
 		"scrFactoryGetTemplate: Invalid structure pointer" );
 	ASSERT( (psStructure->pStructureType->type == REF_FACTORY ||
 		psStructure->pStructureType->type == REF_CYBORG_FACTORY ||
@@ -6815,7 +6818,7 @@ BOOL scrFactoryGetTemplate(void)
 
 	psTemplate = (DROID_TEMPLATE *)((FACTORY*)psStructure->pFunctionality)->psSubject;
 
-	ASSERT( PTRVALID(psTemplate, sizeof(DROID_TEMPLATE)),
+	ASSERT( psTemplate != NULL,
 		"scrFactoryGetTemplate: Invalid template pointer" );
 
 	scrFunctionResult.v.oval = psTemplate;
@@ -6849,7 +6852,7 @@ BOOL scrNumTemplatesInProduction(void)
 		return FALSE;
 	}
 
-	ASSERT( PTRVALID(psTemplate, sizeof(DROID_TEMPLATE)),
+	ASSERT( psTemplate != NULL,
 		"scrNumTemplatesInProduction: Invalid template pointer" );
 
 	psBaseStats = (BASE_STATS *)psTemplate; //Convert
@@ -7963,8 +7966,8 @@ BOOL scrNumPlayerWeapDroidsInRange(void)
 	SDWORD		targetPlayer,lookingPlayer,range,rangeX,rangeY;
 	BOOL		bVTOLs;
 
-	if (!stackPopParams(6, VAL_INT, &lookingPlayer, VAL_INT, &targetPlayer, VAL_INT, &rangeX,
-		VAL_INT, &rangeY, VAL_INT, &range, VAL_BOOL, &bVTOLs))
+	if (!stackPopParams(6, VAL_INT, &targetPlayer, VAL_INT, &lookingPlayer,
+		VAL_INT, &rangeX, VAL_INT, &rangeY, VAL_INT, &range, VAL_BOOL, &bVTOLs))
 	{
 		debug(LOG_ERROR,"scrNumPlayerWeapDroidsInRange(): stack failed");
 		return FALSE;
@@ -7985,8 +7988,8 @@ BOOL scrNumPlayerWeapStructsInRange(void)
 {
 	SDWORD		targetPlayer,lookingPlayer,range,rangeX,rangeY;
 
-	if (!stackPopParams(5, VAL_INT, &lookingPlayer, VAL_INT, &targetPlayer, VAL_INT, &rangeX,
-		VAL_INT, &rangeY, VAL_INT, &range))
+	if (!stackPopParams(5, VAL_INT, &targetPlayer, VAL_INT, &lookingPlayer,
+		VAL_INT, &rangeX, VAL_INT, &rangeY, VAL_INT, &range))
 	{
 		debug(LOG_ERROR,"scrNumPlayerWeapStructsInRange(): stack failed");
 		return FALSE;
@@ -8005,19 +8008,19 @@ BOOL scrNumPlayerWeapStructsInRange(void)
 
 BOOL scrNumPlayerWeapObjInRange(void)
 {
-	SDWORD				player,lookingPlayer,range,rangeX,rangeY;
+	SDWORD				targetPlayer,lookingPlayer,range,rangeX,rangeY;
 	UDWORD				numEnemies = 0;
 	BOOL				bVTOLs;
 
-	if (!stackPopParams(6, VAL_INT, &player, VAL_INT, &lookingPlayer, VAL_INT, &rangeX,
-		VAL_INT, &rangeY, VAL_INT, &range, VAL_BOOL, &bVTOLs))
+	if (!stackPopParams(6, VAL_INT, &targetPlayer, VAL_INT, &lookingPlayer,
+		VAL_INT, &rangeX, VAL_INT, &rangeY, VAL_INT, &range, VAL_BOOL, &bVTOLs))
 	{
 		debug(LOG_ERROR,"scrNumPlayerWeapObjInRange(): stack failed");
 		return FALSE;
 	}
 
-	numEnemies = numEnemies + numPlayerWeapDroidsInRange(player, lookingPlayer, range, rangeX, rangeY, bVTOLs);
-	numEnemies = numEnemies + numPlayerWeapStructsInRange(player, lookingPlayer, range, rangeX, rangeY);
+	numEnemies = numEnemies + numPlayerWeapDroidsInRange(targetPlayer, lookingPlayer, range, rangeX, rangeY, bVTOLs);
+	numEnemies = numEnemies + numPlayerWeapStructsInRange(targetPlayer, lookingPlayer, range, rangeX, rangeY);
 
 	scrFunctionResult.v.ival = numEnemies;
 	if (!stackPushResult(VAL_INT, &scrFunctionResult))
@@ -8031,17 +8034,17 @@ BOOL scrNumPlayerWeapObjInRange(void)
 
 BOOL scrNumEnemyObjInRange(void)
 {
-	SDWORD				player,range,rangeX,rangeY;
+	SDWORD				lookingPlayer,range,rangeX,rangeY;
 	BOOL				bVTOLs;
 
-	if (!stackPopParams(5, VAL_INT, &player, VAL_INT, &rangeX,
+	if (!stackPopParams(5, VAL_INT, &lookingPlayer, VAL_INT, &rangeX,
 		VAL_INT, &rangeY, VAL_INT, &range, VAL_BOOL, &bVTOLs))
 	{
 		debug(LOG_ERROR, "scrNumEnemyObjInRange(): stack failed");
 		return FALSE;
 	}
 
-	scrFunctionResult.v.ival = numEnemyObjInRange(player, range, rangeX, rangeY, bVTOLs);;
+	scrFunctionResult.v.ival = numEnemyObjInRange(lookingPlayer, range, rangeX, rangeY, bVTOLs);;
 	if (!stackPushResult(VAL_INT, &scrFunctionResult))
 	{
 		debug(LOG_ERROR, "scrNumEnemyObjInRange(): failed to push result");
@@ -8214,7 +8217,7 @@ BOOL scrNumStructsByStatInArea(void)
 
 	psStats = (STRUCTURE_STATS *)(asStructureStats + index);
 
-	ASSERT( PTRVALID(psStats, sizeof(STRUCTURE_STATS)),
+	ASSERT( psStats != NULL,
 			"scrNumStructsByStatInArea: Invalid structure pointer" );
 
 	NumStruct = 0;
@@ -9243,13 +9246,13 @@ BOOL scrNumAllies(void)
 //num aa defenses in range
 BOOL scrNumAAinRange(void)
 {
-	SDWORD				player,lookingPlayer,range,rangeX,rangeY;
+	SDWORD				targetPlayer,lookingPlayer,range,rangeX,rangeY;
 	SDWORD				tx,ty;
 	UDWORD				numFound = 0;
 	STRUCTURE	*psStruct;
 
-	if (!stackPopParams(5, VAL_INT, &player, VAL_INT, &lookingPlayer, VAL_INT, &rangeX,
-		VAL_INT, &rangeY, VAL_INT, &range))
+	if (!stackPopParams(5, VAL_INT, &targetPlayer, VAL_INT, &lookingPlayer,
+		VAL_INT, &rangeX, VAL_INT, &rangeY, VAL_INT, &range))
 	{
 		debug(LOG_ERROR,"scrNumAAinRange(): stack failed");
 		return FALSE;
@@ -9261,7 +9264,7 @@ BOOL scrNumAAinRange(void)
 	numFound = 0;
 
 	//check structures
-	for(psStruct = apsStructLists[player]; psStruct; psStruct=psStruct->psNext)
+	for(psStruct = apsStructLists[targetPlayer]; psStruct; psStruct=psStruct->psNext)
 	{
 		if(psStruct->visible[lookingPlayer])	//if can see it
 		{
@@ -10084,27 +10087,27 @@ BOOL scrDropBeacon(void)
 	return sendBeaconToPlayer(locX, locY, forPlayer, sender, ssval2);
 }
 
-/* Remove help message from the map */
-BOOL scrRemoveHelpMessage(void)
+/* Remove beacon from the map */
+BOOL scrRemoveBeacon(void)
 {
 	MESSAGE			*psMessage;
 	SDWORD			player, sender;
 
 	if (!stackPopParams(2, VAL_INT, &player, VAL_INT, &sender))
 	{
-		debug(LOG_ERROR,"scrRemoveMessage: failed to pop parameters");
+		debug(LOG_ERROR,"scrRemoveBeacon: failed to pop parameters");
 		return FALSE;
 	}
 
 	if (player >= MAX_PLAYERS)
 	{
-		debug(LOG_ERROR,"scrRemoveMessage:player number is too high");
+		debug(LOG_ERROR,"scrRemoveBeacon:player number is too high");
 		return FALSE;
 	}
 
 	if (sender >= MAX_PLAYERS)
 	{
-		debug(LOG_ERROR,"scrRemoveMessage:sender number is too high");
+		debug(LOG_ERROR,"scrRemoveBeacon:sender number is too high");
 		return FALSE;
 	}
 
@@ -10115,12 +10118,6 @@ BOOL scrRemoveHelpMessage(void)
 		//delete it
 		removeMessage(psMessage, player);
 	}
-	//else
-	//{
-	//	ASSERT((FALSE, "scrRemoveMessage:cannot find message - %s",
-	//		psViewData->pName));
-	//	return FALSE;
-	//}
 
 	return TRUE;
 }
@@ -10583,20 +10580,53 @@ SDWORD getPlayerFromString(char *playerName)
 }
 
 /* Checks if a particular bit is set in an integer */
-BOOL scrBitSet(void)
+BOOL scrGetBit(void)
 {
 	SDWORD				val1,val2;
 
 	if (!stackPopParams(2, VAL_INT, &val1, VAL_INT, &val2))
 	{
-		debug(LOG_ERROR, "scrBitSet(): failed to pop");
+		debug(LOG_ERROR, "scrGetBit(): failed to pop");
 		return FALSE;
 	}
 
-	ASSERT(val2 < MAX_PLAYERS && val2 >= 0, "scrBitSet(): wrong player index (%d)", val2);
+	ASSERT(val2 < MAX_PLAYERS && val2 >= 0, "scrGetBit(): wrong player index (%d)", val2);
 
-	scrFunctionResult.v.bval = ((val1 & playerFlag[val2]) != 0);
+	scrFunctionResult.v.bval = ((val1 & bitMask[val2]) != 0);
 	if (!stackPushResult(VAL_BOOL, &scrFunctionResult))
+	{
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/* Sets a particular bit in an integer */
+BOOL scrSetBit(void)
+{
+	SDWORD				base,position;
+	BOOL				bSet;
+
+	if (!stackPopParams(3, VAL_INT, &base,
+		VAL_INT, &position, VAL_BOOL, &bSet))
+	{
+		debug(LOG_ERROR, "scrSetBit(): failed to pop");
+		return FALSE;
+	}
+
+	ASSERT(position < MAX_PLAYERS && position >= 0, "scrSetBit(): wrong position index (%d)", position);
+
+	if(bSet)
+	{
+		base |= bitMask[position];
+	}
+	else
+	{
+		base &= bitMask[position];
+	}
+
+	scrFunctionResult.v.ival = base;
+	if (!stackPushResult(VAL_INT, &scrFunctionResult))
 	{
 		return FALSE;
 	}

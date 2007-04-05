@@ -25,6 +25,7 @@
 #include <SDL/SDL_main.h>
 #include <physfs.h>
 #include <string.h>
+#include <locale.h>
 
 // Get platform defines before checking for them!
 #include "lib/framework/frame.h"
@@ -280,7 +281,7 @@ static void initialize_PhysicsFS(void)
  */
 static void scanDataDirs( void )
 {
-	char tmpstr[MAX_PATH], prefix[MAX_PATH] = { '\0' };
+	char tmpstr[MAX_PATH] = {'\0'}, prefix[MAX_PATH] = {'\0'};
 
 	// Find out which PREFIX we are in...
 	strcpy( tmpstr, PHYSFS_getBaseDir() );
@@ -421,6 +422,10 @@ int main(int argc, char *argv[])
 #else
 	debug( LOG_WZ, "Warzone 2100 - Version %s - Built %s", VERSION, __DATE__ );
 #endif
+	/*** Initialize translations ***/
+	setlocale(LC_ALL, "");
+	bindtextdomain(PACKAGE, LOCALEDIR);
+	textdomain(PACKAGE);
 
 	/*** Initialize PhysicsFS ***/
 
@@ -446,11 +451,6 @@ int main(int argc, char *argv[])
 init://jump here from the end if re_initialising
 
 	debug(LOG_MAIN, "reinitializing");
-
-	if (!blkInitialise())
-	{
-		return FALSE;
-	}
 
 	bDisableLobby = FALSE;
 
@@ -888,6 +888,3 @@ void SetGameMode(UDWORD status)
 
 	gameStatus = status;
 }
-
-
-

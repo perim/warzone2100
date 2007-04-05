@@ -17,14 +17,17 @@ if test "x$YACC" != "xbison -y" ; then
 	AC_MSG_ERROR([Bison is not installed])
 fi
 
-AM_PROG_LEX
+AC_PROG_LEX
 if test "x$LEX" != "xflex" ; then
 	AC_MSG_ERROR([Flex is not installed])
 fi
 
+AC_GNU_SOURCE
+AM_GNU_GETTEXT([external])
+AM_GNU_GETTEXT_VERSION([0.14])
+
 
 # Check for Windows.
-AC_CANONICAL_HOST
 case $host_os in
 	mingw32)
 		host_os_mingw32=yes
@@ -55,6 +58,9 @@ AC_SUBST(icondir, $with_icondir)
 AC_SUBST(applicationdir, $with_applicationdir)
 if test "x$docdir" = "x" ; then
 	AC_SUBST(docdir, $datarootdir/doc/$AC_PACKAGE_TARNAME)
+fi
+if test "x$localedir" = "x" ; then
+	AC_SUBST(localedir, $datadir/locale)
 fi
 
 
@@ -125,15 +131,13 @@ AC_ARG_ENABLE(debug,
 AC_MSG_CHECKING([whether to compile in debug mode])
 AC_MSG_RESULT([$enable_debug])
 if test "x$enable_debug" = "xyes" ; then
-	WZ_CFLAGS="${WZ_CFLAGS} -g -DDEBUG -Wall -Wno-unused-label"
-	WZ_CFLAGS_OVERRIDE="-O0"
+	WZ_CFLAGS="${WZ_CFLAGS} -O0 -g -DDEBUG -Wall -Wno-unused-label"
 elif test "x$enable_debug" = "xstrict" ; then
-	WZ_CFLAGS="${WZ_CFLAGS} -g -DDEBUG -Wall -Wno-unused-label -Werror"
-	WZ_CFLAGS_OVERRIDE="-O0"
+	WZ_CFLAGS="${WZ_CFLAGS} -O0 -g -DDEBUG -Wall -Wno-unused-label -Werror"
 elif test "x$enable_debug" = "xrelaxed" ; then
 	WZ_CFLAGS="${WZ_CFLAGS} -g -DDEBUG -Wall -Wno-unused-label -Wextra"
 else
-	WZ_CFLAGS="${WZ_CFLAGS} -g -DNDEBUG"
+	WZ_CFLAGS="${WZ_CFLAGS} -DNDEBUG"
 fi
 
 
@@ -310,13 +314,13 @@ fi
 
 # add some required C flags here
 # -DYY_STATIC is required by flex
-WZ_CFLAGS="${WZ_CFLAGS} -DYY_STATIC -DDEFAULT_DATADIR=\\\"${datadir}/warzone2100\\\""
-
-CFLAGS="${WZ_CFLAGS} ${CFLAGS} ${WZ_CFLAGS_OVERRIDE}"
+CPPFLAGS="-I\$(top_srcdir) -DYY_STATIC -DLOCALEDIR=\\\"${localedir}\\\" -DDATADIR=\\\"${datadir}/${PACKAGE}\\\""
+CFLAGS="${CFLAGS} ${WZ_CFLAGS}"
 LIBS="${LIBS} ${WZ_LIBS} ${WIN32_LIBS}"
 
-AC_CONFIG_HEADER([lib/framework/config.h])
+AC_CONFIG_HEADER([config.h])
 AC_CONFIG_FILES([Makefile
+		po/Makefile.in
 		data/Makefile
 		nsis/Makefile
 		win32/Makefile

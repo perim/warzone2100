@@ -605,7 +605,7 @@ extern BOOL scrSelectDroid(void);
 extern BOOL scrSelectGroup(void);
 extern BOOL scrModulo(void);
 extern BOOL scrPlayerLoaded(void);
-extern BOOL scrRemoveHelpMessage(void);
+extern BOOL scrRemoveBeacon(void);
 extern BOOL scrDropBeacon(void);
 extern BOOL scrClosestDamagedGroupDroid(void);
 extern BOOL scrMsgBox(void);
@@ -613,7 +613,8 @@ extern BOOL scrGetStructureType(void);
 extern BOOL scrGetPlayerName(void);
 extern BOOL scrSetPlayerName(void);
 
-extern BOOL scrBitSet(void);
+extern BOOL scrGetBit(void);
+extern BOOL scrSetBit(void);
 extern BOOL scrAlliancesLocked(void);
 extern BOOL scrASSERT(void);
 extern BOOL scrShowRangeAtPos(void);

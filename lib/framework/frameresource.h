@@ -95,10 +95,8 @@ extern void resShutDown(void);
 extern void resSetBaseDir(char *pResDir);
 
 /* Parse the res file */
-struct _block_heap;
 BOOL resLoad(const char *pResFile, SDWORD blockID,
-             char *pLoadBuffer, SDWORD bufferSize,
-             struct _block_heap *psMemHeap);
+             char *pLoadBuffer, SDWORD bufferSize);
 
 /* Release all the resources currently loaded and the resource load functions */
 extern void resReleaseAll(void);
@@ -143,8 +141,6 @@ void SetLastResourceFilename(char *pName);
 UDWORD GetLastHashName(void);
 // Set the resource name of the last resource file loaded
 void SetLastHashName(UDWORD HashName);
-
-void SetLastResourceHash(char *fname);
 
 #endif
 

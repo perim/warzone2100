@@ -47,7 +47,7 @@ version_check ()
     return 1
   }
   # the following line is carefully crafted sed magic
-  pkg_version=`$PACKAGE --version|head -n 1|sed 's/([^)]*)//g;s/^[a-zA-Z\.\ \-]*//;s/ .*$//'`
+  pkg_version=`$PACKAGE --version|head -n 1|sed 's/([^)]*)//g;s/^[a-zA-Z\.\ \-\/]*//;s/ .*$//'`
   debug "pkg_version $pkg_version"
   pkg_major=`echo $pkg_version | cut -d. -f1`
   pkg_minor=`echo $pkg_version | sed s/[-,a-z,A-Z].*// | cut -d. -f2`
@@ -82,6 +82,8 @@ version_check ()
   fi
 }
 
+version_check 1 "xgettext" "ftp://ftp.gnu.org/pub/gnu/gettext/" 0 14 || DIE=1
+version_check 1 "msgfmt" "ftp://ftp.gnu.org/pub/gnu/gettext/" 0 14 || DIE=1
 version_check 1 "autoconf" "ftp://ftp.gnu.org/pub/gnu/autoconf/" 2 56 || DIE=1
 version_check 1 "automake" "ftp://ftp.gnu.org/pub/gnu/automake/" 1 8 || DIE=1
 version_check 1 "bison" "ftp://ftp.gnu.org/pub/gnu/bison/" 1 31 || DIE=1
@@ -99,11 +101,8 @@ cd $SRCDIR
   exit 1
 }
 
-echo "+ creating acinclude.m4"
-cat m4/*.m4 > acinclude.m4
-
 echo "+ running aclocal ..."
-aclocal $ACLOCAL_FLAGS || {
+aclocal -I m4 || {
   echo
   echo "aclocal failed - check that all needed development files are present on system"
   exit 1

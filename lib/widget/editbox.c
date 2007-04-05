@@ -67,9 +67,6 @@ BOOL editBoxCreate(W_EDITBOX **ppsWidget, W_EDBINIT *psInit)
 		return FALSE;
 	}
 
-//	ASSERT( PTRVALID(psInit->psFont, sizeof(PROP_FONT)),
-//		"editBoxCreate: Invalid font pointer" );
-
 	/* Allocate the required memory */
 #if W_USE_MALLOC
 	*ppsWidget = (W_EDITBOX *)MALLOC(sizeof(W_EDITBOX));
@@ -91,7 +88,6 @@ BOOL editBoxCreate(W_EDITBOX **ppsWidget, W_EDBINIT *psInit)
 	(*ppsWidget)->y = psInit->y;
 	(*ppsWidget)->width = psInit->width;
 	(*ppsWidget)->height = psInit->height;
-//	(*ppsWidget)->psFont = psInit->psFont;
 	(*ppsWidget)->FontID = psInit->FontID;
 	if (psInit->pDisplay)
 	{
@@ -142,7 +138,7 @@ void editBoxFree(W_EDITBOX *psWidget)
 /* Initialise an edit box widget */
 void editBoxInitialise(W_EDITBOX *psWidget)
 {
-	ASSERT( PTRVALID(psWidget, sizeof(W_EDITBOX)),
+	ASSERT( psWidget != NULL,
 		"editBoxInitialise: Invalid edit box pointer" );
 
 	psWidget->state = WEDBS_FIXED;
@@ -303,13 +299,11 @@ static void fitStringStart(char *pBuffer, UDWORD boxWidth, UWORD *pCount, UWORD 
 	UDWORD		len;
 	UWORD		printWidth, printChars, width;
 	char		*pCurr;
-//	PROP_FONT	*psCurrFont;
 
 	len = strlen(pBuffer);
 	printWidth = 0;
 	printChars = 0;
 	pCurr = pBuffer;
-//	psCurrFont = fontGet();
 
 	/* Find the number of characters that will fit in boxWidth */
 	while (printChars < len)
@@ -338,11 +332,9 @@ static void fitStringEnd(char *pBuffer, UDWORD boxWidth,
 	UDWORD		len;
 	UWORD		printWidth, printChars, width;
 	char		*pCurr;
-//	PROP_FONT	*psCurrFont;
 
 	len = strlen(pBuffer);
 
-//	psCurrFont = fontGet();
 	pCurr = pBuffer + len - 1;
 	printChars = 0;
 	printWidth = 0;
@@ -591,7 +583,7 @@ void editBoxRun(W_EDITBOX *psWidget, W_CONTEXT *psContext)
 /* Set the current string for the edit box */
 void editBoxSetString(W_EDITBOX *psWidget, char *pText)
 {
-	ASSERT( PTRVALID(psWidget, sizeof(W_EDITBOX)),
+	ASSERT( psWidget != NULL,
 		"editBoxSetString: Invalid edit box pointer" );
 
 	widgCopyString(psWidget->aText, pText);
@@ -700,7 +692,6 @@ void editBoxDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pC
 {
 	W_EDITBOX	*psEdBox;
 	SDWORD		x0,y0,x1,y1, fx,fy, cx,cy;
-//	PROP_FONT	*psCurrFont;
 	int CurrFontID;
 	char		ch, *pInsPoint, *pPrint;
 #if CURSOR_BLINK
@@ -708,7 +699,6 @@ void editBoxDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pC
 #endif
 
 	psEdBox = (W_EDITBOX *)psWidget;
-//	psCurrFont = psEdBox->psFont;
 	CurrFontID = psEdBox->FontID;
 
 	x0=psEdBox->x + xOffset;
@@ -728,10 +718,8 @@ void editBoxDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pC
 	}
 
 	fx = x0 + WEDB_XGAP;// + (psEdBox->width - fw) / 2;
-//	fy = y0 + (psEdBox->height - psCurrFont->height + psCurrFont->baseLine) / 2;
 
 	iV_SetFont(CurrFontID);
-//	fontSet(psCurrFont);
 	iV_SetTextColour((UBYTE)*(pColours + WCOL_TEXT));
 
   	fy = y0 + (psEdBox->height - iV_GetTextLineSize())/2 - iV_GetTextAboveBase();
@@ -780,7 +768,6 @@ void editBoxDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pC
 		cx = x0 + WEDB_XGAP + iV_GetTextWidth(psEdBox->aText + psEdBox->printStart);
 		*pInsPoint = ch;
 	  	cy = fy;
-//		cy = fy + psCurrFont->height - (psCurrFont->baseLine >> 1);
 		iV_Line(cx,cy, cx + WEDB_CURSORSIZE,cy,*(pColours + WCOL_CURSOR));
 	}
 

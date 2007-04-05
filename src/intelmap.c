@@ -329,7 +329,7 @@ BOOL intAddIntelMap(void)
 			sLabInit.y = INTMAP_LABELY+PAUSEMESSAGE_YOFFSET;
 			sLabInit.width = INTMAP_LABELWIDTH;
 			sLabInit.height = INTMAP_LABELHEIGHT;
-			sLabInit.pText = strresGetString(psStringRes, STR_MISC_PAUSED);
+			sLabInit.pText = _("PAUSED");
 			sLabInit.FontID = WFont;
 			if (!widgAddLabel(psWScreen, &sLabInit))
 			{
@@ -496,14 +496,14 @@ static BOOL intAddMessageForm(BOOL playCurrent)
 				else
 
 				{
-					sBFormInit.pTip = strresGetString(psStringRes, STR_INT_RESMESSAGE);
+					sBFormInit.pTip = _("Research Update");
 				}
 				break;
 			case MSG_CAMPAIGN:
-				sBFormInit.pTip = strresGetString(psStringRes, STR_INT_GENMESSAGE);
+				sBFormInit.pTip = _("Project Goals");
 				break;
 			case MSG_MISSION:
-				sBFormInit.pTip = strresGetString(psStringRes, STR_INT_MISMESSAGE);
+				sBFormInit.pTip = _("Current Objective");
 				break;
 			default:
 				break;
@@ -660,7 +660,7 @@ BOOL intAddMessageView(MESSAGE * psMessage)
 	sButInit.y = OPT_GAP;
 	sButInit.width = CLOSE_SIZE;
 	sButInit.height = CLOSE_SIZE;
-	sButInit.pTip = strresGetString(psStringRes, STR_MISC_CLOSE);
+	sButInit.pTip = _("Close");
 	sButInit.pDisplay = intDisplayImageHilight;
 	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
 	if (!widgAddButton(psWScreen, &sButInit))
@@ -961,7 +961,7 @@ static void StartMessageSequences(MESSAGE *psMessage, BOOL Start)
 		return;
 	}
 
-	ASSERT( PTRVALID(psMessage->pViewData, sizeof(VIEWDATA)),
+	ASSERT( psMessage->pViewData != NULL,
 		"StartMessageSequences: invalid ViewData pointer" );
 
 	if (((VIEWDATA *)psMessage->pViewData)->type == VIEW_RPL)
@@ -1052,6 +1052,12 @@ void intIntelButtonPressed(BOOL proxMsg, UDWORD id)
 
 	ASSERT( proxMsg != TRUE,
 		"intIntelButtonPressed: Shouldn't be able to get a proximity message!" );
+
+	if(id == 0)
+	{
+		intRemoveIntelMap();
+		return;
+	}
 
 	/* message button has been pressed - clear the old button and messageView*/
 	if (messageID != 0)
@@ -1256,12 +1262,12 @@ void intRemoveIntelMap(void)
 
 	// Start the window close animation.
 	Form = (W_TABFORM*)widgGetFromID(psWScreen,IDINTMAP_FORM);
-
-	ASSERT(Form != NULL, "intRemoveIntelMap: Form is NULL");
-
-	Form->display = intClosePlainForm;
-	Form->disableChildren = TRUE;
-	Form->pUserData = (void*)0;	// Used to signal when the close anim has finished.
+	if(Form)
+	{
+		Form->display = intClosePlainForm;
+		Form->disableChildren = TRUE;
+		Form->pUserData = (void*)0;	// Used to signal when the close anim has finished.
+	}
 	ClosingIntelMap = TRUE;
 	//remove the text label
 	widgDelete(psWScreen, IDINTMAP_PAUSELABEL);

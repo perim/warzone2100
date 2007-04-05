@@ -613,7 +613,7 @@ static void offscreenUpdate(DROID *psDroid,
 
 	// snap droid(if on ground)  to terrain level at x,y.
 	psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
-	ASSERT( PTRVALID(psPropStats, sizeof(PROPULSION_STATS)),"offscreenUpdate: invalid propulsion stats pointer" );
+	ASSERT( psPropStats != NULL, "offscreenUpdate: invalid propulsion stats pointer" );
 	if(	psPropStats->propulsionType != LIFT )		// if not airborne.
 	{
 		psDroid->z = map_Height(psDroid->x, psDroid->y);
@@ -1135,7 +1135,7 @@ BOOL sendPing(void)
 	{
 		if( isHumanPlayer(i) && PingSend[i] && ingame.PingTimes[i] && (i!= selectedPlayer) )
 		{
-	//		CONPRINTF(ConsoleString,(ConsoleString,strresGetString(psStringRes,STR_MUL_RESPOND),getPlayerName(i) ));
+	//		CONPRINTF(ConsoleString,(ConsoleString,_("%s is Not Respoding"),getPlayerName(i) ));
 			ingame.PingTimes[i] = PING_LIMIT;
 		}
 		else if( !isHumanPlayer(i) && PingSend[i] && ingame.PingTimes[i] && (i!= selectedPlayer) )

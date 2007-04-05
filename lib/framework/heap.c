@@ -37,7 +37,6 @@
 #include "heap.h"
 #include "treap.h"
 #include "treapint.h"
-#include "block.h"
 
 // Control whether a heap usage report is printed out when a heap is destroyed
 #define HEAP_USAGE_REPORT	FALSE
@@ -163,7 +162,7 @@ BOOL heapCreate(OBJ_HEAP **ppsHeap, UDWORD size, UDWORD init, UDWORD ext)
 	(*ppsHeap)->pMemory = (UBYTE *)MALLOC(size * init);
 
 /*
-	if (PTRVALID((*ppsHeap)->pMemory,size*init)==FALSE)
+	if ((*ppsHeap)->pMemory == NULL)
 	{
 		DBPRINTF(("Allocated heap memory is not valid!\n"));
 	}
@@ -185,7 +184,6 @@ BOOL heapCreate(OBJ_HEAP **ppsHeap, UDWORD size, UDWORD init, UDWORD ext)
 	(*ppsHeap)->initAlloc = init;
 	(*ppsHeap)->extAlloc = ext;
 	(*ppsHeap)->psExt = NULL;
-	(*ppsHeap)->psBlkHeap = memGetBlockHeap();
 #if DEBUG_HEAP
 	(*ppsHeap)->maxUsage = 0;
 	(*ppsHeap)->currUsage = 0;
@@ -213,7 +211,7 @@ BOOL heapCreate(OBJ_HEAP **ppsHeap, UDWORD size, UDWORD init, UDWORD ext)
 	// Now create the free object list
 	heapCreateFreeList(*ppsHeap);
 /*
-	if (PTRVALID((*ppsHeap)->pMemory,10)==FALSE)
+	if ((*ppsHeap)->pMemory == NULL)
 	{
 		DBPRINTF(("Allocated heap memory is not valid!\n"));
 	}
@@ -251,7 +249,6 @@ BOOL heapAlloc(OBJ_HEAP *psHeap, void **ppObject)
 	UDWORD		i;
 	FREE_OBJECT	*psCurr = NULL;
 	UBYTE		*pBase;
-	BLOCK_HEAP	*psCurrBlk;
 #if DEBUG_HEAP
 	HEAP_OBJHDR	*psHdr;
 	FREE_OBJECT		*psFree;
@@ -259,7 +256,7 @@ BOOL heapAlloc(OBJ_HEAP *psHeap, void **ppObject)
 	UBYTE			*pStart, *pEnd;
 #endif
 
-	ASSERT( PTRVALID(psHeap, sizeof(OBJ_HEAP)),
+	ASSERT( psHeap != NULL,
 		"heapAlloc: Invalid heap pointer" );
 
 	if (psHeap->psFree == NULL)
@@ -272,10 +269,6 @@ BOOL heapAlloc(OBJ_HEAP *psHeap, void **ppObject)
 #endif
 			return FALSE;
 		}
-
-		/* No objects left - need to add a heap extension */
-		psCurrBlk = memGetBlockHeap();
-		memSetBlockHeap(psHeap->psBlkHeap);
 
 #ifdef REALLY_DEBUG_HEAP
 		debug(LOG_MEMORY, "heapAlloc: Heap %s, line %d extended. Max use: %d\n", psHeap->pFile, psHeap->line, psHeap->maxUsage);
@@ -296,7 +289,6 @@ BOOL heapAlloc(OBJ_HEAP *psHeap, void **ppObject)
 			FREE(psNew);
 			return FALSE;
 		}
-		memSetBlockHeap(psCurrBlk);
 
 #if DEBUG_HEAP
 		/* Initialise the memory to check for overwrites */
@@ -384,7 +376,7 @@ BOOL heapFree(OBJ_HEAP *psHeap, void *pObject)
 #endif
 	FREE_OBJECT		*psFree;
 
-	ASSERT( PTRVALID(psHeap, sizeof(OBJ_HEAP)),
+	ASSERT( psHeap != NULL,
 		"heapFree: Invalid heap pointer" );
 
 #if DEBUG_HEAP
@@ -473,7 +465,7 @@ void heapDestroy(OBJ_HEAP *psHeap)
 	int 			Heap;
 #endif
 
-	ASSERT( PTRVALID(psHeap, sizeof(OBJ_HEAP)),
+	ASSERT( psHeap != NULL,
 		"heapDestroy: invalid heap pointer" );
 
 #if DEBUG_HEAP

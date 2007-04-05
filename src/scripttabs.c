@@ -979,15 +979,19 @@ FUNC_SYMBOL asFuncTable[] =
 		1, { VAL_STRING },
 		0, 0, NULL, 0, 0, NULL, NULL },
 
-	{ "bitSet",				scrBitSet,					VAL_BOOL,
+	{ "getBit",				scrGetBit,					VAL_BOOL,
 		2, { VAL_INT, VAL_INT },
+		0, 0, NULL, 0, 0, NULL, NULL },
+
+	{ "setBit",				scrSetBit,					VAL_INT,
+		3, { VAL_INT, VAL_INT, VAL_BOOL },
 		0, 0, NULL, 0, 0, NULL, NULL },
 
 	{ "dropBeacon",			scrDropBeacon,				VAL_VOID,
 		6, { VAL_STRING, VAL_INT, VAL_INT, VAL_INT, VAL_INT, VAL_INT },
 		0, 0, NULL, 0, 0, NULL, NULL },
 
-	{ "removeHelpMessage",	scrRemoveHelpMessage,		VAL_VOID,
+	{ "removeBeacon",	scrRemoveBeacon,		VAL_VOID,
 		2, { VAL_INT, VAL_INT },
 		0, 0, NULL, 0, 0, NULL, NULL },
 
@@ -1305,10 +1309,6 @@ FUNC_SYMBOL asFuncTable[] =
 
 	{ "getStructureType",		scrGetStructureType,		VAL_INT,
 		1, { (INTERP_TYPE)ST_STRUCTURE },
-		0, 0, NULL, 0, 0, NULL, NULL },
-
-	{ "playerName",				scrGetPlayerName,			VAL_STRING,
-		1, { VAL_INT },
 		0, 0, NULL, 0, 0, NULL, NULL },
 
 	{ "getPlayerName",			scrGetPlayerName,			VAL_STRING,

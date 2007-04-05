@@ -1783,12 +1783,9 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 			}
 			if(bMultiPlayer)
 			{
-				blockSuspendUsage();
 				loadMultiStats(saveGameData.sPName,&playerStats);				// stats stuff
 				setMultiStats(NetPlay.dpidPlayer,playerStats,FALSE);
 				setMultiStats(NetPlay.dpidPlayer,playerStats,TRUE);
-				blockUnsuspendUsage();
-
 			}
         }
 
@@ -1929,7 +1926,6 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 	if (saveGameOnMission && UserSaveGame)
 	{
 		LOADBARCALLBACK();	//		loadingScreenCallback();
-		memSetBlockHeap(psMapHeap);//should be set
 
         //the scroll limits for the mission map have already been written
         if (saveGameVersion >= VERSION_29)
@@ -1974,9 +1970,6 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 				}
 			}
 		}
-
-		//set mission heap
-		memSetBlockHeap(psMissionHeap);
 
 	// reload the objects that were in the mission list
 //except droids these are always loaded directly to the mission.apsDroidList
@@ -2868,13 +2861,9 @@ error:
 BOOL saveGame(char *aFileName, SDWORD saveType)
 {
 	UDWORD			fileExtension;
-	BLOCK_HEAP		*psHeap;
 	DROID			*psDroid, *psNext;
 
 	debug(LOG_WZ, "saveGame: %s", aFileName);
-
-	psHeap = memGetBlockHeap();
-	memSetBlockHeap(NULL);
 
 	fileExtension = strlen(aFileName) - 3;
 	gameTimeStop();
@@ -3195,15 +3184,11 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 		swapMissionPointers();
 	}
 
-
-	memSetBlockHeap(psHeap);
-
 	/* Start the game clock */
 	gameTimeStart();
 	return TRUE;
 
 error:
-	memSetBlockHeap(psHeap);
 	/* Start the game clock */
 	gameTimeStart();
 
@@ -4058,11 +4043,9 @@ BOOL gameLoadV(char *pFileData, UDWORD filesize, UDWORD version)
 			}
 			if(bMultiPlayer)
 			{
-				blockSuspendUsage();
 				loadMultiStats(psSaveGame->sPName,&playerStats);				// stats stuff
 				setMultiStats(NetPlay.dpidPlayer,playerStats,FALSE);
 				setMultiStats(NetPlay.dpidPlayer,playerStats,TRUE);
-				blockUnsuspendUsage();
 			}
 		}
 
@@ -4516,7 +4499,7 @@ BOOL loadSaveDroidInitV2(char *pFileData, UDWORD filesize,UDWORD quantity)
 		}
 		else
 		{
-			ASSERT( PTRVALID(psTemplate, sizeof(DROID_TEMPLATE)),
+			ASSERT( psTemplate != NULL,
 				"loadSaveUnitInitV2: Invalid template pointer" );
 
 // Need to set apCompList[pDroidInit->player][componenttype][compid] = AVAILABLE for each droid.
@@ -9314,8 +9297,7 @@ static BOOL writeCompListFile(char *pFileName)
 
 	// Calculate the file size
 	totalComp = (numBodyStats + numWeaponStats + numConstructStats + numECMStats +
-		numPropulsionStats + numSensorStats + numRepairStats + numBrainStats +
-		numProgramStats) * MAX_PLAYERS;
+		numPropulsionStats + numSensorStats + numRepairStats + numBrainStats) * MAX_PLAYERS;
 	fileSize = COMPLIST_HEADER_SIZE + (sizeof(SAVE_COMPLIST) * totalComp);
 	//allocate the buffer space
 	pFileData = (char*)MALLOC(fileSize);
@@ -9428,15 +9410,6 @@ static BOOL writeCompListFile(char *pFileName)
 			psSaveCompList->state = apCompLists[player][COMP_BRAIN][i];
 			psSaveCompList = (SAVE_COMPLIST *)((char *)psSaveCompList + sizeof(SAVE_COMPLIST));
 		}
-		/*for(i = 0; i < numProgramStats; i++)
-		{
-			psStats = (COMP_BASE_STATS *)(asProgramStats + i);
-			strcpy(psSaveCompList->name, psStats->pName);
-			psSaveCompList->type = COMP_PROGRAM;
-			psSaveCompList->player = (UBYTE)player;
-			psSaveCompList->state = apCompLists[player][COMP_PROGRAM][i];
-			psSaveCompList = (SAVE_COMPLIST *)((char *)psSaveCompList + sizeof(SAVE_COMPLIST));
-		}*/
 	}
 
 	/* COMPLIST_SAVEHEADER */

@@ -1,9 +1,11 @@
-SUBDIRS = win32 lib src data nsis
+SUBDIRS = po win32 lib src data nsis
 
 dist_doc_DATA = AUTHORS ChangeLog README COPYING COPYING.README
 
 # Remove this line when Automake 1.10 becomes standard
 MKDIR_P=$(mkdir_p)
+
+ACLOCAL_AMFLAGS = -I m4
 
 install-data-local:
 	$(MKDIR_P) $(DESTDIR)$(icondir)
@@ -15,7 +17,8 @@ uninstall-local:
 	$(RM) $(DESTDIR)$(icondir)/warzone2100.png
 	$(RM) $(DESTDIR)$(applicationdir)/warzone2100.desktop
 
-EXTRA_DIST=	\
+EXTRA_DIST= \
+	config.rpath \
 	autogen.sh \
 	configure.ac \
 	m4/ogg.m4 \

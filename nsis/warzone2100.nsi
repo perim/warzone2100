@@ -1,5 +1,5 @@
 ;NSIS Modern User Interface
-;Warzone 2100 GPL Installer script
+;Warzone 2100 Resurrection Installer script
 ;Written by Dennis Schridde
 
 ;--------------------------------
@@ -18,7 +18,7 @@
   InstallDir "$PROGRAMFILES\Warzone 2100"
 
   ;Get installation folder from registry if available
-  InstallDirRegKey HKCU "Software\Warzone 2100" ""
+  InstallDirRegKey HKLM "Software\Warzone 2100" ""
 
   SetCompressor /FINAL /SOLID lzma
 
@@ -50,7 +50,7 @@ VIAddVersionKey "ProductVersion"	"${VERSION}"
   !define MUI_LICENSEPAGE_RADIOBUTTONS
 
   ;Start Menu Folder Page Configuration (for MUI_PAGE_STARTMENU)
-  !define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKCU"
+  !define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKLM"
   !define MUI_STARTMENUPAGE_REGISTRY_KEY "Software\Warzone 2100"
   !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "Start Menu Folder"
 
@@ -120,6 +120,10 @@ Section $(TEXT_SecBase) SecBase
   File "${LIBDIR}\OpenAL32.dll"
   File "${LIBDIR}\wrap_oal.dll"
 
+  ; Windows dbghelp library
+  File "${LIBDIR}\dbghelp.dll.license.txt"
+  File "${LIBDIR}\dbghelp.dll"
+
   ; Data files
   File "..\data\mp.wz"
   File "..\data\warzone.wz"
@@ -132,18 +136,18 @@ Section $(TEXT_SecBase) SecBase
 
 
   ;Store installation folder
-  WriteRegStr HKCU "Software\Warzone 2100" "" $INSTDIR
+  WriteRegStr HKLM "Software\Warzone 2100" "" $INSTDIR
 
   ; Write the Windows-uninstall keys
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "DisplayName" "Warzone 2100"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "DisplayVersion" "${VERSION}"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "DisplayIcon" "$INSTDIR\warzone2100.exe,0"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "Publisher" "Warzone Resurrection Project"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "URLInfoAbout" "http://wz2100.net/"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "UninstallString" "$INSTDIR\uninstall.exe"
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "NoModify" 1
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "NoRepair" 1
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "DisplayName" "Warzone 2100"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "DisplayVersion" "${VERSION}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "DisplayIcon" "$INSTDIR\warzone2100.exe,0"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "Publisher" "Warzone Resurrection Project"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "URLInfoAbout" "http://wz2100.net/"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "InstallLocation" "$INSTDIR"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "UninstallString" "$INSTDIR\uninstall.exe"
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "NoModify" 1
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100" "NoRepair" 1
 
   ;Create uninstaller
   WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -160,7 +164,7 @@ Section $(TEXT_SecBase) SecBase
 SectionEnd
 
 
-SectionGroup /e $(TEXT_SecMods) SecMods
+SectionGroup /e $(TEXT_SecMods) secMods
 
 Section $(TEXT_SecGrimMod) SecGrimMod
 
@@ -242,13 +246,20 @@ Section "Uninstall"
   ;ADD YOUR OWN FILES HERE...
 
   Delete "$INSTDIR\warzone2100.exe"
+
   Delete "$INSTDIR\OpenAL32.dll"
   Delete "$INSTDIR\wrap_oal.dll"
+
+  Delete "$INSTDIR\dbghelp.dll.license.txt"
+  Delete "$INSTDIR\dbghelp.dll"
+
   Delete "$INSTDIR\warzone.wz"
   Delete "$INSTDIR\mp.wz"
 
   Delete "$INSTDIR\Readme.txt"
   Delete "$INSTDIR\License.txt"
+  Delete "$INSTDIR\Authors.txt"
+  Delete "$INSTDIR\ChangeLog.txt"
 
   Delete "$INSTDIR\uninstall.exe"
 
@@ -277,12 +288,12 @@ Section "Uninstall"
     StrCmp $MUI_TEMP $SMPROGRAMS startMenuDeleteLoopDone startMenuDeleteLoop
   startMenuDeleteLoopDone:
 
-  DeleteRegValue HKCU "Software\Warzone 2100" "Start Menu Folder"
-  DeleteRegValue HKCU "Software\Warzone 2100" ""
-  DeleteRegKey /ifempty HKCU "Software\Warzone 2100"
+  DeleteRegValue HKLM "Software\Warzone 2100" "Start Menu Folder"
+  DeleteRegValue HKLM "Software\Warzone 2100" ""
+  DeleteRegKey /ifempty HKLM "Software\Warzone 2100"
 
   ; Unregister with Windows' uninstall system
-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Warzone 2100"
 
 SectionEnd
 

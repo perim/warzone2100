@@ -60,7 +60,6 @@ static SDWORD		fx,fy;				// Position of the text
 static char		*pTip;				// Tip text
 static UDWORD		*pColours;			// The colours for the tool tip
 static WIDGET		*psWidget;			// The button the tip is for
-//static PROP_FONT	*psFont;			// The font to display the tip with
 static int FontID = 0;	// ID for the Ivis Font.
 static int TipColour;
 
@@ -89,17 +88,14 @@ void widgSetTipColour(W_SCREEN *psScreen, UBYTE red, UBYTE green, UBYTE blue)
  * x,y,width,height - specify the position of the button to place the
  * tip by.
  */
-//void tipStart(WIDGET *psSource, char *pNewTip, PROP_FONT *psNewFont,
 void tipStart(WIDGET *psSource, char *pNewTip, int NewFontID,
 					 UDWORD *pNewColours, SDWORD x, SDWORD y, UDWORD width, UDWORD height)
 {
-	ASSERT( PTRVALID(psSource, sizeof(WIDGET)),
+	ASSERT( psSource != NULL,
 		"tipStart: Invalid widget pointer" );
-//	ASSERT( PTRVALID(pNewTip, WIDG_MAXSTR),
+//	ASSERT( pNewTip != NULL,
 //		"tipStart: Invalid tip pointer" );
-//	ASSERT( PTRVALID(psNewFont, sizeof(PROP_FONT)),
-//		"tipStart: Invalid font pointer" );
-	ASSERT( PTRVALID(pNewColours, sizeof(UDWORD) * WCOL_MAX),
+	ASSERT( pNewColours != NULL,
 		"tipStart: Invalid colours pointer" );
 
 	tipState = TIP_WAIT;
@@ -120,7 +116,7 @@ void tipStart(WIDGET *psSource, char *pNewTip, int NewFontID,
  */
 void tipStop(WIDGET *psSource)
 {
-	ASSERT( PTRVALID(psSource, sizeof(WIDGET)),
+	ASSERT( psSource != NULL,
 		"tipStop: Invalid widget pointer" );
 
 	if (tipState != TIP_NONE && psSource == psWidget)
