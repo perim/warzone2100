@@ -38,6 +38,8 @@
 #include "interface/stringarray.hpp"
 #include "interface/devicelist.hpp"
 
+#include "audio_id.hpp"
+
 #include <map>
 #include <list>
 #include <string>
@@ -118,6 +120,7 @@ void sound_ShutdownLibrary()
     sndDevice.reset();
 
     interfaceUtil::DeviceList::DestroyInstance();
+    AudioIDmap::DestroyInstance();
 }
 
 const char** sound_DeviceList()

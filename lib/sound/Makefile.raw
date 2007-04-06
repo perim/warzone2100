@@ -11,6 +11,7 @@ SRC=general/databuffer.cpp \
 	decoding.cpp \
 	stream.cpp \
 	track.cpp \
+	audio_id.cpp \
 	interface/stringarray.cpp \
 	interface/devicelist.cpp \
 	interface.cpp
