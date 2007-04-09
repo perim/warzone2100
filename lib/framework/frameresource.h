@@ -33,7 +33,7 @@
 /* Function pointer for a function that loads from a memory buffer */
 typedef BOOL (*RES_BUFFERLOAD)(char *pBuffer, UDWORD size, void **pData);
 /* Function pointer for a function that loads from a filename */
-typedef BOOL (*RES_FILELOAD)(char *pFile, void **pData);
+typedef BOOL (*RES_FILELOAD)(const char *pFile, void **pData);
 
 /* Function pointer for releasing a resource loaded by the above functions */
 typedef void (*RES_FREE)(void *pData);
@@ -44,7 +44,7 @@ typedef void (*RESLOAD_CALLBACK)(void);
 
 typedef struct res_data
 {
-	char		aID[RESID_MAXCHAR];	// ID of the resource - filename from the .wrf - e.g. "TRON.PIE"
+	const char	*aID;				// ID of the resource - filename from the .wrf - e.g. "TRON.PIE"
 	void		*pData;				// pointer to the acutal data
 	SDWORD		blockID;			// which of the blocks is it in (so we can clear some of them...)
 
@@ -75,15 +75,6 @@ typedef struct _res_type
 
 /* set the function to call when loading files with resloadfile*/
 extern void resSetLoadCallback(RESLOAD_CALLBACK funcToCall);
-
-
-/* callback type for res pre-load callback*/
-typedef BOOL (*RESPRELOAD_CALLBACK)(char *type, char *name, char *directory);
-
-/* set the function to call when loading files with resloadfile*/
-extern void resSetPreLoadCallback(RESPRELOAD_CALLBACK funcToCall);
-
-
 
 /* Initialise the resource module */
 extern BOOL resInitialise(void);
@@ -116,7 +107,7 @@ extern BOOL	resAddFileLoad(const char *pType, RES_FILELOAD fileLoad,
 						   RES_FREE release);
 
 /* Call the load function for a file */
-extern BOOL resLoadFile(char *pType, char *pFile);
+extern BOOL resLoadFile(const char *pType, const char *pFile);
 
 // Add data to the resource system
 extern BOOL resAddData(char *pType, char *pID, void *pData);
@@ -129,8 +120,6 @@ void resToLower(char *pStr);
 
 // return the HashedID string for a piece of data
 extern BOOL resGetHashfromData(const char *pType, const void *pData, UDWORD *pHash);
-
-void resDoResLoadCallback(void);
 
 //return last imd resource
 char *GetLastResourceFilename(void);

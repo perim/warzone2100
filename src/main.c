@@ -62,8 +62,8 @@
 #include "winmain.h"
 #include "wrappers.h"
 
-#ifndef DEFAULT_DATADIR
-# define DEFAULT_DATADIR "/usr/share/warzone2100/"
+#ifndef DATADIR
+# define DATADIR "/usr/share/warzone2100/"
 #endif
 
 #if defined(WZ_OS_WIN)
@@ -92,7 +92,6 @@ BOOL	gameInitialised = FALSE;
 BOOL	frontendInitialised = FALSE;
 BOOL	reInit = FALSE;
 BOOL	bDisableLobby;
-BOOL pQUEUE=TRUE;			//This is used to control our pQueue list. Always ON except for SP games! -Q
 char	SaveGamePath[MAX_PATH];
 char	ScreenDumpPath[MAX_PATH];
 char	MultiForcesPath[MAX_PATH];
@@ -325,7 +324,7 @@ static void scanDataDirs( void )
 				if( !PHYSFS_exists("gamedesc.lev") )
 				{
 					// Guessed fallback default datadir on Unix
-					registerSearchPath( DEFAULT_DATADIR, 6 );
+					registerSearchPath( DATADIR, 6 );
 					rebuildSearchPath( mod_multiplay, TRUE );
 				}
 			}

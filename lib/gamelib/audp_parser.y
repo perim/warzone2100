@@ -85,16 +85,18 @@ audio_list:				audio_list audio_track |
 						;
 	/*
 	 * BOOL audio_SetTrackVals( char szFileName[], BOOL bLoop, int *piID, int iVol,
-	 *					int iPriority, int iAudibleRadius )
+	 *					int iAudibleRadius )
 	 */
 
+// Giel: TODO: The middle of the three integers should be removed
+// I'm however leaving this since I don't know whether it will affect scripts in an unintended way (i.e. break them)
 audio_track:			AUDIO QTEXT LOOP INTEGER INTEGER INTEGER
 						{
-							audio_SetTrackVals( $2, TRUE, &g_iDummy, $4, $5, $6 );
+							audio_SetTrackVals( $2, TRUE, &g_iDummy, $4, $6 );
 						}
 						| AUDIO QTEXT ONESHOT INTEGER INTEGER INTEGER
 						{
-							audio_SetTrackVals( $2, FALSE, &g_iDummy, $4, $5, $6 );
+							audio_SetTrackVals( $2, FALSE, &g_iDummy, $4, $6 );
 						}
 						;
 
@@ -224,11 +226,10 @@ void audp_error(char *pMessage,...)
 
 /***************************************************************************/
 /* Read a resource file */
-
-BOOL ParseResourceFile(char *pData, UDWORD fileSize)
+BOOL ParseResourceFile(PHYSFS_file* fileHandle)
 {
-	// Tell lex about the input buffer
-	parserSetInputBuffer( pData, fileSize );
+	// Tell lex about the input file
+	parserSetInputFile(fileHandle);
 
 	audp_parse();
 

@@ -969,7 +969,7 @@ static void dataTexPageRelease(void *pData)
 
 
 /* Load an audio file */
-static BOOL dataAudioLoad(char *pBuffer, UDWORD size, void **ppData)
+static BOOL dataAudioLoad(const char* fileName, void **ppData)
 {
 	if ( audio_Disabled() == TRUE )
 	{
@@ -977,69 +977,74 @@ static BOOL dataAudioLoad(char *pBuffer, UDWORD size, void **ppData)
 		// No error occurred (sound is just disabled), so we return TRUE
 		return TRUE;
 	}
-    // Load the track from a file
-	*ppData = sound_LoadTrackFromBuffer( pBuffer, size );
+
+	// Load the track from a file
+	*ppData = sound_LoadTrackFromFile( fileName );
 
 	return *ppData != NULL;
 }
 
-static void dataAudioRelease( void *pData )
-{
-	TRACK	*psTrack = (TRACK *) pData;
-
-	ASSERT( psTrack != NULL,
-			"dataAudioRelease: invalid track pointer" );
-
-	audio_ReleaseTrack( psTrack );
-}
-
-
 /* Load an audio file */
-static BOOL dataAudioCfgLoad(char *pBuffer, UDWORD size, void **ppData)
+static BOOL dataAudioCfgLoad(const char* fileName, void **ppData)
 {
+	BOOL success;
+	PHYSFS_file* fileHandle;
+
 	*ppData = NULL;
 
-	if ( audio_Disabled() == FALSE &&
-		 ParseResourceFile( pBuffer, size ) == FALSE )
-	{
-		return FALSE;
-	}
-	else
+	if ( audio_Disabled() == TRUE )
 	{
 		return TRUE;
 	}
-}
 
+	fileHandle = PHYSFS_openRead(fileName);
+
+	if (fileHandle == NULL)
+	{
+		return FALSE;
+	}
+
+	success = ParseResourceFile(fileHandle);
+
+	PHYSFS_close(fileHandle);
+
+	return success;
+}
 
 /* Load an anim file */
-static BOOL dataAnimLoad(char *pBuffer, UDWORD size, void **ppData)
+static BOOL dataAnimLoad(const char *fileName, void **ppData)
 {
-	BASEANIM	*psAnim;
-
-	if ( (psAnim = anim_LoadFromBuffer( pBuffer, size )) == NULL )
+	PHYSFS_file* fileHandle = PHYSFS_openRead(fileName);
+	if (fileHandle == NULL)
 	{
+		*ppData = NULL;
 		return FALSE;
 	}
 
-	/* copy anim for return */
-	*ppData = psAnim;
+	*ppData = anim_LoadFromFile(fileHandle);
 
+	PHYSFS_close(fileHandle);
 
-
-	return TRUE;
+	return *ppData != NULL;
 }
 
-
 /* Load an audio config file */
-static BOOL dataAnimCfgLoad(char *pBuffer, UDWORD size, void **ppData)
+static BOOL dataAnimCfgLoad(const char *fileName, void **ppData)
 {
+	BOOL success;
+	PHYSFS_file* fileHandle = PHYSFS_openRead(fileName);
 	*ppData = NULL;
-	if ( ParseResourceFile( pBuffer, size ) == FALSE )
+
+	if (fileHandle == NULL)
 	{
 		return FALSE;
 	}
 
-	return TRUE;
+	success = ParseResourceFile(fileHandle);
+
+	PHYSFS_close(fileHandle);
+
+	return success;
 }
 
 
@@ -1132,130 +1137,110 @@ static BOOL dataScriptLoadVals(char *pBuffer, UDWORD size, void **ppData)
 	return TRUE;
 }
 
-static BOOL dataSaveGameLoad(char *pFile, void **ppData)
-{
-	if (!stageTwoInitialise())
-	{
-		return FALSE;
-	}
-
-	if (!loadGameInit(pFile))
-	{
-		return FALSE;
-	}
-	if (!loadGame(pFile, !KEEPOBJECTS, FREEMEM,TRUE))
-	{
-		return FALSE;
-	}
-
-	if (!newMapInitialise())
-	{
-		return FALSE;
-	}
-
-	//not interested in this value
-	*ppData = NULL;
-	return TRUE;
-}
-
-
-
-
-
 // New reduced resource type ... specially for PSX
 // These are statically defined in data.c
 // this is also defined in frameresource.c - needs moving to a .h file
+// This basically matches the argument list of resAddBufferLoad in frameresource.c
 typedef struct
 {
-	const char *aType;			// points to the string defining the type (e.g. SCRIPT) - NULL indicates end of list
-	RES_BUFFERLOAD buffLoad;		// routine to process the data for this type
-	RES_FREE release;			// routine to release the data (NULL indicates none)
-	void *ResourceData;			// Linked list of data - set to null initially
-	UDWORD HashedType;			// hashed version of aType
-} RES_TYPE_MIN;
+	const char *aType;                      // points to the string defining the type (e.g. SCRIPT) - NULL indicates end of list
+	RES_BUFFERLOAD buffLoad;                // routine to process the data for this type
+	RES_FREE release;                       // routine to release the data (NULL indicates none)
+} RES_TYPE_MIN_BUF;
 
-
-
-
-static RES_TYPE_MIN ResourceTypes[]=
+static const RES_TYPE_MIN_BUF BufferResourceTypes[] =
 {
-	{"SWEAPON", bufferSWEAPONLoad, NULL, NULL, 0},
-	{"SBODY", bufferSBODYLoad, dataReleaseStats, NULL, 0},
-	{"SBRAIN", bufferSBRAINLoad, NULL, NULL, 0},
-	{"SPROP", bufferSPROPLoad, NULL, NULL, 0},
-	{"SSENSOR", bufferSSENSORLoad, NULL, NULL, 0},
-	{"SECM", bufferSECMLoad, NULL, NULL, 0},
-	{"SREPAIR", bufferSREPAIRLoad, NULL, NULL, 0},
-	{"SCONSTR", bufferSCONSTRLoad, NULL, NULL, 0},
-	{"SPROPTYPES", bufferSPROPTYPESLoad, NULL, NULL, 0},
-	{"SPROPSND", bufferSPROPSNDLoad, NULL, NULL, 0},
-	{"STERRTABLE", bufferSTERRTABLELoad, NULL, NULL, 0},
-	{"SSPECABIL", bufferSSPECABILLoad, NULL, NULL, 0},
-	{"SBPIMD", bufferSBPIMDLoad, NULL, NULL, 0},
-	{"SWEAPSND", bufferSWEAPSNDLoad, NULL, NULL, 0},
-	{"SWEAPMOD", bufferSWEAPMODLoad, NULL, NULL, 0},
-	{"STEMPL", bufferSTEMPLLoad, dataSTEMPLRelease, NULL, 0},	//template and associated files
-	{"STEMPWEAP", bufferSTEMPWEAPLoad, NULL, NULL, 0},
-	{"SSTRUCT", bufferSSTRUCTLoad, dataSSTRUCTRelease, NULL, 0},		//structure stats and associated files
-	{"SSTRFUNC", bufferSSTRFUNCLoad, NULL, NULL, 0},
-	{"SSTRWEAP", bufferSSTRWEAPLoad, NULL, NULL, 0},
-	{"SSTRMOD", bufferSSTRMODLoad, NULL, NULL, 0},
-	{"SFEAT", bufferSFEATLoad, dataSFEATRelease, NULL, 0},	//feature stats file
-	{"SFUNC", bufferSFUNCLoad, dataSFUNCRelease, NULL, 0},	//function stats file
-	{"RESCH", bufferRESCHLoad, dataRESCHRelease, NULL, 0},	//research stats files
-	{"RPREREQ", bufferRPREREQLoad, NULL, NULL, 0},
-	{"RCOMPRED", bufferRCOMPREDLoad, NULL, NULL, 0},
-	{"RCOMPRES", bufferRCOMPRESLoad, NULL, NULL, 0},
-	{"RSTRREQ", bufferRSTRREQLoad, NULL, NULL, 0},
-	{"RSTRRED", bufferRSTRREDLoad, NULL, NULL, 0},
-	{"RSTRRES", bufferRSTRRESLoad, NULL, NULL, 0},
-	{"RFUNC", bufferRFUNCLoad, NULL, NULL, 0},
-	{"SMSG", bufferSMSGLoad, dataSMSGRelease, NULL, 0},
-	{"SCRIPT", dataScriptLoad, (RES_FREE)scriptFreeCode, NULL, 0},
-	{"SCRIPTVAL", dataScriptLoadVals, NULL, NULL, 0},
-	{"STR_RES", dataStrResLoad, dataStrResRelease, NULL, 0},
-	{"IMGPAGE", dataIMGPAGELoad, dataIMGPAGERelease, NULL, 0},
-	{"TERTILES", NULL, NULL, NULL, 0},	// This version was used when running with the software renderer.
-	{"HWTERTILES", dataHWTERTILESLoad, dataHWTERTILESRelease, NULL, 0},	// freed by 3d shutdow},// Tertiles Files. This version used when running with hardware renderer.
-	{"AUDIOCFG", dataAudioCfgLoad, NULL, NULL, 0},
-	{"WAV", dataAudioLoad, dataAudioRelease, NULL, 0},
-	{"ANI", dataAnimLoad, dataAnimRelease, NULL, 0},
-	{"ANIMCFG", dataAnimCfgLoad, NULL, NULL, 0},
-	{"IMG", dataIMGLoad, dataIMGRelease, NULL, 0},
-	{"TEXPAGE", bufferTexPageLoad, dataTexPageRelease, NULL, 0},
-	{"IMD", dataIMDBufferLoad, (RES_FREE)iV_IMDRelease, NULL, 0},
-
-
-	{NULL,NULL,NULL, NULL, 0}		// indicates end of list
+	{"SWEAPON", bufferSWEAPONLoad, NULL},
+	{"SBODY", bufferSBODYLoad, dataReleaseStats},
+	{"SBRAIN", bufferSBRAINLoad, NULL},
+	{"SPROP", bufferSPROPLoad, NULL},
+	{"SSENSOR", bufferSSENSORLoad, NULL},
+	{"SECM", bufferSECMLoad, NULL},
+	{"SREPAIR", bufferSREPAIRLoad, NULL},
+	{"SCONSTR", bufferSCONSTRLoad, NULL},
+	{"SPROPTYPES", bufferSPROPTYPESLoad, NULL},
+	{"SPROPSND", bufferSPROPSNDLoad, NULL},
+	{"STERRTABLE", bufferSTERRTABLELoad, NULL},
+	{"SSPECABIL", bufferSSPECABILLoad, NULL},
+	{"SBPIMD", bufferSBPIMDLoad, NULL},
+	{"SWEAPSND", bufferSWEAPSNDLoad, NULL},
+	{"SWEAPMOD", bufferSWEAPMODLoad, NULL},
+	{"STEMPL", bufferSTEMPLLoad, dataSTEMPLRelease},               //template and associated files
+	{"STEMPWEAP", bufferSTEMPWEAPLoad, NULL},
+	{"SSTRUCT", bufferSSTRUCTLoad, dataSSTRUCTRelease},            //structure stats and associated files
+	{"SSTRFUNC", bufferSSTRFUNCLoad, NULL},
+	{"SSTRWEAP", bufferSSTRWEAPLoad, NULL},
+	{"SSTRMOD", bufferSSTRMODLoad, NULL},
+	{"SFEAT", bufferSFEATLoad, dataSFEATRelease},                  //feature stats file
+	{"SFUNC", bufferSFUNCLoad, dataSFUNCRelease},                  //function stats file
+	{"RESCH", bufferRESCHLoad, dataRESCHRelease},                  //research stats files
+	{"RPREREQ", bufferRPREREQLoad, NULL},
+	{"RCOMPRED", bufferRCOMPREDLoad, NULL},
+	{"RCOMPRES", bufferRCOMPRESLoad, NULL},
+	{"RSTRREQ", bufferRSTRREQLoad, NULL},
+	{"RSTRRED", bufferRSTRREDLoad, NULL},
+	{"RSTRRES", bufferRSTRRESLoad, NULL},
+	{"RFUNC", bufferRFUNCLoad, NULL},
+	{"SMSG", bufferSMSGLoad, dataSMSGRelease},
+	{"SCRIPT", dataScriptLoad, (RES_FREE)scriptFreeCode},
+	{"SCRIPTVAL", dataScriptLoadVals, NULL},
+	{"STR_RES", dataStrResLoad, dataStrResRelease},
+	{"IMGPAGE", dataIMGPAGELoad, dataIMGPAGERelease},
+	{"TERTILES", NULL, NULL},                                      // This version was used when running with the software renderer.
+	{"HWTERTILES", dataHWTERTILESLoad, dataHWTERTILESRelease},     // freed by 3d shutdow},// Tertiles Files. This version used when running with hardware renderer.
+	{"IMG", dataIMGLoad, dataIMGRelease},
+	{"TEXPAGE", bufferTexPageLoad, dataTexPageRelease},
+	{"IMD", dataIMDBufferLoad, (RES_FREE)iV_IMDRelease},
 };
 
+typedef struct
+{
+	const char *aType;                      // points to the string defining the type (e.g. SCRIPT) - NULL indicates end of list
+	RES_FILELOAD fileLoad;                  // routine to process the data for this type
+	RES_FREE release;                       // routine to release the data (NULL indicates none)
+} RES_TYPE_MIN_FILE;
+
+static const RES_TYPE_MIN_FILE FileResourceTypes[] =
+{
+	{"WAV", dataAudioLoad, (RES_FREE)sound_ReleaseTrack},
+	{"AUDIOCFG", dataAudioCfgLoad, NULL},
+	{"ANI", dataAnimLoad, dataAnimRelease},
+	{"ANIMCFG", dataAnimCfgLoad, NULL},
+};
 
 /* Pass all the data loading functions to the framework library */
 BOOL dataInitLoadFuncs(void)
 {
-	RES_TYPE_MIN *CurrentType;
-//	UDWORD	i;
-
 	// init the cheat system;
 	resetCheatHash();
 
-	CurrentType=ResourceTypes;	// point to the first entry
+	// Using iterator style: begin iterator (ResourceTypes),
+	// end iterator (EndType), and current iterator (CurrentType)
+	{  // iterate through buffer load functions
+		const RES_TYPE_MIN_BUF *CurrentType;
+		// Points just past the last item in the list
+		const RES_TYPE_MIN_BUF *EndType = &BufferResourceTypes[sizeof(BufferResourceTypes) / sizeof(RES_TYPE_MIN_BUF)];
 
-	// While there are still some entries in the list
-	while( CurrentType->aType != NULL )
-	{
-//		printf(" ==>%s\n",CurrentType->aType);	//TESTING -Q
-		if(!resAddBufferLoad(CurrentType->aType,CurrentType->buffLoad,CurrentType->release))
+		for (CurrentType = BufferResourceTypes; CurrentType != EndType; ++CurrentType)
 		{
-			return FALSE;	// error whilst adding a buffer load
+			if(!resAddBufferLoad(CurrentType->aType,CurrentType->buffLoad,CurrentType->release))
+			{
+				return FALSE;	// error whilst adding a buffer load
+			}
 		}
-		CurrentType++;
 	}
+	{  // iterate through file load functions
+		const RES_TYPE_MIN_FILE *CurrentType;
+		// Points just past the last item in the list
+		const RES_TYPE_MIN_FILE *EndType = &FileResourceTypes[sizeof(FileResourceTypes) / sizeof(RES_TYPE_MIN_BUF)];
 
-	// Now add the only file load left!
-	if (!resAddFileLoad("SAVEGAME", dataSaveGameLoad, NULL))
-	{
-		return FALSE;
+		for (CurrentType = FileResourceTypes; CurrentType != EndType; ++CurrentType)
+		{
+			if(!resAddFileLoad(CurrentType->aType,CurrentType->fileLoad,CurrentType->release))
+			{
+				return FALSE;	// error whilst adding a buffer load
+			}
+		}
 	}
 
 	return TRUE;

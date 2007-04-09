@@ -1274,6 +1274,7 @@ void placeLimboDroids(void)
 			    psDroid->x += TILE_UNITS;
 			    psDroid->y += TILE_UNITS;
 		    }
+		    ASSERT(worldOnMap(psDroid->x,psDroid->y), "limbo droid is not on the map");
 		    psDroid->z = map_Height(psDroid->x, psDroid->y);
 		    updateDroidOrientation(psDroid);
 		    //psDroid->lastTile = mapTile(psDroid->x >> TILE_SHIFT,
@@ -1668,6 +1669,7 @@ static void processMission(void)
 		    	psDroid->x += TILE_UNITS;
 			    psDroid->y += TILE_UNITS;
 		    }
+		    ASSERT(worldOnMap(psDroid->x,psDroid->y), "the droid is not on the map");
 		    psDroid->z = map_Height(psDroid->x, psDroid->y);
 		    updateDroidOrientation(psDroid);
 /*		    psDroid->lastTile = mapTile(psDroid->x >> TILE_SHIFT,
