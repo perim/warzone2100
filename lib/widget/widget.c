@@ -175,7 +175,7 @@ BOOL widgAllocString(char **ppStr)
 /* Copy one string to another
  * The string to copy will be truncated if it is longer than WIDG_MAXSTR.
  */
-void widgCopyString(char *pDest, char *pSrc)
+void widgCopyString(char *pDest, const char *pSrc)
 {
 	/* See if we need to clip the string, then copy */
 	if (strlen(pSrc) >= WIDG_MAXSTR)
@@ -1292,7 +1292,7 @@ char *widgGetString(W_SCREEN *psScreen, UDWORD id)
 
 
 /* Set the text in a widget */
-void widgSetString(W_SCREEN *psScreen, UDWORD id, char *pText)
+void widgSetString(W_SCREEN *psScreen, UDWORD id, const char *pText)
 {
 	WIDGET	*psWidget;
 

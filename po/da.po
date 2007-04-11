@@ -1,13 +1,13 @@
 # translation of da.po to Dansk
 # Copyright (C) YEAR Warzone Resurrection Project
 # This file is distributed under the same license as the PACKAGE package.
-#
+# 
 # Christian Vest Hansen <karmazilla@gmail.com>, 2007.
 msgid ""
 msgstr ""
 "Project-Id-Version: da\n"
 "Report-Msgid-Bugs-To: warzone-dev@gna.org\n"
-"POT-Creation-Date: 2007-04-06 02:42+0200\n"
+"POT-Creation-Date: 2007-04-10 19:19+0200\n"
 "PO-Revision-Date: 2007-04-03 22:35+0200\n"
 "Last-Translator: Christian Vest Hansen <karmazilla@gmail.com>\n"
 "Language-Team: Dansk <en@li.org>\n"
@@ -16,48 +16,48 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: KBabel 1.11.4\n"
 
-#: src/multiplay.c:2042 src/droid.c:5077
+#: src/multiplay.c:2039
 msgid "Green"
 msgstr "Grøn"
 
-#: src/multiplay.c:2045
+#: src/multiplay.c:2040
 msgid "Orange"
 msgstr "Orange"
 
-#: src/multiplay.c:2048
+#: src/multiplay.c:2041
 msgid "Grey"
 msgstr "Grå"
 
-#: src/multiplay.c:2051
+#: src/multiplay.c:2042
 msgid "Black"
 msgstr "Sort"
 
-#: src/multiplay.c:2054
+#: src/multiplay.c:2043
 msgid "Red"
 msgstr "Rød"
 
-#: src/multiplay.c:2057
+#: src/multiplay.c:2044
 msgid "Blue"
 msgstr "Blå"
 
-#: src/multiplay.c:2060
+#: src/multiplay.c:2045
 msgid "Pink"
 msgstr "Pink"
 
-#: src/multiplay.c:2063
+#: src/multiplay.c:2046
 msgid "Cyan"
 msgstr "Cyan"
 
-#: src/display.c:2021
+#: src/display.c:2019
 msgid "Cannot Build. Oil Resource Burning."
 msgstr "Kan ikke bygge på brændende oilebrøn."
 
-#: src/display.c:2179
+#: src/display.c:2177
 #, c-format
 msgid "%s - Damage %d%% - Kills %d, %s"
 msgstr "%s - Skade %d%% - Drab %d, %s"
 
-#: src/display.c:2424
+#: src/display.c:2422
 msgid "Truck ordered to build Oil Derrick"
 msgstr "Truck beordret til at bygge oliebrøn."
 
@@ -199,67 +199,73 @@ msgstr "Tilbage til hovedmenu"
 msgid "Continue Game"
 msgstr "Fortsæt"
 
-#: src/mission.c:3419 src/mission.c:3555 src/ingameop.c:417 src/frontend.c:540
+#: src/mission.c:3419 src/mission.c:3555 src/ingameop.c:417 src/frontend.c:516
 msgid "Load Saved Game"
 msgstr "Indlæs gemt spil"
 
-#: src/droid.c:320 src/droid.c:376
+#: src/droid.c:306 src/droid.c:362
 msgid "Unit Lost!"
 msgstr "Enhed tabt!"
 
-#: src/droid.c:2494
+#: src/droid.c:2480
 msgid "Structure Restored"
 msgstr "Bygning restoreret"
 
-#: src/droid.c:4730
+#: src/droid.c:4727
 #, c-format
 msgid "Group %d Selected - %d Unit(s)"
 msgstr "Gruppe %d valgt - %d Enheder"
 
-#: src/droid.c:4742
+#: src/droid.c:4739
 #, c-format
 msgid "%d Unit(s) Assigned to Group %d"
 msgstr "%d Enheder tildelt gruppe %d"
 
-#: src/droid.c:4754
+#: src/droid.c:4751
 #, c-format
 msgid "Centered on Group %d - %d Unit(s)"
 msgstr "Fokuseret på gruppe %d - %d Enheder"
 
-#: src/droid.c:4758
+#: src/droid.c:4755
 #, c-format
-msgid "Alligning with Group %d - %d Unit(s)"
+msgid "Aligning with Group %d - %d Unit(s)"
 msgstr "Korigerede med gruppe %d - %d Enheder"
 
-#: src/droid.c:5075
+#: src/droid.c:5027
 msgid "Rookie"
 msgstr "Menig"
 
-#: src/droid.c:5079
+#: src/droid.c:5028
+#, fuzzy
+msgctxt "rank"
+msgid "Green"
+msgstr "Grøn"
+
+#: src/droid.c:5029
 msgid "Trained"
 msgstr "Sasjant"
 
-#: src/droid.c:5081
+#: src/droid.c:5030
 msgid "Regular"
 msgstr "Oversasjant"
 
-#: src/droid.c:5083
+#: src/droid.c:5031
 msgid "Professional"
 msgstr "Løjtnant"
 
-#: src/droid.c:5085
+#: src/droid.c:5032
 msgid "Veteran"
 msgstr "Kaptajn"
 
-#: src/droid.c:5087
+#: src/droid.c:5033
 msgid "Elite"
 msgstr "Major"
 
-#: src/droid.c:5089
+#: src/droid.c:5034
 msgid "Special"
 msgstr "Oberst"
 
-#: src/droid.c:5091
+#: src/droid.c:5035
 msgid "Hero"
 msgstr "General"
 
@@ -291,7 +297,7 @@ msgstr "INDSTILLINGER"
 msgid "Game"
 msgstr "Spil"
 
-#: src/multiint.c:927 src/frontend.c:786
+#: src/multiint.c:927 src/frontend.c:762
 msgid "Fog"
 msgstr "Tåge"
 
@@ -405,45 +411,45 @@ msgstr "Konstruktionsmenuen vil ikke genåbne"
 msgid "Power Accrued"
 msgstr "Indsalmet energi"
 
-#: src/structure.c:3808
+#: src/structure.c:3810
 msgid "Command Control Limit Reached - Production Halted"
 msgstr "Kommandobegrænsning nået - indstiller produktion"
 
-#: src/structure.c:7768
+#: src/structure.c:7773
 #, c-format
 msgid "%s - Connected %d of %d"
 msgstr "%s - Forbundet %d af %d"
 
-#: src/structure.c:7903 src/structure.c:7960
+#: src/structure.c:7908 src/structure.c:7965
 #, c-format
 msgid "%s - Electronically Damaged"
 msgstr "%s - Elektronisk beskadiget"
 
-#: src/structure.c:8234
+#: src/structure.c:8239
 msgid "Electronic Reward - Visibility Report"
 msgstr "Elektronisk gevinst - Rekonniseringsrapport"
 
-#: src/structure.c:8276
+#: src/structure.c:8281
 msgid "Factory Reward - Propulsion"
 msgstr "Fabriksgevinst - Fremdrift"
 
-#: src/structure.c:8301
+#: src/structure.c:8306
 msgid "Factory Reward - Body"
 msgstr "Fabriksgevinst - Skrog"
 
-#: src/structure.c:8326
+#: src/structure.c:8331
 msgid "Factory Reward - Weapon"
 msgstr "Frabriskgevinst - Våben"
 
-#: src/structure.c:8335
+#: src/structure.c:8340
 msgid "Factory Reward - Nothing"
 msgstr "Fabriksgevinst - Ingen"
 
-#: src/structure.c:8364
+#: src/structure.c:8369
 msgid "Repair Facility Award - Repair"
 msgstr "Reperationsgevinst - Reperation"
 
-#: src/structure.c:8371
+#: src/structure.c:8376
 msgid "Repair Facility Award - Nothing"
 msgstr "Reperationsgevinst - Ingen"
 
@@ -515,19 +521,19 @@ msgstr "Fortsæt spil"
 msgid "Quit"
 msgstr "Afbryd"
 
-#: src/ingameop.c:143 src/frontend.c:964
+#: src/ingameop.c:143 src/frontend.c:940
 msgid "Voice Volume"
 msgstr "Stemme volume"
 
-#: src/ingameop.c:148 src/frontend.c:968
+#: src/ingameop.c:148 src/frontend.c:944
 msgid "FX Volume"
 msgstr "Effekt volume"
 
-#: src/ingameop.c:153 src/frontend.c:972
+#: src/ingameop.c:153 src/frontend.c:948
 msgid "Music Volume"
 msgstr "Musik volume"
 
-#: src/ingameop.c:265 src/frontend.c:326
+#: src/ingameop.c:265 src/frontend.c:302
 msgid "Options"
 msgstr "Indstillinger"
 
@@ -643,154 +649,154 @@ msgstr "Elektronik"
 msgid "Command Turrets"
 msgstr "Kommandotårn"
 
-#: src/frontend.c:318
+#: src/frontend.c:294
 msgid "Single Player Campaign"
 msgstr "Solokampange"
 
-#: src/frontend.c:321 src/frontend.c:323
+#: src/frontend.c:297 src/frontend.c:299
 #, fuzzy
 msgid "Multi Player Game"
 msgstr "Flerbruger spil"
 
-#: src/frontend.c:325 src/frontend.c:385
+#: src/frontend.c:301 src/frontend.c:361
 msgid "Tutorial"
 msgstr "Tutorial"
 
-#: src/frontend.c:328
+#: src/frontend.c:304
 msgid "Quit Game"
 msgstr "Afslut spil"
 
-#: src/frontend.c:330
+#: src/frontend.c:306
 msgid "MAIN MENU"
 msgstr "HOVED MENU"
 
-#: src/frontend.c:386
+#: src/frontend.c:362
 msgid "Fast Play"
 msgstr "Hurtgigt spil"
 
-#: src/frontend.c:387
+#: src/frontend.c:363
 msgid "TUTORIALS"
 msgstr "TUTORIALS"
 
-#: src/frontend.c:446
+#: src/frontend.c:422
 msgid "Load Campaign"
 msgstr "Indlæs kampange"
 
-#: src/frontend.c:447
+#: src/frontend.c:423
 msgid "New Campaign"
 msgstr "Ny kampange"
 
-#: src/frontend.c:449
+#: src/frontend.c:425
 msgid "SINGLE PLAYER"
 msgstr "SOLO SPILLER"
 
-#: src/frontend.c:583
+#: src/frontend.c:559
 msgid "MULTI PLAYER"
 msgstr "FLER SPILLER"
 
-#: src/frontend.c:585
+#: src/frontend.c:561
 msgid "Host Game"
 msgstr "Udbyd spil"
 
-#: src/frontend.c:586
+#: src/frontend.c:562
 msgid "Join Game"
 msgstr "Forbind til vært"
 
-#: src/frontend.c:588
+#: src/frontend.c:564
 msgid "Force Editor"
 msgstr "Redigér styrke"
 
-#: src/frontend.c:589
+#: src/frontend.c:565
 msgid "One Player Skirmish"
 msgstr "Spil mod computeren"
 
-#: src/frontend.c:683 src/frontend.c:979 src/frontend.c:1088
+#: src/frontend.c:659 src/frontend.c:955 src/frontend.c:1064
 msgid "GAME OPTIONS"
 msgstr "SPIL INDSTILLINGER"
 
-#: src/frontend.c:684
+#: src/frontend.c:660
 msgid "Game Options"
 msgstr "Spil indstillinger"
 
-#: src/frontend.c:685
+#: src/frontend.c:661
 msgid "Graphics Options"
 msgstr "Grafik indstillinger"
 
-#: src/frontend.c:686
+#: src/frontend.c:662
 msgid "Audio Options"
 msgstr "Lyd indstillinger"
 
-#: src/frontend.c:687
+#: src/frontend.c:663
 msgid "Key Mappings"
 msgstr "Tastatur indstillinger"
 
-#: src/frontend.c:762
+#: src/frontend.c:738
 msgid "Reverse Mouse"
 msgstr "Omvendt mus"
 
-#: src/frontend.c:765 src/frontend.c:777 src/frontend.c:830 src/frontend.c:865
-#: src/frontend.c:879 src/frontend.c:915
+#: src/frontend.c:741 src/frontend.c:753 src/frontend.c:806 src/frontend.c:841
+#: src/frontend.c:855 src/frontend.c:891
 msgid "On"
 msgstr "Til"
 
-#: src/frontend.c:769 src/frontend.c:781 src/frontend.c:826 src/frontend.c:835
-#: src/frontend.c:860 src/frontend.c:874 src/frontend.c:910
+#: src/frontend.c:745 src/frontend.c:757 src/frontend.c:802 src/frontend.c:811
+#: src/frontend.c:836 src/frontend.c:850 src/frontend.c:886
 msgid "Off"
 msgstr "Fra"
 
-#: src/frontend.c:774
+#: src/frontend.c:750
 msgid "Screen Shake"
 msgstr "Ryst skærm"
 
-#: src/frontend.c:789 src/frontend.c:897
+#: src/frontend.c:765 src/frontend.c:873
 msgid "Mist"
 msgstr "Afstandståge"
 
-#: src/frontend.c:793 src/frontend.c:890
+#: src/frontend.c:769 src/frontend.c:866
 msgid "Fog Of War"
 msgstr "Krigståge"
 
-#: src/frontend.c:798
+#: src/frontend.c:774
 msgid "Video Playback"
 msgstr ""
 
-#: src/frontend.c:801 src/frontend.c:934
+#: src/frontend.c:777 src/frontend.c:910
 msgid "Full"
 msgstr "Fuldskærm"
 
-#: src/frontend.c:805 src/frontend.c:924
+#: src/frontend.c:781 src/frontend.c:900
 msgid "Windowed"
 msgstr "Vindue"
 
-#: src/frontend.c:808 src/frontend.c:929
+#: src/frontend.c:784 src/frontend.c:905
 msgid "Minimal"
 msgstr "Minimal"
 
-#: src/frontend.c:815 src/frontend.c:819
+#: src/frontend.c:791 src/frontend.c:795
 msgid "Subtitles"
 msgstr "Undertekster"
 
-#: src/frontend.c:1050
+#: src/frontend.c:1026
 msgid "Difficulty"
 msgstr "Sværhedsgræd"
 
-#: src/frontend.c:1054 src/frontend.c:1139
+#: src/frontend.c:1030 src/frontend.c:1115
 msgid "Easy"
 msgstr "Begynder"
 
-#: src/frontend.c:1057 src/frontend.c:1131
+#: src/frontend.c:1033 src/frontend.c:1107
 msgid "Normal"
 msgstr "Øvet"
 
-#: src/frontend.c:1061 src/frontend.c:1135
+#: src/frontend.c:1037 src/frontend.c:1111
 msgid "Hard"
 msgstr "Svær"
 
-#: src/frontend.c:1066
+#: src/frontend.c:1042
 msgid "Scroll Speed"
 msgstr "Kamera hastighed"
 
-#: src/frontend.c:1082
+#: src/frontend.c:1058
 msgid "Unit Colour"
 msgstr "Holdfarve"
 

@@ -8,7 +8,6 @@ SRC=ai.c \
 	advvis.c \
 	atmos.c \
 	bridge.c \
-	buildpos.c \
 	cdspan.c \
 	cheat.c \
 	cluster.c \
@@ -67,7 +66,6 @@ SRC=ai.c \
 	optimisepath.c \
 	order.c \
 	player.c \
-	powercrypt.c \
 	radar.c \
 	raycast.c \
 	research.c \
@@ -89,7 +87,6 @@ SRC=ai.c \
 	visibility.c \
 	warcam.c \
 	wrappers.c \
-	ani.c \
 	arrow.c \
 	aud.c \
 	bucket3d.c \

@@ -91,7 +91,6 @@
 #include "cmddroid.h"
 #include "keybind.h"
 #include "wrappers.h"
-#include "powercrypt.h"
 
 #include "warzoneconfig.h"
 
@@ -468,8 +467,6 @@ GAMECODE gameLoop(void)
                 //this is a check cos there is a problem with the power but not sure where!!
                 powerCheck(FALSE, (UBYTE)i);
 			}
-
-			pwrcUpdate();
 
 			missionTimerUpdate();
 

@@ -24,7 +24,6 @@ lib/ivis_common/bitimage.c
 lib/ivis_common/piestate.c
 lib/gamelib/hashtabl.c
 lib/gamelib/anim.c
-lib/gamelib/ptrlist.c
 lib/gamelib/gtime.c
 lib/gamelib/animobj.c
 lib/netplay/netusers_stub.c
@@ -83,7 +82,6 @@ src/csnap.c
 src/multisync.c
 src/component.c
 src/multigifts.c
-src/ani.c
 src/aud.c
 src/hci.c
 src/map.c
@@ -125,7 +123,6 @@ src/game.c
 src/visibility.c
 src/levels.c
 src/intimage.c
-src/buildpos.c
 src/lighting.c
 src/warcam.c
 src/init.c
@@ -164,7 +161,6 @@ src/atmos.c
 src/message.c
 src/projectile.c
 src/aiexperience.c
-src/powercrypt.c
 src/multilimit.c
 src/oprint.c
 src/seqdisp.c
