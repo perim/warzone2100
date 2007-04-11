@@ -57,7 +57,8 @@ LDFLAGS+=-L$(DEVDIR)/lib
 # Setup build environment with config values
 
 ifeq ($(strip $(MODE)),debug)
-CFLAGS+=-g -O0 -DDEBUG -Wall -Werror-implicit-function-declaration
+CCFLAGS+=-Werror-implicit-function-declaration
+CFLAGS+=-g -O0 -DDEBUG -Wall
 else
 CFLAGS+=-DNDEBUG
 endif

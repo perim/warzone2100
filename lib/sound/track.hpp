@@ -24,19 +24,29 @@
 #ifndef SOUND_TRACK_HPP
 #define SOUND_TRACK_HPP
 
+#include <string>
 #include "openal/buffer.hpp"
 
 class soundTrack : public soundBuffer
 {
     public:
         soundTrack(const soundDataBuffer& data);
+        soundTrack(const soundDataBuffer& data, const std::string& fName);
+
+        void setLoop(const bool& bLoop);
+        bool loop() const;
 
         void setVolume(const float& vol);
         float volume() const;
 
+        void setFilename(const std::string& fName);
+        std::string fileName() const;
+
     private:
+        bool         _loop;
         float        _volume;
         unsigned int _lastFinished; // timeframe this track last finished playing in miliseconds
+        std::string  _fileName;
 };
 
 #endif // SOUND_TRACK_HPP

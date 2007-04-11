@@ -2,7 +2,7 @@
 	$(WINDRES) -o$@ $<
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c -o$@ $<
+	$(CC) $(CFLAGS) $(CCFLAGS) -c -o$@ $<
 
 %.o: %.cpp
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o$@ $<

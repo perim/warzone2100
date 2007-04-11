@@ -30,14 +30,20 @@
 #include <map>
 
 // Associative array which maps filenames (of audio files) to track id numbers
-class AudioIDmap : public std::map<std::string, sndTrackID>
+class AudioIDmap
 {
     public:
+        /** Retrieves the mapped ID number for the fileName or a unique ID if none is specified for this file
+         *  \param fileName the file to retrieve an ID number for
+         *  \return a non-zero ID number when successfull, or zero when the store of ID numbers ran empty
+         */
+        sndTrackID GetAvailableID(const std::string& fileName);
+
         /** Provides a reference to an instance of AudioIDmap
          *  If there currently exists no instance of AudioIDmap it creates one
-         *  \return a const (read-only) reference to a singleton instance of AudioIDmap&
+         *  \return a reference to a singleton instance of AudioIDmap&
          */
-        static const AudioIDmap& Instance();
+        static AudioIDmap& Instance();
 
         /** Destroys the singleton instance of AudioIDmap, provided that it exists of course.
          */
@@ -50,6 +56,12 @@ class AudioIDmap : public std::map<std::string, sndTrackID>
          */
         AudioIDmap();
 
+        /** Retrieves a unique ID number
+         *  \param fileName fileName to register with the new ID number
+         *  \return a unique ID number when successfull, or zero if none are left
+         */
+        sndTrackID GetUniqueID(const std::string& fileName);
+
     private:
         // Private copy constructor and copy assignment operator ensures this class cannot be copied
         AudioIDmap( const AudioIDmap& );
@@ -58,6 +70,12 @@ class AudioIDmap : public std::map<std::string, sndTrackID>
     private:
         // Singleton instance pointer
         static AudioIDmap* _instance;
+
+        // The internal map structure
+        std::map<std::string, sndTrackID> _map;
+
+        // The next ID number to be given when a unique one is required
+        sndTrackID _nextIDNumber;
 
     private:
         // Proxy iterator to aid in inserting AUDIO_ID_MAP in an std::map for construction of associative arrays

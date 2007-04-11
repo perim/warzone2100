@@ -25,12 +25,12 @@
 #ifndef _AUDIO_ID_H_
 #define _AUDIO_ID_H_
 
+#include "types.h"
+
 #if defined(__cplusplus)
 extern "C"
 {
 #endif
-
-#include "../types.h"
 
 /* INGAME AUDIO */
 
@@ -497,8 +497,8 @@ typedef enum
 	ID_SOUND_LAS_SAT_COUNTDOWN,
 
 	/* Last ID */
-	ID_MAX_SOUND_DUMMY,  // Thanks to this dummy we don't have to redefine ID_MAX_SOUND every time in terms of the preceding enum value
-	ID_MAX_SOUND = ID_MAX_SOUND_DUMMY - 1,
+	ID_SOUND_NEXT,  // Thanks to this dummy we don't have to redefine ID_MAX_SOUND every time in terms of the preceding enum value
+	ID_MAX_SOUND = ID_SOUND_NEXT - 1,
 }
 INGAME_AUDIO;
 

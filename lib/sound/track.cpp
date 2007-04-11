@@ -23,8 +23,22 @@
 
 #include "track.hpp"
 
-soundTrack::soundTrack(const soundDataBuffer& data) : soundBuffer(data)
+soundTrack::soundTrack(const soundDataBuffer& data) : soundBuffer(data), _loop(false), _volume(0), _lastFinished(0)
 {
+}
+
+soundTrack::soundTrack(const soundDataBuffer& data, const std::string& fName) : soundBuffer(data), _loop(false), _volume(0), _lastFinished(0), _fileName(fName)
+{
+}
+
+void soundTrack::setLoop(const bool& bLoop)
+{
+    _loop = bLoop;
+}
+
+bool soundTrack::loop() const
+{
+    return _loop;
 }
 
 void soundTrack::setVolume(const float& vol)
@@ -35,4 +49,14 @@ void soundTrack::setVolume(const float& vol)
 float soundTrack::volume() const
 {
     return _volume;
+}
+
+void soundTrack::setFilename(const std::string& fName)
+{
+    _fileName = fName;
+}
+
+std::string soundTrack::fileName() const
+{
+    return _fileName;
 }

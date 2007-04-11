@@ -28,4 +28,14 @@ typedef unsigned int sndStreamID;
 typedef unsigned int sndSourceID;
 typedef unsigned int sndTrackID;
 
+#if defined(__cplusplus)
+#include <boost/shared_ptr.hpp>
+#include "track.hpp"
+
+typedef boost::shared_ptr<soundTrack>* TrackHandle;
+
+#else
+typedef void* TrackHandle;
+#endif
+
 #endif // SOUND_TYPES_H

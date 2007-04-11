@@ -38,6 +38,10 @@
 #include "interface/stringarray.hpp"
 #include "interface/devicelist.hpp"
 
+extern "C" {
+#include "lib/framework/frameresource.h"
+}
+
 #include "audio_id.hpp"
 
 #include <map>
@@ -62,14 +66,15 @@ static boost::shared_ptr<soundContext> sndContext;
 
 // Some containers of exported objects (through ID numbers)
 static std::map<sndStreamID, boost::shared_ptr<soundStream> > sndStreams;
-static std::map<sndTrackID, boost::shared_ptr<soundTrack> > sndTracks;
+static std::map<sndTrackID, boost::weak_ptr<soundTrack> > sndTracks;
+
+static std::list<boost::shared_ptr<soundTrack> > resourceTracks;
 
 // Makes sure sound sources are kept alive until they're not needed anymore
 static std::list<boost::shared_ptr<soundSource> > sndSamples;
 
 // The ID numbers
 static sndStreamID nextStreamID = 0;
-static sndTrackID nextTrackID = 0;
 
 BOOL sound_InitLibrary()
 {
@@ -155,7 +160,7 @@ inline bool validID(TypeID& ID, const TypeID& nextID, std::map<TypeID, boost::sh
     return true;
 }
 
-sndStreamID sound_Create2DStream(char* fileName)
+sndStreamID sound_Create2DStream(const char* fileName)
 {
     if (!Initialized)
         return 0;
@@ -275,7 +280,7 @@ void sound_Update(void)
     }
 }
 
-sndTrackID sound_LoadTrackFromFile(char* fileName)
+TrackHandle sound_LoadTrackFromFile(const char* fileName)
 {
     // Construct decoder object
     soundDecoding decoder(fileName, true);
@@ -287,20 +292,59 @@ sndTrackID sound_LoadTrackFromFile(char* fileName)
         return 0;
 
     // Construct track/OpenAL buffer object and insert the buffer into the OpenAL buffer
-    boost::shared_ptr<soundTrack> track(new soundTrack(buffer));
+    boost::shared_ptr<soundTrack> track(new soundTrack(buffer, GetLastResourceFilename()));
 
     // Insert the track into the container for later reference/usage
-    sndTracks.insert(std::pair<sndTrackID, boost::shared_ptr<soundTrack> >(nextTrackID, track));
+    resourceTracks.push_back(track);
 
-    // First return current track ID plus 1 (because we reserve 0 for an invalid/non-existent stream)
-    return nextTrackID++ + 1;
+    return &resourceTracks.back();
+}
+
+void sound_ReleaseTrack(TrackHandle handle)
+{
+    // Remove the track pointer from the track resource list.
+    // This will automatically destroy the track object if it isn't in use anymore.
+    resourceTracks.remove(*handle);
+}
+
+sndTrackID sound_SetTrackVals(const char* fileName, BOOL loop, unsigned int volume, unsigned int AudibleRadius)
+{
+    TrackHandle handle = reinterpret_cast<TrackHandle>(resGetData("WAV", fileName));
+    if (handle == NULL)
+    {
+        debug(LOG_NEVER, "audio_SetTrackVals: track %s resource not found\n", fileName);
+        return 0;
+    }
+
+    sndTrackID trackID = AudioIDmap::Instance().GetAvailableID(fileName);
+    if (!trackID)
+    {
+        debug(LOG_NEVER, "audio_SetTrackVals: couldn't get spare track ID for %s\n", fileName);
+        return 0;
+    }
+
+    if (!sndTracks[trackID].expired())
+    {
+        debug(LOG_ERROR, "sound_SetTrackVals: track %s (ID: %i) already set\n", fileName, trackID);
+        abort();
+        return 0;
+    }
+
+    boost::shared_ptr<soundTrack> track(*handle);
+
+    track->setLoop(loop == TRUE);
+    track->setVolume(float(volume) / 100);
+
+    sndTracks.insert(std::pair<sndTrackID, boost::weak_ptr<soundTrack> >(trackID, boost::weak_ptr<soundTrack>(track)));
+
+    return trackID;
 }
 
 void sound_PlayTrack(sndTrackID track)
 {
-    if (!Initialized || !validID(track, nextTrackID, sndTracks)) return;
+    if (!Initialized/* || !validID(track, nextTrackID, sndTracks) */) return;
 
-    boost::shared_ptr<soundSource> source(new soundSource(sndContext, sndTracks[track]));
+    boost::shared_ptr<soundSource> source(new soundSource(sndContext, sndTracks[track].lock()));
 
     source->play();
 

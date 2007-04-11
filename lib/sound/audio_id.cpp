@@ -29,7 +29,7 @@
  */
 /***************************************************************************/
 
-#include "interface/audio_id.h"
+#include "audio_id.h"
 #include "audio_id.hpp"
 #include <boost/array.hpp>
 
@@ -509,15 +509,7 @@ static const boost::array<AUDIO_ID_MAP, ID_MAX_SOUND> asAudioID =
 sndTrackID audio_GetIDFromStr(const char* fileName)
 {
     // Lookup an ID number for the given fileName
-    AudioIDmap::const_iterator ID = AudioIDmap::Instance().find(fileName);
-
-    // If an ID number was found for the fileName, return it
-    if (ID != AudioIDmap::Instance().end())
-    {
-        return ID->second;
-    }
-
-    return NO_SOUND;
+    return AudioIDmap::Instance().GetAvailableID(fileName);
 }
 
 /***************************************************************************/
@@ -526,14 +518,35 @@ sndTrackID audio_GetIDFromStr(const char* fileName)
 AudioIDmap* AudioIDmap::_instance = 0;
 
 AudioIDmap::AudioIDmap() :
-    std::map<std::string, sndTrackID>(
+    _map(
         pair_iterator<boost::array<AUDIO_ID_MAP, ID_MAX_SOUND>::const_iterator>(asAudioID.begin()),
-        pair_iterator<boost::array<AUDIO_ID_MAP, ID_MAX_SOUND>::const_iterator>(asAudioID.end()))
+        pair_iterator<boost::array<AUDIO_ID_MAP, ID_MAX_SOUND>::const_iterator>(asAudioID.end())),
+    _nextIDNumber(ID_SOUND_NEXT)
 {
 }
 
+sndTrackID AudioIDmap::GetAvailableID(const std::string& fileName)
+{
+    // Lookup an ID number for the given fileName
+    std::map<std::string, sndTrackID>::const_iterator IDpair = _map.find(fileName);
+
+    // If an ID number was found for the fileName, return it
+    if (IDpair != _map.end())
+    {
+        return IDpair->second;
+    }
+
+    return GetUniqueID(fileName);
+}
+
+sndTrackID AudioIDmap::GetUniqueID(const std::string& fileName)
+{
+    _map.insert(std::pair<std::string, sndTrackID>(fileName, _nextIDNumber));
+    return _nextIDNumber++;
+}
+
 // Singleton functions for AudioIDmap
-const AudioIDmap& AudioIDmap::Instance()
+AudioIDmap& AudioIDmap::Instance()
 {
     if (_instance == 0)
     {

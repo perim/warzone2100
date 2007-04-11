@@ -62,7 +62,7 @@ extern "C"
      *  \param fileName the file to play from
      *  \return the id number of the stream as used internally by the library
      */
-    sndStreamID sound_Create2DStream(char* fileName);
+    sndStreamID sound_Create2DStream(const char* fileName);
 
     /** Initiates playing of a stream
      *  \param stream the stream to play
@@ -87,7 +87,22 @@ extern "C"
      *  \param fileName the file to load
      *  \return the id number of the track as used internally by the library
      */
-    sndTrackID sound_LoadTrackFromFile(char* fileName);
+    TrackHandle sound_LoadTrackFromFile(const char* fileName);
+
+    /** Destructs the referred track object
+     *  matches the RES_FREE signature of the resource management framework
+     *  \param trackHandle a handle which (indirectly!!) refers to the track object
+     */
+    void sound_ReleaseTrack(TrackHandle handle);
+
+    /** Finds an audio file previously loaded with sound_LoadTrackFromFile and initializes it
+     *  \param fileName the filename of the track
+     *  \param loop whether the track should be looped until explictitly stopped
+     *  \param volume the volume this track should be played on (range is 0-100)
+     *  \param AudibleRadius the radius from the source of sound where it can be heard
+     *  \return a non-zero ID number if successfull, zero on failure
+     */
+    sndTrackID sound_SetTrackVals(const char* fileName, BOOL loop, unsigned int volume, unsigned int AudibleRadius);
 
     /** Immediately starts playing a track
      *  \param track the track to play
