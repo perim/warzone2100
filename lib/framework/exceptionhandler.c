@@ -88,9 +88,7 @@ static LONG WINAPI windowsExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-
-#elif defined(WZ_OS_POSIX)
-
+#elif defined(WZ_OS_UNIX) && !defined(WZ_OS_MAC)
 
 // C99 headers:
 # include <stdint.h>
@@ -118,7 +116,11 @@ static LONG WINAPI windowsExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 typedef void(*SigActionHandler)(int, siginfo_t *, void *);
 
 
+#ifdef WZ_OS_MAC
+static struct sigaction oldAction[32];
+#else
 static struct sigaction oldAction[NSIG];
+#endif
 
 
 static struct utsname sysInfo;
@@ -536,7 +538,7 @@ void setupExceptionHandler(const char * programCommand_x)
 {
 #if defined(WZ_OS_WIN)
 	SetUnhandledExceptionFilter(windowsExceptionHandler);
-#elif defined(WZ_OS_POSIX)
+#elif defined(WZ_OS_UNIX) && !defined(WZ_OS_MAC)
 	// Get full path to 'gdb'
 	FILE * whichStream = popen("which gdb", "r");
 	fread(gdbPath, 1, MAX_PATH, whichStream);

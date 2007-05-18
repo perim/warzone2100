@@ -10,6 +10,7 @@ lib/framework/exceptionhandler.c
 lib/framework/trig.c
 lib/framework/input.c
 lib/framework/strres.c
+lib/sound/oggvorbis.c
 lib/sound/openal_track.c
 lib/sound/playlist.c
 lib/sound/track.c
@@ -18,10 +19,10 @@ lib/sound/cdaudio.c
 lib/sound/audio_id.c
 lib/ivis_common/imdload.c
 lib/ivis_common/imd.c
-lib/ivis_common/pcx.c
 lib/ivis_common/pieclip.c
 lib/ivis_common/bitimage.c
 lib/ivis_common/piestate.c
+lib/ivis_common/png_util.c
 lib/gamelib/hashtabl.c
 lib/gamelib/anim.c
 lib/gamelib/gtime.c
@@ -31,7 +32,6 @@ lib/netplay/netplay.c
 lib/netplay/netjoin_stub.c
 lib/netplay/netlog.c
 lib/netplay/netcrypt.c
-lib/netplay/netaudio_stub.c
 lib/ivis_opengl/piepalette.c
 lib/ivis_opengl/textdraw.c
 lib/ivis_opengl/ivi.c
@@ -39,7 +39,6 @@ lib/ivis_opengl/tex.c
 lib/ivis_opengl/rendfunc.c
 lib/ivis_opengl/rendmode.c
 lib/ivis_opengl/screen.c
-lib/ivis_opengl/bspimd.c
 lib/ivis_opengl/piematrix.c
 lib/ivis_opengl/pietexture.c
 lib/ivis_opengl/piedraw.c

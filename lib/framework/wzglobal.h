@@ -32,6 +32,10 @@
 #  include "config.h"
 #endif
 
+#ifdef __MACOSX__
+#include "config-macosx.h"
+#endif
+
 
 /*
    The operating system, must be one of: (WZ_OS_x)
@@ -52,7 +56,7 @@
      WIN      - Any Windows system
 */
 
-#if defined(__APPLE__) && defined(__GNUC__)
+#if defined(__MACOSX__)
 #  define WZ_OS_MAC
 #elif defined(__CYGWIN__)
 #  define WZ_OS_CYGWIN
@@ -94,10 +98,6 @@
 #elif !defined(WZ_OS_UNIX)
 #  define WZ_OS_UNIX
 #endif /* WZ_OS_WIN */
-
-#if defined(WZ_OS_UNIX) && (_XOPEN_SOURCE - 0 >= 500)
-#  define WZ_OS_POSIX
-#endif /* WZ_OS_UNIX */
 
 
 /*

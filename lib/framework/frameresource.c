@@ -130,7 +130,7 @@ BOOL resLoad(const char *pResFile, SDWORD blockID,
 		return FALSE;
 	}
 
-	FREE(pBuffer);
+	free(pBuffer);
 
 	return TRUE;
 }
@@ -151,7 +151,7 @@ static RES_TYPE* resAlloc(const char *pType)
 #endif
 
 	// Allocate the memory
-	psT = (RES_TYPE *)MALLOC(sizeof(RES_TYPE));
+	psT = (RES_TYPE *)malloc(sizeof(RES_TYPE));
 	if (!psT)
 	{
 		debug( LOG_ERROR, "resAlloc: Out of memory" );
@@ -245,21 +245,6 @@ void SetLastResourceFilename(char *pName)
 }
 
 
-static UDWORD LastHashName;
-
-// Returns the filename of the last resource file loaded
-UDWORD GetLastHashName(void)
-{
-	return (LastHashName);
-}
-
-// Set the resource name of the last resource file loaded
-void SetLastHashName(UDWORD HashName)
-{
-	LastHashName = HashName;
-}
-
-
 // Structure for each file currently in use in the resource  ... probably only going to be one ... but we will handle upto MAXLOADEDRESOURCE
 typedef struct
 {
@@ -346,7 +331,7 @@ static void FreeResourceFile(RESOURCEFILE *OldResource)
 	switch (OldResource->type)
 	  {
 		case RESFILETYPE_LOADED:
-			FREE(OldResource->pBuffer);
+			free(OldResource->pBuffer);
 			break;
 		default:
 			debug(LOG_WARNING, "resource not freed");
@@ -426,7 +411,6 @@ BOOL resLoadFile(const char *pType, const char *pFile)
 	strcat(aFileName, pFile);
 
 	strcpy(LastResourceFilename,pFile);	// Save the filename in case any routines need it
-	SetLastHashName(HashStringIgnoreCase(LastResourceFilename));
 
 	// load the resource
 	if (psT->buffLoad)
@@ -569,10 +553,10 @@ void *resGetData(const char *pType, const char *pID)
 
 	if (psRes == NULL)
 	{
-		ASSERT( FALSE, "resGetData: Unknown ID: %s", pID );
+		ASSERT( psRes != NULL, "resGetData: Unknown ID: %s", pID );
 //		resLoadFile(pType,pID);
 //		resGetData(pType,pID);
-//		return NULL;
+		return NULL;
 	}
 
 	psRes->usage += 1;
@@ -692,11 +676,11 @@ void resReleaseAll(void)
 				ASSERT( FALSE,"resReleaseAll: NULL release function" );
 			}
 			psNRes = psRes->psNext;
-			FREE(psRes);
+			free(psRes);
 		}
 		psNT = psT->psNext;
 
-		FREE(psT);
+		free(psT);
 	}
 
 	psResTypes = NULL;
@@ -731,7 +715,7 @@ void resReleaseBlockData(SDWORD blockID)
 				}
 
 				psNRes = psRes->psNext;
-				FREE(psRes);
+				free(psRes);
 
 				if (psPRes == NULL)
 				{
@@ -774,7 +758,7 @@ void resReleaseAllData(void)
 			}
 
 			psNRes = psRes->psNext;
-			FREE(psRes);
+			free(psRes);
 		}
 		psT->psRes = NULL;
 		psNT = psT->psNext;

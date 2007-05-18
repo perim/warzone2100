@@ -28,7 +28,6 @@
 #include <string.h>
 
 /* loop position printf's */
-//#define DEBUG_GROUP1
 #include "lib/framework/frame.h"
 #include "lib/framework/input.h"
 #include "lib/framework/strres.h"
@@ -98,7 +97,7 @@
 #include "objmem.h"
 #endif
 
-#define MISSION_COMPLETE_DELAY	4000
+static void fireWaitingCallbacks(void);
 
 /*
  * Global variables
@@ -107,10 +106,10 @@ SDWORD loopPieCount;
 SDWORD loopTileCount;
 SDWORD loopPolyCount;
 SDWORD loopStateChanges;
+
 /*
  * local variables
  */
-
 static BOOL paused=FALSE;
 static BOOL video=FALSE;
 static BOOL bQuitVideo=FALSE;
@@ -133,9 +132,7 @@ static	UDWORD	numTransporterDroids[MAX_PLAYERS];
 static	UDWORD	numCommandDroids[MAX_PLAYERS];
 static	UDWORD	numConstructorDroids[MAX_PLAYERS];
 // flag to signal a quick exit from the game
-static BOOL fastExit;
 static SDWORD videoMode;
-
 static SDWORD	g_iGlobalVol;
 
 LOOP_MISSION_STATE		loopMissionState = LMS_NORMAL;
@@ -148,35 +145,16 @@ UDWORD	mcTime;
 BOOL	display3D = TRUE;
 extern BOOL		godMode;
 
-BOOL	gamePaused( void );
-void	setGamePauseStatus( BOOL val );
-void	setGameUpdatePause(BOOL state);
-void	setAudioPause(BOOL state);
-void	setScriptPause(BOOL state);
-void	setScrollPause(BOOL state);
-
-
-// signal a fast exit from the game
-void loopFastExit(void)
-{
-	fastExit = TRUE;
-}
-
-
 /* The main game loop */
 GAMECODE gameLoop(void)
 {
 	DROID		*psCurr, *psNext;
 	STRUCTURE	*psCBuilding, *psNBuilding;
-//	BOOL		bPlayerHasHQ = FALSE;
 	FEATURE		*psCFeat, *psNFeat;
 	UDWORD		i,widgval;
 	BOOL		quitting=FALSE;
 	INT_RETVAL	intRetVal;
 	int	        clearMode;
-//	DumpVRAM();	// use mouse to scroll through vram
-
-//	dumpimdpoints();
 
 #ifdef DEBUG
 	heapIntegrityCheck(psDroidHeap);
@@ -200,8 +178,6 @@ GAMECODE gameLoop(void)
 	}
 	pie_ScreenFlip(clearMode);//gameloopflip
 
-	fastExit = FALSE;
-
 	HandleClosingWindows();	// Needs to be done outside the pause case.
 
 	audio_Update();
@@ -224,7 +200,6 @@ GAMECODE gameLoop(void)
 		}
 
 		/* Run the in game interface and see if it grabbed any mouse clicks */
-// 		debug( LOG_NEVER, "loop: Run Widgets Update\n");
 	  	if( (!rotActive) && getWidgetsStatus() &&
 			(dragBox3D.status != DRAG_DRAGGING) &&
 			(wallDrag.status != DRAG_DRAGGING) )
@@ -236,31 +211,19 @@ GAMECODE gameLoop(void)
 			intRetVal = INT_NONE;
 		}
 
-        //don't process the object lists if paused or about to quit to the front end
+		//don't process the object lists if paused or about to quit to the front end
 		if (!(gameUpdatePaused() || intRetVal == INT_QUIT))
 		{
-			if( (dragBox3D.status != DRAG_DRAGGING) && (wallDrag.status
-				!= DRAG_DRAGGING))
+			if( dragBox3D.status != DRAG_DRAGGING
+				&& wallDrag.status != DRAG_DRAGGING
+				&& ( intRetVal == INT_INTERCEPT
+					|| ( radarOnScreen
+						 && CoordInRadar(mouseX(), mouseY())
+						 && getHQExists(selectedPlayer) ) ) )
 			{
-				if( (intRetVal == INT_INTERCEPT)
-					|| (radarOnScreen && CoordInRadar(mouseX(),mouseY()) &&
-                    getHQExists(selectedPlayer)) )
-				{
-					frameSetCursorFromRes(IDC_DEFAULT);
-					//if( (intRetVal != INT_FULLSCREENPAUSE) && (
-					//	intRetVal != INT_INTELPAUSE) )
-					//{
-						intRetVal = INT_INTERCEPT;
-					//}
-				}
+				frameSetCursorFromRes(IDC_DEFAULT);
+				intRetVal = INT_INTERCEPT;
 			}
-		//}
-
-//		intRetVal = INT_NONE;
-
-		// Don't update the game world if the design screen is up and single player game
-		//if (((intRetVal != INT_FULLSCREENPAUSE) || bMultiPlayer) && ((intRetVal !=
-		//	INT_INTELPAUSE) || bMultiPlayer))
 
 #ifdef DEBUG
 			// check all flag positions for duplicate delivery points
@@ -287,10 +250,8 @@ GAMECODE gameLoop(void)
 			// update the command droids
 			cmdDroidUpdate();
 
-// 			debug( LOG_NEVER, "loop: Object Update\n");
-
 			/* Update the AI for a player */
-			for(i=0; i<MAX_PLAYERS; i++)
+			for(i = 0; i < MAX_PLAYERS; i++)
 			{
 				playerUpdate(i);
 			}
@@ -304,26 +265,22 @@ GAMECODE gameLoop(void)
 			if(bMultiPlayer)
 			{
 				multiPlayerLoop();
-//		RecvMessage();
 			}
 
-			fireWaitingCallbacks();		//Now is the good time to fire waiting callbacks (since interpreter is off now)
+			fireWaitingCallbacks(); //Now is the good time to fire waiting callbacks (since interpreter is off now)
 
-			for(i=0; i<MAX_PLAYERS; i++)
+			for(i = 0; i < MAX_PLAYERS; i++)
 			{
 				//update the current power available for a player
 				updatePlayerPower(i);
 
-                //this is a check cos there is a problem with the power but not sure where!!
-                powerCheck(TRUE, (UBYTE)i);
-
-				//spread the power out...done in aiUpdateStructure now
-				//spreadPower((UBYTE)i);
+				//this is a check cos there is a problem with the power but not sure where!!
+				powerCheck(TRUE, (UBYTE)i);
 
 				//set the flag for each player
 				//setPowerGenExists(FALSE, i);
 				setHQExists(FALSE, i);
-                setSatUplinkExists(FALSE, i);
+				setSatUplinkExists(FALSE, i);
 
 				numCommandDroids[i] = 0;
 				numConstructorDroids[i] = 0;
@@ -333,7 +290,7 @@ GAMECODE gameLoop(void)
 				for(psCurr = apsDroidLists[i]; psCurr; psCurr = psNext)
 				{
 					/* Copy the next pointer - not 100% sure if the droid could get destroyed
-					   but this covers us anyway */
+					but this covers us anyway */
 					psNext = psCurr->psNext;
 					droidUpdate(psCurr);
 
@@ -341,23 +298,22 @@ GAMECODE gameLoop(void)
 					numDroids[i]++;
 					switch (psCurr->droidType)
 					{
-					case DROID_COMMAND:
-						numCommandDroids[i] += 1;
-						break;
-					case DROID_CONSTRUCT:
-                    case DROID_CYBORG_CONSTRUCT:
-						numConstructorDroids[i] += 1;
-						break;
-					case DROID_TRANSPORTER:
-						if( (psCurr->psGroup != NULL) )
-						{
-							numTransporterDroids[i] += psCurr->psGroup->refCount-1;
-						}
-						break;
-					default:
-						break;
+						case DROID_COMMAND:
+							numCommandDroids[i] += 1;
+							break;
+						case DROID_CONSTRUCT:
+						case DROID_CYBORG_CONSTRUCT:
+							numConstructorDroids[i] += 1;
+							break;
+						case DROID_TRANSPORTER:
+							if( (psCurr->psGroup != NULL) )
+							{
+								numTransporterDroids[i] += psCurr->psGroup->refCount-1;
+							}
+							break;
+						default:
+							break;
 					}
-
 				}
 
 				numMissionDroids[i]=0;
@@ -370,21 +326,21 @@ GAMECODE gameLoop(void)
 					numMissionDroids[i]++;
 					switch (psCurr->droidType)
 					{
-					case DROID_COMMAND:
-						numCommandDroids[i] += 1;
-						break;
-					case DROID_CONSTRUCT:
-                    case DROID_CYBORG_CONSTRUCT:
-						numConstructorDroids[i] += 1;
-						break;
-					case DROID_TRANSPORTER:
-						if( (psCurr->psGroup != NULL) )
-						{
-							numTransporterDroids[i] += psCurr->psGroup->refCount-1;
-						}
-						break;
-					default:
-						break;
+						case DROID_COMMAND:
+							numCommandDroids[i] += 1;
+							break;
+						case DROID_CONSTRUCT:
+						case DROID_CYBORG_CONSTRUCT:
+							numConstructorDroids[i] += 1;
+							break;
+						case DROID_TRANSPORTER:
+							if( (psCurr->psGroup != NULL) )
+							{
+								numTransporterDroids[i] += psCurr->psGroup->refCount-1;
+							}
+							break;
+						default:
+							break;
 					}
 				}
 				for(psCurr = apsLimboDroids[i]; psCurr; psCurr = psNext)
@@ -396,33 +352,27 @@ GAMECODE gameLoop(void)
 					// count the type of units
 					switch (psCurr->droidType)
 					{
-					case DROID_COMMAND:
-						numCommandDroids[i] += 1;
-						break;
-					case DROID_CONSTRUCT:
-                    case DROID_CYBORG_CONSTRUCT:
-						numConstructorDroids[i] += 1;
-						break;
-					default:
-						break;
+						case DROID_COMMAND:
+							numCommandDroids[i] += 1;
+							break;
+						case DROID_CONSTRUCT:
+						case DROID_CYBORG_CONSTRUCT:
+							numConstructorDroids[i] += 1;
+							break;
+						default:
+							break;
 					}
 				}
 
-                /*set this up AFTER droidUpdate so that if trying to building a
-                new one, we know whether one exists already*/
-                setLasSatExists(FALSE, i);
+				/*set this up AFTER droidUpdate so that if trying to building a
+				new one, we know whether one exists already*/
+				setLasSatExists(FALSE, i);
 				for (psCBuilding = apsStructLists[i]; psCBuilding; psCBuilding = psNBuilding)
 				{
-					/* Copy the next pointer - not 100% sure if the structure could get destroyed
-					   but this covers us anyway */
+					/* Copy the next pointer - not 100% sure if the structure could get destroyed but this covers us anyway */
 					psNBuilding = psCBuilding->psNext;
 					structureUpdate(psCBuilding);
 					//set animation flag
-					/*if (psCBuilding->pStructureType->type == REF_POWER_GEN &&
-						psCBuilding->status == SS_BUILT)
-					{
-						setPowerGenExists(TRUE, i);
-					}*/
 					if (psCBuilding->pStructureType->type == REF_HQ &&
 						psCBuilding->status == SS_BUILT)
 					{
@@ -433,18 +383,17 @@ GAMECODE gameLoop(void)
 					{
 						setSatUplinkExists(TRUE, i);
 					}
-                    //don't wait for the Las Sat to be built - can't build another if one is partially built
-                    if (asWeaponStats[psCBuilding->asWeaps[0].nStat].
-                        weaponSubClass == WSC_LAS_SAT)
-                    {
-                        setLasSatExists(TRUE, i);
-                    }
+					//don't wait for the Las Sat to be built - can't build another if one is partially built
+					if (asWeaponStats[psCBuilding->asWeaps[0].nStat].
+						weaponSubClass == WSC_LAS_SAT)
+					{
+						setLasSatExists(TRUE, i);
+					}
 				}
 				for (psCBuilding = mission.apsStructLists[i]; psCBuilding;
 						psCBuilding = psNBuilding)
 				{
-					/* Copy the next pointer - not 100% sure if the structure could get destroyed
-					   but this covers us anyway It shouldn't do since its not even on the map!*/
+					/* Copy the next pointer - not 100% sure if the structure could get destroyed but this covers us anyway. It shouldn't do since its not even on the map!*/
 					psNBuilding = psCBuilding->psNext;
 					missionStructureUpdate(psCBuilding);
 					if (psCBuilding->pStructureType->type == REF_HQ &&
@@ -457,15 +406,15 @@ GAMECODE gameLoop(void)
 					{
 						setSatUplinkExists(TRUE, i);
 					}
-                    //don't wait for the Las Sat to be built - can't build another if one is partially built
-                    if (asWeaponStats[psCBuilding->asWeaps[0].nStat].
-                        weaponSubClass == WSC_LAS_SAT)
-                    {
-                        setLasSatExists(TRUE, i);
-                    }
+					//don't wait for the Las Sat to be built - can't build another if one is partially built
+					if (asWeaponStats[psCBuilding->asWeaps[0].nStat].
+						weaponSubClass == WSC_LAS_SAT)
+					{
+						setLasSatExists(TRUE, i);
+					}
 				}
-                //this is a check cos there is a problem with the power but not sure where!!
-                powerCheck(FALSE, (UBYTE)i);
+				//this is a check cos there is a problem with the power but not sure where!!
+				powerCheck(FALSE, (UBYTE)i);
 			}
 
 			missionTimerUpdate();
@@ -478,80 +427,29 @@ GAMECODE gameLoop(void)
 				featureUpdate(psCFeat);
 			}
 
-
-// 			debug( LOG_NEVER, "loop: Smoke/Explosion Update\n");
-
-			/* Ensure smoke drifts up! */
-//			raiseSmoke();
-//			updateGravitons();
-
 			/* update animations */
 			animObj_Update();
 
-			/* Raise and increase frames of explosions */
-//			updateExplosions();
-			/* Update all the temporary world effects */
-//			processEffects();
-
-//			flushConsoleMessages();
-//			clustDisplay();
-
-		//}
-		// Don't update the game world if the design screen is up and single player game
-		//if (((intRetVal != INT_FULLSCREENPAUSE ) || bMultiPlayer) && ((intRetVal !=
-		//	INT_INTELNOSCROLL) || bMultiPlayer))
-		//{
-			//not any more!
-			//need to be able to scroll and have radar still in Intelligence Screen -
-			//but only if 3D View is not up
-			/*if(!getWarCamStatus())
-			{
-				scroll();
-			}*/
-		//}
-		// Don't update the game world if the design screen is up and single player game
-		//if ((intRetVal != INT_FULLSCREENPAUSE ) || bMultiPlayer)
-		//{
-//			debug( LOG_NEVER, "Radar update \n");
-//			/* Make radar line sweep and colour cycle */
-//			updateRadar();
-		//}
-
-		// Don't update the game world if the design screen is up and single player game
-		//if ((intRetVal != INT_FULLSCREENPAUSE && intRetVal !=
-		//	INT_INTELPAUSE) || bMultiPlayer)
-		//{
-// 			debug( LOG_NEVER, "loop: Objmem Update\n");
-
 			objmemUpdate();
-
-// 			debug( LOG_NEVER, "loop: audio Update\n");
-
 		}
 		if (!consolePaused())
 		{
 			/* Process all the console messages */
 			updateConsoleMessages();
 		}
-		if (!scrollPaused())
+		if (!scrollPaused() && !getWarCamStatus() && dragBox3D.status != DRAG_DRAGGING && intMode != INT_INGAMEOP )
 		{
-			if(!getWarCamStatus()) //this could set scrollPause?
-			{
-			 	if(dragBox3D.status != DRAG_DRAGGING
-					&& intMode		!= INT_INGAMEOP )
-				{
-					scroll();
-				}
-			}
+			scroll();
 		}
 	}
-	else//paused
+	else // paused
 	{
 		intRetVal = INT_NONE;
-		if (video)
+		if (loop_GetVideoStatus())
 		{
 			bQuitVideo = !seq_UpdateFullScreenVideo(NULL);
 		}
+
 		if(dragBox3D.status != DRAG_DRAGGING)
 		{
 			scroll();
@@ -560,7 +458,6 @@ GAMECODE gameLoop(void)
 		if(InGameOpUp)		// ingame options menu up, run it!
 		{
 			intRunInGameOptions();
-//			processFrontendSnap(FALSE);
 			widgval = widgRunScreen(psWScreen);
 			intProcessInGameOptions(widgval);
 			if(widgval == INTINGAMEOP_QUIT_CONFIRM)
@@ -573,61 +470,52 @@ GAMECODE gameLoop(void)
 			}
 		}
 
-		if(bLoadSaveUp)
+		if(bLoadSaveUp && runLoadSave(TRUE) && strlen(sRequestResult))
 		{
-			if(runLoadSave(TRUE))// check for file name.
+			debug( LOG_NEVER, "Returned %s", sRequestResult );
+			if(bRequestLoad)
 			{
-				if(strlen(sRequestResult))
+				loopMissionState = LMS_LOADGAME;
+				strcpy(saveGameName, sRequestResult);
+			}
+			else
+			{
+				if (saveInMissionRes())
 				{
-					debug( LOG_NEVER, "Returned %s", sRequestResult );
-					if(bRequestLoad)
+					if (saveGame(sRequestResult, GTYPE_SAVE_START))
 					{
-						loopMissionState = LMS_LOADGAME;
-						strcpy(saveGameName, sRequestResult);
+						addConsoleMessage(_("GAME SAVED!"), LEFT_JUSTIFY);
 					}
 					else
 					{
-						if (saveInMissionRes())
-						{
-							if (saveGame(sRequestResult, GTYPE_SAVE_START))
-							{
-								addConsoleMessage(_("GAME SAVED!"), LEFT_JUSTIFY);
-							}
-							else
-							{
-								ASSERT( FALSE,"Mission Results: saveGame Failed" );
-								deleteSaveGame(sRequestResult);
-							}
-						}
-						else if (bMultiPlayer || saveMidMission())
-						{
-							if (saveGame(sRequestResult, GTYPE_SAVE_MIDMISSION))//mid mission from [esc] menu
-							{
-								addConsoleMessage(_("GAME SAVED!"), LEFT_JUSTIFY);
-							}
-							else
-							{
-								ASSERT( FALSE,"Mid Mission: saveGame Failed" );
-								deleteSaveGame(sRequestResult);
-							}
-      					}
-						else
-						{
-							ASSERT( FALSE, "Attempt to save game with incorrect load/save mode" );
-						}
+						ASSERT( FALSE,"Mission Results: saveGame Failed" );
+						deleteSaveGame(sRequestResult);
 					}
+				}
+				else if (bMultiPlayer || saveMidMission())
+				{
+					if (saveGame(sRequestResult, GTYPE_SAVE_MIDMISSION))//mid mission from [esc] menu
+					{
+						addConsoleMessage(_("GAME SAVED!"), LEFT_JUSTIFY);
+					}
+					else
+					{
+						ASSERT( FALSE,"Mid Mission: saveGame Failed" );
+						deleteSaveGame(sRequestResult);
+					}
+				}
+				else
+				{
+					ASSERT( FALSE, "Attempt to save game with incorrect load/save mode" );
 				}
 			}
 		}
-
-	SDL_Delay(20);	//Added to prevent busy loop, and get CPU time back when paused!
 	}
 
 	/* Check for quit */
-//	if (keyPressed(KEY_ESC) || intRetVal == INT_QUIT)
-	if ((intRetVal == INT_QUIT) || fastExit)
+	if (intRetVal == INT_QUIT)
 	{
-		if (!video)
+		if (!loop_GetVideoStatus())
 		{
 			//quitting from the game to the front end
 			//so get a new backdrop
@@ -640,153 +528,64 @@ GAMECODE gameLoop(void)
 			bQuitVideo = TRUE;
 		}
 	}
-	if  (!video)
+	if (!loop_GetVideoStatus() && !quitting)
 	{
-		//if (!quitting && intRetVal != INT_FULLSCREENPAUSE)
-		if (!quitting)
+		if (!gameUpdatePaused())
 		{
-			if (!gameUpdatePaused())
+			if (display3D)
 			{
-				if (display3D)
+				if (dragBox3D.status != DRAG_DRAGGING
+					&& wallDrag.status != DRAG_DRAGGING)
 				{
-					/*bPlayerHasHQ=FALSE;
-					for (psStructure = apsStructLists[selectedPlayer]; psStructure &&
-						!bPlayerHasHQ; psStructure = psStructure->psNext)
-					{
-						if (psStructure->pStructureType->type == REF_HQ)
-						{
-							bPlayerHasHQ = TRUE;
-						}
-					}
-					*/
-				  //	bPlayerHasHQ = radarCheckForHQ(selectedPlayer);
-
-					if( //(intRetVal != INT_INTELPAUSE) &&
-						(dragBox3D.status != DRAG_DRAGGING) &&
-						(wallDrag.status != DRAG_DRAGGING))
-					{
-						ProcessRadarInput();
-					}
-					processInput();
-
-					//no key clicks or in Intelligence Screen
-	//				if (intRetVal == INT_INTELPAUSE)
-					if (intRetVal == INT_NONE && !InGameOpUp)// || intRetVal == INT_INTELPAUSE)
-					{
-// 						debug( LOG_NEVER, "loop: 3D input\n");
-						//quitting = processInput();
-						//don't want to handle the mouse input here when in intelligence screen
-						//if (intRetVal != INT_INTELPAUSE)
-						//{
-							processMouseClickInput();
-						//}
-					}
-// 					debug( LOG_NEVER, "loop: display3D\n");
-					displayWorld();
+					ProcessRadarInput();
 				}
-				else
+				processInput();
+
+				//no key clicks or in Intelligence Screen
+				if (intRetVal == INT_NONE && !InGameOpUp)
 				{
-					//no key clicks or in Intelligence Screen
-					if (intRetVal == INT_NONE)// || intRetVal == INT_INTELPAUSE)
-					{
-// 						debug( LOG_NEVER, "loop: 2D input\n");
+					processMouseClickInput();
+				}
+				displayWorld();
+			}
 #ifdef DISP2D
-						quitting = process2DInput();
-#endif
-					}
-// 					debug( LOG_NEVER, "loop: display2D\n");
-#ifdef DISP2D
-					display2DWorld();
-#endif
-				}
-			}
-			/* Display the in game interface */
-//			if(widgetsOn || forceWidgetsOn)
-//			{
-			pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_ON);
-			pie_SetFogStatus(FALSE);
-
-
-			if(bMultiPlayer)
+			else
 			{
-//				if((game.type == DMATCH) && !MultiMenuUp)
-//				{
-//					intDisplayMiniMultiMenu();
-//				}
-
-				if(bDisplayMultiJoiningStatus)
+				//no key clicks or in Intelligence Screen
+				if (intRetVal == INT_NONE)
 				{
-					intDisplayMultiJoiningStatus(bDisplayMultiJoiningStatus);
-					setWidgetsStatus(FALSE);
+					quitting = process2DInput();
 				}
+				display2DWorld();
 			}
-
-			if(getWidgetsStatus())
-			{
-				intDisplayWidgets();
-			}
-			pie_SetDepthBufferStatus(DEPTH_CMP_LEQ_WRT_ON);
-			pie_SetFogStatus(TRUE);
-//			}
-
-
-	//#endif
+#endif
 		}
-		/*else if (!quitting)
+		/* Display the in game interface */
+		pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_ON);
+		pie_SetFogStatus(FALSE);
+
+		if(bMultiPlayer && bDisplayMultiJoiningStatus)
 		{
-			// Display the in game interface
+			intDisplayMultiJoiningStatus(bDisplayMultiJoiningStatus);
+			setWidgetsStatus(FALSE);
+		}
 
-			debug( LOG_NEVER, "loop: Display widgets\n");
-			if(widgetsOn)
-			{
-				pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_ON);
-				pie_SetFogStatus(FALSE);
-
-				intDisplayWidgets();
-
-				pie_SetDepthBufferStatus(DEPTH_CMP_LEQ_WRT_ON);
-				pie_SetFogStatus(TRUE);
-			}
-		}*/
+		if(getWidgetsStatus())
+		{
+			intDisplayWidgets();
+		}
+		pie_SetDepthBufferStatus(DEPTH_CMP_LEQ_WRT_ON);
+		pie_SetFogStatus(TRUE);
 	}
-
-// 	debug( LOG_NEVER, "loop: key presses\n");
-
 
 	/* Check for toggling video playbackmode */
-	if (bQuitVideo)
+	if (bQuitVideo && loop_GetVideoStatus())
 	{
-		if (!video)
-		{
-		}
-		else
-		{
-			seq_StopFullScreenVideo();
-			bQuitVideo = FALSE;
-		}
+		seq_StopFullScreenVideo();
+		bQuitVideo = FALSE;
 	}
 
-	/* Check for pause */
-//	if (!video)
-//	{
-//		if (keyPressed(KEY_F12) && !paused)
-//		{
-//			paused = TRUE;
-//			gameTimeStop();
-	//		addGameMessage("Game Status : PAUSED",1000, TRUE);
-//			addConsoleMessage("Game has been paused",DEFAULT_JUSTIFY);
-//		}
-//		else if (keyPressed(KEY_F12) && paused)
-//		{
-//			paused = FALSE;
-//			gameTimeStart();
-//		}
-//	}		// ALL THIS GUBBINS DONE IN A PROPER KEYMAPPING NOW (A DEBUG ONE THOUGH!).
-
-// 	debug( LOG_NEVER, "loop: flip\n");
-
 	pie_GetResetCounts(&loopPieCount, &loopTileCount, &loopPolyCount, &loopStateChanges);
-
 
 	if (fogStatus & FOG_BACKGROUND)
 	{
@@ -802,135 +601,93 @@ GAMECODE gameLoop(void)
 		clearMode = CLEAR_BLACK;//force to black 3DFX
 	}
 
-	if(!quitting && !fastExit)
+	if (!quitting)
 	{
-
-//JPS 24 feb???		pie_ScreenFlip(clearMode);//gameloopflip
-		{
 			/* Check for toggling display mode */
-			if ((keyDown(KEY_LALT) || keyDown(KEY_RALT)) &&
-				keyPressed(KEY_RETURN))
+			if ((keyDown(KEY_LALT) || keyDown(KEY_RALT)) && keyPressed(KEY_RETURN))
 			{
 				screenToggleMode();
 		#ifdef DISP2D
 				disp2DModeChange();
 		#endif
-				dispModeChange();
 			}
-		}
 	}
-
-/*	if(missionComplete)
-	{
-		if (gameTime>(mcTime+MISSION_COMPLETE_DELAY))
-		{
-			quitting = TRUE;
-		}
-	}*/
 
 	// deal with the mission state
 	switch (loopMissionState)
 	{
-	case LMS_CLEAROBJECTS:
-		missionDestroyObjects();
-        setScriptPause(TRUE);
-		loopMissionState = LMS_SETUPMISSION;
-		break;
+		case LMS_CLEAROBJECTS:
+			missionDestroyObjects();
+			setScriptPause(TRUE);
+			loopMissionState = LMS_SETUPMISSION;
+			break;
 
-	case LMS_NORMAL:
-		// default
-		break;
-	case LMS_SETUPMISSION:
-        setScriptPause(FALSE);
-		if (!setUpMission(nextMissionType))
-		{
-			return GAMECODE_QUITGAME;
-		}
-		break;
-	case LMS_SAVECONTINUE:
-		// just wait for this to be changed when the new mission starts
-		clearMode = CLEAR_BLACK;
-		break;
-	case LMS_NEWLEVEL:
-		//nextMissionType = MISSION_NONE;
-		nextMissionType = LDS_NONE;
-		return GAMECODE_NEWLEVEL;
-		break;
-	case LMS_LOADGAME:
-		return GAMECODE_LOADGAME;
-		break;
-	default:
-		ASSERT( FALSE, "unknown loopMissionState" );
-		break;
+		case LMS_NORMAL:
+			// default
+			break;
+		case LMS_SETUPMISSION:
+			setScriptPause(FALSE);
+			if (!setUpMission(nextMissionType))
+			{
+				return GAMECODE_QUITGAME;
+			}
+			break;
+		case LMS_SAVECONTINUE:
+			// just wait for this to be changed when the new mission starts
+			clearMode = CLEAR_BLACK;
+			break;
+		case LMS_NEWLEVEL:
+			//nextMissionType = MISSION_NONE;
+			nextMissionType = LDS_NONE;
+			return GAMECODE_NEWLEVEL;
+			break;
+		case LMS_LOADGAME:
+			return GAMECODE_LOADGAME;
+			break;
+		default:
+			ASSERT( FALSE, "unknown loopMissionState" );
+			break;
 	}
 
-	if (fastExit)
+	if (quitting)
 	{
 		pie_SetFogStatus(FALSE);
 		pie_ScreenFlip(CLEAR_BLACK);//gameloopflip
 		pie_ScreenFlip(CLEAR_BLACK);//gameloopflip
+		/* Check for toggling display mode */
+		if ((keyDown(KEY_LALT) || keyDown(KEY_RALT)) && keyPressed(KEY_RETURN))
 		{
-			/* Check for toggling display mode */
-			if ((keyDown(KEY_LALT) || keyDown(KEY_RALT)) &&
-				keyPressed(KEY_RETURN))
-			{
-				screenToggleMode();
-		#ifdef DISP2D
-				disp2DModeChange();
-		#endif
-				dispModeChange();
-			}
-		}
-		return GAMECODE_FASTEXIT;
-	}
-	else if (quitting)
-	{
-		pie_SetFogStatus(FALSE);
-		pie_ScreenFlip(CLEAR_BLACK);//gameloopflip
-		pie_ScreenFlip(CLEAR_BLACK);//gameloopflip
-		{
-			/* Check for toggling display mode */
-			if ((keyDown(KEY_LALT) || keyDown(KEY_RALT)) &&
-				keyPressed(KEY_RETURN))
-			{
-				screenToggleMode();
-		#ifdef DISP2D
-				disp2DModeChange();
-		#endif
-				dispModeChange();
-			}
+			screenToggleMode();
+#ifdef DISP2D
+			disp2DModeChange();
+#endif
 		}
 		return GAMECODE_QUITGAME;
 	}
-	else if (video)
+	else if (loop_GetVideoStatus())
 	{
 		audio_StopAll();
 		return GAMECODE_PLAYVIDEO;
 	}
 
-	/*
-	if( (intMode == INT_NORMAL) && (forceWidgetsOn == TRUE) )
-	{
-		forceWidgetsOn = FALSE;
-	}
-	*/
 	return GAMECODE_CONTINUE;
 }
 
 /* The video playback loop */
 GAMECODE videoLoop(void)
 {
-	BOOL	bVolKilled = FALSE;
+	BOOL bVolKilled = FALSE;
 
 	// There is something really odd here. - Per
 	static BOOL bActiveBackDrop = FALSE;
 
 #ifdef DEBUG
 	// Surely this should be: bActiveBackDrop = screen_GetBackDrop(); ?? - Per
-	screen_GetBackDrop();//test only remove JPS feb26
+	// That would look odd, I tried it. Eg. intelligence screen is not redrawn correctly. -- DevU
+	screen_GetBackDrop();
 #endif
 
-	if (video)
+	if (loop_GetVideoStatus())
 	{
 		bQuitVideo = !seq_UpdateFullScreenVideo(NULL);
 	}
@@ -966,7 +723,6 @@ GAMECODE videoLoop(void)
 		{
 			displayGameOver(getScriptWinLoseVideo() == PLAY_WIN);
 		}
-//		clearCount = 0;
 		pie_ScreenFlip(CLEAR_BLACK);// videoloopflip extra mar10
 
 		if (bActiveBackDrop)
@@ -974,11 +730,6 @@ GAMECODE videoLoop(void)
 			// We never get here presently - Per
  			screen_RestartBackDrop();
 		}
-		// remove the intelligence screen if necessary
-		/*if (messageIsImmediate())
-		{
-			intResetScreen(TRUE);
-		}*/
 	}
 
 	//if the video finished...
@@ -1016,7 +767,6 @@ GAMECODE videoLoop(void)
 			{
 				displayGameOver(getScriptWinLoseVideo() == PLAY_WIN);
 			}
-//		    clearCount = 0;
 			pie_ScreenFlip(CLEAR_BLACK);// videoloopflip extra mar10
 
 			if (bActiveBackDrop)
@@ -1024,11 +774,6 @@ GAMECODE videoLoop(void)
 				// We never get here presently - Per
 				screen_RestartBackDrop();
 			}
-			// remove the intelligence screen if necessary
-			/*if (messageIsImmediate())
-			{
-				intResetScreen(TRUE);
-			}*/
 		}
 	}
 
@@ -1059,6 +804,7 @@ GAMECODE videoLoop(void)
 	return GAMECODE_CONTINUE;
 }
 
+
 void loop_SetVideoPlaybackMode(void)
 {
 	videoMode += 1;
@@ -1070,6 +816,7 @@ void loop_SetVideoPlaybackMode(void)
 	audio_StopAll();
 }
 
+
 void loop_ClearVideoPlaybackMode(void)
 {
 	videoMode -=1;
@@ -1078,8 +825,9 @@ void loop_ClearVideoPlaybackMode(void)
 	gameTimeStart();
 	pie_SetFogStatus(TRUE);
 	cdAudio_Resume();
-	ASSERT( videoMode == 0,"loop_ClearVideoPlaybackMode: out of sync." );
+	ASSERT( videoMode == 0, "loop_ClearVideoPlaybackMode: out of sync." );
 }
+
 
 SDWORD loop_GetVideoMode(void)
 {
@@ -1091,12 +839,12 @@ BOOL loop_GetVideoStatus(void)
 	return video;
 }
 
-BOOL	gamePaused( void )
+BOOL gamePaused( void )
 {
-	return(paused);
+	return paused;
 }
 
-void	setGamePauseStatus( BOOL val )
+void setGamePauseStatus( BOOL val )
 {
 	paused = val;
 }
@@ -1202,7 +950,7 @@ void incNumConstructorDroids(UDWORD player)
 }
 
 /* Fire waiting beacon messages which we couldn't run before */
-void fireWaitingCallbacks(void)
+static void fireWaitingCallbacks(void)
 {
 	BOOL bOK = TRUE;
 

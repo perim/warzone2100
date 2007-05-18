@@ -51,26 +51,12 @@
 #include "cursors.h"
 #endif
 
-#include "SDL_framerate.h"
-
-#define IGNORE_FOCUS
-
 /* Linux specific stuff */
-
-static FPSmanager wzFPSmanager;
 
 static UWORD currentCursorResID = UWORD_MAX;
 SDL_Cursor *aCursors[MAX_CURSORS];
 
-typedef enum _focus_state
-{
-	FOCUS_OUT,		// Window does not have the focus
-	FOCUS_SET,		// Just received WM_SETFOCUS
-	FOCUS_IN,		// Window has got the focus
-	FOCUS_KILL,		// Just received WM_KILLFOCUS
-} FOCUS_STATE;
-
-FOCUS_STATE		focusState, focusLast;
+FOCUS_STATE focusState = FOCUS_IN;
 
 /************************************************************************************
  *
@@ -92,7 +78,7 @@ static Uint32	curTicks = 0; // Number of ticks since execution started
 static Uint32	lastTicks = 0;
 
 /* InitFrameStuff - needs to be called once before frame loop commences */
-static void	InitFrameStuff( void )
+static void InitFrameStuff( void )
 {
 	UDWORD i;
 
@@ -109,7 +95,7 @@ static void	InitFrameStuff( void )
 }
 
 /* MaintainFrameStuff - call this during completion of each frame loop */
-static void	MaintainFrameStuff( void )
+static void MaintainFrameStuff( void )
 {
 	curTicks = SDL_GetTicks();
 	curFrames++;
@@ -160,68 +146,6 @@ void frameSetCursorFromRes(SWORD resID)
 		currentCursorResID = resID;
         }
 }
-
-
-void setFramerateLimit(Uint32 fpsLimit)
-{
-	SDL_initFramerate( &wzFPSmanager );
-	SDL_setFramerate( &wzFPSmanager, fpsLimit );
-}
-
-Uint32 getFramerateLimit(void)
-{
-	return SDL_getFramerate( &wzFPSmanager );
-}
-
-
-/*
- * processEvent
- *
- * Event processing function
- */
-static void processEvent(SDL_Event *event)
-{
-	switch(event->type)
-	{
-#ifndef IGNORE_FOCUS
-		case SDL_ACTIVEEVENT:
-			if (event->active.state == SDL_APPINPUTFOCUS || event->active.state == SDL_APPACTIVE)
-			{
-				if (event->active.gain == 1)
-				{
-					debug( LOG_NEVER, "WM_SETFOCUS\n");
-					if (focusState != FOCUS_IN)
-					{
-						debug( LOG_NEVER, "FOCUS_SET\n");
-						focusState = FOCUS_SET;
-					}
-				}
-				else
-				{
-					debug( LOG_NEVER, "WM_KILLFOCUS\n");
-					if (focusState != FOCUS_OUT)
-					{
-						debug( LOG_NEVER, "FOCUS_KILL\n");
-						focusState = FOCUS_KILL;
-					}
-					/* Have to tell the input system that we've lost focus */
-					inputProcessEvent(event);
-				}
-			}
-			break;
-#endif
-		case SDL_KEYUP:
-		case SDL_KEYDOWN:
-		case SDL_MOUSEBUTTONUP:
-		case SDL_MOUSEBUTTONDOWN:
-		case SDL_MOUSEMOTION:
-			inputProcessEvent(event);
-			break;
-	}
-}
-
-
-
 
 
 static void initCursors(void)
@@ -277,7 +201,7 @@ BOOL frameInitialise(
 					BOOL fullScreen		// Whether to start full screen or windowed
 					)
 {
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_CDROM) != 0)
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
 	{
 		debug( LOG_ERROR, "Error: Could not initialise SDL (%s).\n", SDL_GetError() );
 		return FALSE;
@@ -285,23 +209,20 @@ BOOL frameInitialise(
 
 	SDL_WM_SetCaption(pWindowName, NULL);
 
-	focusState = FOCUS_IN;
-	focusLast = FOCUS_IN;
-
 	/* Initialise the trig stuff */
 	if (!trigInitialise())
 	{
 		return FALSE;
 	}
 
-        /* initialise all cursors */
-        initCursors();
+		/* initialise all cursors */
+		initCursors();
 
-        /* Initialise the Direct Draw Buffers */
-        if (!screenInitialise(width, height, bitDepth, fullScreen))
-        {
-                return FALSE;
-        }
+		/* Initialise the Direct Draw Buffers */
+		if (!screenInitialise(width, height, bitDepth, fullScreen))
+		{
+				return FALSE;
+		}
 
 	/* Initialise the input system */
 	inputInitialise();
@@ -317,82 +238,26 @@ BOOL frameInitialise(
 	return TRUE;
 }
 
-/*
- * frameUpdate
- *
- * Call this each cycle to allow the framework to deal with
- * windows messages, and do general house keeping.
- *
- * Returns FRAME_STATUS.
- */
-FRAME_STATUS frameUpdate(void)
-{
-	SDL_Event event;
-	FRAME_STATUS	retVal;
-	BOOL wzQuit = FALSE;
 
+/*!
+ * Call this each cycle to do general house keeping.
+ */
+void frameUpdate(void)
+{
 	/* Tell the input system about the start of another frame */
 	inputNewFrame();
 
-	/* Deal with any windows messages */
-	while ( SDL_PollEvent( &event ) != 0)
-	{
-		if (event.type == SDL_QUIT)
-			wzQuit = TRUE;
-		else
-			processEvent(&event);
-	}
-
-	/* Now figure out what to return */
-	retVal = FRAME_OK;
-	if (wzQuit)
-	{
-		retVal = FRAME_QUIT;
-	}
-	else if ((focusState == FOCUS_SET) && (focusLast == FOCUS_OUT))
-	{
-		debug( LOG_NEVER, "Returning SETFOCUS\n");
-		focusState = FOCUS_IN;
-		retVal = FRAME_SETFOCUS;
-	}
-	else if ((focusState == FOCUS_KILL) && (focusLast == FOCUS_IN))
-	{
-		debug( LOG_NEVER, "Returning KILLFOCUS\n");
-		focusState = FOCUS_OUT;
-		retVal = FRAME_KILLFOCUS;
-	}
-
-	if ((focusState == FOCUS_SET) || (focusState == FOCUS_KILL))
-	{
-		/* Got a SET or KILL when we were already in or out of
-		   focus respectively */
-		focusState = focusLast;
-	}
-	else if (focusLast != focusState)
-	{
-		debug( LOG_NEVER, "focusLast changing from %d to %d\n", focusLast, focusState);
-		focusLast = focusState;
-	}
-
-	/* If things are running normally update the framerate */
-	if ((!wzQuit) && (focusState == FOCUS_IN))
-	{
-		/* Update the frame rate stuff */
-		MaintainFrameStuff();
-		SDL_framerateDelay( &wzFPSmanager );
-	}
-
-	return retVal;
+	/* Update the frame rate stuff */
+	MaintainFrameStuff();
 }
 
 
-
+/*!
+ * Cleanup framework
+ */
 void frameShutDown(void)
 {
 	screenShutDown();
-
-	/* Free the default cursor */
-	// DestroyCursor(hCursor);
 
 	/* Free all cursors */
 	freeCursors();
@@ -406,6 +271,7 @@ void frameShutDown(void)
 	// Shutdown the resource stuff
 	resShutDown();
 }
+
 
 /***************************************************************************
   Load the file with name pointed to by pFileName into a memory buffer.
@@ -438,7 +304,7 @@ static BOOL loadFile2(const char *pFileName, char **ppFileData, UDWORD *pFileSiz
 
 	if (AllocateMem == TRUE) {
 		// Allocate a buffer to store the data and a terminating zero
-		*ppFileData = (char*)MALLOC(filesize + 1);
+		*ppFileData = (char*)malloc(filesize + 1);
 		if (*ppFileData == NULL) {
 			debug(LOG_ERROR, "loadFile2: Out of memory loading %s", pFileName);
 			assert(FALSE);
@@ -456,14 +322,14 @@ static BOOL loadFile2(const char *pFileName, char **ppFileData, UDWORD *pFileSiz
 	/* Load the file data */
 	length_read = PHYSFS_read(pfile, *ppFileData, 1, filesize);
 	if (length_read != filesize) {
-		FREE( *ppFileData );
+		free( *ppFileData );
 		debug(LOG_ERROR, "loadFile2: Reading %s short: %s",
 		      pFileName, PHYSFS_getLastError());
 		assert(FALSE);
 		return FALSE;
 	}
 	if (!PHYSFS_close(pfile)) {
-		FREE( *ppFileData );
+		free( *ppFileData );
 		debug(LOG_ERROR, "loadFile2: Error closing %s: %s", pFileName,
 		      PHYSFS_getLastError());
 		assert(FALSE);
@@ -545,25 +411,11 @@ BOOL loadFileToBufferNoError(const char *pFileName, char *pFileBuffer, UDWORD bu
 }
 
 
-
 /* next four used in HashPJW */
 #define	BITS_IN_int		32
 #define	THREE_QUARTERS	((UDWORD) ((BITS_IN_int * 3) / 4))
 #define	ONE_EIGHTH		((UDWORD) (BITS_IN_int / 8))
 #define	HIGH_BITS		( ~((UDWORD)(~0) >> ONE_EIGHTH ))
-
-//#define	HIGH_BITS		((UDWORD)(0xf0000000))
-//#define	LOW_BITS		((UDWORD)(0x0fffffff))
-
-
-
-
-///////////////////////////////////////////////////////////////////
-
-
-
-
-
 
 
 /***************************************************************************/

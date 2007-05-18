@@ -63,7 +63,7 @@
 
 static int StartWithGame = 1; // New game starts in Cam 1.
 
-tMode titleMode;					// the global case
+tMode titleMode; // the global case
 int				FEFont;
 char			pLevelName[MAX_LEVEL_NAME_SIZE+1];	//256];			// vital! the wrf file to use.
 
@@ -182,7 +182,7 @@ void changeTitleMode(tMode mode)
 {
 	tMode oldMode;
 
-	widgDelete(psWScreen,FRONTEND_BACKDROP);		// delete backdrop.
+	widgDelete(psWScreen, FRONTEND_BACKDROP);		// delete backdrop.
 
 	oldMode = titleMode;							// store old mode
 	titleMode = mode;								// set new mode
@@ -291,22 +291,24 @@ BOOL startTitleMenu(void)
 	addTopForm();
 	addBottomForm();
 
-		addTextButton(FRONTEND_SINGLEPLAYER,FRONTEND_POS2X,FRONTEND_POS2Y, _("Single Player Campaign"),FALSE,FALSE);
-		if(!bDisableLobby)
-		{
-			addTextButton(FRONTEND_MULTIPLAYER,	FRONTEND_POS3X,FRONTEND_POS3Y, _("Multi Player Game")   ,FALSE,FALSE);
-		}else{
-			addTextButton(FRONTEND_MULTIPLAYER,	FRONTEND_POS3X,FRONTEND_POS3Y, _("Multi Player Game")   ,FALSE,TRUE);
-		}
-		addTextButton(FRONTEND_TUTORIAL,	FRONTEND_POS4X,FRONTEND_POS4Y, _("Tutorial") ,FALSE,FALSE);
-		addTextButton(FRONTEND_OPTIONS,		FRONTEND_POS5X,FRONTEND_POS5Y, _("Options") ,FALSE,FALSE);
+	addTextButton(FRONTEND_SINGLEPLAYER, FRONTEND_POS2X, FRONTEND_POS2Y, _("Single Player Campaign"), FALSE, FALSE);
+	if(!bDisableLobby)
+	{
+		addTextButton(FRONTEND_MULTIPLAYER, FRONTEND_POS3X,FRONTEND_POS3Y, _("Multi Player Game"), FALSE, FALSE);
+	}
+	else
+	{
+		addTextButton(FRONTEND_MULTIPLAYER, FRONTEND_POS3X, FRONTEND_POS3Y, _("Multi Player Game"),FALSE,TRUE);
+	}
+	addTextButton(FRONTEND_TUTORIAL, FRONTEND_POS4X, FRONTEND_POS4Y, _("Tutorial") ,FALSE,FALSE);
+	addTextButton(FRONTEND_OPTIONS, FRONTEND_POS5X, FRONTEND_POS5Y, _("Options") ,FALSE,FALSE);
 
-	addTextButton(FRONTEND_QUIT,		FRONTEND_POS6X,FRONTEND_POS6Y, _("Quit Game"),FALSE,FALSE);
+	addTextButton(FRONTEND_QUIT, FRONTEND_POS6X, FRONTEND_POS6Y, _("Quit Game"), FALSE, FALSE);
 
-	addSideText	 (FRONTEND_SIDETEXT ,	FRONTEND_SIDEX,FRONTEND_SIDEY,_("MAIN MENU"));
+	addSideText(FRONTEND_SIDETEXT, FRONTEND_SIDEX, FRONTEND_SIDEY, _("MAIN MENU"));
 
 	SetMousePos(320, FRONTEND_BOTFORMY + FRONTEND_POS2Y);
-	SnapToID(&InterfaceSnap,4);
+	SnapToID(&InterfaceSnap, 4);
 
 	return TRUE;
 }
@@ -318,11 +320,11 @@ BOOL runTitleMenu(void)
 
 	processFrontendSnap(TRUE);
 
-	id = widgRunScreen(psWScreen);						// Run the current set of widgets
+	id = widgRunScreen(psWScreen); // Run the current set of widgets
 
-		switch(id)
-		{
-			case FRONTEND_QUIT:
+	switch(id)
+	{
+		case FRONTEND_QUIT:
 			changeTitleMode(CREDITS);
 			break;
 		case FRONTEND_MULTIPLAYER:
@@ -339,10 +341,10 @@ BOOL runTitleMenu(void)
 			break;
 		default:
 			break;
-		}
+	}
 
 	StartCursorSnap(&InterfaceSnap);
-	widgDisplayScreen(psWScreen);						// show the widgets currently running
+	widgDisplayScreen(psWScreen); // show the widgets currently running
 
 	return TRUE;
 }
@@ -361,7 +363,8 @@ BOOL startTutorialMenu(void)
 	addTextButton(FRONTEND_TUTORIAL, FRONTEND_POS3X,FRONTEND_POS3Y, _("Tutorial"),FALSE,FALSE);
 	addTextButton(FRONTEND_FASTPLAY, FRONTEND_POS4X,FRONTEND_POS4Y, _("Fast Play"),FALSE,FALSE);
 	addSideText	 (FRONTEND_SIDETEXT ,FRONTEND_SIDEX,FRONTEND_SIDEY,_("TUTORIALS"));
-	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, STR_FE_RETURN,IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
+	// TRANSLATORS: "Return", in this context, means "return to previous screen/menu"
+	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, P_("menu", "Return"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 
 	SetCurrentSnapID(&InterfaceSnap,FRONTEND_FASTPLAY);
 
@@ -424,7 +427,7 @@ void startSinglePlayerMenu(void)
 
 	addSideText	 (FRONTEND_SIDETEXT ,FRONTEND_SIDEX,FRONTEND_SIDEY,_("SINGLE PLAYER"));
 	SetCurrentSnapID(&InterfaceSnap,FRONTEND_LOADGAME);
-	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, STR_FE_RETURN,IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
+	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, P_("menu", "Return"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 }
 
 static void frontEndNewGame( void )
@@ -564,7 +567,7 @@ BOOL startMultiPlayerMenu(void)
 	addTextButton(FRONTEND_FORCEEDIT,FRONTEND_POS4X,FRONTEND_POS4Y, _("Force Editor"),FALSE,FALSE);
 	addTextButton(FRONTEND_SKIRMISH, FRONTEND_POS5X,FRONTEND_POS5Y, _("One Player Skirmish"),FALSE,FALSE);
 
-	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, STR_FE_RETURN,IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
+	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, P_("menu", "Return"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 
 	SetMousePos(320, FRONTEND_BOTFORMY + FRONTEND_POS3Y);
 	SnapToID(&InterfaceSnap,3);
@@ -661,7 +664,7 @@ BOOL startOptionsMenu(void)
 	addTextButton(FRONTEND_GAMEOPTIONS2,FRONTEND_POS3X,FRONTEND_POS3Y, _("Graphics Options"),FALSE,FALSE);
 	addTextButton(FRONTEND_GAMEOPTIONS3,	FRONTEND_POS4X,FRONTEND_POS4Y, _("Audio Options"),FALSE,FALSE);
 	addTextButton(FRONTEND_KEYMAP,		FRONTEND_POS5X,FRONTEND_POS5Y, _("Key Mappings"),FALSE,FALSE);
-	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, STR_FE_RETURN,IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
+	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, P_("menu", "Return"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 
 	SetMousePos(320, FRONTEND_BOTFORMY + FRONTEND_POS3Y);
 	SnapToID(&InterfaceSnap,3);
@@ -813,7 +816,7 @@ BOOL startGameOptions2Menu(void)
 
 	////////////
 	// quit.
-	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, STR_FE_RETURN,IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
+	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, P_("menu", "Return"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 
 	return TRUE;
 }
@@ -949,7 +952,7 @@ BOOL startGameOptions3Menu(void)
 	addFESlider(FRONTEND_MUSIC_SL,FRONTEND_BOTFORM, FRONTEND_POS4M, FRONTEND_POS4Y+5,AUDIO_VOL_MAX,mixer_GetCDVolume(),FRONTEND_MUSIC );
 
 	// quit.
-	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, STR_FE_RETURN,IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
+	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, P_("menu", "Return"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 
 	//add some text down the side of the form
 	addSideText	 (FRONTEND_SIDETEXT ,	FRONTEND_SIDEX,FRONTEND_SIDEY, _("GAME OPTIONS"));
@@ -1045,20 +1048,20 @@ BOOL startGameOptionsMenu(void)
 	// colour stuff
 	w = 	iV_GetImageWidth(FrontImages,IMAGE_PLAYER0);
 	h = 	iV_GetImageHeight(FrontImages,IMAGE_PLAYER0);
-	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P0, FRONTEND_POS4M+(0*(w+6)),FRONTEND_POS4Y,w,h,0,IMAGE_PLAYER0	,IMAGE_PLAYERX,TRUE);
-//	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P1, FRONTEND_POS6M-(3*(w+4)),FRONTEND_POS6Y,w,h,0,IMAGE_PLAYER1	,IMAGE_HI34,TRUE);
-//	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P2, FRONTEND_POS6M-(2*(w+4)),FRONTEND_POS6Y,w,h,0,IMAGE_PLAYER2	,IMAGE_HI34,TRUE);
-//	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P3, FRONTEND_POS6M-(1*(w+4)),FRONTEND_POS6Y,w,h,0,IMAGE_PLAYER3	,IMAGE_HI34,TRUE);
-	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P4, FRONTEND_POS4M+(1*(w+6)),FRONTEND_POS4Y,w,h,0,IMAGE_PLAYER4	,IMAGE_PLAYERX,TRUE);
-	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P5, FRONTEND_POS4M+(2*(w+6)),FRONTEND_POS4Y,w,h,0,IMAGE_PLAYER5	,IMAGE_PLAYERX,TRUE);
-	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P6, FRONTEND_POS4M+(3*(w+6)),FRONTEND_POS4Y,w,h,0,IMAGE_PLAYER6	,IMAGE_PLAYERX,TRUE);
-	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P7, FRONTEND_POS4M+(4*(w+6)),FRONTEND_POS4Y,w,h,0,IMAGE_PLAYER7,IMAGE_PLAYERX,TRUE);
+	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P0, FRONTEND_POS4M+(0*(w+6)),FRONTEND_POS4Y,w,h, "", IMAGE_PLAYER0, IMAGE_PLAYERX,TRUE);
+//	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P1, FRONTEND_POS6M-(3*(w+4)),FRONTEND_POS6Y,w,h, "", IMAGE_PLAYER1, IMAGE_HI34,TRUE);
+//	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P2, FRONTEND_POS6M-(2*(w+4)),FRONTEND_POS6Y,w,h, "", IMAGE_PLAYER2, IMAGE_HI34,TRUE);
+//	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P3, FRONTEND_POS6M-(1*(w+4)),FRONTEND_POS6Y,w,h, "", IMAGE_PLAYER3, IMAGE_HI34,TRUE);
+	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P4, FRONTEND_POS4M+(1*(w+6)),FRONTEND_POS4Y,w,h, "", IMAGE_PLAYER4, IMAGE_PLAYERX,TRUE);
+	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P5, FRONTEND_POS4M+(2*(w+6)),FRONTEND_POS4Y,w,h, "", IMAGE_PLAYER5, IMAGE_PLAYERX,TRUE);
+	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P6, FRONTEND_POS4M+(3*(w+6)),FRONTEND_POS4Y,w,h, "", IMAGE_PLAYER6, IMAGE_PLAYERX,TRUE);
+	addMultiBut(psWScreen,FRONTEND_BOTFORM,FE_P7, FRONTEND_POS4M+(4*(w+6)),FRONTEND_POS4Y,w,h, "", IMAGE_PLAYER7, IMAGE_PLAYERX,TRUE);
 
 	widgSetButtonState(psWScreen, FE_P0+getPlayerColour(0), WBUT_LOCK);
 	addTextButton(FRONTEND_COLOUR,		FRONTEND_POS4X-25,FRONTEND_POS4Y, _("Unit Colour"),TRUE,FALSE);
 
 	// quit.
-	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, STR_FE_RETURN,IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
+	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, P_("menu", "Return"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 
 	//add some text down the side of the form
 	addSideText	 (FRONTEND_SIDETEXT ,	FRONTEND_SIDEX,FRONTEND_SIDEY, _("GAME OPTIONS"));
@@ -1553,34 +1556,3 @@ static void displayBigSlider(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, U
 
 
 }
-
-
-// Placed here to avoid automatic inlining in InGameOp.c by the Playstation compiler.
-//
-BOOL addIGTextButton(UDWORD id, UWORD y, const char *string, UDWORD Style)
-{
-	W_BUTINIT sButInit;
-
-	memset( &sButInit, 0, sizeof(W_BUTINIT) );
-
-	//resume
-	sButInit.formID		= INTINGAMEOP;
-	sButInit.id			= id;
-	sButInit.style		= Style;
-
-
-	sButInit.x			= INTINGAMEOP_1_X;
-	sButInit.y			= y;
-	sButInit.width		= INTINGAMEOP_OP_W;
-	sButInit.height		= INTINGAMEOP_OP_H;
-
-	sButInit.FontID		= WFont;
-	sButInit.pDisplay	= displayTextOption;
-	sButInit.pText		= string;
-	widgAddButton(psWScreen, &sButInit);
-
-	return TRUE;
-}
-
-
-

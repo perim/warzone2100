@@ -437,7 +437,7 @@ proj_SendProjectile( WEAPON *psWeap, BASE_OBJECT *psAttacker, SDWORD player,
 	{
 		fR += (FRACT_D) (2 * M_PI);
 	}
-	psObj->direction = (UWORD)( RAD_TO_DEG(fR) );
+	psObj->direction = RAD_TO_DEG(fR);
 
 
 	/* get target distance */
@@ -816,11 +816,20 @@ proj_InFlightDirectFunc( PROJ_OBJECT *psObj )
 
 					if (bPenetrate)
 					{
+						SDWORD TargetX, TargetY;
+
 						asWeap.nStat = psObj->psWStats - asWeaponStats;
 						//Watermelon:just assume we damaged the chosen target
 						psObj->psDamaged = psNewTarget;
 
-						proj_SendProjectile( &asWeap, (BASE_OBJECT*)psObj, psObj->player, (psObj->startX + extendRad * dx / rad), (psObj->startY + extendRad * dy / rad), psObj->z, NULL, TRUE, bPenetrate, -1 );
+						// Determine position to fire a missile at
+						// (must be at least 0 because we don't use signed integers
+						//  this shouldn't be larger than the height and width of the map either)
+						TargetX = MAX(psObj->startX + extendRad * dx / rad, 0);
+						TargetX = MIN(TargetX, world_coord(mapWidth - 1));
+						TargetY = MAX(psObj->startY + extendRad * dy / rad, 0);
+						TargetY = MIN(TargetY, world_coord(mapHeight - 1));
+						proj_SendProjectile( &asWeap, (BASE_OBJECT*)psObj, psObj->player, TargetX, TargetY, psObj->z, NULL, TRUE, bPenetrate, -1 );
 					}
 					else
 					{
@@ -1054,11 +1063,20 @@ proj_InFlightIndirectFunc( PROJ_OBJECT *psObj )
 
 					if (bPenetrate)
 					{
+						SDWORD TargetX, TargetY;
+
 						asWeap.nStat = psObj->psWStats - asWeaponStats;
 						//Watermelon:just assume we damaged the chosen target
 						psObj->psDamaged = psNewTarget;
 
-						proj_SendProjectile( &asWeap, (BASE_OBJECT*)psObj, psObj->player, (psObj->startX + extendRad * dx / iRad), (psObj->startY + extendRad * dy / iRad), psObj->z, NULL, TRUE, bPenetrate, -1 );
+						// Determine position to fire a missile at
+						// (must be at least 0 because we don't use signed integers
+						//  this shouldn't be larger than the height and width of the map either)
+						TargetX = MAX(psObj->startX + extendRad * dx / iRad, 0);
+						TargetX = MIN(TargetX, world_coord(mapWidth - 1));
+						TargetY = MAX(psObj->startY + extendRad * dy / iRad, 0);
+						TargetY = MIN(TargetY, world_coord(mapHeight - 1));						
+						proj_SendProjectile( &asWeap, (BASE_OBJECT*)psObj, psObj->player, TargetX, TargetY, psObj->z, NULL, TRUE, bPenetrate, -1 );
 					}
 					else
 					{
@@ -1396,7 +1414,7 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 					{
 						xDiff = psObj->startX - psObj->psDest->x;
 						yDiff = psObj->startY - psObj->psDest->y;
-						impact_angle = abs(psObj->psDest->direction - (180 * atan2f((float)xDiff, (float)yDiff) / M_PI));
+						impact_angle = abs( psObj->psDest->direction - ( 180 * atan2f(xDiff, yDiff) / M_PI ) );
 						if (impact_angle >= 360)
 						{
 							impact_angle -= 360;
@@ -1600,7 +1618,7 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 								{
 									xDiff = psObj->x - psCurrD->x;
 									yDiff = psObj->y - psCurrD->y;
-									impact_angle = abs(psCurrD->direction - (180 * atan2f((float)xDiff, (float)yDiff) / M_PI));
+									impact_angle = abs( psCurrD->direction - ( 180 * atan2f(xDiff, yDiff) / M_PI ) );
 									if (impact_angle >= 360)
 									{
 										impact_angle -= 360;
@@ -1682,7 +1700,7 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 								{
 									xDiff = psObj->x - psCurrD->x;
 									yDiff = psObj->y - psCurrD->y;
-									impact_angle = abs(psCurrD->direction - (180 * atan2f((float)xDiff, (float)yDiff) / M_PI));
+									impact_angle = abs( psCurrD->direction - ( 180 * atan2f(xDiff, yDiff) / M_PI ) );
 									if (impact_angle >= 360)
 									{
 										impact_angle -= 360;
@@ -2423,17 +2441,17 @@ UDWORD	establishTargetHeight( BASE_OBJECT *psTarget )
 					break;
 			}
 
-			utilityHeight = yMax - yMin;
+			utilityHeight = (yMax + yMin)/2;
 			height += utilityHeight;
 
 			return height;
 
 		case OBJ_STRUCTURE:
 			psStructureStats = ((STRUCTURE *)psTarget)->pStructureType;
-			return (psStructureStats->pIMD->ymax - psStructureStats->pIMD->ymin);
+			return (psStructureStats->pIMD->ymax + psStructureStats->pIMD->ymin) /2;
 		case OBJ_FEATURE:
 			// Just use imd ymax+ymin
-			return (psTarget->sDisplay.imd->ymax - psTarget->sDisplay.imd->ymin);
+			return (psTarget->sDisplay.imd->ymax + psTarget->sDisplay.imd->ymin) /2;
 		case OBJ_BULLET:
 			// 16 for bullet
 			return 16;

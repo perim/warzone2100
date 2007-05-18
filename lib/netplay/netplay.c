@@ -26,20 +26,26 @@
 // ////////////////////////////////////////////////////////////////////////
 // includes
 
+#include "lib/framework/frame.h"
+
 #include <time.h>			// for stats
 #include <SDL/SDL_thread.h>
+#ifdef WZ_OS_MAC
+#include <SDL_net/SDL_net.h>
+#else
 #include <SDL/SDL_net.h>
+#endif
 #include <physfs.h>
 #include <string.h>
 
-#include "lib/framework/frame.h"
 #include "netplay.h"
 #include "netlog.h"
 
-char* master_server = "warzone2100.kicks-ass.org";
-#define MASTER_SERVER_PORT	9998
 
-#define WARZONE_NET_PORT	9999
+// WARNING !!! This is initialised via configuration.c !!!
+char masterserver_name[255] = {'\0'};
+unsigned int masterserver_port = 0, gameserver_port = 0;
+
 #define MAX_CONNECTED_PLAYERS	8
 #define MAX_TMP_SOCKETS		16
 
@@ -472,10 +478,8 @@ BOOL NETsetGameFlags(UDWORD flag, SDWORD value)
 // setup stuff
 BOOL NETinit(BOOL bFirstCall)
 {
-	UDWORD			i;
+	UDWORD i;
 	debug( LOG_NET, "NETinit" );
-
-//	NEThashFile("warzonedebug.exe");
 
 	if(bFirstCall)
 	{
@@ -975,14 +979,14 @@ BOOL NETsetupTCPIP(void ** addr, char * machine)
 	debug( LOG_NET, "NETsetupTCPIP\n" );
 
 	if (   hostname != NULL
-	    && hostname != master_server) {
+	    && hostname != masterserver_name) {
 		free(hostname);
 	}
 	if (   machine != NULL
 	    && machine[0] != '\0') {
 		hostname = strdup(machine);
 	} else {
-		hostname = master_server;
+		hostname = masterserver_name;
 	}
 
 	return TRUE;
@@ -1121,15 +1125,15 @@ void NETregisterServer(int state) {
 	if (state != registered) {
 		switch(state) {
 			case 1: {
-				if(SDLNet_ResolveHost(&ip, master_server, MASTER_SERVER_PORT) == -1) {
-					debug( LOG_ERROR, "NETregisterServer: couldn't resolve master server (%s): %s\n", master_server, SDLNet_GetError() );
+				if(SDLNet_ResolveHost(&ip, masterserver_name, masterserver_port) == -1) {
+					debug( LOG_ERROR, "NETregisterServer: Cannot resolve masterserver \"%s\": %s\n", masterserver_name, SDLNet_GetError() );
 					server_not_there = 1;
 					return;
 				}
 
 				if(!rs_socket) rs_socket = SDLNet_TCP_Open(&ip);
 				if(rs_socket == NULL) {
-					debug( LOG_ERROR, "NETregisterServer: Cannot connect to master server (%s): %s\n", master_server, SDLNet_GetError() );
+					debug( LOG_ERROR, "NETregisterServer: Cannot connect to masterserver \"%s:%d\": %s\n", masterserver_name, masterserver_port, SDLNet_GetError() );
 					server_not_there = 1;
 					return;
 				}
@@ -1154,7 +1158,7 @@ void NETregisterServer(int state) {
 
 static void NETallowJoining(void) {
 	unsigned int i;
-	UDWORD numgames=1;	// always 1 on normal server
+	UDWORD numgames = SDL_SwapBE32(1);	// always 1 on normal server
 	char buffer[5];
 
 	if (allow_joining == FALSE) return;
@@ -1164,7 +1168,7 @@ static void NETallowJoining(void) {
 	if (tmp_socket_set == NULL) {
 		tmp_socket_set = SDLNet_AllocSocketSet(MAX_TMP_SOCKETS+1);
 		if (tmp_socket_set == NULL) {
-			debug( LOG_ERROR, "Couldn't create socket set: %s\n", SDLNet_GetError() );
+			debug( LOG_ERROR, "NETallowJoining: Cannot create socket set: %s\n", SDLNet_GetError() );
 			return;
 		}
 		SDLNet_TCP_AddSocket(tmp_socket_set, tcp_socket);
@@ -1243,6 +1247,10 @@ static void NETallowJoining(void) {
 					for (j = 0; j < MAX_CONNECTED_PLAYERS; ++j) {
 						NETBroadcastPlayerInfo(j);
 					}
+
+					// Make sure the master server gets updated by disconnecting from it
+					// NETallowJoining will reconnect
+					NETregisterServer(0);
 				}
 			}
 		}
@@ -1266,20 +1274,20 @@ BOOL NEThostGame(const char* SessionName, const char* PlayerName,
 		return TRUE;
 	}
 
-	if(SDLNet_ResolveHost(&ip, NULL, WARZONE_NET_PORT) == -1) {
-		debug( LOG_ERROR, "NEThostGame: couldn't resolve master self: %s\n", SDLNet_GetError() );
+	if(SDLNet_ResolveHost(&ip, NULL, gameserver_port) == -1) {
+		debug( LOG_ERROR, "NEThostGame: Cannot resolve master self: %s\n", SDLNet_GetError() );
 		return FALSE;
 	}
 
 	if(!tcp_socket) tcp_socket = SDLNet_TCP_Open(&ip);
 	if(tcp_socket == NULL) {
-		printf("SDLNet_TCP_Open: %s\n", SDLNet_GetError());
+		printf("NEThostGame: Cannot connect to master self: %s\n", SDLNet_GetError());
 		return FALSE;
 	}
 
 	if(!socket_set) socket_set = SDLNet_AllocSocketSet(MAX_CONNECTED_PLAYERS);
 	if (socket_set == NULL) {
-		debug( LOG_ERROR, "Couldn't create socket set: %s\n", SDLNet_GetError() );
+		debug( LOG_ERROR, "NEThostGame: Cannot create socket set: %s\n", SDLNet_GetError() );
 		return FALSE;
 	}
 	for (i = 0; i < MAX_CONNECTED_PLAYERS; ++i) {
@@ -1322,19 +1330,20 @@ BOOL NEThaltJoining(void)
 	debug( LOG_NET, "NEThaltJoining\n" );
 
 	allow_joining = FALSE;
-
+	// disconnect from the master server
+	NETregisterServer(0);
 	return TRUE;
 }
 
 // ////////////////////////////////////////////////////////////////////////
-// find games on open connection, option to do this asynchronously
-// since it can sometimes take a while.
-BOOL NETfindGame(BOOL async)	/// may (not) want to use async here...
+// find games on open connection
+BOOL NETfindGame()
 {
 	static UDWORD gamecount = 0, gamesavailable;
 	IPaddress ip;
 	char buffer[sizeof(GAMESTRUCT)*2];
 	GAMESTRUCT* tmpgame = (GAMESTRUCT*)buffer;
+	unsigned int port = (hostname == masterserver_name) ? masterserver_port : gameserver_port;
 
 	debug( LOG_NET, "NETfindGame\n" );
 
@@ -1350,9 +1359,8 @@ BOOL NETfindGame(BOOL async)	/// may (not) want to use async here...
 		return TRUE;
 	}
 
-	if (SDLNet_ResolveHost(&ip, hostname, (hostname == master_server) ? MASTER_SERVER_PORT
-								          : WARZONE_NET_PORT) == -1) {
-		debug( LOG_ERROR, "NETfindGame: couldn't resolve hostname (%s): %s\n", hostname, SDLNet_GetError() );
+	if (SDLNet_ResolveHost(&ip, hostname, port) == -1) {
+		debug( LOG_ERROR, "NETfindGame: Cannot resolve hostname \"%s\": %s\n", hostname, SDLNet_GetError() );
 		return FALSE;
 	}
 
@@ -1362,13 +1370,13 @@ BOOL NETfindGame(BOOL async)	/// may (not) want to use async here...
 
 	tcp_socket = SDLNet_TCP_Open(&ip);
 	if (tcp_socket == NULL) {
-		debug( LOG_ERROR, "SDLNet_TCP_Open: %s\n", SDLNet_GetError() );
+		debug( LOG_ERROR, "NETfindGame: Cannot connect to \"%s:%d\": %s\n", hostname, port, SDLNet_GetError() );
 		return FALSE;
 	}
 
 	socket_set = SDLNet_AllocSocketSet(1);
 	if (socket_set == NULL) {
-		debug( LOG_ERROR, "Couldn't create socket set: %s\n", SDLNet_GetError() );
+		debug( LOG_ERROR, "NETfindGame: Cannot create socket set: %s\n", SDLNet_GetError() );
 		return FALSE;
 	}
 	SDLNet_TCP_AddSocket(socket_set, tcp_socket);
@@ -1377,11 +1385,11 @@ BOOL NETfindGame(BOOL async)	/// may (not) want to use async here...
 
 	if (   SDLNet_CheckSockets(socket_set, 1000) > 0
 	    && SDLNet_SocketReady(tcp_socket)
-	    && SDLNet_TCP_Recv(tcp_socket, buffer, sizeof(int))) {
-		gamesavailable=(UDWORD)buffer[0];
+	    && SDLNet_TCP_Recv(tcp_socket, &gamesavailable, sizeof(gamesavailable))) {
+		gamesavailable = SDL_SwapBE32(gamesavailable);
 	}
 
-	debug( LOG_NET, "receiving info of %d game(s)\n", gamesavailable );
+	debug( LOG_NET, "receiving info of %u game(s)\n", gamesavailable );
 
 	do {
 		if (   SDLNet_CheckSockets(socket_set, 1000) > 0
@@ -1426,13 +1434,13 @@ BOOL NETjoinGame(UDWORD gameNumber, const char* playername)
 
 	NETclose();	// just to be sure :)
 
-	if (hostname != master_server) {
+	if (hostname != masterserver_name) {
 		free(hostname);
 	}
 	hostname = strdup(NetPlay.games[gameNumber].desc.host);
 
-	if(SDLNet_ResolveHost(&ip, hostname, WARZONE_NET_PORT) == -1) {
-		debug( LOG_ERROR, "NETjoinGame: couldn't resolve hostname (%s): %s\n", hostname, SDLNet_GetError() );
+	if(SDLNet_ResolveHost(&ip, hostname, gameserver_port) == -1) {
+		debug( LOG_ERROR, "NETjoinGame: Cannot resolve hostname \"%s\": %s\n", hostname, SDLNet_GetError() );
 		return FALSE;
 	}
 
@@ -1442,13 +1450,13 @@ BOOL NETjoinGame(UDWORD gameNumber, const char* playername)
 
 	tcp_socket = SDLNet_TCP_Open(&ip);
  	if (tcp_socket == NULL) {
-		debug( LOG_ERROR, "SDLNet_TCP_Open: %s\n", SDLNet_GetError() );
+		debug( LOG_ERROR, "NETjoinGame: Cannot connect to \"%s:%d\": %s\n", hostname, gameserver_port, SDLNet_GetError() );
 		return FALSE;
 	}
 
 	socket_set = SDLNet_AllocSocketSet(1);
 	if (socket_set == NULL) {
-		debug( LOG_ERROR, "Couldn't create socket set: %s\n", SDLNet_GetError() );
+		debug( LOG_ERROR, "NETjoinGame: Cannot create socket set: %s\n", SDLNet_GetError() );
  		return FALSE;
  	}
 	SDLNet_TCP_AddSocket(socket_set, tcp_socket);
@@ -1513,3 +1521,34 @@ BOOL NETjoinGame(UDWORD gameNumber, const char* playername)
 }
 
 
+/*!
+ * Set the masterserver name
+ * \param hostname The hostname of the masterserver to connect to
+ */
+void NETsetMasterserverName(const char* hostname)
+{
+	size_t name_size = strlen(hostname);
+	if ( name_size > 255 )
+		name_size = 255;
+	strncpy(masterserver_name, hostname, name_size);
+}
+
+
+/*!
+ * Set the masterserver port
+ * \param port The port of the masterserver to connect to
+ */
+void NETsetMasterserverPort(unsigned int port)
+{
+	masterserver_port = port;
+}
+
+
+/*!
+ * Set the port we shall host games on
+ * \param port The port to listen to
+ */
+void NETsetGameserverPort(unsigned int port)
+{
+	gameserver_port = port;
+}

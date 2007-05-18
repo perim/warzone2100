@@ -394,10 +394,16 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 			//Watermelon:Target prediction
 			if(psTarget->type == OBJ_DROID)
 			{
-				predictX = (sinf(((float)M_PI / 180) * (((DROID *)psTarget)->sMove.dir)) * ((DROID *)psTarget)->sMove.speed * dist) / psStats->flightSpeed;
+				predictX = (SDWORD)(trigSin( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed );
 				predictX += psTarget->x;
-				predictY = (cosf(((float)M_PI / 180) * (((DROID *)psTarget)->sMove.dir)) * ((DROID *)psTarget)->sMove.speed * dist) / psStats->flightSpeed;
+				predictY = (SDWORD)(trigCos( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed );
 				predictY += psTarget->y;
+
+				// Make sure we don't pass any negative or out of bounds numbers to proj_SendProjectile
+				predictX = MAX(predictX, 0);
+				predictX = MIN(predictX, world_coord(mapWidth - 1));
+				predictY = MAX(predictY, 0);
+				predictY = MIN(predictY, world_coord(mapHeight - 1));
 			}
 			else
 			{
@@ -445,10 +451,16 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 			//Watermelon:Target prediction
 			if(psTarget->type == OBJ_DROID)
 			{
-				predictX = (sinf(((float)M_PI / 180) * (((DROID *)psTarget)->sMove.dir)) * ((DROID *)psTarget)->sMove.speed * dist) / psStats->flightSpeed;
+				predictX = (SDWORD)(trigSin( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed );
 				predictX += psTarget->x;
-				predictY = (cosf(((float)M_PI / 180) * (((DROID *)psTarget)->sMove.dir)) * ((DROID *)psTarget)->sMove.speed * dist) / psStats->flightSpeed;
+				predictY = (SDWORD)(trigCos( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed );
 				predictY += psTarget->y;
+
+				// Make sure we don't pass any negative or out of bounds numbers to proj_SendProjectile
+				predictX = MAX(predictX, 0);
+				predictX = MIN(predictX, world_coord(mapWidth - 1));
+				predictY = MAX(predictY, 0);
+				predictY = MIN(predictY, world_coord(mapHeight - 1));
 			}
 			else
 			{

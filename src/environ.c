@@ -78,7 +78,7 @@ BOOL	waterOnMap(void)
 //this function just allocates the memory now for MaxMapWidth, MaxMapHeight
 BOOL    environInit( void )
 {
-	pEnvironData = (ENVIRON_DATA*)MALLOC(sizeof(struct environ_data) * MAP_MAXWIDTH * MAP_MAXHEIGHT);
+	pEnvironData = (ENVIRON_DATA*)malloc(sizeof(struct environ_data) * MAP_MAXWIDTH * MAP_MAXHEIGHT);
 	if(!pEnvironData)
 	{
 		debug( LOG_ERROR, "Can't get memory for the environment data" );
@@ -130,14 +130,14 @@ MAPTILE	*psTile;
 // -------------------------------------------------------------------------------
 void	environUpdate( void )
 {
-UDWORD	i,j;
-UDWORD	index;
-FRACT	value,newValue;
-FRACT	increment = 0;
-FRACT	lowest = 0;
-FRACT	highest = 0;
-UDWORD	startX,startY,endX,endY;
-FRACT	fraction;
+	UDWORD	i,j;
+	UDWORD	index;
+	FRACT	value,newValue;
+	FRACT	increment = 0;
+	FRACT	lowest = 0;
+	FRACT	highest = 0;
+	UDWORD	startX,startY,endX,endY;
+	FRACT	fraction;
 
 	//at the moment this function is getting called between levels and so crashes - quick check here for now
 	if (pEnvironData == NULL)
@@ -372,6 +372,6 @@ void	environShutDown( void )
 {
 	if(pEnvironData)
 	{
-		FREE(pEnvironData);
+		free(pEnvironData);
 	}
 }

@@ -33,12 +33,11 @@ case $host_os in
 		AC_CHECK_TOOL([WINDRES], [windres], AC_MSG_ERROR([windres not found]))
 		WIN32_LIBS="-lintl -lshfolder -lwinmm -lwsock32 -L\$(srcdir) -ldbghelp"
 		;;
-	darwin*)
-		host_os_darwin=yes
+	*)
+		AC_DEFINE([_XOPEN_SOURCE], 600, [Enable POSIX extensions if present])
 		;;
 esac
 AM_CONDITIONAL([MINGW32], test "x$host_os_mingw32" = "xyes")
-AM_CONDITIONAL([DARWIN], test "x$host_os_darwin" = "xyes")
 
 
 # Installation directories
@@ -64,14 +63,6 @@ fi
 
 
 # Commandline options:
-
-AC_ARG_ENABLE([data],
-	AS_HELP_STRING([--enable-data],[Build data packages [no]]),
-	[ enable_data=$enableval ], [ enable_data=no ])
-AM_CONDITIONAL(DATA, test "x$enable_data" = "xyes")
-AC_MSG_CHECKING([whether to build data packages])
-AC_MSG_RESULT([$enable_data])
-
 
 AC_ARG_ENABLE([installer],
 	AS_HELP_STRING([--enable-installer],[Build NSIS installer [no]]),
@@ -122,6 +113,7 @@ fi
 
 
 # -O0 turns off all optimizations; this is necessary for accurate debugging
+# -Wno-unused-label is necessary because flex produces unused labels that we cannot fix
 # Add later for stricter checking: -Wextra -Wmissing-declarations -Wstrict-prototypes
 AC_ARG_ENABLE(debug,
 	AS_HELP_STRING([--enable-debug[=yes/relaxed/no]],[Compile debug version [no]]),
@@ -141,25 +133,14 @@ fi
 AC_ARG_ENABLE(ogg,
 	AS_HELP_STRING([--disable-ogg],[Do not built support for Ogg files]))
 
-#   --disable-mp3 will build without Mp3 support
-AC_ARG_ENABLE(mp3,
-	AS_HELP_STRING([--disable-mp3],[Do not built support for Mp3 files]))
-
 
 # Checks for libraries:
 
 AC_CHECK_LIB(m, pow)
 
-AC_CHECK_LIB(z, gzgets, , AC_MSG_ERROR([zlib not found.]))
-AC_CHECK_HEADER(zlib.h, , AC_MSG_ERROR([zlib header not found.]))
-
-
 # Look for image libs
-AC_CHECK_LIB(jpeg, main, , AC_MSG_ERROR([libjpeg not found.]))
-AC_CHECK_HEADER(jpeglib.h, , AC_MSG_ERROR([jpeg header not found.]))
 AC_CHECK_LIB(png, main, , AC_MSG_ERROR([libpng not found.]))
 AC_CHECK_HEADER(png.h, , AC_MSG_ERROR([png header not found.]))
-
 
 # Look for PhysicsFS
 AC_CHECK_LIB(physfs, PHYSFS_init, , AC_MSG_ERROR([PhysicsFS not found]))
@@ -176,15 +157,6 @@ AC_PATH_SDLNET([
 
 
 if test "x$enable_opengl" != "xno" ; then
-	if test "x$host_os_darwin" = "xyes" ; then
-		AC_MSG_CHECKING([for OpenGL framework])
-		wz_ac_check_opengl_save_LIBS=$LIBS
-		LIBS="-framework OpenGL $LIBS"
-		AC_LINK_IFELSE([main() { }],
-			[GL_h=mac ; GLU_h=mac ; GL_lib=yes ; GLU_lib=yes ; GLLIB="-framework OpenGL" ; GLULIB="" ; AC_MSG_RESULT([yes])],
-			[LIBS=$wz_ac_check_opengl_save_LIBS ; AC_MSG_RESULT([no])])
-	fi
-
 	if test "x$GL_lib" != "xyes" ; then
 		AC_CHECK_HEADER(SDL/SDL_opengl.h, GL_h=yes, GL_h=no)
 		AC_CHECK_LIB(GL, main, GLLIB=-lGL GL_lib=yes,
@@ -222,15 +194,6 @@ fi
 
 
 if test "x$enable_openal" != "xno" ; then
-	if test "x$host_os_darwin" = "xyes" ; then
-		AC_MSG_CHECKING([for OpenAL framework])
-		wz_ac_check_openal_save_LIBS=$LIBS
-		LIBS="-framework OpenAL $LIBS"
-		AC_LINK_IFELSE([main() { }],
-			[AL_h=mac ; AL_lib=yes ; ALLIB="-framework OpenAL" ; AC_MSG_RESULT([yes])],
-			[LIBS=$wz_ac_check_openal_save_LIBS ; AC_MSG_RESULT([no])])
-	fi
-
 	if test "x$AL_lib" != "xyes" ; then
 		AC_CHECK_HEADER(AL/al.h, AL_h=yes,
 			[AC_CHECK_HEADER(openal/al.h, AL_h=mac, AL_h=no)])
@@ -288,26 +251,6 @@ else
 fi
 
 
-if test "x$enable_mp3" != "xno" ; then
-	AC_CHECK_LIB(mad, mad_stream_init,
-		[AC_CHECK_HEADER(mad.h, have_mad=yes, have_mad=no)],
-		[have_mad=no])
-	if test "x$have_mad" = "xno" ; then
-		if test "x$enable_mp3" = "xyes" ; then
-			AC_MSG_ERROR([You need to install libMAD.])
-		else
-			enable_mp3=no
-			AC_DEFINE(WZ_NOMP3, 1, [Disable mp3 support])
-		fi
-	else
-		enable_mp3=yes
-		WZ_LIBS="${WZ_LIBS} -lmad"
-	fi
-else
-	AC_DEFINE(WZ_NOMP3, 1, [Disable mp3 support])
-fi
-
-
 # add some required C flags here
 # -DYY_STATIC is required by flex
 WZ_CFLAGS="${WZ_CFLAGS} -DYY_STATIC -DLOCALEDIR=\\\"${localedir}\\\" -DDATADIR=\\\"${datadir}/${PACKAGE}\\\""
@@ -340,7 +283,6 @@ echo "Warzone 2100 will compile with the following components:"
 echo ""
 echo " OpenGL acceleration:   $enable_opengl"
 echo " OpenAL sound system:   $enable_openal"
-echo " MP3 music support:     $enable_mp3"
 echo " OGG music support:     $enable_ogg"
 echo ""
 

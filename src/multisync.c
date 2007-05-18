@@ -29,8 +29,6 @@
  * Alex Lee, pumpkin Studios, bath.
  */
 
-#include <string.h>
-
 #include "lib/framework/frame.h"
 #include "lib/framework/input.h"
 #include "lib/framework/strres.h"
@@ -53,22 +51,13 @@
 #include "frontend.h"								// for titlemode
 #include "multistat.h"
 #include "power.h"									// for power checks
+
 // ////////////////////////////////////////////////////////////////////////////
 // function definitions
-BOOL		sendCheck			(void);							// send/recv  check info
-BOOL		recvDroidCheck		(NETMSG *pMsg);
-BOOL		recvStructureCheck	(NETMSG *pMsg);
-BOOL		recvPowerCheck		(NETMSG *pMsg);
-BOOL		recvPing			(NETMSG *pMsg);
-BOOL		sendScoreCheck		(void);							//score
 
 static BOOL sendStructureCheck	(void);							//Structure
-BOOL		sendPowerCheck		(BOOL now);						//power
 static void packageCheck		(UDWORD i, NETMSG *pMsg, DROID *pD);
-
 static BOOL sendDroidCheck		(void);							//droids
-UDWORD		averagePing			(void);
-BOOL		sendPing			(void);							// send/recv Ping information
 
 static void highLevelDroidUpdate(DROID *psDroid,
 								 UDWORD x,
@@ -578,7 +567,7 @@ static void offscreenUpdate(DROID *psDroid,
 				psDroid->y		 = (UWORD) fy;
 				gridMoveObject((BASE_OBJECT *)psDroid, (SDWORD)oldx,(SDWORD)oldy);
 
-				psDroid->direction	= (UWORD)(dir %360);		// update rotation
+				psDroid->direction = dir % 360;		// update rotation
 
 				// reroute the droid.
 				turnOffMultiMsg(TRUE);
@@ -595,7 +584,7 @@ static void offscreenUpdate(DROID *psDroid,
 		psDroid->x		 = (UWORD)x;						//update x
 		psDroid->y		 = (UWORD)y;						//update y
 		gridMoveObject((BASE_OBJECT *)psDroid, (SDWORD)oldx,(SDWORD)oldy);
-		psDroid->direction	= (UWORD)(dir %360);				// update rotation
+		psDroid->direction = dir % 360;				// update rotation
 	}
 
 	psDroid->body		= dam;								// update damage
@@ -850,7 +839,6 @@ BOOL recvStructureCheck( NETMSG *m)
 
 	if(pS)
 	{
-
 		if( pS->status != SS_BUILT)							// check its finished
 		{
 			pS->direction = dir;

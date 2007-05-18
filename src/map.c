@@ -216,9 +216,9 @@ BOOL mapNew(UDWORD width, UDWORD height)
 		freeAllStructs();
 		freeAllFeatures();
 		proj_FreeAllProjectiles();
-//		FREE(psMapTiles);
+//		free(psMapTiles);
 //		mapFreeTilesAndStrips();
-		FREE(aMapLinePoints);
+		free(aMapLinePoints);
 		psMapTiles = NULL;
 		aMapLinePoints = NULL;
 	}
@@ -252,7 +252,7 @@ BOOL mapNew(UDWORD width, UDWORD height)
 	*/
 
 
-	psMapTiles = (MAPTILE *)MALLOC(sizeof(MAPTILE) * width*height);
+	psMapTiles = (MAPTILE *)malloc(sizeof(MAPTILE) * width*height);
 	if (psMapTiles == NULL)
 	{
 		debug( LOG_ERROR, "mapNew: Out of memory" );
@@ -265,9 +265,9 @@ BOOL mapNew(UDWORD width, UDWORD height)
 	mapHeight = height;
 
 	for (i=0; i<MAX_TILE_TEXTURES; i++)
-		{
-			terrainTypes[i] = TER_SANDYBRUSH;
-		}
+	{
+		terrainTypes[i] = TER_SANDYBRUSH;
+	}
 
 	/* Allocate a buffer for the LOS routines points */
 
@@ -275,7 +275,7 @@ BOOL mapNew(UDWORD width, UDWORD height)
 
 
 
-	aMapLinePoints = (TILE_COORD *)MALLOC(sizeof(TILE_COORD) * numPoints);
+	aMapLinePoints = (TILE_COORD *)malloc(sizeof(TILE_COORD) * numPoints);
 	if (!aMapLinePoints)
 	{
 		DBERROR(("Out of memory"));
@@ -540,7 +540,7 @@ BOOL mapLoad(char *pFileData, UDWORD fileSize)
 	{
 		debug( LOG_ERROR, "mapLoad: Incorrect file type" );
 		abort();
-		FREE(pFileData);
+		free(pFileData);
 		return FALSE;
 	}
 
@@ -555,7 +555,7 @@ BOOL mapLoad(char *pFileData, UDWORD fileSize)
 	{
 		debug( LOG_ERROR, "MapLoad: unsupported save format version %d", psHeader->version );
 		abort();
-		FREE(pFileData);
+		free(pFileData);
 		return FALSE;
 	}
 	else if (psHeader->version <= VERSION_9)
@@ -570,7 +570,7 @@ BOOL mapLoad(char *pFileData, UDWORD fileSize)
 	{
 		debug( LOG_ERROR, "MapLoad: undefined save format version %d", psHeader->version );
 		abort();
-		FREE(pFileData);
+		free(pFileData);
 		return FALSE;
 	}
 
@@ -622,9 +622,9 @@ BOOL mapLoad(char *pFileData, UDWORD fileSize)
 			freeAllStructs();
 			freeAllFeatures();
 			proj_FreeAllProjectiles();
-//			FREE(psMapTiles);
+//			free(psMapTiles);
 //			mapFreeTilesAndStrips();
-			FREE(aMapLinePoints);
+			free(aMapLinePoints);
 			psMapTiles = NULL;
 			aMapLinePoints = NULL;
 		}
@@ -635,7 +635,7 @@ BOOL mapLoad(char *pFileData, UDWORD fileSize)
 	{
 
 
-		psMapTiles = (MAPTILE *)MALLOC(sizeof(MAPTILE) * width*height);
+		psMapTiles = (MAPTILE *)malloc(sizeof(MAPTILE) * width*height);
 		if (psMapTiles == NULL)
 		{
 			debug( LOG_ERROR, "mapLoad: Out of memory" );
@@ -661,7 +661,7 @@ BOOL mapLoad(char *pFileData, UDWORD fileSize)
 
 
 
-		aMapLinePoints = (TILE_COORD *)MALLOC(sizeof(TILE_COORD) * numPoints);
+		aMapLinePoints = (TILE_COORD *)malloc(sizeof(TILE_COORD) * numPoints);
 		if (!aMapLinePoints)
 		{
 			DBERROR(("Out of memory"));
@@ -733,7 +733,7 @@ BOOL mapSave(char **ppFileData, UDWORD *pFileSize)
 		*pFileSize += 1+aNumEquiv[i];
 	}
 
-	*ppFileData = (char*)MALLOC(*pFileSize);
+	*ppFileData = (char*)malloc(*pFileSize);
 	if (*ppFileData == NULL)
 	{
 		debug( LOG_ERROR, "Out of memory" );
@@ -872,7 +872,7 @@ BOOL mapSaveMission(char **ppFileData, UDWORD *pFileSize)
 		*pFileSize += 1+aNumEquiv[i];
 	}
 
-	*ppFileData = MALLOC(*pFileSize);
+	*ppFileData = malloc(*pFileSize);
 	if (*ppFileData == NULL)
 	{
 		debug( LOG_ERROR, "Out of memory" );
@@ -962,19 +962,19 @@ BOOL mapSaveMission(char **ppFileData, UDWORD *pFileSize)
 BOOL mapShutdown(void)
 {
 	if(psMapTiles) {
-		FREE(psMapTiles);
+		free(psMapTiles);
 //		mapFreeTilesAndStrips();
 	}
 	psMapTiles = NULL;
 	mapWidth = mapHeight = 0;
 
 /*	if(aMapLinePoints) {
-		FREE(aMapLinePoints);
+		free(aMapLinePoints);
 	}
 	aMapLinePoints = NULL;
 
 	if(aAARootTbl) {
-		FREE(aAARootTbl);
+		free(aAARootTbl);
 	}
 	aAARootTbl = NULL;
 */
@@ -1130,7 +1130,7 @@ void mapRootTblInit(void)
 
 
 	/* Allocate the table */
-	aAARootTbl = MALLOC( tablecells * sizeof(AAFLOAT) );
+	aAARootTbl = malloc( tablecells * sizeof(AAFLOAT) );
 
 	/* Set the table values */
 //	incval = AADIV(AA_ONE,(tablecells - 1));	// This line is incorrect ... the second value is a constant not a fixed point value
@@ -1311,7 +1311,6 @@ void mapCalcAALine(SDWORD X1, SDWORD Y1,
 }
 
 /* Return linear interpolated height of x,y */
-//extern SDWORD map_Height(UDWORD x, UDWORD y)
 extern SWORD map_Height(UDWORD x, UDWORD y)
 {
 	SDWORD	retVal;
@@ -1321,14 +1320,21 @@ extern SWORD map_Height(UDWORD x, UDWORD y)
 	//SDWORD	lowerHeightOffset,upperHeightOffset;
 	SDWORD dx, dy, ox, oy;
 	BOOL	bWaterTile = FALSE;
-	ASSERT( x < (mapWidth << TILE_SHIFT),
-		"mapHeight: x coordinate bigger than map width" );
-	ASSERT( y < (mapHeight<< TILE_SHIFT),
-		"mapHeight: y coordinate bigger than map height" );
 
-	/* Tile comp */
-	tileX = x >> TILE_SHIFT;
-	tileY = y >> TILE_SHIFT;
+	// Print out a debug message when we get SDWORDs passed as if they're UDWORDs
+	if (x > SDWORD_MAX)
+		debug(LOG_ERROR, "map_Height: x coordinate is a negative SDWORD passed as an UDWORD: %d", (SDWORD)x);
+	if (y > SDWORD_MAX)
+		debug(LOG_ERROR, "map_Height: y coordinate is a negative SDWORD passed as an UDWORD: %d", (SDWORD)y);
+
+	x = x > SDWORD_MAX ? 0 : x;//negative SDWORD passed as UDWORD
+	x = x >= world_coord(mapWidth) ? world_coord(mapWidth - 1) : x;
+	y = y > SDWORD_MAX ? 0 : y;//negative SDWORD passed as UDWORD
+	y = y >= world_coord(mapHeight) ? world_coord(mapHeight - 1) : y;
+
+	/* Turn into tile coordinates */
+	tileX = map_coord(x);
+	tileY = map_coord(y);
 
 	/* Inter tile comp */
 	ox = (x & (TILE_UNITS-1));
@@ -1568,7 +1574,7 @@ BOOL	writeVisibilityData( char *pFileName )
 	fileSize = ( sizeof(struct _vis_save_header) + ( mapEntries*sizeof(UBYTE) ) );
 
 	/* Try and allocate it - freed up in same function */
-	pFileData = (char*)MALLOC(fileSize);
+	pFileData = (char*)malloc(fileSize);
 
 	/* Did we get it? */
 	if(!pFileData)
@@ -1607,7 +1613,7 @@ BOOL	writeVisibilityData( char *pFileName )
 	/* And free up the memory we used */
 	if (pFileData != NULL)
 	{
-		FREE(pFileData);
+		free(pFileData);
 	}
 
 	/* Everything is just fine! */
@@ -1664,6 +1670,7 @@ UBYTE				*pVisData;
 	return(TRUE);
 }
 // -----------------------------------------------------------------------------------
+
 
 
 

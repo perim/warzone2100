@@ -37,9 +37,6 @@
 
 #include <string.h>
 
-#define MALLOC(a) malloc(a)
-#define FREE(a) free(a); a = NULL;
-
 #include "typedefs.h"
 
 #define MAP_MAXWIDTH	256
@@ -525,7 +522,7 @@ BOOL gwCreateBlankZoneMap(void)
 		gwFreeZoneMap();
 	}
 
-	apRLEZones = (UBYTE**)MALLOC(sizeof(UBYTE *) * gwMapHeight());
+	apRLEZones = (UBYTE**)malloc(sizeof(UBYTE *) * gwMapHeight());
 	if (apRLEZones == NULL)
 	{
 		debug( LOG_ERROR, "gwCreateBlankZoneMap: Out of memory" );
@@ -535,7 +532,7 @@ BOOL gwCreateBlankZoneMap(void)
 	for(i=0; i< gwMapHeight(); i++)
 	{
 
-		apRLEZones[i] = (UBYTE*)MALLOC(gwMapWidth() * 2);
+		apRLEZones[i] = (UBYTE*)malloc(gwMapWidth() * 2);
 
 		if (apRLEZones[i] == NULL)
 		{
@@ -548,8 +545,8 @@ BOOL gwCreateBlankZoneMap(void)
 	// set all the zones to zero
 	for(i=0; i<gwMapHeight(); i++)
 	{
-		*apRLEZones[i] = (UBYTE)gwMapWidth();
-		*(apRLEZones[i] + 1) = 0;
+		apRLEZones[i][0] = (UBYTE)gwMapWidth();
+		apRLEZones[i][1] = 0;
 	}
 
 	return TRUE;
@@ -566,8 +563,8 @@ static void gwDecompressLine(SDWORD line, UBYTE *pBuffer)
 	bufPos = 0;
 	while (bufPos < gwMapWidth())
 	{
-		count = *(apRLEZones[line] + rlePos);
-		zone  = *(apRLEZones[line] + rlePos + 1);
+		count = apRLEZones[line][rlePos];
+		zone  = apRLEZones[line][rlePos + 1];
 		rlePos += 2;
 
 		for(store=0; store < count; store ++)
@@ -599,8 +596,8 @@ static void gwCompressLine(SDWORD line, UBYTE *pBuffer)
 			bufPos += 1;
 		}
 
-		*(apRLEZones[line] + rlePos) = (UBYTE)count;
-		*(apRLEZones[line] + rlePos + 1) = (UBYTE)zone;
+		apRLEZones[line][rlePos] = (UBYTE)count;
+		apRLEZones[line][rlePos + 1] = (UBYTE)zone;
 
 		rlePos += 2;
 	}

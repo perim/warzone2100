@@ -25,15 +25,13 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 
 /* Allow frame header files to be singly included */
 #define FRAME_LIB_INCLUDE
 
-// Report unused strings
-//#define DEBUG_GROUP0
 #include "types.h"
 #include "debug.h"
-#include "mem.h"
 #include "heap.h"
 #include "treap.h"
 #include "strres.h"
@@ -48,7 +46,7 @@ STR_RES	*psCurrRes;
 /* Allocate a string block */
 static BOOL strresAllocBlock(STR_BLOCK **ppsBlock, UDWORD size)
 {
-	*ppsBlock = (STR_BLOCK*)MALLOC(sizeof(STR_BLOCK));
+	*ppsBlock = (STR_BLOCK*)malloc(sizeof(STR_BLOCK));
 	if (!*ppsBlock)
 	{
 		debug( LOG_ERROR, "strresAllocBlock: Out of memory - 1" );
@@ -56,18 +54,18 @@ static BOOL strresAllocBlock(STR_BLOCK **ppsBlock, UDWORD size)
 		return FALSE;
 	}
 
-	(*ppsBlock)->apStrings = (char**)MALLOC(sizeof(char *) * size);
+	(*ppsBlock)->apStrings = (char**)malloc(sizeof(char *) * size);
 	if (!(*ppsBlock)->apStrings)
 	{
 		debug( LOG_ERROR, "strresAllocBlock: Out of memory - 2" );
 		abort();
-		FREE(*ppsBlock);
+		free(*ppsBlock);
 		return FALSE;
 	}
 	memset((*ppsBlock)->apStrings, 0, sizeof(char *) * size);
 
 #ifdef DEBUG
-	(*ppsBlock)->aUsage = (UDWORD*)MALLOC(sizeof(UDWORD) * size);
+	(*ppsBlock)->aUsage = (UDWORD*)malloc(sizeof(UDWORD) * size);
 	memset((*ppsBlock)->aUsage, 0, sizeof(UDWORD) * size);
 #endif
 
@@ -80,7 +78,7 @@ BOOL strresCreate(STR_RES **ppsRes, UDWORD init, UDWORD ext)
 {
 	STR_RES		*psRes;
 
-	psRes = (STR_RES*)MALLOC(sizeof(STR_RES));
+	psRes = (STR_RES*)malloc(sizeof(STR_RES));
 	if (!psRes)
 	{
 		debug( LOG_ERROR, "strresCreate: Out of memory" );
@@ -95,14 +93,14 @@ BOOL strresCreate(STR_RES **ppsRes, UDWORD init, UDWORD ext)
 	{
 		debug( LOG_ERROR, "strresCreate: Out of memory" );
 		abort();
-		FREE(psRes);
+		free(psRes);
 		return FALSE;
 	}
 
 	if (!strresAllocBlock(&psRes->psStrings, init))
 	{
 		TREAP_DESTROY(psRes->psIDTreap);
-		FREE(psRes);
+		free(psRes);
 		return FALSE;
 	}
 	psRes->psStrings->psNext = NULL;
@@ -131,8 +129,8 @@ void strresReleaseIDStrings(STR_RES *psRes)
 		TREAP_DEL(psRes->psIDTreap, (void*)psID->pIDStr);
 		if (psID->id & ID_ALLOC)
 		{
-			FREE(psID->pIDStr);
-			FREE(psID);
+			free(psID->pIDStr);
+			free(psID);
 		}
 	}
 }
@@ -164,7 +162,7 @@ void strresDestroy(STR_RES *psRes)
 #endif
 			if (psBlock->apStrings[i - psBlock->idStart])
 			{
-				FREE(psBlock->apStrings[i - psBlock->idStart]);
+				free(psBlock->apStrings[i - psBlock->idStart]);
 			}
 #ifdef DEBUG
 			else if (i < psRes->nextID)
@@ -174,16 +172,16 @@ void strresDestroy(STR_RES *psRes)
 #endif
 		}
 		psNext = psBlock->psNext;
-		FREE(psBlock->apStrings);
+		free(psBlock->apStrings);
 #ifdef DEBUG
-		FREE(psBlock->aUsage);
+		free(psBlock->aUsage);
 #endif
-		FREE(psBlock);
+		free(psBlock);
 	}
 
 	// Release the treap and free the final memory
 	TREAP_DESTROY(psRes->psIDTreap);
-	FREE(psRes);
+	free(psRes);
 }
 
 
@@ -280,19 +278,19 @@ BOOL strresStoreString(STR_RES *psRes, char *pID, char *pString)
 	if (!psID)
 	{
 		// No ID yet so generate a new one
-		psID = (STR_ID*)MALLOC(sizeof(STR_ID));
+		psID = (STR_ID*)malloc(sizeof(STR_ID));
 		if (!psID)
 		{
 			debug( LOG_ERROR, "strresStoreString: Out of memory" );
 			abort();
 			return FALSE;
 		}
-		psID->pIDStr = (char*)MALLOC(sizeof(char) * (stringLen(pID) + 1));
+		psID->pIDStr = (char*)malloc(sizeof(char) * (stringLen(pID) + 1));
 		if (!psID->pIDStr)
 		{
 			debug( LOG_ERROR, "strresStoreString: Out of memory" );
 			abort();
-			FREE(psID);
+			free(psID);
 			return FALSE;
 		}
 		stringCpy(psID->pIDStr, pID);
@@ -335,7 +333,7 @@ BOOL strresStoreString(STR_RES *psRes, char *pID, char *pString)
 	}
 
 	// Allocate a copy of the string
-	pNew = (char*)MALLOC(sizeof(char) * (stringLen(pString) + 1));
+	pNew = (char*)malloc(sizeof(char) * (stringLen(pString) + 1));
 	if (!pNew)
 	{
 		debug( LOG_ERROR, "strresStoreString: Out of memory" );

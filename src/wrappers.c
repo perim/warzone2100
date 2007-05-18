@@ -93,7 +93,7 @@ STAR	stars[30];	// quick hack for loading stuff
 extern int WFont;
 extern BOOL bLoadSaveUp;
 
-static BOOL		firstcall;
+static BOOL		firstcall = FALSE;
 static UDWORD	loadScreenCallNo=0;
 static BOOL		bPlayerHasLost = FALSE;
 static BOOL		bPlayerHasWon = FALSE;
@@ -122,9 +122,7 @@ UDWORD	i;
 BOOL frontendInitVars(void)
 {
 	firstcall = TRUE;
-
 	initStars();
-
 
 	return TRUE;
 }
@@ -139,14 +137,15 @@ TITLECODE titleLoop(void)
 	pie_SetFogStatus(FALSE);
 	screen_RestartBackDrop();
 
-	if (firstcall) {
-		startTitleMenu();
-		titleMode = TITLE;
+	if (firstcall)
+	{
 		firstcall = FALSE;
 
-		frameSetCursorFromRes(IDC_DEFAULT);						// reset cursor	(sw)
+		changeTitleMode(TITLE);
 
-		if(NetPlay.bLobbyLaunched)					// lobbies skip title screens & go into the game
+		frameSetCursorFromRes(IDC_DEFAULT); // reset cursor (sw)
+
+		if(NetPlay.bLobbyLaunched) // lobbies skip title screens & go into the game
 		{
 			if (NetPlay.bHost)
 			{
@@ -156,17 +155,15 @@ TITLECODE titleLoop(void)
 			{
 				ingame.bHostSetup = FALSE;
 			}
-
 			changeTitleMode(QUIT);
 		}
 	}
 
-	switch(titleMode)								// run relevant title screen code.
+	switch(titleMode) // run relevant title screen code.
 	{
-
-										// MULTIPLAYER screens
+		// MULTIPLAYER screens
 		case PROTOCOL:
-			runConnectionScreen();					// multiplayer connection screen.
+			runConnectionScreen(); // multiplayer connection screen.
 			break;
 		case MULTIOPTION:
 			runMultiOptions();
@@ -187,7 +184,6 @@ TITLECODE titleLoop(void)
 			runKeyMapEditor();
 			break;
 
-
 		case TITLE:
 			runTitleMenu();
 			break;
@@ -199,7 +195,6 @@ TITLECODE titleLoop(void)
 		case TUTORIAL:
 			runTutorialMenu();
 			break;
-
 
 //		case GRAPHICS:
 //			runGraphicsOptionsMenu();
@@ -232,16 +227,13 @@ TITLECODE titleLoop(void)
 			runGameOptions3Menu();
 			break;
 
-
 		case QUIT:
 			RetCode = TITLECODE_QUITGAME;
 			break;
 
 		case STARTGAME:
 		case LOADSAVEGAME:
-
 			initLoadingScreen(TRUE);//render active
-
   			if (titleMode == LOADSAVEGAME)
 			{
 				RetCode = TITLECODE_SAVEGAMELOAD;
@@ -250,12 +242,9 @@ TITLECODE titleLoop(void)
 			{
 				RetCode = TITLECODE_STARTGAME;
 			}
-
 			return RetCode;			// don't flip!
-			break;
 
 		case SHOWINTRO:
-
 			pie_SetFogStatus(FALSE);
 			pie_ScreenFlip(CLEAR_BLACK);//flip to clear screen but not here//reshow intro video.
 	  		pie_ScreenFlip(CLEAR_BLACK);//flip to clear screen but not here
@@ -279,7 +268,6 @@ TITLECODE titleLoop(void)
 	    && keyPressed(KEY_RETURN)) {
 		screenToggleMode();
 	}
-	SDL_Delay(30);	//To fix ALL menus to be less CPU hogging. -Q 5-14-05
 	return RetCode;
 }
 
@@ -381,14 +369,13 @@ void startCreditsScreen(void)
 }
 
 /* This function does nothing - since it's already been drawn */
-void	runCreditsScreen( void )
+void runCreditsScreen( void )
 {
 	// Check for key presses now.
-	if(keyReleased(KEY_ESC)
+	if( keyReleased(KEY_ESC)
 	   || keyReleased(KEY_SPACE)
 	   || mouseReleased(MOUSE_LMB)
-	   || (gameTime-lastChange > 4000)
-	   )
+	   || gameTime - lastChange > 4000 )
 	{
 		lastChange = gameTime;
 		changeTitleMode(QUIT);

@@ -173,7 +173,7 @@ BOOL loadFeatureStats(char *pFeatureData, UDWORD bufferSize)
 
 	numFeatureStats = numCR(pFeatureData, bufferSize);
 
-	asFeatureStats = (FEATURE_STATS *)MALLOC(sizeof(FEATURE_STATS)*
+	asFeatureStats = (FEATURE_STATS *)malloc(sizeof(FEATURE_STATS)*
 		numFeatureStats);
 
 	if (asFeatureStats == NULL)
@@ -259,13 +259,13 @@ BOOL loadFeatureStats(char *pFeatureData, UDWORD bufferSize)
 		psFeature++;
 	}
 
-//	FREE(pData);
+//	free(pData);
 
 	return TRUE;
 
 	/* Allocate the stats Array */
 /*	numFeatureStats = 19;
-	asFeatureStats = (FEATURE_STATS *)MALLOC(sizeof(FEATURE_STATS) * numFeatureStats);
+	asFeatureStats = (FEATURE_STATS *)malloc(sizeof(FEATURE_STATS) * numFeatureStats);
 	if (!asFeatureStats)
 	{
 		DBERROR(("Out of memory"));
@@ -626,13 +626,13 @@ void featureStatsShutDown(void)
 
 	for(inc=0; inc < numFeatureStats; inc++, psFeature++)
 	{
-		FREE(psFeature->pName);
+		free(psFeature->pName);
 	}
 #endif
 
 	if(numFeatureStats)
 	{
-		FREE(asFeatureStats);
+		free(asFeatureStats);
 	}
 }
 
@@ -782,12 +782,12 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,BOOL FromSave)
 	/* Dump down the building wrecks at random angles - still looks shit though */
 	if(psStats->subType == FEAT_BUILD_WRECK)
 	{
-		psFeature->direction = (UWORD)(rand()%360);
+		psFeature->direction = rand() % 360;
 		psFeature->gfxScaling = (UWORD)(80 + (10 - rand()%20)); // put into define
 	}
 	else if(psStats->subType == FEAT_TREE)
 	{
-		psFeature->direction = (UWORD)(rand()%360);
+		psFeature->direction = rand() % 360;
 		psFeature->gfxScaling = (UWORD) (100 + (14-rand()%28));
 	}
 	else

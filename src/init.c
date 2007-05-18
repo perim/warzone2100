@@ -688,7 +688,7 @@ static BOOL loadLevFile(const char* filename, searchPathMode datadir) {
 		debug(LOG_ERROR, "loadLevFile: Parse error in %s\n", filename);
 		return FALSE;
 	}
-	FREE(pBuffer);
+	free(pBuffer);
 
 	return TRUE;
 }
@@ -958,7 +958,7 @@ BOOL systemInitialise(void)
 	{
 		displayBufferSize = 5000000;
 	}
-	DisplayBuffer = (char*)MALLOC(displayBufferSize);
+	DisplayBuffer = (char*)malloc(displayBufferSize);
 	if (DisplayBuffer == NULL)
 	{
 		debug( LOG_ERROR, "Unable to allocate memory for display buffer" );
@@ -1018,7 +1018,7 @@ BOOL systemInitialise(void)
 // ////////////////////////////////////////////////////////////////////////////
 // Called once at program shutdown.
 //
-BOOL systemShutdown(void)
+void systemShutdown(void)
 {
 //	unsigned int i;
 #ifdef ARROWS
@@ -1031,17 +1031,9 @@ BOOL systemShutdown(void)
 	// free up all the load functions (all the data should already have been freed)
 	resReleaseAll();
 
-/*
-	for( i = 0; i < data_dirs_size; i++ )
+	if (!bDisableLobby && !multiShutdown()) // ajl. init net stuff
 	{
-		free( data_dirs[i].name );
-	}
-	free( data_dirs );
-*/
-
-	if (!bDisableLobby &&	!multiShutdown())		// ajl. init net stuff
-	{
-		return FALSE;
+		return;
 	}
 
 	debug(LOG_MAIN, "shutting down audio subsystems");
@@ -1054,16 +1046,16 @@ BOOL systemShutdown(void)
 
 	if ( audio_Disabled() == FALSE && !audio_Shutdown() )
 	{
-		return FALSE;
+		return;
 	}
 
 	debug(LOG_MAIN, "shutting down graphics subsystem");
-	FREE(DisplayBuffer);
+	free(DisplayBuffer);
 	iV_ShutDown();
 	levShutDown();
 	widgShutDown();
 
-	return TRUE;
+	return;
 }
 
 /***************************************************************************/
@@ -1104,7 +1096,7 @@ init_ObjectDead( void * psObj )
 
 static iIMDShape *anim_GetShapeFunc( char * pStr )
 {
-	return resGetData( "IMD", pStr );
+	return (iIMDShape*)resGetData( "IMD", pStr );
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -1488,7 +1480,6 @@ BOOL stageTwoInitialise(void)
 		}
 	}
 
-
 	if (!dispInitialise())		/* Initialise the display system */
 	{
 		return FALSE;
@@ -1510,18 +1501,6 @@ BOOL stageTwoInitialise(void)
 		abort();
 		return FALSE;
 	}
-
-/*
-	if (!loadExtraIMDs())
-	{
-		return FALSE;
-	}
-*/
-
-	/*if (!mechInitialise())		// Initialise the mechanics system
-	{
-		return FALSE;
-	}*/
 
 	if (!cmdDroidInit())
 	{
@@ -1549,23 +1528,15 @@ BOOL stageTwoInitialise(void)
 
 	LOADBARCALLBACK();	//	loadingScreenCallback();
 
-//	if (!initTitle())
-//	{
-//		return(FALSE);
-//	}
-
 	if (!initMessage())			/* Initialise the message heaps */
 	{
 		return FALSE;
 	}
 
-
 	if (!gwInitialise())
 	{
 		return FALSE;
 	}
-
-
 
 	// keymappings
 	LOADBARCALLBACK();	//	loadingScreenCallback();
@@ -1573,23 +1544,9 @@ BOOL stageTwoInitialise(void)
 	keyInitMappings(FALSE);
 	LOADBARCALLBACK();	//	loadingScreenCallback();
 
-
 	frameSetCursorFromRes(IDC_DEFAULT);
 
-
 	SetFormAudioIDs(ID_SOUND_WINDOWOPEN,ID_SOUND_WINDOWCLOSE);
-
-//	mapNew(256,256);	// Generate the largest size of map needed for the game
-//	if (!loadGame("final.gam"))
-//	if (!loadGame("savetest.gam"))
-//	{
-//		return FALSE;
-//	}
-
-//	intSetMapPos(43 << TILE_SHIFT, 43 << TILE_SHIFT);
-
-
-
 
 	debug(LOG_MAIN, "stageTwoInitialise: done");
 

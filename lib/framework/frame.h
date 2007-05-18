@@ -28,8 +28,15 @@
 /* This one must be invoked *after* platform.h to get _GNU_SOURCE! */
 #include <string.h>
 #include <locale.h>
+#include <stdlib.h>
+#include <ctype.h>
 
 #include "gettext.h"
+
+#if !defined(LC_MESSAGES)
+# define LC_MESSAGES 0
+#endif
+
 #define _(String) gettext(String)
 #define N_(String) gettext_noop(String)
 
@@ -44,7 +51,6 @@
 #include "macros.h"
 #include "types.h"
 #include "debug.h"
-#include "mem.h"
 
 #include "heap.h"
 #include "treap.h"
@@ -68,21 +74,20 @@ extern BOOL frameInitialise(
  */
 extern void frameShutDown(void);
 
-/* The current status of the framework */
-typedef enum _frame_status
+
+typedef enum _focus_state
 {
-	FRAME_OK,			// Everything normal
-	FRAME_KILLFOCUS,	// The main app window has lost focus (might well want to pause)
-	FRAME_SETFOCUS,		// The main app window has focus back
-	FRAME_QUIT,			// The main app window has been told to quit
-} FRAME_STATUS;
+	FOCUS_OUT,		// Window does not have the focus
+	FOCUS_IN,		// Window has got the focus
+} FOCUS_STATE;
+
 
 /* Call this each cycle to allow the framework to deal with
  * windows messages, and do general house keeping.
  *
  * Returns FRAME_STATUS.
  */
-extern FRAME_STATUS frameUpdate(void);
+extern void frameUpdate(void);
 
 /* Set the current cursor from a Resource ID
  * This is the same as calling:
@@ -92,7 +97,7 @@ extern FRAME_STATUS frameUpdate(void);
 extern void frameSetCursorFromRes(SWORD resID);
 
 /* Returns the current frame we're on - used to establish whats on screen */
-extern UDWORD	frameGetFrameNumber(void);
+extern UDWORD frameGetFrameNumber(void);
 
 /**
  * Average framerate of the last seconds
@@ -101,20 +106,6 @@ extern UDWORD	frameGetFrameNumber(void);
  */
 extern UDWORD frameGetAverageRate(void);
 
-
-/**
- * Set the framerate limit
- *
- * \param fpsLimit Desired framerate
- */
-extern void setFramerateLimit(Uint32 fpsLimit);
-
-/**
- * Get the framerate limit
- *
- * \return Desired framerate
- */
-extern Uint32 getFramerateLimit(void);
 
 /* Load the file with name pointed to by pFileName into a memory buffer. */
 extern BOOL loadFile(const char *pFileName,		// The filename
@@ -138,6 +129,7 @@ UDWORD HashStringIgnoreCase( const char *String );
 
 
 /* Endianness hacks */
+// TODO Use SDL_SwapXXXX instead
 
 #ifdef __BIG_ENDIAN__
 static inline void endian_uword(UWORD *uword) {

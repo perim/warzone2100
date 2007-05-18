@@ -84,20 +84,20 @@ IMAGEFILE *iV_LoadImageFile(char *FileData, WZ_DECL_UNUSED UDWORD FileSize)
 	endian_uword(&Header->BitDepth);
 	endian_uword(&Header->NumTPages);
 
-	ImageFile = (IMAGEFILE*)MALLOC(sizeof(IMAGEFILE));
+	ImageFile = (IMAGEFILE*)malloc(sizeof(IMAGEFILE));
 	if(ImageFile == NULL) {
 		debug( LOG_ERROR, "Out of memory" );
 		return NULL;
 	}
 
 
-	ImageFile->TexturePages = (iTexture*)MALLOC(sizeof(iTexture)*Header->NumTPages);
+	ImageFile->TexturePages = (iTexture*)malloc(sizeof(iTexture)*Header->NumTPages);
 	if(ImageFile->TexturePages == NULL) {
 		debug( LOG_ERROR, "Out of memory" );
 		return NULL;
 	}
 
-	ImageFile->ImageDefs = (IMAGEDEF*)MALLOC(sizeof(IMAGEDEF)*Header->NumImages);
+	ImageFile->ImageDefs = (IMAGEDEF*)malloc(sizeof(IMAGEDEF)*Header->NumImages);
 	if(ImageFile->ImageDefs == NULL) {
 		debug( LOG_ERROR, "Out of memory" );
 		return NULL;
@@ -142,18 +142,18 @@ void iV_FreeImageFile(IMAGEFILE *ImageFile)
 {
 
 //	for(i=0; i<ImageFile->Header.NumTPages; i++) {
-//		FREE(ImageFile->TexturePages[i].bmp);
+//		free(ImageFile->TexturePages[i].bmp);
 //	}
 
-	FREE(ImageFile->TexturePages);
-	FREE(ImageFile->ImageDefs);
-	FREE(ImageFile);
+	free(ImageFile->TexturePages);
+	free(ImageFile->ImageDefs);
+	free(ImageFile);
 }
 
 
 static BOOL LoadTextureFile(char *FileName, iTexture *pSprite, int *texPageID)
 {
-	int i=0;
+	unsigned int i=0;
 
 	debug(LOG_TEXTURE, "LoadTextureFile: %s", FileName);
 
@@ -170,17 +170,14 @@ static BOOL LoadTextureFile(char *FileName, iTexture *pSprite, int *texPageID)
 	/* We have already loaded this one? */
 	while (i < _TEX_INDEX) {
 		if (strcasecmp(FileName, _TEX_PAGE[i].name) == 0) {
-			*texPageID = (_TEX_PAGE[i].textPage3dfx);
+			*texPageID = _TEX_PAGE[i].id;
 			debug(LOG_TEXTURE, "LoadTextureFile: already loaded");
 			return TRUE;
 		}
 		i++;
 	}
 
-#ifdef PIETOOL
-	*texPageID=NULL;
-#else
-	*texPageID = pie_AddBMPtoTexPages(pSprite, FileName, 1, TRUE);
-#endif
+	*texPageID = pie_AddTexPage(pSprite, FileName, 1, TRUE);
+
 	return TRUE;
 }

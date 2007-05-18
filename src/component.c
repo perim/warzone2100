@@ -36,7 +36,6 @@
 #include "lib/ivis_common/piedef.h" //ivis matrix code
 #include "lib/ivis_common/piestate.h" //ivis render code
 #include "lighting.h"
-#include "lib/ivis_common/bspfunc.h"
 #include "loop.h"
 
 #define GetRadius(x) ((x)->sradius)
@@ -143,23 +142,6 @@ void updateLightLevels(void)
 
 void setMatrix(Vector3i *Position, Vector3i *Rotation, Vector3i *CameraPos, BOOL RotXYZ)
 {
-	Vector3i BSPCameraPos;
-	OBJPOS Camera = {0,0,0,0,0,0};
-
-	Camera.pitch=-45;
-	Camera.yaw=0;
-
-//	Rotation->y=0;
-
-	GetRealCameraPos(&Camera,Position->z,&BSPCameraPos);
-//	SetBSPCameraPos(BSPCameraPos.x,BSPCameraPos.y,BSPCameraPos.z);
-	// Fixes BSP drawing in buttons. eg Player HQ.
-	SetBSPCameraPos(BSPCameraPos.x,500,BSPCameraPos.z);
-	SetBSPObjectPos(0,0,0);			// For imd button the bsp is sourced at 0,0,0
-
-
-	SetBSPObjectRot(DEG(-Rotation->y),0);								// Droid rotation
-
 	pie_PerspectiveBegin();
    	pie_MatBegin();
 
@@ -318,7 +300,6 @@ void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i
         Position->y -= 20;
     }
 
-	SetBSPObjectPos(0,0,0);
 	setMatrix(Position,Rotation,&TmpCamPos,RotXYZ);
 	pie_MatScale(scale);
 
@@ -769,24 +750,24 @@ void displayComponentButtonObject(DROID *psDroid, Vector3i *Rotation, Vector3i *
 // Watermelon:multiple turrets display removed the pointless mountRotation
 void displayComponentObject(BASE_OBJECT *psObj)
 {
-DROID		*psDroid;
-//iIMDShape	*psShape;
-Vector3i		position, rotation;	//,null;
-//iPoint		screenCoords;
-//SDWORD		dummyZ;
-Sint32		xShift,zShift;
-UDWORD		worldAngle;
-SDWORD		difference;
-SDWORD		frame;
-PROPULSION_STATS	*psPropStats;
-UDWORD	tileX,tileY;
-MAPTILE	*psTile;
+	DROID		*psDroid;
+	//iIMDShape	*psShape;
+	Vector3i		position, rotation;	//,null;
+	//iPoint		screenCoords;
+	//SDWORD		dummyZ;
+	Sint32		xShift,zShift;
+	UDWORD		worldAngle;
+	SDWORD		difference;
+	SDWORD		frame;
+	PROPULSION_STATS	*psPropStats;
+	UDWORD	tileX,tileY;
+	MAPTILE	*psTile;
 
 	psDroid = (DROID *)psObj;
 	psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
 
-	worldAngle = (UDWORD) ((UDWORD)player.r.y/DEG_1)%360;
-	difference = (worldAngle-psObj->direction);
+	worldAngle = (UDWORD)(player.r.y / DEG_1) % 360;
+	difference = worldAngle - psObj->direction;
 
 	if((difference>0 && difference <180) || difference<-180)
 	{
@@ -1472,9 +1453,9 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 						psShape = getImdFromIndex(MI_FLAME);
 
 						/* Rotate for droid */
-						pie_MatRotY(DEG((SDWORD)psDroid->direction));
-						pie_MatRotX(DEG(-psDroid->pitch));
-						pie_MatRotZ(DEG(-psDroid->roll));
+						pie_MatRotY( DEG( (SDWORD)psDroid->direction ) );
+						pie_MatRotX( DEG( -psDroid->pitch ) );
+						pie_MatRotZ( DEG( -psDroid->roll ) );
 						//Watermelon:rotate Y
 					   	pie_MatRotY(DEG( -( (-(SDWORD)(psDroid->turretRotation[0])) ) ));
 

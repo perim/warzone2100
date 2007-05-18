@@ -45,6 +45,8 @@
 #include "hci.h"
 #include "fpath.h"
 #include "radar.h"
+// HACK bAllowDebugMode shouldn't be in clparse
+#include "clparse.h"
 
 // ////////////////////////////////////////////////////////////////////////////
 
@@ -58,6 +60,7 @@ extern  char	sForceName[256];
 extern	UBYTE	sPlayer[128];
 
 extern void registry_clear(void); // from configfile.c
+
 
 // ////////////////////////////////////////////////////////////////////////////
 BOOL loadConfig(void)
@@ -100,6 +103,16 @@ BOOL loadConfig(void)
 
 	if (getWarzoneKeyNumeric("playaudiocds", &val)) {
 		war_SetPlayAudioCDs(val);
+	}
+
+	if (getWarzoneKeyNumeric("debugmode", &val))
+	{
+		bAllowDebugMode = val;
+	}
+	else
+	{
+		bAllowDebugMode = FALSE;
+		setWarzoneKeyNumeric("debugmode", FALSE);
 	}
 
 	if (getWarzoneKeyNumeric("framerate", &val))
@@ -188,6 +201,36 @@ BOOL loadConfig(void)
 	{
 		setInvertMouseStatus(TRUE);
 		setWarzoneKeyNumeric("mouseflip", TRUE);
+	}
+
+	if (getWarzoneKeyString("masterserver_name", sBuf))
+	{
+		NETsetMasterserverName(sBuf);
+	}
+	else
+	{
+		NETsetMasterserverName("lobby.wz2100.net");
+		setWarzoneKeyString("masterserver_name", "lobby.wz2100.net");
+	}
+
+	if (getWarzoneKeyNumeric("masterserver_port", &val))
+	{
+		NETsetMasterserverPort(val);
+	}
+	else
+	{
+		NETsetMasterserverPort(9998);
+		setWarzoneKeyNumeric("masterserver_port", 9998);
+	}
+
+	if (getWarzoneKeyNumeric("gameserver_port", &val))
+	{
+		NETsetGameserverPort(val);
+	}
+	else
+	{
+		NETsetGameserverPort(9999);
+		setWarzoneKeyNumeric("gameserver_port", 9999);
 	}
 
 	// //////////////////////////
@@ -309,7 +352,7 @@ BOOL loadConfig(void)
 	// /////////////////////////
 
 	// game name
-	if (getWarzoneKeyString("gameName",(char*)&sBuf))
+	if (getWarzoneKeyString("gameName", sBuf))
 	{
 		strcpy(game.name, sBuf);
 	}
@@ -319,7 +362,7 @@ BOOL loadConfig(void)
 	}
 
 	// player name
-	if (getWarzoneKeyString("playerName",(char*)&sBuf))
+	if (getWarzoneKeyString("playerName", sBuf))
 	{
 		strcpy((char*)sPlayer, sBuf);
 	}
@@ -329,7 +372,7 @@ BOOL loadConfig(void)
 	}
 
 	// map name
-	if(getWarzoneKeyString("mapName",(char*)&sBuf))
+	if(getWarzoneKeyString("mapName", sBuf))
 	{
 		strcpy(game.map, sBuf);
 	}
@@ -428,7 +471,7 @@ BOOL loadConfig(void)
 	}
 
 	// force name
-	if(getWarzoneKeyString("forceName",(char*)&sBuf))
+	if(getWarzoneKeyString("forceName", sBuf))
 	{
 		strcpy(sForceName, sBuf);
 	}
@@ -535,6 +578,7 @@ BOOL saveConfig(void)
 		setDifficultyLevel(DL_NORMAL);
 	}
 	setWarzoneKeyNumeric("allowSubtitles", war_GetAllowSubtitles());
+	setWarzoneKeyNumeric("debugmode", bAllowDebugMode);
 	setWarzoneKeyNumeric("framerate", (SDWORD)getFramerateLimit());
 	setWarzoneKeyNumeric("gamma", (SDWORD)gammaValue);
 	setWarzoneKeyNumeric("scroll",(SDWORD)scroll_speed_accel);		// scroll

@@ -2700,11 +2700,11 @@ void	effectDroidUpdates( void )
 					if( (SDWORD)psDroid->sMove.speed != 0 )
 					{
 				   		/* Present direction is important */
-						xBehind = ((50*iV_SIN(DEG(psDroid->direction))) >> FP12_SHIFT);
-						yBehind = ((50*iV_COS(DEG(psDroid->direction))) >> FP12_SHIFT);
+						xBehind = ( ( 50 * iV_SIN( DEG( (int)psDroid->direction) ) ) >> FP12_SHIFT );
+						yBehind = ( ( 50 * iV_COS( DEG( (int)psDroid->direction) ) ) >> FP12_SHIFT );
 						pos.x = psDroid->x - xBehind;
 						pos.z = psDroid->y - yBehind;
-						pos.y = map_Height(pos.x,pos.z);
+						pos.y = map_Height(pos.x, pos.z);
 //						addEffect(&pos,EFFECT_SMOKE,SMOKE_TYPE_TRAIL,FALSE,NULL);
 					}
 				}
@@ -2905,7 +2905,7 @@ iIMDShape		*psOrig;
 	fileSize = ( sizeof(struct _fx_save_header) + ( fxEntries*sizeof(struct _effect_def) ) );
 
 	/* Try and allocate it - freed up in same function */
-	pFileData = (char*)MALLOC(fileSize);
+	pFileData = (char*)malloc(fileSize);
 
 	/* Did we get it? */
 	if(!pFileData)
@@ -2998,7 +2998,7 @@ iIMDShape		*psOrig;
 	/* And free up the memory we used */
 	if (pFileData != NULL)
 	{
-		FREE(pFileData);
+		free(pFileData);
 	}
 	/* Everything is just fine! */
 	return TRUE;

@@ -74,8 +74,6 @@
 #define pie_DROID_BRIGHT_LEVEL 192
 
 //Render style flags for all pie draw functions
-#define pie_FLAG_MASK           0xffff
-#define pie_FLAT                0x1
 #define pie_TRANSLUCENT         0x2
 #define pie_ADDITIVE            0x4
 #define pie_NO_BILINEAR         0x8
@@ -172,24 +170,9 @@ extern void pie_Draw3DShape(iIMDShape *shape, int frame, int team, UDWORD colour
 extern void pie_DrawImage(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style);
 extern void pie_DrawImage270( PIEIMAGE *image, PIERECT *dest );
 
-void pie_DrawTriangle( iVertex *pv );
-extern void pie_DrawTexTriangle(PIEVERTEX *aVrts, SDWORD texPage, void* psEffects);
+extern void pie_DrawTexTriangle(PIEVERTEX *aVrts, void* psEffects);
 
 extern void pie_GetResetCounts(SDWORD* pPieCount, SDWORD* pTileCount, SDWORD* pPolyCount, SDWORD* pStateCount);
-
-extern void SetBSPObjectPos(SDWORD x,SDWORD y,SDWORD z);
-extern void SetBSPCameraPos(SDWORD x,SDWORD y,SDWORD z);
-
-/*!
- * Load a PNG from buffer pngimage into sprite
- *
- * \param pngimage Buffer to load from
- * \param sprite Sprite to read into
- * \return TRUE on success, FALSE otherwise
- */
-BOOL pie_PNGLoadMem(char *pngimage, iTexture *sprite);
-
-void SetBSPObjectRot(SDWORD Yaw, SDWORD Pitch);
 
 void pie_BeginLighting(float x, float y, float z);
 void pie_EndLighting(void);

@@ -24,8 +24,6 @@
  *
  * Routines for setting the game options and starting the init process.
  */
-#include <string.h>
-
 #include "lib/framework/frame.h"			// for everything
 #include "map.h"
 #include "game.h"			// for loading maps
@@ -59,31 +57,7 @@
 // External Variables
 
 extern char	MultiForcesPath[255];
-
 extern char	buildTime[8];
-
-// ////////////////////////////////////////////////////////////////////////////
-// Local Functions
-
-void		sendOptions			(UDWORD dest, UDWORD player);
-void		recvOptions			(NETMSG *pMsg);
-//static BOOL dMatchInit			(void);
-static BOOL campInit			(void);
-BOOL		hostCampaign		(char *sGame,		char *sPlayer);
-BOOL		joinCampaign		(UDWORD gameNumber, char *playername);
-//BOOL		hostArena			(char *sGame,		char *sPlayer);
-//BOOL		joinArena			(UDWORD gameNumber, char *playername);
-BOOL		LobbyLaunched		(void);
-void		playerResponding	(void);
-BOOL		multiInitialise		(void);		//only once.
-BOOL		lobbyInitialise		(void);		//only once.
-BOOL		sendLeavingMsg		(void);
-BOOL		multiShutdown		(void);
-BOOL		addTemplate			(UDWORD player, DROID_TEMPLATE *psNew);
-BOOL		addTemplateSet		(UDWORD from,UDWORD to);
-BOOL		copyTemplateSet		(UDWORD from,UDWORD to);
-BOOL		multiGameInit		(void);		// every game
-BOOL		multiGameShutdown	(void);
 
 // ////////////////////////////////////////////////////////////////////////////
 // ////////////////////////////////////////////////////////////////////////////
@@ -186,7 +160,7 @@ void recvOptions(NETMSG *pMsg)
 	if(ingame.numStructureLimits)							// free old limits.
 	{
 			ingame.numStructureLimits = 0;
-			FREE(ingame.pStructureLimits);
+			free(ingame.pStructureLimits);
 	}
 
 	NetGet(pMsg,pos,player2dpid);
@@ -225,7 +199,7 @@ void recvOptions(NETMSG *pMsg)
 	pos += sizeof(ingame.numStructureLimits);
 	if(ingame.numStructureLimits)
 	{
-		ingame.pStructureLimits = (UBYTE*)MALLOC(ingame.numStructureLimits*(sizeof(UDWORD)+sizeof(UBYTE)));	// malloc some room
+		ingame.pStructureLimits = (UBYTE*)malloc(ingame.numStructureLimits*(sizeof(UDWORD)+sizeof(UBYTE)));	// malloc some room
 		memcpy(ingame.pStructureLimits, &(pMsg->body[pos]) ,ingame.numStructureLimits*(sizeof(UDWORD)+sizeof(UBYTE)));
 	}
 
@@ -471,25 +445,25 @@ BOOL joinArena(UDWORD gameNumber, char *playerName)
 // Lobby launched. fires the correct routine when the game was lobby launched.
 BOOL LobbyLaunched(void)
 {
-	UDWORD			i;
-	PLAYERSTATS		pl={0};
+	UDWORD i;
+	PLAYERSTATS pl={0};
 
 	// set the player info as soon as possible to avoid screwy scores appearing elsewhere.
 	NETplayerInfo();
-	NETfindGame(TRUE);
+	NETfindGame();
 
-	for(i = 0; (i< MAX_PLAYERS)&& (NetPlay.players[i].dpid != NetPlay.dpidPlayer);i++);
+	for (i = 0; i < MAX_PLAYERS && NetPlay.players[i].dpid != NetPlay.dpidPlayer; i++);
 
-	if(!loadMultiStats(NetPlay.players[i].name,&pl) )
+	if(!loadMultiStats(NetPlay.players[i].name, &pl) )
 	{
-		return FALSE;									// cheating was detected, so fail.
+		return FALSE; // cheating was detected, so fail.
 	}
 
-	setMultiStats(NetPlay.dpidPlayer,pl,FALSE);
-	setMultiStats(NetPlay.dpidPlayer,pl,TRUE);
+	setMultiStats(NetPlay.dpidPlayer, pl, FALSE);
+	setMultiStats(NetPlay.dpidPlayer, pl, TRUE);
 
 	// setup text boxes on multiplay screen.
-	strcpy((char*) sPlayer,	NetPlay.players[i].name);
+	strcpy((char*) sPlayer, NetPlay.players[i].name);
 	strcpy((char*) game.name, NetPlay.games[0].name);
 
 	return TRUE;
@@ -508,13 +482,9 @@ BOOL lobbyInitialise(void)
 
 	// RODZ : hashing the file is no more an option.
 	// hash the file to get the key.and catch out the exe patchers.
-//#ifdef DEBUG
-	NETsetKey( 0xdaf456 ,0xb72a5, 0x114d0, 0x2a17);
-//#else
-//	NETsetKey(NEThashFile("warzone.exe"), 0xb72a5, 0x114d0, 0x2a7);
-//#endif
+	NETsetKey( 0xdaf456, 0xb72a5, 0x114d0, 0x2a17);
 
-	if(NetPlay.bLobbyLaunched)									// now check for lobby launching..
+	if(NetPlay.bLobbyLaunched) // now check for lobby launching..
 	{
 		if(!LobbyLaunched())
 		{
@@ -526,15 +496,9 @@ BOOL lobbyInitialise(void)
 
 BOOL multiInitialise(void)
 {
-	// NET AUDIO CAPTURE
-#ifdef WIN32			//Disabled for now.  (returns FALSE always anyway) --Qamly
-//	NETinitPlaybackBuffer(audio_GetDirectSoundObj());			// pass in a dsound pointer to use.
-#endif
-
-	return TRUE;  // use the menus dumbass.
+	// Perform multiplayer initialization here, on success return TRUE
+	return TRUE;
 }
-
-
 
 // ////////////////////////////////////////////////////////////////////////////
 // say goodbye to everyone else
@@ -573,14 +537,14 @@ BOOL multiShutdown(void)
 	{
 		pF = Force.pMembers;
 		Force.pMembers = pF->psNext;
-		FREE(pF);
+		free(pF);
 	}
 
 	debug(LOG_MAIN, "free game data (structure limits)");
 	if(ingame.numStructureLimits)
 	{
 		ingame.numStructureLimits = 0;
-		FREE(ingame.pStructureLimits);
+		free(ingame.pStructureLimits);
 	}
 
 	return TRUE;
@@ -1138,7 +1102,7 @@ BOOL multiGameShutdown(void)
 	if(ingame.numStructureLimits)
 	{
 		ingame.numStructureLimits = 0;
-		FREE(ingame.pStructureLimits);
+		free(ingame.pStructureLimits);
 	}
 
 	ingame.localJoiningInProgress   = FALSE;	// clean up

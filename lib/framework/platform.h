@@ -55,14 +55,12 @@
 #    define inline __inline
 #  endif /* WZ_CC_MSVC */
 
-#endif /* WZ_OS_WIN */
+#elif defined(WZ_OS_UNIX)
 
+#  include <limits.h>
+#  define MAX_PATH PATH_MAX
 
-#if defined(WZ_OS_UNIX)
-
-#  define MAX_PATH 260
-
-#endif /* WZ_OS_UNIX */
+#endif /* WZ_OS_* */
 
 
 #endif /* PLATFORM_H */

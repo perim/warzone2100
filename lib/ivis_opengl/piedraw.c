@@ -94,7 +94,9 @@ BOOL check_extension(const char* extension_name)
 typedef void (APIENTRY * PFNGLACTIVESTENCILFACEEXTPROC) (GLenum face);
 #endif
 
+#ifndef WZ_OS_MAC
 PFNGLACTIVESTENCILFACEEXTPROC glActiveStencilFaceEXT;
+#endif
 
 /// Check if we can use one-pass stencil in the shadow draw code
 static BOOL stencil_one_pass(void)
@@ -106,6 +108,9 @@ static BOOL stencil_one_pass(void)
 		can_do_stencil_one_pass = 0; // can't use it until we decide otherwise
 
 		// let's check if we have the needed extensions
+#ifdef WZ_OS_MAC
+		can_do_stencil_one_pass = 1;
+#else
 		if( check_extension("GL_EXT_stencil_two_side")
 		 && check_extension("GL_EXT_stencil_wrap"))
 		{
@@ -117,6 +122,7 @@ static BOOL stencil_one_pass(void)
 				can_do_stencil_one_pass = 1;
 			}
 		}
+#endif /* WZ_OS_MAC */
 	}
 
 	return (1 == can_do_stencil_one_pass); // to get the types right
@@ -149,8 +155,6 @@ static SDWORD		polyCount = 0;
 //pievertex draw poly (low level) //all modes from PIEVERTEX data
 static inline void pie_PiePoly(PIEPOLY *poly, BOOL bClip);
 static inline void pie_PiePolyFrame(PIEPOLY *poly, SDWORD frame, BOOL bClip);
-
-void DrawTriangleList(BSPPOLYID PolygonNumber);
 
 /***************************************************************************/
 /*
@@ -191,45 +195,6 @@ void pie_EndLighting(void)
 	shadows = FALSE;
 	lighting = FALSE;
 }
-
-#ifdef BSPIMD
-
-// BSP object position
-static Vector3i BSPObject;
-static Vector3i BSPCamera;
-static SDWORD BSPObject_Yaw=0,BSPObject_Pitch=0;
-
-
-void SetBSPObjectPos(SDWORD x,SDWORD y,SDWORD z)
-{
-	BSPObject.x=x;
-	BSPObject.y=y;
-	BSPObject.z=z;
-	// Reset the yaw & pitch
-
-		// these values must be set every time they are used ...
-	BSPObject_Yaw=0;
-	BSPObject_Pitch=0;
-}
-
-// This MUST be called after SetBSPObjectPos ...
-
-void SetBSPObjectRot(SDWORD Yaw, SDWORD Pitch)
-{
-	BSPObject_Yaw=Yaw;
-	BSPObject_Pitch=Pitch;
-}
-
-
-// This must be called once per frame after the terrainMidX & player.p values have been updated
-void SetBSPCameraPos(SDWORD x,SDWORD y,SDWORD z)
-{
-	BSPCamera.x=x;
-	BSPCamera.y=y;
-	BSPCamera.z=z;
-}
-
-#endif
 
 static inline void Vector3f_Set(Vector3f* v, float x, float y, float z)
 {
@@ -424,6 +389,9 @@ static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELI
 		piePoly.flags = pPolys->flags;
 		if (pieFlag & pie_TRANSLUCENT)
 		{
+			/* There are no PIE files with PIE_ALPHA set, this is the only user, and
+			 * this flag is never checked anywhere, except we check below that _some_
+			 * flag is set. This is weird. FIXME. - Per */
 			piePoly.flags |= PIE_ALPHA;
 		}
 		else if (pieFlag & pie_ADDITIVE)
@@ -471,12 +439,12 @@ static int compare_edge (EDGE *A, EDGE *B, Vector3i *pVertices )
 		}
 		return compare_point(&pVertices[A->to], &pVertices[B->from]);
 	}
- 
+
 	if(!compare_point(&pVertices[A->from], &pVertices[B->to]))
 	{
 		return FALSE;
 	}
- 
+
 	if(A->to == B->from)
 	{
 		return TRUE;
@@ -538,18 +506,18 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 	iIMDPoly	*pPolys;
 	int edge_count = 0;
 	static EDGE *edgelist = NULL;
-	static unsigned int edgelistsize = 256;
+	static int edgelistsize = 256;
 
 	EDGE *drawlist = NULL;
 
 	if(!edgelist)
 	{
-		edgelist = MALLOC(sizeof(EDGE)*edgelistsize);
+		edgelist = (EDGE*)malloc(sizeof(EDGE)*edgelistsize);
 	}
 	pVertices = shape->points;
 	if( flag & pie_STATIC_SHADOW && shape->shadowEdgeList )
 	{
-		drawlist = shape->shadowEdgeList;
+		drawlist = (EDGE*)shape->shadowEdgeList;
 		edge_count = shape->nShadowEdges;
 	}
 	else
@@ -577,9 +545,9 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 					if(edge_count >= edgelistsize-1)
 					{
 						// enlarge
-						EDGE *newstack = MALLOC(sizeof(EDGE)*edgelistsize*2);
+						EDGE *newstack = (EDGE*)malloc(sizeof(EDGE)*edgelistsize*2);
 						memcpy(newstack, edgelist, sizeof(EDGE)*edgelistsize);
-						FREE(edgelist);
+						free(edgelist);
 						edgelistsize*=2;
 						edgelist = newstack;
 						debug(LOG_WARNING, "new edge list size: %i", edgelistsize);
@@ -1072,30 +1040,14 @@ int	uFrame, vFrame, j, framesPerLine;
  *
  ***************************************************************************/
 
-//ivis style draw function
-void pie_DrawTriangle( iVertex *pv )
+void pie_DrawTexTriangle(PIEVERTEX *aVrts, void* psEffects)
 {
-	UDWORD	i;
-
-	glBegin(GL_TRIANGLE_FAN);
-	for (i = 0; i < 3; i++) {
-		glColor4ub(pv[i].g*16, pv[i].g*16, pv[i].g*16, 255);
-		glTexCoord2f(pv[i].u, pv[i].v);
-		glVertex3f(pv[i].x, pv[i].y, pv[i].z);
-	}
-	glEnd();
-}
-
-void pie_DrawTexTriangle(PIEVERTEX *aVrts, SDWORD texPage, void* psEffects)
-{
-	GLfloat	offset = 0;
+	GLfloat offset = 0;
 	int i;
 
-	/*	Since this is only used from within source for the terrain draw - we can backface cull the
-		polygons.
+	/*	Since this is only used from within source for the terrain draw - we can backface cull the polygons.
 	*/
 	tileCount++;
-	pie_SetTexturePage(texPage);
 	pie_SetFogStatus(TRUE);
 	if (psEffects != NULL)
 	{
@@ -1114,6 +1066,7 @@ void pie_DrawTexTriangle(PIEVERTEX *aVrts, SDWORD texPage, void* psEffects)
 		glVertex3f( aVrts[i].sx, aVrts[i].sy, aVrts[i].sz );
 	}
 	glEnd();
+
 	if (psEffects != NULL)
 	{
 		/* Solid terrain */

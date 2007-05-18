@@ -141,7 +141,7 @@ extern SDWORD	NETgetGameFlags(UDWORD flag);			// return one of the four flags(dw
 extern SDWORD	NETgetGameFlagsUnjoined(UDWORD gameid, UDWORD flag);	// return one of the four flags(dword) about the game.
 extern BOOL	NETsetGameFlags(UDWORD flag, SDWORD value);	// set game flag(1-4) to value.
 extern BOOL	NEThaltJoining(void);				// stop new players joining this game
-extern BOOL	NETfindGame(BOOL asynchronously);		// find games being played(uses GAME_GUID);
+extern BOOL	NETfindGame(void);		// find games being played(uses GAME_GUID);
 extern BOOL	NETjoinGame(UDWORD gameNumber, const char* playername);			// join game given with playername
 extern BOOL	NEThostGame(const char* SessionName, const char* PlayerName,// host a game
 			    SDWORD one, SDWORD two, SDWORD three, SDWORD four, UDWORD plyrs);
@@ -155,14 +155,7 @@ extern BOOL	NETgetGlobalPlayerData(UDWORD dpid, void *pData, SDWORD *pSize);
 extern BOOL	NETsetLocalPlayerData(UDWORD dpid, void *pData, SDWORD size);
 extern BOOL	NETsetGlobalPlayerData(UDWORD dpid, void *pData, SDWORD size);
 
-extern WZ_DECL_DEPRECATED BOOL	NETspectate(void);			// create a spectator
-extern WZ_DECL_DEPRECATED BOOL	NETisSpectator(UDWORD dpid);	// check for spectator status.
-
 #include "netlog.h"
-
-// from net audio.
-extern WZ_DECL_DEPRECATED BOOL	NETinitPlaybackBuffer(void *pSoundBuffer);	// playback
-extern WZ_DECL_DEPRECATED BOOL	NETqueueIncomingAudio(void *pSoundData, SDWORD soundBytes,BOOL bStream);
 
 // encryption
 extern BOOL	NETsetKey(UDWORD c1,UDWORD c2,UDWORD c3, UDWORD c4);
@@ -170,13 +163,15 @@ extern NETMSG*	NETmanglePacket(NETMSG *msg);
 extern void	NETunmanglePacket(NETMSG *msg);
 extern BOOL	NETmangleData(UDWORD *input, UDWORD *result, UDWORD dataSize);
 extern BOOL	NETunmangleData(UDWORD *input, UDWORD *result, UDWORD dataSize);
-extern UDWORD	NEThashFile(char *pFileName);
 extern UBYTE	NEThashVal(UDWORD value);
 extern UDWORD	NEThashBuffer(char *pData, UDWORD size);
 
 extern WZ_DECL_DEPRECATED BOOL NETcheckRegistryEntries	(char *name,char *guid);
 extern WZ_DECL_DEPRECATED BOOL NETsetRegistryEntries	(char *name,char *guid,char *file,char *cline,char *path,char *cdir);
 extern WZ_DECL_DEPRECATED BOOL NETconnectToLobby		(LPNETPLAY lpNetPlay);
+extern void NETsetMasterserverName(const char* hostname);
+extern void NETsetMasterserverPort(unsigned int port);
+extern void NETsetGameserverPort(unsigned int port);
 
 // Some shortcuts to help you along!
 /* FIXME: This is _not_ portable! Bad, Pumpkin, bad! - Per */

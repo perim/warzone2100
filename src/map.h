@@ -156,8 +156,8 @@ typedef struct _maptile
 #define MAP_MAXHEIGHT	256
 #define MAP_MAXAREA		(256*256)
 
-#define TILE_MAX_HEIGHT		(255 * ELEVATION_SCALE)
-#define TILE_MIN_HEIGHT		  0
+#define TILE_MAX_HEIGHT (255 * ELEVATION_SCALE)
+#define TILE_MIN_HEIGHT 0
 
 /* The size and contents of the map */
 extern UDWORD	mapWidth, mapHeight;
@@ -181,6 +181,16 @@ extern MAPTILE *psMapTiles;
 /* The mask to get internal tile coords from a full coordinate */
 #define TILE_MASK	0x7f
 
+static inline UDWORD world_coord(UDWORD mapCoord)
+{
+	return mapCoord * TILE_UNITS;
+}
+
+static inline UDWORD map_coord(UDWORD worldCoord)
+{
+	return worldCoord / TILE_UNITS;
+}
+
 /* Shutdown the map module */
 extern BOOL mapShutdown(void);
 
@@ -200,13 +210,12 @@ extern void	mapWaterProcess( void );
 /* Return a pointer to the tile structure at x,y */
 static inline MAPTILE *mapTile(UDWORD x, UDWORD y)
 {
-
 	ASSERT( x < mapWidth,
 		"mapTile: x coordinate bigger than map width" );
 	ASSERT( y < mapHeight,
 		"mapTile: y coordinate bigger than map height" );
 
-	return psMapTiles + x + (y * mapWidth);
+	return &psMapTiles[x + (y * mapWidth)];
 }
 
 /* Return height of tile at x,y */

@@ -90,8 +90,7 @@ void pie_EnableFog(BOOL val)
 {
 	if (rendStates.fogCap == FOG_CAP_NO)
 	{
-		debug(LOG_FOG, "pie_EnableFog: Trying to fog set fog to %s, but global fog disabled",
-		      val ? "ON" : "OFF");
+		debug(LOG_FOG, "pie_EnableFog: Trying to fog set fog to %s, but global fog disabled", val ? "ON" : "OFF");
 		val = FALSE;
 	}
 	if (rendStates.fogEnabled != val)
@@ -234,44 +233,34 @@ void pie_SetRendMode(REND_MODE rendMode)
 
 void pie_SetBilinear(BOOL bilinearOn)
 {
-#ifndef PIETOOL
 	if (bilinearOn != rendStates.bilinearOn)
-{
-	rendStates.bilinearOn = bilinearOn;
-	pieStateCount++;
-}
-#endif
+	{
+		rendStates.bilinearOn = bilinearOn;
+		pieStateCount++;
+	}
 }
 
 BOOL pie_GetBilinear(void)
 {
-#ifndef PIETOOL
 	return rendStates.bilinearOn;
-#else
-	return FALSE;
-#endif
 }
 
 static void pie_SetTexCombine(TEX_MODE texCombMode)
 {
-#ifndef PIETOOL	//ffs
 	if (texCombMode != rendStates.texCombine)
-{
-	rendStates.texCombine = texCombMode;
-	pieStateCount++;
-}
-#endif
+	{
+		rendStates.texCombine = texCombMode;
+		pieStateCount++;
+	}
 }
 
 static void pie_SetAlphaCombine(ALPHA_MODE alphaCombMode)
 {
-#ifndef PIETOOL	//ffs
 	if (alphaCombMode != rendStates.alphaCombine)
-{
-	rendStates.alphaCombine = alphaCombMode;
-	pieStateCount++;
-}
-#endif
+	{
+		rendStates.alphaCombine = alphaCombMode;
+		pieStateCount++;
+	}
 }
 
 /***************************************************************************/

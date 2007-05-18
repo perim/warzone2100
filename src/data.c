@@ -62,6 +62,7 @@
 #include "display3d.h"
 #include "display3ddef.h"
 #include "init.h"
+#include "lib/ivis_common/png_util.h"
 
 #include "multiplay.h"
 #include "lib/netplay/netplay.h"
@@ -739,14 +740,14 @@ static BOOL dataIMDBufferLoad(char *pBuffer, UDWORD size, void **ppData)
 }
 
 
-BOOL dataIMGPAGELoad(char *pBuffer, UDWORD size, void **ppData)
+static BOOL dataIMGPAGELoad(const char *fileName, void **ppData)
 {
-	iTexture *psSprite = (iTexture*) MALLOC(sizeof(iTexture));
+	iTexture *psSprite = (iTexture*) malloc(sizeof(iTexture));
 	if (!psSprite)	{
 		return FALSE;
 	}
 
-	if (!pie_PNGLoadMem(pBuffer, psSprite))
+	if (!iV_loadImage_PNG(fileName, psSprite))
 	{
 		debug( LOG_ERROR, "IMGPAGE load failed" );
 		return FALSE;
@@ -764,14 +765,16 @@ void dataIMGPAGERelease(void *pData)
 	dataISpriteRelease(psSprite);
 }
 
+
 // Tertiles loader. This version for hardware renderer.
-static BOOL dataHWTERTILESLoad(char *pBuffer, UDWORD size, void **ppData)
+static BOOL dataHWTERTILESLoad(const char *fileName, void **ppData)
 {
 	// tile loader.
 	if (bTilesPCXLoaded)
 	{
 		debug( LOG_TEXTURE, "Reloading terrain tiles\n" );
-		if(!pie_PNGLoadMem(pBuffer,&tilesPCX))
+		iV_unloadImage(&tilesPCX);
+		if(!iV_loadImage_PNG(fileName, &tilesPCX))
 		{
 			debug( LOG_ERROR, "HWTERTILES reload failed" );
 			return FALSE;
@@ -780,7 +783,7 @@ static BOOL dataHWTERTILESLoad(char *pBuffer, UDWORD size, void **ppData)
 	else
 	{
 		debug( LOG_TEXTURE, "Loading terrain tiles\n" );
-		if(!pie_PNGLoadMem(pBuffer,&tilesPCX))
+		if(!iV_loadImage_PNG(fileName, &tilesPCX))
 		{
 			debug( LOG_ERROR, "HWTERTILES load failed" );
 			return FALSE;
@@ -790,11 +793,11 @@ static BOOL dataHWTERTILESLoad(char *pBuffer, UDWORD size, void **ppData)
 	getTileRadarColours();
 	if (bTilesPCXLoaded)
 	{
-		remakeTileTexturePages(tilesPCX.width,tilesPCX.height,TILE_WIDTH, TILE_HEIGHT, tilesPCX.bmp);
+		remakeTileTexturePages(&tilesPCX, TILE_WIDTH, TILE_HEIGHT);
 	}
 	else
 	{
-		makeTileTexturePages(tilesPCX.width,tilesPCX.height,TILE_WIDTH, TILE_HEIGHT, tilesPCX.bmp);
+		makeTileTexturePages(&tilesPCX, TILE_WIDTH, TILE_HEIGHT);
 	}
 
 	if (bTilesPCXLoaded)
@@ -815,11 +818,7 @@ static void dataHWTERTILESRelease(void *pData)
 	iTexture *psSprite = (iTexture*) pData;
 
 	freeTileTextures();
-	if( psSprite->bmp )
-	{
-		free(psSprite->bmp);
-		psSprite->bmp = NULL;
-	}
+	iV_unloadImage(psSprite);
 	// We are not allowed to free psSprite also, this would give an error on Windows: HEAP[Warzone.exe]: Invalid Address specified to RtlFreeHeap( xxx, xxx )
 	bTilesPCXLoaded = FALSE;
 	pie_TexShutDown();
@@ -848,41 +847,26 @@ static void dataIMGRelease(void *pData)
 
 
 /* Load a texturepage into memory */
-static BOOL bufferTexPageLoad(char *pBuffer, UDWORD size, void **ppData)
+static BOOL dataTexPageLoad(const char *fileName, void **ppData)
 {
-	char		texfile[255];
-	char		texpage[255];
-	SDWORD		i, id;
+	char texfile[MAX_PATH] = {'\0'}, texpage[MAX_PATH] = {'\0'};
+	SDWORD id;
 
-	// generate a texture page name in "page-xx" format
-	strncpy(texfile, GetLastResourceFilename(), 254);
-	texfile[254] = '\0';
-	resToLower(texfile);
+	strncpy(texfile, GetLastResourceFilename(), MAX_PATH);
+	texfile[MAX_PATH-1] = '\0';
 
-	//hardware
-	if (strstr(texfile, "soft") != NULL) // and this is a software textpage
-	{
-		//so dont load it
-		*ppData = NULL;
-		return TRUE;
-	}
+	strncpy(texpage, texfile, MAX_PATH);
 
-	strncpy(texpage, texfile, 254);
-
-	if (strncmp(texfile, "page-", 5) == 0) // FIXME This is the culprit for WZ discarding everything after the "page-123" part of the texture name!
-	{
-		for(i=5; i<(SDWORD)strlen(texfile) && isdigit(texfile[i]); i++);
-		texpage[i] = '\0';
-	}
+	pie_MakeTexPageName(texpage);
 	SetLastResourceFilename(texpage);
 
 	// see if this texture page has already been loaded
 	if (resPresent("TEXPAGE", texpage))
 	{
 		// replace the old texture page with the new one
-		debug(LOG_TEXTURE, "bufferTexPageLoad: replacing %s with new texture %s", texpage, texfile);
-		id = pie_ReloadTexPage(texpage, pBuffer);
-		ASSERT( id >=0, "pie_ReloadTexPage failed" );
+		debug(LOG_TEXTURE, "fileTexPageLoad: replacing %s with new texture %s", texpage, texfile);
+		id = pie_ReloadTexPage(texpage, fileName);
+		ASSERT( id >= 0, "pie_ReloadTexPage failed" );
 		*ppData = NULL;
 	}
 	else
@@ -891,24 +875,24 @@ static BOOL bufferTexPageLoad(char *pBuffer, UDWORD size, void **ppData)
 		iPalette	*psPal;
 		iTexture	*psSprite;
 
-		debug(LOG_TEXTURE, "bufferTexPageLoad: adding page %s with texture %s", texpage, texfile);
+		debug(LOG_TEXTURE, "fileTexPageLoad: adding page %s with texture %s", texpage, texfile);
 
-		NewTexturePage = (TEXTUREPAGE*)MALLOC(sizeof(TEXTUREPAGE));
+		NewTexturePage = (TEXTUREPAGE*)malloc(sizeof(TEXTUREPAGE));
 		if (!NewTexturePage) return FALSE;
 
 		NewTexturePage->Texture=NULL;
 		NewTexturePage->Palette=NULL;
 
-		psPal = (iPalette*)MALLOC(sizeof(iPalette));
+		psPal = (iPalette*)malloc(sizeof(iPalette));
 		if (!psPal) return FALSE;
 
-		psSprite = (iTexture*)MALLOC(sizeof(iTexture));
+		psSprite = (iTexture*)malloc(sizeof(iTexture));
 		if (!psSprite)
 		{
 			return FALSE;
 		}
 
-		if (!pie_PNGLoadMem(pBuffer, psSprite))
+		if (!iV_loadImage_PNG(fileName, psSprite))
 		{
 			return FALSE;
 		}
@@ -916,7 +900,7 @@ static BOOL bufferTexPageLoad(char *pBuffer, UDWORD size, void **ppData)
 		NewTexturePage->Texture=psSprite;
 		NewTexturePage->Palette=psPal;
 
-		pie_AddBMPtoTexPages(psSprite, texpage, 1, TRUE);
+		pie_AddTexPage(psSprite, texpage, 1, TRUE);
 
 		*ppData = NewTexturePage;
 	}
@@ -932,12 +916,8 @@ static void dataISpriteRelease(void *pData)
 
 	if( psSprite )
 	{
-		if( psSprite->bmp )
-		{
-			free(psSprite->bmp);
-			psSprite->bmp = NULL;
-		}
-		FREE(psSprite);
+		iV_unloadImage(psSprite);
+		free(psSprite);
 		psSprite = NULL;
 	}
 }
@@ -956,9 +936,9 @@ static void dataTexPageRelease(void *pData)
 		dataISpriteRelease(Tpage->Texture);
 	}
 	if (Tpage->Palette != NULL)
-		FREE(Tpage->Palette);
+		free(Tpage->Palette);
 
-	FREE(Tpage);
+	free(Tpage);
 }
 
 
@@ -1179,11 +1159,8 @@ static const RES_TYPE_MIN_BUF BufferResourceTypes[] =
 	{"SCRIPT", dataScriptLoad, (RES_FREE)scriptFreeCode},
 	{"SCRIPTVAL", dataScriptLoadVals, NULL},
 	{"STR_RES", dataStrResLoad, dataStrResRelease},
-	{"IMGPAGE", dataIMGPAGELoad, dataIMGPAGERelease},
 	{"TERTILES", NULL, NULL},                                      // This version was used when running with the software renderer.
-	{"HWTERTILES", dataHWTERTILESLoad, dataHWTERTILESRelease},     // freed by 3d shutdow},// Tertiles Files. This version used when running with hardware renderer.
 	{"IMG", dataIMGLoad, dataIMGRelease},
-	{"TEXPAGE", bufferTexPageLoad, dataTexPageRelease},
 	{"IMD", dataIMDBufferLoad, (RES_FREE)iV_IMDRelease},
 };
 
@@ -1200,6 +1177,9 @@ static const RES_TYPE_MIN_FILE FileResourceTypes[] =
 	{"AUDIOCFG", dataAudioCfgLoad, NULL},
 	{"ANI", dataAnimLoad, dataAnimRelease},
 	{"ANIMCFG", dataAnimCfgLoad, NULL},
+	{"IMGPAGE", dataIMGPAGELoad, dataIMGPAGERelease},
+	{"HWTERTILES", dataHWTERTILESLoad, dataHWTERTILESRelease},     // freed by 3d shutdow},// Tertiles Files. This version used when running with hardware renderer.
+	{"TEXPAGE", dataTexPageLoad, dataTexPageRelease},
 };
 
 /* Pass all the data loading functions to the framework library */

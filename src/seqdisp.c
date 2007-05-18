@@ -83,8 +83,8 @@ typedef struct {
 } SEQTEXT;
 
 typedef struct {
-	char		*pSeq;						//name of the sequence to play
-	char		*pAudio;					//name of the wav to play
+	const char	*pSeq;						//name of the sequence to play
+	const char	*pAudio;					//name of the wav to play
 	BOOL		bSeqLoop;					//loop this sequence
 	SDWORD		currentText;				//cuurent number of text messages for this seq
 	SEQTEXT		aText[MAX_TEXT_OVERLAYS];	//text data to display for this sequence
@@ -318,8 +318,8 @@ UDWORD	*toClear;
 
 BOOL seq_ReleaseVideoBuffers(void)
 {
-	FREE(pVideoBuffer);
-	FREE(pVideoPalette);
+	free(pVideoBuffer);
+	free(pVideoPalette);
 	return TRUE;
 }
 
@@ -329,13 +329,13 @@ BOOL seq_SetupVideoBuffers(void)
 	UBYTE r,g,b;
 	//assume 320 * 240 * 16bit playback surface
 	mallocSize = (RPL_WIDTH*RPL_HEIGHT*RPL_DEPTH);
-	if ((pVideoBuffer = (char*)MALLOC(mallocSize)) == NULL)
+	if ((pVideoBuffer = (char*)malloc(mallocSize)) == NULL)
 	{
 		return FALSE;
 	}
 
 	mallocSize = 1<<(RPL_BITS_555);//palette only used in 555mode
-	if ((pVideoPalette = (char*)MALLOC(mallocSize)) == NULL)
+	if ((pVideoPalette = (char*)malloc(mallocSize)) == NULL)
 	{
 		return FALSE;
 	}
@@ -397,7 +397,7 @@ static BOOL SeqEndCallBack( void *psObj )
 }
 
 //full screenvideo functions
-static BOOL seq_StartFullScreenVideo(char* videoName, char* audioName)
+static BOOL seq_StartFullScreenVideo(const char* videoName, const char* audioName)
 {
 	bHoldSeqForAudio = FALSE;
 
@@ -441,9 +441,9 @@ static BOOL seq_StartFullScreenVideo(char* videoName, char* audioName)
 	}
 	else if (bCDPath)
 	{
-		ASSERT( (strlen(videoName) + strlen(aCDPath))<MAX_STR_LENGTH,"sequence path+name greater than max string" );
-		strcpy(aVideoName,aCDPath);
-		strcat(aVideoName,videoName);
+		ASSERT( (strlen(videoName) + strlen(aCDPath)) < MAX_STR_LENGTH, "sequence path+name greater than max string" );
+		strcpy(aVideoName, aCDPath);
+		strcat(aVideoName, videoName);
 	}
 	else
 	{
@@ -455,9 +455,9 @@ static BOOL seq_StartFullScreenVideo(char* videoName, char* audioName)
 	//set audio path
 	if (audioName != NULL)
 	{
-		ASSERT( strlen(audioName)<244,"sequence path+name greater than max string" );
-		strcpy(aAudioName,"sequenceaudio/");
-		strcat(aAudioName,audioName);
+		ASSERT( strlen(audioName) < MAX_STR_LENGTH, "sequence path+name greater than max string" );
+		strcpy(aAudioName, "sequenceaudio/");
+		strcat(aAudioName, audioName);
 	}
 
 	//start video mode
@@ -471,9 +471,9 @@ static BOOL seq_StartFullScreenVideo(char* videoName, char* audioName)
 
 	if (audioName != NULL)
 	{
-		ASSERT( strlen(audioName)<244,"sequence path+name greater than max string" );
-		strcpy(aAudioName,"sequenceaudio/");
-		strcat(aAudioName,audioName);
+		ASSERT( strlen(audioName) < MAX_STR_LENGTH, "sequence path+name greater than max string" );
+		strcpy(aAudioName, "sequenceaudio/");
+		strcat(aAudioName, audioName);
 	}
 
 
@@ -930,7 +930,7 @@ void seq_ClearSeqList(void)
 }
 
 //add a sequence to the list to be played
-void seq_AddSeqToList(char *pSeqName, char *pAudioName, const char *pTextName, BOOL bLoop)
+void seq_AddSeqToList(const char *pSeqName, const char *pAudioName, const char *pTextName, BOOL bLoop)
 {
 	SDWORD strLen;
 	currentSeq++;

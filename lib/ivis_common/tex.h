@@ -21,13 +21,16 @@
 #define _tex_
 
 #include "ivi.h"
+#include "png_util.h"
 
 //*************************************************************************
 
 
 
-#define iV_TEX_MAX		64
+#define iV_TEX_MAX 64
+#define iV_TEXNAME_MAX 64
 
+#define SKY_TEXPAGE "page-25"
 
 
 //*************************************************************************
@@ -42,25 +45,33 @@
 
 typedef struct
 {
-	iTexture	tex;
-	Uint8		type;
-	char		name[80];
-	unsigned int textPage3dfx;
-	int		bResource;	// Was page provided by resource handler?
-}
-iTexPage;
+	iTexture tex;
+	Uint8 type;
+	char name[iV_TEXNAME_MAX];
+	unsigned int id;
+	int bResource;	// Was page provided by resource handler?
+} iTexPage;
 
 //*************************************************************************
-extern int _TEX_INDEX;
-extern iTexPage	_TEX_PAGE[iV_TEX_MAX];
+extern unsigned int _TEX_INDEX;
+extern iTexPage _TEX_PAGE[iV_TEX_MAX];
 
 //*************************************************************************
 
-int iV_GetTexture(char *filename);
-extern int pie_ReloadTexPage(char *filename, char *pBuffer);
-extern int pie_AddBMPtoTexPages(iTexture* s, const char *filename, int type, BOOL bResource);
-void pie_ChangeTexPage(int tex_index, iTexture* s, int type, BOOL bResource);
+extern int iV_GetTexture(const char *filename);
+extern void iV_unloadImage(iV_Image *image);
+extern unsigned int iV_getPixelFormat(const iV_Image *image);
+
+extern int pie_ReloadTexPage(const char *texpageName, const char *fileName);
+extern int pie_AddTexPage(iTexture* s, const char *filename, int type, BOOL bResource);
+extern void pie_ChangeTexPage(int tex_index, iTexture* s, int type, BOOL bResource);
 extern void pie_TexInit(void);
+
+/*!
+ * Turns filename into a pagename if possible
+ * \param[in,out] filename Filename to pagify
+ */
+extern void pie_MakeTexPageName(char * filename);
 
 //*************************************************************************
 

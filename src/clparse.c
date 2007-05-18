@@ -58,9 +58,6 @@ extern char * global_mods[MAX_MODS];
 extern char * campaign_mods[MAX_MODS];
 extern char * multiplay_mods[MAX_MODS];
 
-//! Whether to play the intro video
-BOOL	clIntroVideo;
-
 //! Let the end user into debug mode....
 BOOL	bAllowDebugMode = FALSE;
 
@@ -119,6 +116,10 @@ BOOL ParseCommandLineEarly(int argc, char** argv)
 	int i;
 
 	// TODO Don't forget to add new options to ParseCommandLine also!
+
+#if defined(WZ_OS_MAC) && defined(DEBUG)
+	debug_enable_switch( "all" );
+#endif /* WZ_OS_MAC && DEBUG */
 
 	/* loop through command line */
 	for (i = 1; i < argc; ++i) {
@@ -202,7 +203,7 @@ BOOL ParseCommandLine(int argc, char** argv)
 		}
 		else if ( strcasecmp(tokenType, "--cheat") == 0 )
 		{
-			fprintf(stdout, "  ** CHEAT MODE ACTIVATED! **\n");
+			fprintf(stdout, "  ** DEBUG MODE UNLOCKED! **\n");
 			bAllowDebugMode = TRUE;
 		}
 		else if ( strcasecmp( tokenType, "--fullscreen" ) == 0 )
@@ -312,14 +313,6 @@ BOOL ParseCommandLine(int argc, char** argv)
 		else if ( strcasecmp( tokenType, "--window" ) == 0 )
 		{
 			war_setFullscreen(FALSE);
-		}
-		else if ( strcasecmp( tokenType, "--intro" ) == 0 )
-		{
-			SetGameMode(GS_VIDEO_MODE);
-		}
-		else if ( strcasecmp( tokenType, "--title" ) == 0 )
-		{
-			SetGameMode(GS_TITLE_SCREEN);
 		}
 		else if ( strcasecmp( tokenType,"--noTranslucent") == 0 )
 		{

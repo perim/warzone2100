@@ -22,8 +22,6 @@
  *
  * interface for setting limits to the game, bots, structlimits etc...
  */
-#include <string.h>
-
 #include "lib/framework/frame.h"
 #include "lib/framework/frameresource.h"
 #include "lib/framework/strres.h"
@@ -82,12 +80,8 @@ extern void			intDisplayPlainForm	(WIDGET *psWidget, UDWORD xOffset,
 #define BUTPERFORM				8
 // ////////////////////////////////////////////////////////////////////////////
 // protos.
-BOOL startLimitScreen	(void);
-void runLimitScreen		(void);
-void applyLimitSet		(void);
-void createLimitSet		(void);
 
-void displayStructureBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
+static void displayStructureBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
 
 // ////////////////////////////////////////////////////////////////////////////
 
@@ -156,7 +150,7 @@ BOOL startLimitScreen(void)
 //					8,5,
 //					iV_GetImageWidth(FrontImages,IMAGE_RETURN),
 //					iV_GetImageHeight(FrontImages,IMAGE_RETURN),
-//					STR_MUL_CANCEL,IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
+//					_("Return To Previous Screen"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 
 
 	// ok button
@@ -164,13 +158,13 @@ BOOL startLimitScreen(void)
 //					LIMITS_OKX,LIMITS_OKY,
 //					iV_GetImageWidth(FrontImages,IMAGE_BIGOK),
 //					iV_GetImageHeight(FrontImages,IMAGE_BIGOK),
-//					STR_MUL_OK,IMAGE_BIGOK,IMAGE_BIGOK,TRUE);
+//					_("Accept Settings"),IMAGE_BIGOK,IMAGE_BIGOK,TRUE);
 
 	addMultiBut(psWScreen,IDLIMITS,IDLIMITS_RETURN,
 					LIMITS_OKX-40,LIMITS_OKY,
 					iV_GetImageWidth(FrontImages,IMAGE_RETURN),
 					iV_GetImageHeight(FrontImages,IMAGE_RETURN),
-					STR_MUL_CANCEL,IMAGE_NO,IMAGE_NO,TRUE);
+					_("Return To Previous Screen"),IMAGE_NO,IMAGE_NO,TRUE);
 
 
 	// ok button
@@ -178,7 +172,7 @@ BOOL startLimitScreen(void)
 					LIMITS_OKX,LIMITS_OKY,
 					iV_GetImageWidth(FrontImages,IMAGE_BIGOK),
 					iV_GetImageHeight(FrontImages,IMAGE_BIGOK),
-					STR_MUL_OK,IMAGE_OK,IMAGE_OK,TRUE);
+					_("Accept Settings"),IMAGE_OK,IMAGE_OK,TRUE);
 
 
 
@@ -335,7 +329,7 @@ void createLimitSet(void)
 	if(ingame.numStructureLimits)									// free the old set if required.
 	{
 		ingame.numStructureLimits = 0;
-		FREE(ingame.pStructureLimits);
+		free(ingame.pStructureLimits);
 	}
 
 	numchanges =0;													// count number of changes
@@ -348,7 +342,7 @@ void createLimitSet(void)
 	}
 
 	//close your eyes now
-	pChanges = (UBYTE*)MALLOC(numchanges*(sizeof(UDWORD)+sizeof(UBYTE)));			// allocate some mem for this.
+	pChanges = (UBYTE*)malloc(numchanges*(sizeof(UDWORD)+sizeof(UBYTE)));			// allocate some mem for this.
 	pEntry = pChanges;
 
 	for(i=0;i<numStructureStats;i++)								// prepare chunk.
@@ -410,14 +404,14 @@ void applyLimitSet(void)
 	// free.
 	if(	ingame.numStructureLimits )
 	{
-		FREE(ingame.pStructureLimits);
+		free(ingame.pStructureLimits);
 		ingame.numStructureLimits = 0;
 	}
 }
 
 // ////////////////////////////////////////////////////////////////////////////
 
-void displayStructureBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
+static void displayStructureBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
 {
 	UDWORD	x = xOffset+psWidget->x;
 	UDWORD	y = yOffset+psWidget->y;

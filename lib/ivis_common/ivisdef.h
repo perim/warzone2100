@@ -40,11 +40,6 @@
  *	Global Definitions
  */
 /***************************************************************************/
-#define BSPIMD	// now defined for all versions (optional BSP handled on all formats)
-#ifdef WIN321		//Not really needed I guess, however, see debug.c comments.  -Qamly
-	#define iV_DDX
-#endif
-
 #define iV_SCANTABLE_MAX	1024
 
 // texture animation defines
@@ -84,7 +79,6 @@
 typedef struct { Sint32 left, top, right, bottom; } iClip;
 
 typedef struct iSurface {
-	int usr;
 	Uint32 flags;
 	int xcentre;
 	int ycentre;
@@ -124,11 +118,6 @@ typedef struct {
 // imd structures
 //
 //*************************************************************************
-#ifdef BSPIMD
-typedef Uint16 BSPPOLYID;			// lets hope this can work as a byte ... that will limit it to 255 polygons in 1 imd
-#endif
-#include "bspimd.h" //structure defintions only
-
 
 typedef int VERTEXID;	// Size of the entry for vertex id in the imd polygon structure
 
@@ -140,13 +129,9 @@ typedef struct {
 	VERTEXID *pindex;
 	iVertex *vrt;
 	iTexAnim *pTexAnim;		// warning.... this is not used on the playstation version !
-#ifdef BSPIMD
-	BSPPOLYID BSP_NextPoly;	// the polygon number for the next in the BSP list ... or BSPPOLYID_TERMINATE for no more
-#endif
 } iIMDPoly;
 
 typedef struct iIMDShape {
-	Uint32 flags;
 	Sint32 texpage;
 	Sint32 oradius, sradius, radius, visRadius, xmin, xmax, ymin, ymax, zmin, zmax;
 
@@ -168,10 +153,6 @@ typedef struct iIMDShape {
 
 	void *shadowEdgeList;
 	unsigned int nShadowEdges;
-
-#ifdef BSPIMD
-	PSBSPTREENODE BSPNode;	// Start of the BSP tree;
-#endif
 } iIMDShape;
 
 
