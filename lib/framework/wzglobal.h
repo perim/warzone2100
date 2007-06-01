@@ -122,6 +122,17 @@
 #endif /* WZ_CC_x */
 
 
+/*
+   The supported C standard, must be one of: (WZ_Cxx)
+
+     99       - ISO/IEC 9899:1999 / C99
+
+*/
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+# define WZ_C99
+#endif /* WZ_Cxx */
+
+
 /**
  * \def WZ_DECL_DEPRECATED
  *
@@ -168,10 +179,37 @@
 #  define WZ_DECL_DEPRECATED
 #endif
 
+
+/*!
+ * \def WZ_DECL_UNUSED
+ * This function is not used, but shall not generate an unused warning either.
+ */
 #if defined(WZ_CC_GNU) && !defined(WZ_CC_INTEL) && (__GNUC__ - 0 > 3 || (__GNUC__ - 0 == 3 && __GNUC_MINOR__ - 0 >= 2))
-#  define WZ_DECL_UNUSED __attribute__((unused))
+#  define WZ_DECL_UNUSED __attribute__((__unused__))
 #else
 #  define WZ_DECL_UNUSED
+#endif
+
+
+/*!
+ * \def WZ_DECL_PURE
+ * "Many functions have no effects except the return value and their return value depends only on the parameters and/or global variables. Such a function can be subject to common subexpression elimination and loop optimization just as an arithmetic operator would be."
+ */
+#if defined(WZ_CC_GNU) && !defined(WZ_CC_INTEL) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 2))
+#  define WZ_DECL_PURE __attribute__((__pure__))
+#else
+#  define WZ_DECL_PURE
+#endif
+
+
+/*!
+ * \def WZ_DECL_CONST
+ * "Many functions do not examine any values except their arguments, and have no effects except the return value. Basically this is just slightly more strict class than the pure attribute below, since function is not allowed to read global memory."
+ */
+#if defined(WZ_CC_GNU) && !defined(WZ_CC_INTEL) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 2))
+#  define WZ_DECL_CONST __attribute__((__const__))
+#else
+#  define WZ_DECL_CONST
 #endif
 
 #endif /* WZGLOBAL_H */

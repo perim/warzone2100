@@ -201,6 +201,13 @@ extern BOOL placeDroid(STRUCTURE *psStructure, UDWORD *droidX, UDWORD *droidY);
 /*returns teh status of the flag*/
 //extern BOOL getPowerGenExists(UDWORD player);
 
+/* is this a lassat structure? */
+static inline bool isLasSat(STRUCTURE_STATS *pStructureType)
+{
+	return (pStructureType->psWeapStat[0]
+	        && pStructureType->psWeapStat[0]->weaponSubClass == WSC_LAS_SAT);
+}
+
 /*sets the flag to indicate a HQ Exists - so draw Radar*/
 extern void setHQExists(BOOL state, UDWORD player);
 /*returns the status of the flag*/
@@ -222,10 +229,6 @@ extern void buildingComplete(STRUCTURE *psBuilding);
 // these functions are used in game.c inplace of  building complete
 extern void checkForResExtractors(STRUCTURE *psPowerGen);
 extern void checkForPowerGen(STRUCTURE *psPowerGen);
-
-/*Looks through the players list of structures to see if a HQ exists - will look
-through the list of structures at Home Base when on an offWorld mission map*/
-extern BOOL radarCheckForHQ(UDWORD player);
 
 // Set the command droid that factory production should go to
 //struct _command_droid;
@@ -327,7 +330,7 @@ extern void checkResExtractorsActive(void);
 extern UWORD countAssignableFactories(UBYTE player,UWORD FactoryType);
 
 /*Used for determining how much of the structure to draw as being built or demolished*/
-extern FRACT structHeightScale(STRUCTURE *psStruct);
+extern float structHeightScale(STRUCTURE *psStruct);
 
 /*compares the structure sensor type with the droid weapon type to see if the
 FIRE_SUPPORT order can be assigned*/

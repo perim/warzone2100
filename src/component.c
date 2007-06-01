@@ -490,9 +490,6 @@ void displayStructureStatButton(STRUCTURE_STATS *Stats,UDWORD Player, Vector3i *
 				//can only have the one
 				if (Stats->psWeapStat[i] != NULL)
 				{
-					/*nWeaponStat = Stats->defaultWeap;
-					weaponImd =  Stats->asWeapList[nWeaponStat]->pIMD;
-					mountImd =  Stats->asWeapList[nWeaponStat]->pMountGraphic;*/
 					weaponImd[i] = Stats->psWeapStat[i]->pIMD;
 					mountImd[i] = Stats->psWeapStat[i]->pMountGraphic;
 				}
@@ -522,9 +519,6 @@ void displayStructureStatButton(STRUCTURE_STATS *Stats,UDWORD Player, Vector3i *
 		{
 			if (Stats->psWeapStat[0] != NULL)
 			{
-				/*nWeaponStat = Stats->defaultWeap;
-				weaponImd =  Stats->asWeapList[nWeaponStat]->pIMD;
-				mountImd =  Stats->asWeapList[nWeaponStat]->pMountGraphic;*/
 				weaponImd[0] = Stats->psWeapStat[0]->pIMD;
 				mountImd[0] = Stats->psWeapStat[0]->pMountGraphic;
 			}
@@ -782,8 +776,8 @@ void displayComponentObject(BASE_OBJECT *psObj)
 	pie_MatBegin();
 
 	/* Get internal tile units coordinates */
-	xShift = player.p.x & (TILE_UNITS-1);
-	zShift = player.p.z & (TILE_UNITS-1);
+	xShift = map_round(player.p.x);
+	zShift = map_round(player.p.z);
 
 	/* Mask out to tile_units resolution */
 	pie_TRANSLATE(xShift,0,-zShift);
@@ -876,7 +870,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 	DROID				*psDroid;
 	//Watermelon:I need another temp pointer to Shape
 	iIMDShape			*psShape, *psJet, *psShapeTemp = NULL;
-	Vector3i				null;
+	Vector3i				zero = {0, 0, 0};
 	Vector2i				screenCoords;
 	SDWORD				dummyZ, iConnector;
 	PROPULSION_STATS	*psPropStats;
@@ -924,32 +918,9 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 		specular = 0;
 	}
 
-//	/* No auxilliary rotation */
-	null.x = null.y = null.z = 0;
-
 	/* We've got a z value here _and_ screen coords of origin */
-	dummyZ = pie_RotProj(&null,&screenCoords);
+	dummyZ = pie_RotateProject(&zero, &screenCoords);
 
-	/* Draw the propulsion and body imds here */
-	/* Establish the propulsion - this is more complex if two parts */
-/*
-	if(leftFirst)
-	{
-		psShape = getLeftPropulsionIMD(psDroid);
-		if(psShape!=NULL)
-		{
-			iV_PIEDraw(psShape,psDroid->player);
-		}
-	}
-	else
-	{
-		psShape = getRightPropulsionIMD(psDroid);
-		if(psShape!=NULL)
-		{
-			iV_PIEDraw(psShape,psDroid->player);
-		}
-	}
-*/
 	if (droidScale != 100) {
 		pie_MatScale(droidScale);
 	}
@@ -1140,7 +1111,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 						{
 							pie_MatBegin();
 							//Watermelon:reset Z?
-							dummyZ = pie_RotProj(&null,&screenCoords);
+							dummyZ = pie_RotateProject(&zero, &screenCoords);
 
 							//Watermelon:to skip number of VTOL_CONNECTOR_START ground unit connectors
 							if ( iConnector < VTOL_CONNECTOR_START )
@@ -1276,7 +1247,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 				//Watermelon:sensor uses connectors[0]
 				pie_MatBegin();
 				//Watermelon:reset Z?
-				dummyZ = pie_RotProj(&null,&screenCoords);
+				dummyZ = pie_RotateProject(&zero, &screenCoords);
 				/* vtol weapons inverted */
 				if ( iConnector >= VTOL_CONNECTOR_START )
 				{
@@ -1321,7 +1292,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 				//Watermelon:cyborg uses connectors[0]
 				pie_MatBegin();
 				//Watermelon:reset Z?
-				dummyZ = pie_RotProj(&null,&screenCoords);
+				dummyZ = pie_RotateProject(&zero, &screenCoords);
 				/* vtol weapons inverted */
 				if ( iConnector >= VTOL_CONNECTOR_START )
 				{
@@ -1368,7 +1339,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 				//Watermelon:ecm uses connectors[0]
 				pie_MatBegin();
 				//Watermelon:reset Z?
-				dummyZ = pie_RotProj(&null,&screenCoords);
+				dummyZ = pie_RotateProject(&zero, &screenCoords);
 				/* vtol weapons inverted */
 				if ( iConnector >= VTOL_CONNECTOR_START )
 				{
@@ -1407,7 +1378,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 				//Watermelon:cyborg uses connectors[0]
 				pie_MatBegin();
 				//Watermelon:reset Z?
-				dummyZ = pie_RotProj(&null,&screenCoords);
+				dummyZ = pie_RotateProject(&zero, &screenCoords);
 				/* vtol weapons inverted */
 				if ( iConnector >= VTOL_CONNECTOR_START )
 				{
@@ -1506,35 +1477,15 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 	{
 		pie_Draw3DShape(psShape, 0,colour /*getPlayerColour( psDroid->player)*/, brightness, specular, pieFlag, iPieData);
 	}
-
-
-/*
-	if(leftFirst)
-	{
-		psShape = getRightPropulsionIMD(psDroid);
-		if(psShape!=NULL)
-		{
-			iV_PIEDraw(psShape,psDroid->player);
-		}
-	}
-	else
-	{
-		psShape = getLeftPropulsionIMD(psDroid);
-		if(psShape!=NULL)
-		{
-			iV_PIEDraw(psShape,psDroid->player);
-		}
-	}
-	*/
 }
 
 
 void destroyFXDroid(DROID	*psDroid)
 {
-UDWORD	i;
-iIMDShape	*psImd = NULL;
-SDWORD	widthScatter,breadthScatter,heightScatter;
-Vector3i pos;
+	UDWORD	i;
+	iIMDShape	*psImd = NULL;
+	SDWORD	widthScatter, breadthScatter, heightScatter;
+	Vector3i pos;
 
  	widthScatter = TILE_UNITS/4;
 	breadthScatter = TILE_UNITS/4;
@@ -1556,9 +1507,6 @@ Vector3i pos;
             case DROID_CYBORG_REPAIR:
 			case DROID_WEAPON:
 			case DROID_COMMAND:
-				//Watermelon:another commented-out crash...
-				//Re-added the safety check
-				//if(psDroid->numWeaps)
 				if (psDroid->numWeaps > 0)
 				{
 					if(psDroid->asWeaps[0].nStat > 0)
@@ -1568,12 +1516,10 @@ Vector3i pos;
 				}
 				else
 				{
-//					psImd = debrisImds[rand()%MAX_DEBRIS];
 					psImd = getRandomDebrisImd();
 				}
 				break;
 			default:
-//				psImd = debrisImds[rand()%MAX_DEBRIS];
 				psImd = getRandomDebrisImd();
 				break;
 			}
@@ -1588,19 +1534,16 @@ Vector3i pos;
             case DROID_CYBORG_REPAIR:
 			case DROID_WEAPON:
 			case DROID_COMMAND:
-				//if(psDroid->asWeaps[0].nStat > 0)
 				if(psDroid->numWeaps)
 				{
 					psImd = WEAPON_IMD(psDroid,psDroid->player);
 				}
 				else
 				{
-//					psImd = debrisImds[rand()%MAX_DEBRIS];
 					psImd = getRandomDebrisImd();
 				}
 				break;
 			default:
-//				psImd = debrisImds[rand()%MAX_DEBRIS];
 				psImd = getRandomDebrisImd();
 				break;
 			}
@@ -1608,7 +1551,6 @@ Vector3i pos;
 		case 2:
 		case 3:
 		case 4:
-//			psImd = debrisImds[rand()%MAX_DEBRIS];
 			psImd = getRandomDebrisImd();
 			break;
 		}
@@ -1618,20 +1560,10 @@ Vector3i pos;
 		}
 		else
 		{
-//			addEffect(&pos,EFFECT_GRAVITON,GRAVITON_TYPE_EMITTING_DR,TRUE,debrisImds[rand()%MAX_DEBRIS],0);
 			addEffect(&pos,EFFECT_GRAVITON,GRAVITON_TYPE_EMITTING_DR,TRUE,getRandomDebrisImd(),0);
 		}
 	}
 }
-
-
-//void addBodyPartEffect(iVector *position,iIMDShape *psShape)
-//{
-//	velocity.x = 1-rand()%3;
-//	velocity.z = 1-rand()%3;
-//	velocity.y = 4+rand()%7;
-//	addEffect(position,EFFECT_GRAVITON,GRAVITON_TYPE_GIBLET,TRUE,psShape,0);
-//}
 
 
 void	compPersonToBits(DROID *psDroid)
@@ -1647,7 +1579,6 @@ void	compPersonToBits(DROID *psDroid)
 		return;
 	}
 	/* get bits pointers according to whether baba or cyborg*/
-	//if ( psDroid->droidType == DROID_CYBORG )
     if (cyborgDroid(psDroid))
 	{
 		headImd = getImdFromIndex(MI_CYBORG_HEAD);
@@ -1694,6 +1625,7 @@ iIMDShape *getLeftPropulsionIMD(DROID *psDroid)
 	return *imd;
 }
 
+
 iIMDShape *getRightPropulsionIMD(DROID *psDroid)
 {
 	UDWORD			bodyStat, propStat;
@@ -1708,6 +1640,7 @@ iIMDShape *getRightPropulsionIMD(DROID *psDroid)
 	return *imd;
 }
 
+
 SDWORD	rescaleButtonObject(SDWORD radius, SDWORD baseScale,SDWORD baseRadius)
 {
 	SDWORD newScale;
@@ -1720,12 +1653,3 @@ SDWORD	rescaleButtonObject(SDWORD radius, SDWORD baseScale,SDWORD baseRadius)
 	}
 	return newScale;
 }
-
-
-
-
-
-
-
-
-

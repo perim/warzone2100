@@ -56,7 +56,6 @@
 #include "lib/ivis_common/piemode.h"
 #include "mission.h"
 
-
 /*Remove this one!!! :-( */
 #include "miscimd.h"
 #include "effects.h"
@@ -68,15 +67,7 @@
 #include "loop.h"
 
 #include "multiplay.h"
-
-
 #include "game.h"
-//#define COUNTOFFSCREEN
-
-
-#define DOLIGHTS
-
-
 
 extern UWORD OffScreenEffects;
 
@@ -116,9 +107,7 @@ static EFFECT_STATUS effectStatus[MAX_EFFECTS];
 static	UDWORD	lastUpdateDroids[EFFECT_DROID_DIVISION];
 static	UDWORD	lastUpdateStructures[EFFECT_STRUCTURE_DIVISION];
 
-/* Current next slot to use - cyclic */
-static	UDWORD freeEffect;
-
+static	UDWORD	freeEffect; /* Current next slot to use - cyclic */
 static	UDWORD	numEffects;
 static	UDWORD	activeEffects;
 static	UDWORD	missCount;
@@ -128,35 +117,23 @@ static	UDWORD	auxVarSec; // dirty filthy hack - don't look for what this does...
 static	UDWORD	aeCalls;
 static	UDWORD	specifiedSize;
 static  UDWORD	ellSpec;
+
 // ----------------------------------------------------------------------------------------
 /* PROTOTYPES */
-/* externals */
 
-/* Don't even ask what this fellow does... */
-void	effectResetUpdates		( void );
-void	effectGiveAuxVar		( UDWORD var);
-void	effectGiveAuxVarSec		( UDWORD var);
-UDWORD	getFreeEffect			( void );
-
-void	initEffectsSystem		( void );
-void	processEffects			( void );
-void	addEffect				( Vector3i *pos, EFFECT_GROUP group, EFFECT_TYPE type, BOOL specified, iIMDShape *imd, BOOL lit );
-void	addMultiEffect(Vector3i *basePos, Vector3i *scatter, EFFECT_GROUP group, EFFECT_TYPE type, BOOL specified, iIMDShape *imd, UDWORD number, BOOL lit, UDWORD size);
-UDWORD	getNumEffects			( void );
-void	renderEffect			( EFFECT *psEffect );	// MASTER Fn
 // ----------------------------------------------------------------------------------------
 // ---- Update functions - every group type of effect has one of these */
-void	updateEffect			( EFFECT *psEffect );		//MASTER Fn
-void	updateWaypoint			( EFFECT *psEffect );
-void	updateExplosion			( EFFECT *psEffect );
-void	updatePolySmoke			( EFFECT *psEffect );
-void	updateGraviton			( EFFECT *psEffect );
-void	updateConstruction		( EFFECT *psEffect );
-void	updateBlood				( EFFECT *psEffect );
-void	updateDestruction		( EFFECT *psEffect );
-void	updateFire				( EFFECT *psEffect );
-void	updateSatLaser			( EFFECT *psEffect );
-void	updateFirework			( EFFECT *psEffect );
+static void updateWaypoint(EFFECT *psEffect);
+static void updateExplosion(EFFECT *psEffect);
+static void updatePolySmoke(EFFECT *psEffect);
+static void updateGraviton(EFFECT *psEffect);
+static void updateConstruction(EFFECT *psEffect);
+static void updateBlood	(EFFECT *psEffect);
+static void updateDestruction(EFFECT *psEffect);
+static void updateFire(EFFECT *psEffect);
+static void updateSatLaser(EFFECT *psEffect);
+static void updateFirework(EFFECT *psEffect);
+static void updateEffect(EFFECT *psEffect);	// MASTER function
 
 // ----------------------------------------------------------------------------------------
 // ---- The render functions - every group type of effect has a distinct one
@@ -168,6 +145,7 @@ static void	renderWaypointEffect	( EFFECT *psEffect );
 static void	renderBloodEffect		( EFFECT *psEffect );
 static void	renderDestructionEffect	( EFFECT *psEffect );
 static void renderFirework			( EFFECT *psEffect );
+static void positionEffect(EFFECT *psEffect);
 /* There is no render destruction effect! */
 
 // ----------------------------------------------------------------------------------------
@@ -176,7 +154,6 @@ static void	effectSetupSmoke		( EFFECT *psEffect );
 static void	effectSetupGraviton		( EFFECT *psEffect );
 static void	effectSetupExplosion	( EFFECT *psEffect );
 static void	effectSetupConstruction ( EFFECT *psEffect );
-//static void	effectSetupDust			( EFFECT *psEffect );
 static void	effectSetupWayPoint		( EFFECT *psEffect );
 static void	effectSetupBlood		( EFFECT *psEffect );
 static void effectSetupDestruction  ( EFFECT *psEffect );
@@ -186,18 +163,35 @@ static void effectSetUpFirework		( EFFECT *psEffect );
 #ifdef DEBUG
 static BOOL	validatePie( EFFECT_GROUP group, iIMDShape *pie );
 #endif
-// ----------------------------------------------------------------------------------------
-//void	initPerimeterSmoke			( EFFECT *psEffect );
-void	initPerimeterSmoke			( iIMDShape *pImd, UDWORD x, UDWORD y, UDWORD z);
-// ----------------------------------------------------------------------------------------
-void	effectStructureUpdates	( void );
-void	effectDroidUpdates		( void );
-
-UDWORD EffectGetNumFrames(EFFECT *psEffect);
-UDWORD IMDGetNumFrames(iIMDShape *Shape);
+static void effectStructureUpdates(void);
+static void effectDroidUpdates(void);
 
 /* The fraction of a second that the last game frame took */
-static	FRACT	fraction;
+static	float	fraction;
+
+static void positionEffect(EFFECT *psEffect)
+{
+	Vector3i dv;
+	SDWORD rx, rz;
+
+	/* Establish world position */
+	dv.x = ((UDWORD)MAKEINT(psEffect->position.x) - player.p.x) - terrainMidX * TILE_UNITS;
+	dv.y = (UDWORD)MAKEINT(psEffect->position.y);
+	dv.z = terrainMidY * TILE_UNITS - ((UDWORD)MAKEINT(psEffect->position.z) - player.p.z);
+
+	/* Push the indentity matrix */
+	iV_MatrixBegin();
+
+	/* Move to position */
+	iV_TRANSLATE(dv.x, dv.y, dv.z);
+
+	/* Get the x,z translation components */
+	rx = map_round(player.p.x);
+	rz = map_round(player.p.z);
+
+	/* Move to camera reference */
+	iV_TRANSLATE(rx, 0, -rz);
+}
 
 static void killEffect(EFFECT *e)
 {
@@ -231,6 +225,7 @@ static BOOL	essentialEffect(EFFECT_GROUP group, EFFECT_TYPE type)
 		break;
 	}
 }
+
 static BOOL utterlyReject( EFFECT_GROUP group )
 {
 	switch(group)
@@ -244,6 +239,7 @@ static BOOL utterlyReject( EFFECT_GROUP group )
 		break;
 	}
 }
+
 // ----------------------------------------------------------------------------------------
 /*	Simply sets the free pointer to the start - actually this isn't necessary
 	as it will work just fine anyway. This WOULD be necessary were we to change
@@ -488,7 +484,6 @@ void	addEffect(Vector3i *pos, EFFECT_GROUP group, EFFECT_TYPE type,BOOL specifie
 			effectSetupExplosion(&asEffectsList[freeEffect]);
 			break;
 		case EFFECT_CONSTRUCTION:
-//			effectSetupDust(&asEffectsList[freeEffect]);
 			effectSetupConstruction(&asEffectsList[freeEffect]);
 			break;
 		case EFFECT_WAYPOINT:
@@ -567,6 +562,7 @@ static BOOL validatePie( EFFECT_GROUP group, iIMDShape *pie )
 }
 // ----------------------------------------------------------------------------------------
 #endif
+
 /* Calls all the update functions for each different currently active effect */
 void	processEffects(void)
 {
@@ -610,7 +606,7 @@ void	processEffects(void)
 
 // ----------------------------------------------------------------------------------------
 /* The general update function for all effects - calls a specific one for each */
-void	updateEffect(EFFECT *psEffect)
+static void updateEffect(EFFECT *psEffect)
 {
 	/* What type of effect are we dealing with? */
 	switch(psEffect->group)
@@ -667,7 +663,7 @@ void	updateEffect(EFFECT *psEffect)
 // ALL THE UPDATE FUNCTIONS
 // ----------------------------------------------------------------------------------------
 /* Update the waypoint effects.*/
-void	updateWaypoint(EFFECT *psEffect)
+static void updateWaypoint(EFFECT *psEffect)
 {
 	if(!(keyDown(KEY_LCTRL) || keyDown(KEY_RCTRL) ||
 	     keyDown(KEY_LSHIFT) || keyDown(KEY_RSHIFT)))
@@ -678,7 +674,7 @@ void	updateWaypoint(EFFECT *psEffect)
 
 
 // ----------------------------------------------------------------------------------------
-void	updateFirework(EFFECT *psEffect)
+static void updateFirework(EFFECT *psEffect)
 {
 	UDWORD	height;
 	UDWORD	xDif,yDif,radius,val;
@@ -702,8 +698,6 @@ void	updateFirework(EFFECT *psEffect)
 			addEffect(&dv,EFFECT_EXPLOSION,EXPLOSION_TYPE_MEDIUM,FALSE,NULL,0);
 			audio_PlayStaticTrack( MAKEINT(psEffect->position.x), MAKEINT(psEffect->position.z), ID_SOUND_EXPLOSION );
 
-//			stepHeight = psEffect->radius/15;
-//			stepAngle = psEffect->radius/15;
 			for(dif =0; dif < (psEffect->radius*2); dif+=20)
 			{
 				if(dif<psEffect->radius)
@@ -714,7 +708,7 @@ void	updateFirework(EFFECT *psEffect)
 				{
 					drop = dif - psEffect->radius;
 				}
-				radius = (UDWORD)(sqrt((psEffect->radius*psEffect->radius) - (drop*drop)));
+				radius = (UDWORD)sqrtf(psEffect->radius * psEffect->radius - drop * drop);
 				//val = getStaticTimeValueRange(720,360);	// grab an angle - 4 seconds cyclic
   				for(val = 0; val<=180; val+=20)
 				{
@@ -802,11 +796,10 @@ void	updateFirework(EFFECT *psEffect)
 
 	}
 
-
-
 }
+
 // ----------------------------------------------------------------------------------------
-void	updateSatLaser(EFFECT *psEffect)
+static void updateSatLaser(EFFECT *psEffect)
 {
 	Vector3i dv;
 	UDWORD	val;
@@ -827,10 +820,8 @@ void	updateSatLaser(EFFECT *psEffect)
 	if(psEffect->baseScale)
 	{
 		psEffect->baseScale = 0;
-
 		pie = getImdFromIndex(MI_FLAME);
 
-//printf("%d %d : %d %d : %p\n",xPos,yPos,startHeight,endHeight,pie);
 		/* Add some big explosions....! */
 
 		for(i=0; i<16; i++)
@@ -851,15 +842,11 @@ void	updateSatLaser(EFFECT *psEffect)
 
 
 		/* Now, add the column of light */
-
 		for(i=startHeight; i<endHeight; i+=56)
-
 		{
-
 			radius = 80;
 			/* Add 36 around in a circle..! */
 			for(val = 0; val<=180; val+=30)
-
 			{
    				xDif = radius * (SIN(DEG(val)));
    				yDif = radius * (COS(DEG(val)));
@@ -889,7 +876,6 @@ void	updateSatLaser(EFFECT *psEffect)
 		}
 	}
 
-//printf("%d %d\n",gameTime,psEffect->birthTime);
 	if(gameTime-psEffect->birthTime < 1000)
 	{
   		light.position.x = xPos;
@@ -905,14 +891,15 @@ void	updateSatLaser(EFFECT *psEffect)
 		killEffect(psEffect);
 	}
 }
+
 // ----------------------------------------------------------------------------------------
 /* The update function for the explosions */
-void	updateExplosion(EFFECT *psEffect)
+static void updateExplosion(EFFECT *psEffect)
 {
 	LIGHT light;
 	UDWORD percent;
 	UDWORD range;
-	FRACT scaling;
+	float scaling;
 
 	if(TEST_LIT(psEffect))
 	{
@@ -937,17 +924,14 @@ void	updateExplosion(EFFECT *psEffect)
 		}
 
 		range = percent;
-//#ifdef DOLIGHTS
 		light.position.x = MAKEINT(psEffect->position.x);
 		light.position.y = MAKEINT(psEffect->position.y);
 		light.position.z = MAKEINT(psEffect->position.z);
 		light.range = (3*range)/2;
 		light.colour = LIGHT_RED;
 		processLight(&light);
-//#endif
 	}
 
-#ifdef DOLIGHTS
 /*
 	if(psEffect->type == EXPLOSION_TYPE_LAND_LIGHT)
 	{
@@ -960,21 +944,20 @@ void	updateExplosion(EFFECT *psEffect)
 		processLight(&light);
 	}
 */
-#endif
 
 	if(psEffect->type == EXPLOSION_TYPE_SHOCKWAVE)
 	{
 		psEffect->size += MAKEINT((fraction*SHOCKWAVE_SPEED));
 		scaling = MAKEFRACT(psEffect->size)/MAX_SHOCKWAVE_SIZE;
 		psEffect->frameNumber = MAKEINT(scaling*EffectGetNumFrames(psEffect));
-#ifdef DOLIGHTS
+
 		light.position.x = MAKEINT(psEffect->position.x);
 		light.position.y = MAKEINT(psEffect->position.y);
 		light.position.z = MAKEINT(psEffect->position.z);
 		light.range = psEffect->size+200;
 		light.colour = LIGHT_YELLOW;
 		processLight(&light);
-#endif
+
 		if(psEffect->size>MAX_SHOCKWAVE_SIZE || light.range>600)
 		{
  			/* Kill it off */
@@ -1017,9 +1000,10 @@ void	updateExplosion(EFFECT *psEffect)
 
 	}
 }
+
 // ----------------------------------------------------------------------------------------
 /* The update function for blood */
-void	updateBlood(EFFECT *psEffect)
+static void updateBlood(EFFECT *psEffect)
 {
 	/* Time to update the frame number on the blood */
 	if(gameTime - psEffect->lastFrame > psEffect->frameDelay)
@@ -1044,7 +1028,7 @@ void	updateBlood(EFFECT *psEffect)
 // ----------------------------------------------------------------------------------------
 /* Processes all the drifting smoke
 	Handles the smoke puffing out the factory as well */
-void	updatePolySmoke(EFFECT *psEffect)
+static void updatePolySmoke(EFFECT *psEffect)
 {
 
 	/* Time to update the frame number on the smoke sprite */
@@ -1103,15 +1087,14 @@ void	updatePolySmoke(EFFECT *psEffect)
 	Gravitons just fly up for a bit and then drop down and are
 	killed off when they hit the ground
 */
-void	updateGraviton(EFFECT *psEffect)
+static void updateGraviton(EFFECT *psEffect)
 {
-	FRACT	accel;
+	float	accel;
 	Vector3i dv;
 	UDWORD	groundHeight;
 	MAPTILE	*psTile;
 	LIGHT	light;
 
-#ifdef DOLIGHTS
 	if(psEffect->type!=GRAVITON_TYPE_GIBLET)
 	{
 		light.position.x = MAKEINT(psEffect->position.x);
@@ -1121,7 +1104,6 @@ void	updateGraviton(EFFECT *psEffect)
 		light.colour = LIGHT_YELLOW;
 		processLight(&light);
 	}
-#endif
 
 	if(gamePaused())
 	{
@@ -1189,9 +1171,9 @@ void	updateGraviton(EFFECT *psEffect)
 	}
 
 	/* Spin it round a bit */
-	psEffect->rotation.x += MAKEINT(((FRACT)psEffect->spin.x) * fraction);
-	psEffect->rotation.y += MAKEINT(((FRACT)psEffect->spin.y) * fraction);
-	psEffect->rotation.z += MAKEINT(((FRACT)psEffect->spin.z) * fraction);
+	psEffect->rotation.x += MAKEINT(((float)psEffect->spin.x) * fraction);
+	psEffect->rotation.y += MAKEINT(((float)psEffect->spin.y) * fraction);
+	psEffect->rotation.z += MAKEINT(((float)psEffect->spin.z) * fraction);
 
 	/* Update velocity (and retarding of descent) according to present frame rate */
 	accel = (GRAVITON_GRAVITY*fraction);
@@ -1224,9 +1206,7 @@ void	updateGraviton(EFFECT *psEffect)
 				psEffect->specific++;
 				/* Half it's velocity */
 
-//				psEffect->velocity.x/=(FRACT)(2);
-				psEffect->velocity.y/=(FRACT)(-2); // only y gets flipped
-//				psEffect->velocity.z/=(FRACT)(2);
+				psEffect->velocity.y/=(float)(-2); // only y gets flipped
 
 				/* Set it at ground level - may have gone through */
 				psEffect->position.y = MAKEFRACT(groundHeight);
@@ -1254,7 +1234,7 @@ void	updateGraviton(EFFECT *psEffect)
 /* updateDestruction
 This isn't really an on-screen effect itself - it just spawns other ones....
   */
-void	updateDestruction(EFFECT *psEffect)
+static void updateDestruction(EFFECT *psEffect)
 {
 	Vector3i pos;
 	UDWORD	effectType;
@@ -1263,7 +1243,7 @@ void	updateDestruction(EFFECT *psEffect)
 	LIGHT	light;
 	UDWORD	percent;
 	UDWORD	range;
-	FRACT	div;
+	float	div;
 	UDWORD	height;
 
 	percent = PERCENT(gameTime-psEffect->birthTime,psEffect->lifeSpan);
@@ -1272,7 +1252,7 @@ void	updateDestruction(EFFECT *psEffect)
 		percent = 100;
 	}
 	range = 50 - abs(50-percent);
-#ifdef DOLIGHTS
+
 	light.position.x = MAKEINT(psEffect->position.x);
 	light.position.y = MAKEINT(psEffect->position.y);
 	light.position.z = MAKEINT(psEffect->position.z);
@@ -1294,7 +1274,6 @@ void	updateDestruction(EFFECT *psEffect)
 		light.colour = LIGHT_RED;
 	}
 	processLight(&light);
-#endif
 
 	if(gameTime > (psEffect->birthTime + psEffect->lifeSpan))
 	{
@@ -1403,7 +1382,6 @@ void	updateDestruction(EFFECT *psEffect)
 		case 10:
 			if(psEffect->type == DESTRUCTION_TYPE_STRUCTURE)
 			{
-//				addEffect(&pos,EFFECT_GRAVITON,GRAVITON_TYPE_EMITTING_ST,TRUE,debrisImds[rand()%MAX_DEBRIS],0);
 				addEffect(&pos,EFFECT_GRAVITON,GRAVITON_TYPE_EMITTING_ST,TRUE,getRandomDebrisImd(),0);
 			}
 			else
@@ -1431,12 +1409,13 @@ void	updateDestruction(EFFECT *psEffect)
 		}
 	}
 }
+
 // ----------------------------------------------------------------------------------------
 /*
 updateConstruction:-
 Moves the construction graphic about - dust cloud or whatever....
 */
-void	updateConstruction(EFFECT *psEffect)
+static void updateConstruction(EFFECT *psEffect)
 {
 
 	/* Time to update the frame number on the construction sprite */
@@ -1487,7 +1466,7 @@ void	updateConstruction(EFFECT *psEffect)
 
 // ----------------------------------------------------------------------------------------
 /* Update fire sequences */
-void	updateFire(EFFECT *psEffect)
+static void updateFire(EFFECT *psEffect)
 {
 	Vector3i pos;
 	LIGHT	light;
@@ -1498,14 +1477,13 @@ void	updateFire(EFFECT *psEffect)
 	{
 		percent = 100;
 	}
-#ifdef DOLIGHTS
+
 	light.position.x = MAKEINT(psEffect->position.x);
 	light.position.y = MAKEINT(psEffect->position.y);
 	light.position.z = MAKEINT(psEffect->position.z);
 	light.range = (percent*psEffect->radius*3)/100;
 	light.colour = LIGHT_RED;
 	processLight(&light);
-#endif
 
 	/* Time to update the frame number on the construction sprite */
 	if(gameTime - psEffect->lastFrame > psEffect->frameDelay)
@@ -1524,10 +1502,6 @@ void	updateFire(EFFECT *psEffect)
 			addEffect(&pos,EFFECT_EXPLOSION,EXPLOSION_TYPE_SMALL,FALSE,NULL,0);
 		}
 
-
-//		pos.x = (MAKEINT(psEffect->position.x) + ((rand()%psEffect->radius) - (rand()%(2*psEffect->radius))));
-//		pos.z = (MAKEINT(psEffect->position.z) + ((rand()%psEffect->radius) - (rand()%(2*psEffect->radius))));
-//		pos.y = map_Height(pos.x,pos.z);
 		if(psEffect->type == FIRE_TYPE_SMOKY || psEffect->type == FIRE_TYPE_SMOKY_BLUE)
 		{
 			pos.x = (MAKEINT(psEffect->position.x) + ((rand()%psEffect->radius/2) - (rand()%(2*psEffect->radius/2))));
@@ -1597,7 +1571,6 @@ void	renderEffect(EFFECT *psEffect)
 		renderBloodEffect(psEffect);
 		break;
 
-
 	case EFFECT_STRUCTURE:
 		break;
 
@@ -1626,27 +1599,14 @@ void	renderEffect(EFFECT *psEffect)
 /* drawing func for wapypoints . AJL. */
 void	renderWaypointEffect(EFFECT *psEffect)
 {
-	Vector3i dv;
-	SDWORD		rx,rz;
 	UDWORD brightness, specular;
-	//SDWORD centreX, centreZ;
 
-	dv.x = ((UDWORD)MAKEINT(psEffect->position.x) - player.p.x) - terrainMidX * TILE_UNITS;
-	dv.y = (UDWORD)MAKEINT(psEffect->position.y);
-	dv.z = terrainMidY * TILE_UNITS - ((UDWORD)MAKEINT(psEffect->position.z) - player.p.z);
-	iV_MatrixBegin();							/* Push the indentity matrix */
-	iV_TRANSLATE(dv.x,dv.y,dv.z);
-	rx = player.p.x & (TILE_UNITS-1);			/* Get the x,z translation components */
-	rz = player.p.z & (TILE_UNITS-1);
-	iV_TRANSLATE(rx,0,-rz);						/* Translate */
+	positionEffect(psEffect);
 
 	// set up lighting
-//	centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-//	centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
 	brightness = lightDoFogAndIllumination(pie_MAX_BRIGHT_LEVEL,getCentreX() - MAKEINT(psEffect->position.x),getCentreZ() - MAKEINT(psEffect->position.z), &specular);
 
 	pie_Draw3DShape(psEffect->imd, 0, 0, brightness, specular, 0, 0);
-//	pie_Draw3DShape(psEffect->imd, 0, 0, pie_MAX_BRIGHT_LEVEL, 0, pie_NO_BILINEAR, 0);
 	iV_MatrixEnd();
 
 }
@@ -1654,10 +1614,7 @@ void	renderWaypointEffect(EFFECT *psEffect)
 // ----------------------------------------------------------------------------------------
 void	renderFirework(EFFECT *psEffect)
 {
-	Vector3i dv;
-	SDWORD		rx,rz;
 	UDWORD brightness, specular;
-	//SDWORD centreX, centreZ;
 
 	/* these don't get rendered */
 	if(psEffect->type == FIREWORK_TYPE_LAUNCHER)
@@ -1665,22 +1622,11 @@ void	renderFirework(EFFECT *psEffect)
 		return;
 	}
 
-	dv.x = ((UDWORD)MAKEINT(psEffect->position.x) - player.p.x) - terrainMidX * TILE_UNITS;
-	dv.y = (UDWORD)MAKEINT(psEffect->position.y);
-	dv.z = terrainMidY * TILE_UNITS - ((UDWORD)MAKEINT(psEffect->position.z) - player.p.z);
-	iV_MatrixBegin();							/* Push the indentity matrix */
-	iV_TRANSLATE(dv.x,dv.y,dv.z);
-	rx = player.p.x & (TILE_UNITS-1);			/* Get the x,z translation components */
-	rz = player.p.z & (TILE_UNITS-1);
-	iV_TRANSLATE(rx,0,-rz);						/* Translate */
-
+	positionEffect(psEffect);
 
 	iV_MatrixRotateY(-player.r.y);
 	iV_MatrixRotateX(-player.r.x);
 
-
-  //	centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-  //	centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
 	brightness = lightDoFogAndIllumination(pie_MAX_BRIGHT_LEVEL,getCentreX() - MAKEINT(psEffect->position.x),getCentreZ() - MAKEINT(psEffect->position.z), &specular);
 
 	pie_MatScale(psEffect->size);
@@ -1692,43 +1638,26 @@ void	renderFirework(EFFECT *psEffect)
 /* drawing func for blood. */
 void	renderBloodEffect(EFFECT *psEffect)
 {
-	Vector3i dv;
-	SDWORD		rx,rz;
 	UDWORD brightness, specular;
-	//SDWORD centreX, centreZ;
 
-	dv.x = ((UDWORD)MAKEINT(psEffect->position.x) - player.p.x) - terrainMidX * TILE_UNITS;
-	dv.y = (UDWORD)MAKEINT(psEffect->position.y);
-	dv.z = terrainMidY * TILE_UNITS - ((UDWORD)MAKEINT(psEffect->position.z) - player.p.z);
-	iV_MatrixBegin();							/* Push the indentity matrix */
-	iV_TRANSLATE(dv.x,dv.y,dv.z);
-	rx = player.p.x & (TILE_UNITS-1);			/* Get the x,z translation components */
-	rz = player.p.z & (TILE_UNITS-1);
-	iV_TRANSLATE(rx,0,-rz);						/* Translate */
+	positionEffect(psEffect);
+
 	iV_MatrixRotateY(-player.r.y);
 	iV_MatrixRotateX(-player.r.x);
 	pie_MatScale(psEffect->size);
 
 	// set up lighting
-  //	centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-  //	centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
 	brightness = lightDoFogAndIllumination(pie_MAX_BRIGHT_LEVEL,getCentreX() - MAKEINT(psEffect->position.x),getCentreZ() - MAKEINT(psEffect->position.z), &specular);
 
 	pie_Draw3DShape(getImdFromIndex(MI_BLOOD), psEffect->frameNumber, 0, brightness, specular, pie_TRANSLUCENT, EFFECT_BLOOD_TRANSPARENCY);
 	iV_MatrixEnd();
-
 }
-
-
 
 // ----------------------------------------------------------------------------------------
 void	renderDestructionEffect(EFFECT *psEffect)
 {
-	Vector3i dv;
-	SDWORD	rx,rz;
-	FRACT	div;
+	float	div;
 	SDWORD	percent;
-	//SDWORD	centreX,centreZ;
 	UDWORD	brightness,specular;
 
 	if(psEffect->type!=DESTRUCTION_TYPE_SKYSCRAPER)
@@ -1736,15 +1665,7 @@ void	renderDestructionEffect(EFFECT *psEffect)
 		return;
 	}
 
-   	dv.x = ((UDWORD)MAKEINT(psEffect->position.x) - player.p.x) - terrainMidX * TILE_UNITS;
-	dv.y = (UDWORD)MAKEINT(psEffect->position.y);
-	dv.z = terrainMidY * TILE_UNITS - ((UDWORD)MAKEINT(psEffect->position.z) - player.p.z);
-	iV_MatrixBegin();							/* Push the indentity matrix */
-	iV_TRANSLATE(dv.x,dv.y,dv.z);
-	rx = player.p.x & (TILE_UNITS-1);			/* Get the x,z translation components */
-	rz = player.p.z & (TILE_UNITS-1);
-	iV_TRANSLATE(rx,0,-rz);						/* Translate */
-
+	positionEffect(psEffect);
 
 	div = MAKEFRACT(gameTime - psEffect->birthTime)/psEffect->lifeSpan;
 	if(div>1.0)	div = 1.0;	//temporary!
@@ -1754,8 +1675,6 @@ void	renderDestructionEffect(EFFECT *psEffect)
 	}
 
 	//get fog value
-   //	centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-  //	centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
 	brightness = lightDoFogAndIllumination(pie_MAX_BRIGHT_LEVEL,
 		getCentreX() - MAKEINT(psEffect->position.x),getCentreZ() - MAKEINT(psEffect->position.z), &specular);
 
@@ -1767,9 +1686,7 @@ void	renderDestructionEffect(EFFECT *psEffect)
 	}
  	pie_Draw3DShape(psEffect->imd, 0, 0, brightness, 0,pie_RAISE, percent);
 
-
 	iV_MatrixEnd();
-
 }
 
 // ----------------------------------------------------------------------------------------
@@ -1799,15 +1716,13 @@ UDWORD	timeSlice;
 		if(type == LL_MIDDLE) return(FALSE); else return(TRUE);	// reject all expect middle
 	}
 }
+
 // ----------------------------------------------------------------------------------------
 /* Renders the standard explosion effect */
 void	renderExplosionEffect(EFFECT *psEffect)
 {
-	Vector3i dv;
-	SDWORD		rx,rz;
 	SDWORD	percent;
 	UDWORD brightness, specular;
-//	SDWORD centreX, centreZ;
 
 	if(psEffect->type == EXPLOSION_TYPE_LAND_LIGHT)
 	{
@@ -1817,14 +1732,7 @@ void	renderExplosionEffect(EFFECT *psEffect)
 		}
 	}
 
-	dv.x = ((UDWORD)MAKEINT(psEffect->position.x) - player.p.x) - terrainMidX * TILE_UNITS;
-	dv.y = (UDWORD)MAKEINT(psEffect->position.y);
-	dv.z = terrainMidY * TILE_UNITS - ((UDWORD)MAKEINT(psEffect->position.z) - player.p.z);
-	iV_MatrixBegin();							/* Push the indentity matrix */
-	iV_TRANSLATE(dv.x,dv.y,dv.z);
-	rx = player.p.x & (TILE_UNITS-1);			/* Get the x,z translation components */
-	rz = player.p.z & (TILE_UNITS-1);
-	iV_TRANSLATE(rx,0,-rz);						/* Translate */
+	positionEffect(psEffect);
 
 	/* Bit in comments - doesn't quite work yet? */
 	if(TEST_FACING(psEffect))
@@ -1852,8 +1760,6 @@ void	renderExplosionEffect(EFFECT *psEffect)
 		pie_MatScale(psEffect->size);
 	}
 	//get fog value
-//	centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-//	centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
 	brightness = lightDoFogAndIllumination(pie_MAX_BRIGHT_LEVEL,getCentreX() - MAKEINT(psEffect->position.x),getCentreZ() - MAKEINT(psEffect->position.z), &specular);
 
 	if(psEffect->type == EXPLOSION_TYPE_PLASMA)
@@ -1876,31 +1782,9 @@ void	renderExplosionEffect(EFFECT *psEffect)
 // ----------------------------------------------------------------------------------------
 void	renderGravitonEffect(EFFECT *psEffect)
 {
-	Vector3i	vec;
-	SDWORD	rx,rz;
 	UDWORD  brightness, specular;
-	//SDWORD	centreX,centreZ;
 
-	//	centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-	//	centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
-
-	/* Establish world position */
-	vec.x = ((UDWORD)MAKEINT(psEffect->position.x) - player.p.x) - terrainMidX * TILE_UNITS;
-	vec.y = (UDWORD)MAKEINT(psEffect->position.y);
-	vec.z = terrainMidY * TILE_UNITS - ((UDWORD)MAKEINT(psEffect->position.z) - player.p.z);
-
-	/* Push matrix */
-	iV_MatrixBegin();
-
-	/* Move to position */
-	iV_TRANSLATE(vec.x,vec.y,vec.z);
-
-	/* Offset from camera */
-	rx = player.p.x & (TILE_UNITS-1);
-	rz = player.p.z & (TILE_UNITS-1);
-
-	/* Move to camera reference */
-	iV_TRANSLATE(rx,0,-rz);
+	positionEffect(psEffect);
 
 	iV_MatrixRotateX(psEffect->rotation.x);
 	iV_MatrixRotateY(psEffect->rotation.y);
@@ -1923,7 +1807,6 @@ void	renderGravitonEffect(EFFECT *psEffect)
 
 	/* Pop the matrix */
 	iV_MatrixEnd();
-
 }
 
 // ----------------------------------------------------------------------------------------
@@ -1932,34 +1815,16 @@ renderConstructionEffect:-
 Renders the standard construction effect */
 void	renderConstructionEffect(EFFECT *psEffect)
 {
-	Vector3i vec, null;
-	SDWORD	rx,rz;
+	Vector3i null;
 	SDWORD	percent;
 	UDWORD	translucency;
 	UDWORD	size;
 	UDWORD brightness, specular;
-	//SDWORD centreX, centreZ;
 
 	/* No rotation about arbitrary axis */
 	null.x = null.y = null.z = 0;
 
-	/* Establish world position */
-	vec.x = ((UDWORD)MAKEINT(psEffect->position.x) - player.p.x) - terrainMidX * TILE_UNITS;
-	vec.y = (UDWORD)MAKEINT(psEffect->position.y);
-	vec.z = terrainMidY * TILE_UNITS - ((UDWORD)MAKEINT(psEffect->position.z) - player.p.z);
-
-	/* Push matrix */
-	iV_MatrixBegin();
-
-	/* Move to position */
-	iV_TRANSLATE(vec.x,vec.y,vec.z);
-
-	/* Offset from camera */
-	rx = player.p.x & (TILE_UNITS-1);
-	rz = player.p.z & (TILE_UNITS-1);
-
-	/* Move to camera reference */
-	iV_TRANSLATE(rx,0,-rz);
+	positionEffect(psEffect);
 
 	/* Bit in comments doesn't quite work yet? */
 	if(TEST_FACING(psEffect))
@@ -1988,17 +1853,12 @@ void	renderConstructionEffect(EFFECT *psEffect)
 	pie_MatScale(size);
 
 	// set up lighting
-//	centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-//	centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
 	brightness = lightDoFogAndIllumination(pie_MAX_BRIGHT_LEVEL,getCentreX() - MAKEINT(psEffect->position.x),getCentreZ() - MAKEINT(psEffect->position.z), &specular);
 
 	pie_Draw3DShape(psEffect->imd, psEffect->frameNumber, 0, brightness, specular, pie_TRANSLUCENT, (UBYTE)(translucency));
-//	pie_Draw3DShape(psEffect->imd, psEffect->frameNumber, 0, pie_MAX_BRIGHT_LEVEL, 0, pie_TRANSLUCENT, (UBYTE)(40+percent));
-//	pie_Draw3DShape(psEffect->imd, psEffect->frameNumber, 0, pie_MAX_BRIGHT_LEVEL, 0, pie_TRANSLUCENT, (UBYTE)(130-percent));
 
 	/* Pop the matrix */
 	iV_MatrixEnd();
-
 }
 
 // ----------------------------------------------------------------------------------------
@@ -2010,28 +1870,9 @@ void	renderSmokeEffect(EFFECT *psEffect)
 {
 	UDWORD	percent;
 	UDWORD	transparency = 0;
-	Vector3i vec;
-	SDWORD	rx,rz;
 	UDWORD brightness, specular;
-	//SDWORD centreX, centreZ;
 
-	/* Establish world position */
-	vec.x = ((UDWORD)MAKEINT(psEffect->position.x) - player.p.x) - terrainMidX * TILE_UNITS;
-	vec.y = (UDWORD)MAKEINT(psEffect->position.y);
-	vec.z = terrainMidY * TILE_UNITS - ((UDWORD)MAKEINT(psEffect->position.z) - player.p.z);
-
-	/* Push matrix */
-	iV_MatrixBegin();
-
-	/* Move to position */
-	iV_TRANSLATE(vec.x,vec.y,vec.z);
-
-	/* Offset from camera */
-	rx = player.p.x & (TILE_UNITS-1);
-	rz = player.p.z & (TILE_UNITS-1);
-
-	/* Move to camera reference */
-	iV_TRANSLATE(rx,0,-rz);
+	positionEffect(psEffect);
 
 	/* Bit in comments doesn't quite work yet? */
 	if(TEST_FACING(psEffect))
@@ -2040,8 +1881,6 @@ void	renderSmokeEffect(EFFECT *psEffect)
 /*		TEST_FLIPPED_Y(psEffect) ? iV_MatrixRotateY(-player.r.y+iV_DEG(180)) : */iV_MatrixRotateY(-player.r.y);
 /*		TEST_FLIPPED_X(psEffect) ? iV_MatrixRotateX(-player.r.x+iV_DEG(180)) : */iV_MatrixRotateX(-player.r.x);
 	}
-
-
 
 	/* Small smoke - used for the droids */
 //		if(psEffect->type == SMOKE_TYPE_DRIFTING_SMALL || psEffect->type == SMOKE_TYPE_TRAIL)
@@ -2068,8 +1907,6 @@ void	renderSmokeEffect(EFFECT *psEffect)
 	}
 
    	// set up lighting
-//	centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-//	centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
 	brightness = lightDoFogAndIllumination(pie_MAX_BRIGHT_LEVEL,getCentreX() - MAKEINT(psEffect->position.x),getCentreZ() - MAKEINT(psEffect->position.z), &specular);
 
 	transparency = (transparency * 3) / 2;  //JPS smoke strength increased for d3d 12 may 99
@@ -2101,8 +1938,8 @@ void	renderSmokeEffect(EFFECT *psEffect)
 // ----------------------------------------------------------------------------------------
 void	effectSetUpFirework(EFFECT *psEffect)
 {
+	UDWORD	camExtra;
 
-UDWORD	camExtra;
 	if(psEffect->type == FIREWORK_TYPE_LAUNCHER)
 	{
 	 	psEffect->velocity.x = 200 - rand()%400;
@@ -2150,10 +1987,10 @@ UDWORD	camExtra;
 	psEffect->frameDelay = (EXPLOSION_FRAME_DELAY*2);
 
 }
+
 // ----------------------------------------------------------------------------------------
 void	effectSetupSmoke(EFFECT *psEffect)
 {
-
 	/* everything except steam drifts about */
 	if(psEffect->type==SMOKE_TYPE_STEAM)
 	{
@@ -2243,6 +2080,7 @@ void effectSetUpSatLaser(EFFECT *psEffect)
 	psEffect->baseScale = 1;
 	return;
 }
+
 // ----------------------------------------------------------------------------------------
 void	effectSetupGraviton(EFFECT *psEffect)
 {
@@ -2447,34 +2285,6 @@ void	effectSetupConstruction(EFFECT *psEffect)
 }
 
 // ----------------------------------------------------------------------------------------
-#if (0)
-void	effectSetupDust(EFFECT *psEffect)
-{
-	psEffect->velocity.x = MAKEFRACT(0);//(1-rand()%3);
-	psEffect->velocity.z = MAKEFRACT(0);//(1-rand()%3);
-	psEffect->velocity.y = MAKEFRACT((0-rand()%3));
-	psEffect->frameDelay = (UWORD)CONSTRUCTION_FRAME_DELAY;
-	psEffect->imd = getImdFromIndex(MI_BLOOD);
-	psEffect->lifeSpan = CONSTRUCTION_LIFESPAN;
-
-	/* These effects always face you */
-	SET_FACING(psEffect);
-
-	/* It's a cyclic anim - dies on age */
-	SET_CYCLIC(psEffect);
-
-	/* Randomly flip the construction graphics in x and y for variation */
-	if(ONEINTWO)
-	{
-		SET_FLIPPED_X(psEffect);
-	}
-	if(ONEINTWO)
-	{
-		SET_FLIPPED_Y(psEffect);
-	}
-}
-#endif
-
 void	effectSetupFire(EFFECT *psEffect)
 {
 	psEffect->frameDelay = 300;	   // needs to be investigated...
@@ -2536,6 +2346,7 @@ void    effectSetupDestruction(EFFECT *psEffect)
 		psEffect->frameDelay = DESTRUCTION_FRAME_DELAY/2;
 	}
 }
+
 #define FX_PER_EDGE 6
 #define	SMOKE_SHIFT	(16 - (rand()%32))
 // ----------------------------------------------------------------------------------------
@@ -2552,14 +2363,12 @@ void	initPerimeterSmoke(iIMDShape *pImd, UDWORD x, UDWORD y, UDWORD z)
 	base.y = y;
 	base.z = z;
 
-
 	varStart = pImd->xmin -16;
 	varEnd = pImd->xmax + 16;
 	varStride = 24;//(varEnd-varStart)/FX_PER_EDGE;
 
 	inStart = pImd->zmin - 16;
 	inEnd = pImd->zmax + 16;
-
 
 	for(i=varStart; i<varEnd; i+=varStride)
 	{
@@ -2627,12 +2436,12 @@ void	initPerimeterSmoke(iIMDShape *pImd, UDWORD x, UDWORD y, UDWORD z)
 		}
 	}
 }
+
 // ----------------------------------------------------------------------------------------
 UDWORD	getNumEffects( void )
 {
 	return(numEffects);
 }
-
 
 
 // ----------------------------------------------------------------------------------------
@@ -2669,7 +2478,7 @@ void	effectGiveAuxVarSec( UDWORD var)
 
 // ----------------------------------------------------------------------------------------
 /* Runs all the spot effect stuff for the droids - adding of dust and the like... */
-void	effectDroidUpdates( void )
+static void effectDroidUpdates(void)
 {
 	UDWORD	i;
 	DROID	*psDroid;
@@ -2715,7 +2524,7 @@ void	effectDroidUpdates( void )
 
 // ----------------------------------------------------------------------------------------
 /* Runs all the structure effect stuff - steam puffing out etc */
-void	effectStructureUpdates( void )
+static void effectStructureUpdates(void)
 {
 	UDWORD		i;
 	UDWORD		partition;

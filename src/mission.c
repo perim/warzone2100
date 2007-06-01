@@ -410,7 +410,6 @@ BOOL missionShutDown(void)
 		gwShutDown();
 		//flag positions go with structs
 //		free(psMapTiles);
-//		mapFreeTilesAndStrips();
 		//free(aMapLinePoints);
 
 		for (inc = 0; inc < MAX_PLAYERS; inc++)
@@ -1057,7 +1056,6 @@ void restoreMissionData(void)
 	gwShutDown();
 	mapShutdown();
 //	free(psMapTiles);
-//	mapFreeTilesAndStrips();
 	//free(aMapLinePoints);
 	//releaseAllProxDisp();
 	//flag positions go with structs
@@ -2077,6 +2075,8 @@ void aiUpdateMissionStructure(STRUCTURE *psStructure)
             }
 		    break;
 		}
+		default:
+			break;
 	}
 
 	if (pSubject != NULL)

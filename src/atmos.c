@@ -25,7 +25,6 @@
 */
 #include "lib/framework/frame.h"
 #include "lib/ivis_common/piedef.h"
-// FIXME Direct iVis implementation include!
 #include "lib/ivis_opengl/piematrix.h"
 #include "lib/ivis_common/piestate.h"
 #include "display3d.h"
@@ -66,24 +65,17 @@ APS_ACTIVE,
 APS_INACTIVE,
 } AP_STATUS;
 
-ATPART	asAtmosParts[MAX_ATMOS_PARTICLES];
-static	FRACT	fraction;
+static ATPART	asAtmosParts[MAX_ATMOS_PARTICLES];
+static	float	fraction;
 static	UDWORD	freeParticle;
 static	UDWORD	weather;
 
 // -----------------------------------------------------------------------------
+static void processParticle(ATPART *psPart);
+static void atmosAddParticle(Vector3i *pos, AP_TYPE type);
+static void testParticleWrap(ATPART *psPart);
 // -----------------------------------------------------------------------------
-// -----------------------------------------------------------------------------
-void	atmosInitSystem			( void );
-void	atmosUpdateSystem		( void );
-void	atmosDrawParticles		( void );
-void	processParticle			( ATPART *psPart );
-void	atmosAddParticle		( Vector3i *pos, AP_TYPE type );
-void	renderParticle			( ATPART *psPart );
-void	testParticleWrap		( ATPART *psPart );
-void	atmosSetWeatherType		( WT_CLASS type );
-WT_CLASS	atmosGetWeatherType	( void );
-// -----------------------------------------------------------------------------
+
 /* Setup all the particles */
 void	atmosInitSystem( void )
 {
@@ -349,8 +341,8 @@ void	renderParticle( ATPART *psPart )
 	dv.z = terrainMidY * TILE_UNITS - ((UDWORD)z - player.p.z);
 	iV_MatrixBegin();							/* Push the indentity matrix */
 	iV_TRANSLATE(dv.x,dv.y,dv.z);
-	rx = player.p.x & (TILE_UNITS-1);			/* Get the x,z translation components */
-	rz = player.p.z & (TILE_UNITS-1);
+	rx = map_round(player.p.x);			/* Get the x,z translation components */
+	rz = map_round(player.p.z);
 	iV_TRANSLATE(rx,0,-rz);						/* Translate */
 	/* Make it face camera */
 	iV_MatrixRotateY(-player.r.y);

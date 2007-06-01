@@ -50,23 +50,17 @@
 #define FOG_END_SCALE 0.6
 
 /*	The vector that holds the sun's lighting direction - planar */
-Vector3i	theSun;
+Vector3f	theSun;
 UDWORD	fogStatus = 0;
 /*	Module function Prototypes */
 
-UDWORD	lightDoFogAndIllumination(UBYTE brightness, SDWORD dx, SDWORD dz, UDWORD* pSpecular);
-void	doBuildingLights( void );
-void	processLight(LIGHT *psLight);
-UDWORD	calcDistToTile(UDWORD tileX, UDWORD tileY, Vector3i *pos);
-void	colourTile(SDWORD xIndex, SDWORD yIndex, LIGHT_COLOUR colour, UBYTE percent);
-//void	initLighting( void );
-void	calcTileIllum(UDWORD tileX, UDWORD tileY);
-void	normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant);
+static void colourTile(SDWORD xIndex, SDWORD yIndex, LIGHT_COLOUR colour, UBYTE percent);
+static void normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant);
+static UDWORD calcDistToTile(UDWORD tileX, UDWORD tileY, Vector3i *pos);
+
 UDWORD	numNormals;		// How many normals have we got?
 Vector3i normals[8];		// Maximum 8 possible normals
 extern void	draw3dLine(Vector3i *src, Vector3i *dest, UBYTE col);
-
-
 
 
 /*****************************************************************************/
@@ -74,68 +68,6 @@ extern void	draw3dLine(Vector3i *src, Vector3i *dest, UBYTE col);
  * SOURCE
  */
 /*****************************************************************************/
-
-/*Rewrote the function so it takes parameters and also doesn't loop thru'
-the map 4 times!*/
-/*void initLighting( void )
-{
-UDWORD	i,j;
-MAPTILE	*psTile;
-
-	for(i=0; i<mapWidth; i++)
-	{
-		for(j=0; j<mapHeight; j++)
-		{
-			mapTile(i,j)->illumination = 16;
-		}
-	}
-
-	//for(i=2; i<mapHeight-2; i++)
-	//{
-	//	for(j=2; j<mapWidth-2; j++)
-	//	{
-	//		calcTileIllum(j,i);
-	//	}
-	//}
-
-	for(i=1; i<mapHeight-1; i++)
-	{
-		for(j=1; j<mapWidth-1; j++)
-		{
-			calcTileIllum(j,i);
-		}
-	}
-
-	for(i=0; i<mapWidth; i++)
-	{
-		for(j=0; j<mapHeight; j++)
-		{
-			if(i==0 || j==0 || i>=mapWidth-1 || j>=mapHeight-1)
-			{
-//				mapTile(i,j)->height = 0;
-				psTile = mapTile(i,j);
-				if(TERRAIN_TYPE(psTile) == TER_WATER)
-				{
-					psTile->texture = 0;
-				}
-			}
-		}
-	}
-
-	// Cheers to paul for this idea - works on PC too
-	//	Basically darkens down the tiles that are outside the scroll
-	//	limits - thereby emphasising the cannot-go-there-ness of them
-	for(i=0; i<mapWidth; i++)
-	{
-		for(j=0; j<mapHeight; j++)
-		{
-			if(i<(scrollMinX+4) || i>(scrollMaxX-4) || j<(scrollMinY+4) || j>(scrollMaxY-4))
-			{
-				mapTile(i,j)->illumination/=3;
-			}
-		}
-	}
-}*/
 
 //should do the same as above except cuts down on the loop count!
 //By passing in params - it means that if the scroll limits are changed mid-mission
@@ -229,27 +161,20 @@ void	calcTileIllum(UDWORD tileX, UDWORD tileY)
 		finalVector.y += normals[i].y;
 		finalVector.z += normals[i].z;
 	}
-	pie_VectorNormalise(&finalVector);
-	pie_VectorNormalise(&theSun);
-
-//	iV_NumberOut(theSun.x,100,100,255);
-//	iV_NumberOut(theSun.y,100,110,255);
-//	iV_NumberOut(theSun.z,100,120,255);
-
-//	iV_NumberOut(numNormals,100,140,255);
+	pie_VectorNormalise3iv(&finalVector);
+	pie_VectorNormalise3fv(&theSun);
 
 	dotProduct =	(finalVector.x * theSun.x +
-					finalVector.y * theSun.y +
-					finalVector.z * theSun.z)>>FP12_SHIFT;
+			 finalVector.y * theSun.y +
+			 finalVector.z * theSun.z) / FP12_MULTIPLIER;
 
-   /* iV_NumberOut(dotProduct,100,150,255);*/
 	val = ((abs(dotProduct)) / 16);
 	if (val == 0) val = 1;
 	if(val > 254) val = 254;
 	mapTile(tileX, tileY)->illumination = val;
 }
 
-void normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant)
+static void normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant)
 {
 	Vector3i corner1, corner2, corner3;
 	MAPTILE	*psTile, *tileRight, *tileDownRight, *tileDown;
@@ -282,7 +207,6 @@ void normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant)
 	case 0:
 	case 2:
 		/* Is it flipped? In this case one triangle  */
-//		if(psTile->triangleFlip)
 		if(TRI_FLIPPED(psTile))
 		{
 			if(quadrant==0)
@@ -298,7 +222,7 @@ void normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant)
 				corner3.x = tileX<<TILE_SHIFT;
 				corner3.y = (tileY+1)<<TILE_SHIFT;
 				corner3.z = tileDown->height - dMod;
-				pie_SurfaceNormal(&corner1,&corner2,&corner3,&normals[numNormals++]);
+				pie_SurfaceNormal3iv(&corner1,&corner2,&corner3,&normals[numNormals++]);
 			}
 			else
 			{
@@ -313,7 +237,7 @@ void normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant)
 				corner3.x = tileX<<TILE_SHIFT;
 				corner3.y = (tileY+1)<<TILE_SHIFT;
 				corner3.z = tileDown->height - dMod;
-				pie_SurfaceNormal(&corner1,&corner2,&corner3,&normals[numNormals++]);
+				pie_SurfaceNormal3iv(&corner1,&corner2,&corner3,&normals[numNormals++]);
 			}
 		}
 		else
@@ -330,7 +254,7 @@ void normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant)
 			corner3.x = (tileX+1)<<TILE_SHIFT;
 			corner3.y = (tileY+1)<<TILE_SHIFT;
 			corner3.z = tileDownRight->height - drMod;
-			pie_SurfaceNormal(&corner1,&corner2,&corner3,&normals[numNormals++]);
+			pie_SurfaceNormal3iv(&corner1,&corner2,&corner3,&normals[numNormals++]);
 
 			corner1.x = tileX<<TILE_SHIFT;
 			corner1.y = tileY<<TILE_SHIFT;
@@ -343,13 +267,12 @@ void normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant)
 			corner3.x = tileX<<TILE_SHIFT;
 			corner3.y = (tileY+1)<<TILE_SHIFT;
 			corner3.z = tileDown->height - dMod;
-			pie_SurfaceNormal(&corner1,&corner2,&corner3,&normals[numNormals++]);
+			pie_SurfaceNormal3iv(&corner1,&corner2,&corner3,&normals[numNormals++]);
 		}
 		break;
 	case 1:
 	case 3:
 		/* Is it flipped? In this case two triangles  */
-//		if(psTile->triangleFlip)
 		if(TRI_FLIPPED(psTile))
 		{
 	   	 	corner1.x = tileX<<TILE_SHIFT;
@@ -363,7 +286,7 @@ void normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant)
 	   		corner3.x = tileX<<TILE_SHIFT;
 	   		corner3.y = (tileY+1)<<TILE_SHIFT;
 	   		corner3.z = tileDown->height - dMod;
-			pie_SurfaceNormal(&corner1,&corner2,&corner3,&normals[numNormals++]);
+			pie_SurfaceNormal3iv(&corner1,&corner2,&corner3,&normals[numNormals++]);
 
 			corner1.x = (tileX+1)<<TILE_SHIFT;
 	   		corner1.y = tileY<<TILE_SHIFT;
@@ -376,7 +299,7 @@ void normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant)
 	   		corner3.x = tileX<<TILE_SHIFT;
 	   		corner3.y = (tileY+1)<<TILE_SHIFT;
 	   		corner3.z = tileDown->height - dMod;
-	   		pie_SurfaceNormal(&corner1,&corner2,&corner3,&normals[numNormals++]);
+	   		pie_SurfaceNormal3iv(&corner1,&corner2,&corner3,&normals[numNormals++]);
 		}
 		else
 		{
@@ -393,7 +316,7 @@ void normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant)
 				corner3.x = tileX<<TILE_SHIFT;
 				corner3.y = (tileY+1)<<TILE_SHIFT;
 				corner3.z = tileDown->height - dMod;
-				pie_SurfaceNormal(&corner1,&corner2,&corner3,&normals[numNormals++]);
+				pie_SurfaceNormal3iv(&corner1,&corner2,&corner3,&normals[numNormals++]);
 			}
 			else
 			{
@@ -408,7 +331,7 @@ void normalsOnTile(UDWORD tileX, UDWORD tileY, UDWORD quadrant)
 				corner3.x = (tileX+1)<<TILE_SHIFT;
 				corner3.y = (tileY+1)<<TILE_SHIFT;
 				corner3.z = tileDownRight->height - drMod;
-				pie_SurfaceNormal(&corner1,&corner2,&corner3,&normals[numNormals++]);
+				pie_SurfaceNormal3iv(&corner1,&corner2,&corner3,&normals[numNormals++]);
 			}
 		}
 		break;
@@ -437,11 +360,8 @@ UDWORD	percent;
 	tileX = psLight->position.x/TILE_UNITS;
 	tileY = psLight->position.z/TILE_UNITS;
 
-	rangeSkip = (psLight->range*psLight->range);
-	rangeSkip *=2;
-	rangeSkip = (UDWORD)sqrt(rangeSkip);
-	rangeSkip/=TILE_UNITS;
-	rangeSkip+=1;
+	rangeSkip = sqrtf(psLight->range * psLight->range * 2) / TILE_UNITS + 1;
+
 	/* Rough guess? */
 	startX = tileX - rangeSkip;
 	endX = tileX + rangeSkip;
@@ -484,56 +404,32 @@ UDWORD	percent;
         endY = mapHeight-1;
     }
 
-
 	for(i=startX;i<=endX; i++)
 	{
 		for(j=startY; j<=endY; j++)
 		{
-				distToCorner = calcDistToTile(i,j,&psLight->position);
-				/* If we're inside the range of the light */
-			 	if (distToCorner<(SDWORD)psLight->range)
+			distToCorner = calcDistToTile(i,j,&psLight->position);
+			/* If we're inside the range of the light */
+			if (distToCorner<(SDWORD)psLight->range)
+			{
+				/* Find how close we are to it */
+				percent = 100 - PERCENT(distToCorner,psLight->range);
+				xIndex = i - playerXTile;
+				yIndex = j - playerZTile;
+				// Might go off the grid for light ranges > one tile
+				if ( xIndex >= 0 && yIndex >= 0 &&
+					xIndex < (SDWORD)visibleXTiles &&
+					yIndex < (SDWORD)visibleYTiles )
 				{
-					/* Find how close we are to it */
-					percent = 100 - PERCENT(distToCorner,psLight->range);
-					xIndex = i - playerXTile;
-					yIndex = j - playerZTile;
-					// Might go off the grid for light ranges > one tile
-//					if(i<visibleXTiles && j<visibleYTiles && i>=0 && j>=0)
-					if ( xIndex >= 0 && yIndex >= 0 &&
-					     xIndex < (SDWORD)visibleXTiles &&
-					     yIndex < (SDWORD)visibleYTiles )
-					{
-						colourTile(xIndex, yIndex, psLight->colour, (UBYTE)(2*percent));
-					}
+					colourTile(xIndex, yIndex, psLight->colour, (UBYTE)(2*percent));
 				}
-
-
+			}
 		}
 	}
 }
 
-/*
-UDWORD	calcDistToTile(UDWORD tileX, UDWORD tileY, iVector *pos)
-{
-UDWORD	x1,y1;
-UDWORD	x2,y2;
-UDWORD	xDif,yDif,zDif;
-UDWORD	total;
 
-	x1 = tileX * TILE_UNITS;
-	y1 = tileY * TILE_UNITS;
-
-	x2 = pos->x;
-	y2 = pos->z;
-
-	xDif = abs(x1-x2);
-	zDif = abs(y1-y2);
-
-	total = (xDif*xDif) + (yDif*yDif);
-	return((UDWORD)sqrt(total));
-}
-*/
-UDWORD	calcDistToTile(UDWORD tileX, UDWORD tileY, Vector3i *pos)
+static UDWORD calcDistToTile(UDWORD tileX, UDWORD tileY, Vector3i *pos)
 {
 	UDWORD	x1,y1,z1;
 	UDWORD	x2,y2,z2;
@@ -555,11 +451,11 @@ UDWORD	calcDistToTile(UDWORD tileX, UDWORD tileY, Vector3i *pos)
 	zDif = abs(z1-z2);
 
 	total = (xDif*xDif) + (yDif*yDif) + (zDif*zDif);
-	return((UDWORD)sqrt(total));
+	return (UDWORD)sqrtf(total);
 }
 
 
-void	colourTile(SDWORD xIndex, SDWORD yIndex, LIGHT_COLOUR colour, UBYTE percent)
+static void colourTile(SDWORD xIndex, SDWORD yIndex, LIGHT_COLOUR colour, UBYTE percent)
 {
 
 	ASSERT( xIndex<LAND_XGRD,"X Colour Value out of range (above) for lighting" );
@@ -699,24 +595,19 @@ float	fraction,adjust;
 	psDroid->illumination = (UBYTE)retVal;
 }
 
-//#define EDGE_FOG
 
 
 UDWORD	lightDoFogAndIllumination(UBYTE brightness, SDWORD dx, SDWORD dz, UDWORD* pSpecular)
 {
-SDWORD	umbraRadius;	// Distance to start of light falloff
-SDWORD	penumbraRadius; // radius of area of obscurity
-SDWORD	umbra;
-//SDWORD	edge;
-SDWORD	distance;
-SDWORD	cosA,sinA;
-PIELIGHT lighting, specular, fogColour;
-SDWORD	depth = 0;
-SDWORD	colour;
-SDWORD	fog = 0;
-//SDWORD	mist = 0;
-
-	distance = (SDWORD) (sqrt(dx*dx+dz*dz));
+	SDWORD	umbraRadius;	// Distance to start of light falloff
+	SDWORD	penumbraRadius; // radius of area of obscurity
+	SDWORD	umbra;
+	SDWORD	distance = sqrtf(dx*dx + dz*dz);
+	SDWORD	cosA,sinA;
+	PIELIGHT lighting, specular, fogColour;
+	SDWORD	depth = 0;
+	SDWORD	colour;
+	SDWORD	fog = 0;
 
 	penumbraRadius = (visibleXTiles/2)<<TILE_SHIFT;
 
@@ -866,9 +757,12 @@ SDWORD	fog = 0;
 		brightness = (UBYTE)pie_ByteScale((UBYTE)brightness, (UBYTE)umbra);
 	}
 
-	if (fog == 0) {
-		// (d3d with no fog?)
-		*pSpecular = 0;
+	if (fog == 0)
+	{
+		if (pSpecular != NULL)
+		{
+			*pSpecular = 0;
+		}
 		lighting.byte.a = UBYTE_MAX;
 		lighting.byte.r = brightness;
 		lighting.byte.g = brightness;
@@ -876,12 +770,15 @@ SDWORD	fog = 0;
 	}
 	else
 	{
-		fogColour.argb = pie_GetFogColour();
-		specular.byte.a = (UBYTE)fog;
-		specular.byte.r = pie_ByteScale((UBYTE)fog, fogColour.byte.r);
-		specular.byte.g = pie_ByteScale((UBYTE)fog, fogColour.byte.g);
-		specular.byte.b = pie_ByteScale((UBYTE)fog, fogColour.byte.b);
-		*pSpecular = specular.argb;
+		if (pSpecular != NULL)
+		{
+			fogColour.argb = pie_GetFogColour();
+			specular.byte.a = (UBYTE)fog;
+			specular.byte.r = pie_ByteScale((UBYTE)fog, fogColour.byte.r);
+			specular.byte.g = pie_ByteScale((UBYTE)fog, fogColour.byte.g);
+			specular.byte.b = pie_ByteScale((UBYTE)fog, fogColour.byte.b);
+			*pSpecular = specular.argb;
+		}
 
 		//calculate new brightness
 		colour = 256 - fog;
@@ -891,16 +788,15 @@ SDWORD	fog = 0;
 		lighting.byte.g = brightness;
 		lighting.byte.b = brightness;
 	}
+
 	return lighting.argb;
 }
 
-
-/*
 void	doBuildingLights( void )
 {
-STRUCTURE	*psStructure;
-UDWORD	i;
-LIGHT	light;
+	STRUCTURE	*psStructure;
+	UDWORD	i;
+	LIGHT	light;
 
 	for(i=0; i<MAX_PLAYERS; i++)
 	{
@@ -916,12 +812,11 @@ LIGHT	light;
 		}
 	}
 }
-*/
-#ifdef ALEXM
+
+/* Experimental moving shadows code */
 void	findSunVector( void )
 {
-SDWORD	val,val2,val3;
-UDWORD	i;
+	SDWORD	val,val2,val3;
 
 	val = getStaticTimeValueRange(16384,8192);
 	val = 4096 - val;
@@ -933,27 +828,4 @@ UDWORD	i;
 	theSun.x = val;
 	theSun.y = val2;
 	theSun.z = val3;
-	flushConsoleMessages();
-	DBCONPRINTF(ConsoleString,(ConsoleString,"Sun X Vector : %d",theSun.x));
-	DBCONPRINTF(ConsoleString,(ConsoleString,"Sun Y Vector : %d",theSun.y));
-	DBCONPRINTF(ConsoleString,(ConsoleString,"Sun Z Vector : %d",theSun.z));
-   }
-
-void showSunOnTile(UDWORD x, UDWORD y)
-{
-	Vector3i a, b;
-
-	a.x = (x<<TILE_SHIFT)+(TILE_UNITS/2);
-	a.z = (y<<TILE_SHIFT)+(TILE_UNITS/2);
-	a.y = map_Height(a.x,a.z);
-
-	b.x = a.x + theSun.x/64;
-	b.y = a.y + theSun.y/64;
-	b.z = a.z + theSun.z/64;
-
-	pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_ON);
-	pie_SetFogStatus(FALSE);
-	draw3dLine(&a,&b,mapTile(x,y)->illumination);
-	pie_SetDepthBufferStatus(DEPTH_CMP_LEQ_WRT_ON);
 }
-#endif

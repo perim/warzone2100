@@ -921,8 +921,7 @@ static UDWORD scrStructTargetMask(STRUCTURE *psStruct)
 		//else if (psStats->numWeaps > 0)
         else if (psStats->psWeapStat != NULL)
 		{
-			//psWStats = psStats->asWeapList[0];
-            psWStats = psStats->psWeapStat[0];
+			psWStats = psStats->psWeapStat[0];
 			if (!proj_Direct(psWStats))
 			{
 				mask = SCR_ST_DEF_IDF;
@@ -1758,7 +1757,7 @@ BOOL scrSkDifficultyModifier(void)
 	}
 
 	// power modifier
-	amount = game.skDiff[player]*40;		//(0-20)*25
+	amount = game.skDiff[player]*40;		//(0-DIFF_SLIDER_STOPS)*25
 	
 	if(amount > 0)
 	{

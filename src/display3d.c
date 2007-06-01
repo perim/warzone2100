@@ -76,7 +76,6 @@
 #include "mapdisplay.h"
 #include "message.h"
 #include "component.h"
-#include "bridge.h"
 #include "warcam.h"
 #include "lib/script/script.h"
 #include "scripttabs.h"
@@ -157,7 +156,6 @@ static void	showSensorRange2(BASE_OBJECT *psObj);
 static void	drawRangeAtPos(SDWORD centerX, SDWORD centerY, SDWORD radius);
 static void	addConstructionLine(DROID *psDroid, STRUCTURE *psStructure);
 static void	doConstructionLines(void);
-WZ_DECL_UNUSED static void	showDroidSelection(DROID *psDroid);
 WZ_DECL_UNUSED static void	drawDeliveryPointSelection(void);
 static void	drawDroidCmndNo(DROID *psDroid);
 static void	drawDroidRank(DROID *psDroid);
@@ -182,10 +180,10 @@ static UWORD RiverBedTileID = BED_TILE;
 static float waterRealValue = 0.0f;
 #define WAVE_SPEED 4
 #define	MAX_FIRE_STAGE	32
-static FRACT	separation=(FRACT)0;
+static float	separation=(float)0;
 static SDWORD	acceleration=0;
 static SDWORD	heightSpeed=0;
-static FRACT	aSep;
+static float	aSep;
 static SDWORD	aAccel = 0;
 static SDWORD	aSpeed = 0;
 
@@ -216,23 +214,17 @@ UDWORD		terrainOutline = FALSE;
 SVMESH tileScreenInfo[LAND_YGRD][LAND_XGRD];
 
 /* Stores the tilepointers for rendered tiles */
-static TILE_BUCKET	tileIJ[LAND_YGRD][LAND_XGRD];
+static TILE_BUCKET tileIJ[LAND_YGRD][LAND_XGRD];
 
 /* Points for flipping the texture around if the tile is flipped or rotated */
 static POINT  sP1, sP2, sP3, sP4;
 static POINT  *psP1, *psP2, *psP3, *psP4, *psPTemp;
 
-/* Pointer to which tile the mouse is currently over */
-MAPTILE	*tile3dOver = NULL;
-
 /* Records the present X and Y values for the current mouse tile (in tiles */
-SDWORD	mouseTileX,mouseTileY;
-
-/* World coordinates that the mouse is over */
-static UDWORD	tile3dX,tile3dY;
+SDWORD mouseTileX, mouseTileY;
 
 /* Offsets for the screen being shrunk/expanded - how far in, how far down */
-UDWORD	xOffset=CLIP_BORDER,yOffset=CLIP_BORDER;
+UDWORD xOffset = CLIP_BORDER, yOffset = CLIP_BORDER;
 
 /* Do we want the radar to be rendered */
 BOOL	radarOnScreen=FALSE;
@@ -248,15 +240,14 @@ static BOOL	mouseLocated = TRUE;
 
 /* The box used for multiple selection - present screen coordinates */
 /* The game palette */
-iPalette	gamePal;
-UDWORD	currentGameFrame;
-static UDWORD	numTiles = 0;
-static SDWORD	tileZ = 8000;
-static QUAD	dragQuad;
-//UDWORD	averageHeight;
+iPalette gamePal;
+UDWORD currentGameFrame;
+static UDWORD numTiles = 0;
+static SDWORD tileZ = 8000;
+static QUAD dragQuad;
 
 /* temporary buffer used for flattening IMDs */
-static Vector3i	alteredPoints[iV_IMD_MAX_POINTS];
+static Vector3f alteredPoints[iV_IMD_MAX_POINTS];
 
 //number of tiles visible
 UDWORD	visibleXTiles;
@@ -348,10 +339,6 @@ void draw3DScene( void )
 {
 	BOOL bPlayerHasHQ = FALSE;
 
-	/* Set the droids on-screen display coordinates for selection later */
-	mX = mouseX();
-	mY = mouseY();
-
 	// the world centre - used for decaying lighting etc
 	gridCentreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
 	gridCentreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
@@ -379,6 +366,9 @@ void draw3DScene( void )
 		dragQuad.coords[3].y = dragBox3D.y2;
 	}
 
+	/* Calculate the position of the sun */
+//	findSunVector();
+
 	pie_Begin3DScene();
 	/* Set 3D world origins */
 	pie_SetGeometricOffset((iV_SCREEN_WIDTH>>1), geoOffset);
@@ -398,7 +388,7 @@ void draw3DScene( void )
 	drawStructureSelections();
 //	drawBuildingLines();
 
-	bPlayerHasHQ = radarCheckForHQ(selectedPlayer);
+	bPlayerHasHQ = getHQExists(selectedPlayer);
 
 //	if(radarOnScreen && (bPlayerHasHQ || (bMultiPlayer && (game.type == DMATCH)) ))
 	if(radarOnScreen && bPlayerHasHQ)
@@ -632,19 +622,15 @@ static void drawTiles(iView *camera, iView *player)
 	UDWORD i, j;
 	SDWORD zMax;
 	MAPTILE *psTile;
-	UDWORD specular;
 	UDWORD edgeX, edgeY;
-	BOOL IsWaterTile = FALSE;
+	BOOL bWaterTile = FALSE;
 	BOOL PushedDown = FALSE;
 	UBYTE TileIllum;
-	UWORD TextNum;
 	UDWORD shiftVal = 0;
 	UDWORD altVal = 0;
-	UDWORD realX, realY;
 	int numTilesAveraged = 0;
 	BOOL bEdgeTile;
-	SDWORD tmp_y;
-	static float angle = 0.0;
+	static float angle = 0.0f;
 
 	// Animate the water texture, just cycles the V coordinate through half the tiles height.
 	if(!gamePaused())
@@ -669,6 +655,9 @@ static void drawTiles(iView *camera, iView *player)
 	/* Find our position in tile coordinates */
 	playerXTile = player->p.x >> TILE_SHIFT;
 	playerZTile = player->p.z >> TILE_SHIFT;
+
+	// Check here, since it would crash our loops otherwise
+	ASSERT( visibleYTiles <= mapHeight && visibleXTiles <= mapWidth, "Tile coordinates out of range" );
 
 	/* Get the x,z translation components */
 	rx = (player->p.x) & (TILE_UNITS-1);
@@ -698,10 +687,10 @@ static void drawTiles(iView *camera, iView *player)
 	pie_TRANSLATE(-rx, -player->p.y, rz);
 	angle += 0.01f;
 
-	// RODZ uncomment the following line to see an OpenGL lighting demo
-	if (getDrawShadows()) {
+	if (getDrawShadows())
+	{
 		// this also detemines the length of the shadows
-		pie_BeginLighting(225, -600, 450);
+		pie_BeginLighting(&theSun);
 	}
 
 	/* ---------------------------------------------------------------- */
@@ -711,32 +700,34 @@ static void drawTiles(iView *camera, iView *player)
 		of the tiles in the grid
 	*/
 	averageCentreTerrainHeight = 0;
-	for (i=0; i < (SDWORD)visibleYTiles+1; i++)
+	for (i = 0; i < visibleYTiles+1; i++)
 	{
 		/* Go through the x's */
-		for (j=0; j < (SDWORD)visibleXTiles+1; j++)
+		for (j = 0; j < (SDWORD)visibleXTiles+1; j++)
 		{
-			tileScreenInfo[i][j].bWater = FALSE;
+			tileScreenInfo[i][j].x = world_coord(j - terrainMidX);
+			tileScreenInfo[i][j].z = world_coord(terrainMidY - i);
+
 			if( playerXTile+j < 0 ||
 				playerZTile+i < 0 ||
 				playerXTile+j > (SDWORD)(mapWidth-1) ||
 				playerZTile+i > (SDWORD)(mapHeight-1) )
 			{
+				// Tiles on the border of the map are never water tiles.
+				tileScreenInfo[i][j].bWater = FALSE;
+
 				edgeX = playerXTile+j;
 				edgeY = playerZTile+i;
-				if(playerXTile+j < 0 )
+				if (playerXTile+j < 0 )
 					edgeX = 0;
-				else if(playerXTile+j > (SDWORD)(mapWidth-1) )
+				else if (playerXTile+j > (SDWORD)(mapWidth-1) )
 					edgeX = mapWidth-1;
-				if(playerZTile+i < 0 )
+				if (playerZTile+i < 0 )
 					edgeY = 0;
-				else if(playerZTile+i > (SDWORD)(mapHeight-1) )
+				else if (playerZTile+i > (SDWORD)(mapHeight-1) )
 					edgeY = mapHeight-1;
 
-				tileScreenInfo[i][j].x = world_coord(j-terrainMidX);
-				tileScreenInfo[i][j].y = 0;//map_TileHeight(edgeX,edgeY);
-				tileScreenInfo[i][j].z = world_coord(terrainMidY-i);
-				tileScreenInfo[i][j].sz = pie_RotProj((Vector3i*)&tileScreenInfo[i][j].x, (Vector2i*)&tileScreenInfo[i][j].sx);
+				tileScreenInfo[i][j].y = 0; // map_TileHeight(edgeX, edgeY);
 
 				if (pie_GetFogEnabled())
 				{
@@ -745,7 +736,8 @@ static void drawTiles(iView *camera, iView *player)
 				}
 				else
 				{
-					tileScreenInfo[i][j].light.argb = lightDoFogAndIllumination( mapTile(edgeX, edgeY)->illumination, rx - tileScreenInfo[i][j].x, rz - world_coord(i - terrainMidY), &specular );
+					TileIllum = mapTile(edgeX, edgeY)->illumination;
+					tileScreenInfo[i][j].light.argb = lightDoFogAndIllumination( TileIllum, rx - tileScreenInfo[i][j].x, rz - world_coord(i-terrainMidY), &tileScreenInfo[i][j].specular.argb );
 				}
 
 				if( playerXTile+j < -1 ||
@@ -764,16 +756,20 @@ static void drawTiles(iView *camera, iView *player)
 			{
 				tileScreenInfo[i][j].drawInfo = TRUE;
 
-				psTile = mapTile(playerXTile+j, playerZTile+i);
 				/* Get a pointer to the tile at this location */
-				tileScreenInfo[i][j].x = world_coord(j-terrainMidX);
-
+				psTile = mapTile(playerXTile + j, playerZTile + i);
 				if (TERRAIN_TYPE(psTile) == TER_WATER)
 				{
 					tileScreenInfo[i][j].bWater = TRUE;
+					bWaterTile = TRUE;
 				}
-				tileScreenInfo[i][j].y = map_TileHeight(playerXTile+j, playerZTile+i);
-				tileScreenInfo[i][j].z = world_coord(terrainMidY-i);
+				else
+				{
+					tileScreenInfo[i][j].bWater = FALSE;
+					bWaterTile = FALSE;
+				}
+
+				tileScreenInfo[i][j].y = map_TileHeight(playerXTile + j, playerZTile + i);
 
 				/* Is it in the centre and therefore worth averaging height over? */
 				if ( i > MIN_TILE_Y &&
@@ -784,16 +780,6 @@ static void drawTiles(iView *camera, iView *player)
 					averageCentreTerrainHeight += tileScreenInfo[i][j].y;
 					numTilesAveraged++;
 				}
-				realX = playerXTile+j;
-				realY = playerZTile+i;
-				bEdgeTile = FALSE;
-				if ( realX <= 1 ||
-					 realY <= 1 ||
-					 realX >= mapWidth-2 ||
-					 realY >= mapHeight-2 )
-				{
-					bEdgeTile = TRUE;
-				}
 
 				if(getRevealStatus())
 				{
@@ -803,64 +789,77 @@ static void drawTiles(iView *camera, iView *player)
 					}
 					else
 					{
-						TileIllum = (psTile->level == UBYTE_MAX ? 1 : psTile->level);//avGetTileLevel(realX,realY);
+						TileIllum = (psTile->level == UBYTE_MAX ? 1 : psTile->level); // avGetTileLevel(realX,realY);
 					}
+				}
+				else if(bDisplaySensorRange)
+				{
+					TileIllum = psTile->inRange;
 				}
 				else
 				{
 					TileIllum = psTile->illumination;
 				}
 
+				tileScreenInfo[i][j].light.argb = lightDoFogAndIllumination(TileIllum, rx - tileScreenInfo[i][j].x, rz - world_coord(i-terrainMidY), &tileScreenInfo[i][j].specular.argb);
 
-				if(bDisplaySensorRange)
+				if ( playerXTile+j <= 1 ||
+					 playerZTile+i <= 1 ||
+					 playerXTile+j >= mapWidth-2 ||
+					 playerZTile+i >= mapHeight-2 )
 				{
-					TileIllum = psTile->inRange;
+					bEdgeTile = TRUE;
+				}
+				else
+				{
+					bEdgeTile = FALSE;
 				}
 
-				TextNum = (UWORD)(psTile->texture & TILE_NUMMASK);
-				IsWaterTile = (TERRAIN_TYPE(psTile) == TER_WATER);
-				// If it's the main water tile then..
-				PushedDown = FALSE;
-				if( TextNum == WaterTileID && !bEdgeTile )
+				// If it's the main water tile (has water texture) then..
+				if( (psTile->texture & TILE_NUMMASK) == WaterTileID && !bEdgeTile )
 				{
 					// Push the terrain down for the river bed.
 					PushedDown = TRUE;
 					shiftVal = WATER_DEPTH + environGetData(playerXTile+j, playerZTile+i) * 1.5f;
-					altVal = 0;//environGetValue(playerXTile+j,playerZTile+i);
+					altVal = 0; // environGetValue(playerXTile+j, playerZTile+i);
 					tileScreenInfo[i][j].y -= shiftVal + altVal;
 					// And darken it.
 					TileIllum = (UBYTE)(TileIllum * 0.75f);
 				}
-
-				tileScreenInfo[i][j].sz = pie_RotProj((Vector3i*)&tileScreenInfo[i][j], (Vector2i*)&tileScreenInfo[i][j].sx);
-
-				tileScreenInfo[i][j].light.argb = lightDoFogAndIllumination(TileIllum, rx - tileScreenInfo[i][j].x, rz - world_coord(i-terrainMidY), &specular);
-
-				tileScreenInfo[i][j].specular.argb = specular;
+				else
+				{
+					PushedDown = FALSE;
+				}
 
 				// If it's any water tile..
-				if(IsWaterTile) {
+				if (bWaterTile)
+				{
 					// If it's the main water tile then bring it back up because it was pushed down for the river bed calc.
-					tmp_y = tileScreenInfo[i][j].y;
-					if (PushedDown) { //TextNum == WaterTileID) {
+					SDWORD tmp_y = tileScreenInfo[i][j].y;
+
+					if (PushedDown)
+					{
 						tileScreenInfo[i][j].y += (shiftVal + 2*altVal);
 					}
 
 					// Transform it into the wx,wy mesh members.
-					tileScreenInfo[i][j].wz = pie_RotProj((Vector3i*)&tileScreenInfo[i][j], (Vector2i*)&tileScreenInfo[i][j].wx);
-					tileScreenInfo[i][j].wlight.argb = lightDoFogAndIllumination(
-						TileIllum, rx - tileScreenInfo[i][j].x, rz - world_coord(i-terrainMidY), &specular);
+					tileScreenInfo[i][j].water.z = pie_RotateProject((Vector3i*)&tileScreenInfo[i][j].x, (Vector2i*)&tileScreenInfo[i][j].water);
 					tileScreenInfo[i][j].water_height = tileScreenInfo[i][j].y;
+
+					// Calc the light for modified y coord and ignore the specular component
+					tileScreenInfo[i][j].wlight.argb = lightDoFogAndIllumination(TileIllum, rx - tileScreenInfo[i][j].x, rz - world_coord(i-terrainMidY), NULL);
+
 					tileScreenInfo[i][j].y = tmp_y;
-				} else {
-					// If it was'nt a water tile then need to ensure wx,wy are valid because
+				}
+				else
+				{
+					// If it wasnt a water tile then need to ensure water.xyz are valid because
 					// a water tile might be sharing verticies with it.
-					tileScreenInfo[i][j].wx = tileScreenInfo[i][j].sx;
-					tileScreenInfo[i][j].wy = tileScreenInfo[i][j].sy;
-					tileScreenInfo[i][j].wz = tileScreenInfo[i][j].sz;
+					tileScreenInfo[i][j].water = tileScreenInfo[i][j].screen;
 					tileScreenInfo[i][j].water_height = tileScreenInfo[i][j].y;
 				}
 			}
+			tileScreenInfo[i][j].screen.z = pie_RotateProject((Vector3i*)&tileScreenInfo[i][j].x, (Vector2i*)&tileScreenInfo[i][j].screen);
 		}
 	}
 
@@ -873,6 +872,7 @@ static void drawTiles(iView *camera, iView *player)
 	{
 		averageCentreTerrainHeight = ELEVATION_SCALE * TILE_UNITS;
 	}
+
 	/* This is done here as effects can light the terrain - pause mode problems though */
 	processEffects();
 	atmosUpdateSystem();
@@ -886,37 +886,38 @@ static void drawTiles(iView *camera, iView *player)
 		avUpdateTiles();
 	}
 
-//	doBuildingLights();
+	//doBuildingLights();
 	/* ---------------------------------------------------------------- */
 	/* Draw all the tiles or add them to bucket sort                     */
 	/* ---------------------------------------------------------------- */
-	for (i= 0; i < (SDWORD)visibleYTiles; i++)
+	for (i = 0; i < visibleYTiles; i++)
 	{
-		for (j= 0; j < (SDWORD)visibleXTiles; j++)
+		for (j = 0; j < visibleXTiles; j++)
 		{
-			if(tileScreenInfo[i][j].drawInfo == TRUE)
+			if (tileScreenInfo[i][j].drawInfo == TRUE)
 			{
-				tileIJ[i][j].i = i;
-				tileIJ[i][j].j = j;
 				//get distance of furthest corner
-				zMax = MAX(tileScreenInfo[i][j].sz, tileScreenInfo[i+1][j].sz);
-				zMax = MAX(zMax, tileScreenInfo[i+1][j+1].sz);
-				zMax = MAX(zMax, tileScreenInfo[i][j+1].sz);
-				tileIJ[i][j].depth = zMax;
-				if( (UDWORD)i > mapHeight || (UDWORD)j > mapWidth )
-				{
-					ASSERT( FALSE, "Weirdy tile coords" );
-				}
+				zMax = MAX(tileScreenInfo[i][j].screen.z, tileScreenInfo[i+1][j].screen.z);
+				zMax = MAX(zMax, tileScreenInfo[i+1][j+1].screen.z);
+				zMax = MAX(zMax, tileScreenInfo[i][j+1].screen.z);
+
 				if(zMax < 0)
 				{
 					// clipped
 					continue;
 				}
+
 				drawTerrainTile(i, j, FALSE);
+
 				if(tileScreenInfo[i][j].bWater)
 				{
+					tileIJ[i][j].i = i;
+					tileIJ[i][j].j = j;
+					tileIJ[i][j].depth = zMax;
+
 					// add the (possibly) transparent water to the bucket sort
 					bucketAddTypeToList(RENDER_WATERTILE, &tileIJ[i][j]);
+
 					// check if we need to draw a water edge
 					if((mapTile(playerXTile+j, playerZTile+i)->texture & TILE_NUMMASK) != WaterTileID) {
 						// the edge is in front of the water (which is drawn at z-index -1)
@@ -991,14 +992,13 @@ BOOL init3DView(void)
 	visibleXTiles = VISIBLE_XTILES;
 	visibleYTiles = VISIBLE_YTILES;
 
-
 	/* There are no drag boxes */
 	dragBox3D.status = DRAG_INACTIVE;
 
 	/* Arbitrary choice - from direct read! */
-	theSun.x = 0;
-	theSun.y = -3441;
-	theSun.z = 2619;
+	theSun.x = 225.0f;
+	theSun.y = -600.0f;
+	theSun.z = 450.0f;
 
 	/* Make sure and change these to comply with map.c */
 	imdRot.x = -35;
@@ -1028,9 +1028,6 @@ BOOL init3DView(void)
 
 	/* Set up the sine table for the bullets */
 	initBulletTable();
-
-	/* Set up light values */
-//	initLighting();
 
 	/* Build our shade table for gouraud shading - 256*16 values with best match from 256 colour table */
 	iV_PaletteShadeTableCreate();
@@ -1154,21 +1151,18 @@ BOOL clipXY(SDWORD x, SDWORD y)
 the Intelligence screen.  VERY similar to above function*/
 static void	calcFlagPosScreenCoords(SDWORD *pX, SDWORD *pY, SDWORD *pR)
 {
-	SDWORD	centX,centY,centZ;
-	SDWORD	cX,cY;
-	UDWORD	radius;
-
 	/* Get it's absolute dimensions */
-	centX = centY = centZ = 0;
+	Vector3i center3d = {0, 0, 0};
+	Vector2i center2d = {0, 0};
 	/* How big a box do we want - will ultimately be calculated using xmax, ymax, zmax etc */
-	radius = 22;
+	UDWORD	radius = 22;
 
 	/* Pop matrices and get the screen coordinates for last point*/
-	pie_RotateProject( centX, centY, centZ, &cX, &cY );
+	pie_RotateProject( &center3d, &center2d );
 
 	/*store the coords*/
-	*pX = cX;
-	*pY = cY;
+	*pX = center2d.x;
+	*pY = center2d.y;
 	*pR = radius;
 }
 
@@ -1321,7 +1315,6 @@ renderAnimComponent( COMPONENT_OBJECT *psObj )
 	DROID		*psDroid;
 	STRUCTURE	*psStructure;
 	UDWORD		brightness, specular;
-//	SDWORD		centreX, centreZ;
 
 	ASSERT( psParentObj != NULL,
 		"renderAnimComponent: invalid parent object pointer" );
@@ -1338,9 +1331,6 @@ renderAnimComponent( COMPONENT_OBJECT *psObj )
 	posX = psParentObj->x + psObj->position.x;
 	posY = psParentObj->y + psObj->position.y;
 	posZ = psParentObj->z + psObj->position.z;
-
-//	centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-//	centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
 
 	/* render */
 	if( clipXY( posX, posY ) )
@@ -1404,15 +1394,15 @@ renderAnimComponent( COMPONENT_OBJECT *psObj )
 		//brightness and fog calculation
 		if (psParentObj->type == OBJ_STRUCTURE)
 		{
-			SDWORD sX,sY;
+			Vector3i zero = {0, 0, 0};
+			Vector2i s = {0, 0};
 
 			psStructure = (STRUCTURE*)psParentObj;
 			brightness = 200 - (100-PERCENT( psStructure->body ,
-			//		psStructure->baseBodyPoints ));
 					structureBody(psStructure)));
-			pie_RotateProject( 0, 0, 0, &sX, &sY );
-			psStructure->sDisplay.screenX = sX;
-			psStructure->sDisplay.screenY = sY;
+			pie_RotateProject( &zero, &s );
+			psStructure->sDisplay.screenX = s.x;
+			psStructure->sDisplay.screenY = s.y;
 			targetAdd((BASE_OBJECT*)psStructure);
 		}
 		else
@@ -1583,7 +1573,7 @@ void displayProximityMsgs( void )
 static void displayAnimation( ANIM_OBJECT * psAnimObj, BOOL bHoldOnFirstFrame )
 {
 	UWORD				i,uwFrame;
-	VECTOR3D			vecPos, vecRot, vecScale;
+	Vector3i			vecPos, vecRot, vecScale;
 	COMPONENT_OBJECT	*psComp;
 
 	for ( i=0; i<psAnimObj->psAnim->uwObj; i++ )
@@ -1730,25 +1720,14 @@ void	renderFeature(FEATURE *psFeature)
 {
 	UDWORD		featX,featY;
 	SDWORD		rotation;
-	//SDWORD		centreX,centreZ;
 	UDWORD		brightness, specular;
 	Vector3i dv;
-	Vector3i *vecTemp;
-	BOOL		bForceDraw;
+	Vector3f *vecTemp;
+	BOOL bForceDraw = ( !getRevealStatus() && psFeature->psStats->visibleAtStart);
 	int shadowFlags = 0;
-
-
-//	if(psFeature->psStats->subType == FEAT_BUILD_WRECK)
-//	{
-//		return;//don't draw 'em
-//	}
-
-	bForceDraw = ( !getRevealStatus() && psFeature->psStats->visibleAtStart);
 
 	if (psFeature->visible[selectedPlayer] || godMode || demoGetStatus() || bForceDraw)
 	{
-		SDWORD sX,sY;
-
 		psFeature->sDisplay.frameNumber = currentGameFrame;
 		/* Get it's x and y coordinates so we don't have to deref. struct later */
 		featX = psFeature->x;
@@ -1760,7 +1739,6 @@ void	renderFeature(FEATURE *psFeature)
 		}
 		dv.x = (featX - player.p.x) - terrainMidX*TILE_UNITS;
 		dv.z = terrainMidY*TILE_UNITS - (featY - player.p.z);
-
 
 		/* features sits at the height of the tile it's centre is on */
 		dv.y = psFeature->z;
@@ -1781,12 +1759,8 @@ void	renderFeature(FEATURE *psFeature)
 
 		iV_MatrixRotateY(-rotation);
 
-
-//		centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-//		centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
 		brightness = 200; //? HUH?
 
-//		if(psFeature->sDisplay.imd->ymax>300)
 		if(psFeature->psStats->subType == FEAT_SKYSCRAPER)
 		{
 			objectShimmy((BASE_OBJECT*)psFeature);
@@ -1801,7 +1775,7 @@ void	renderFeature(FEATURE *psFeature)
 			brightness = avGetObjLightLevel((BASE_OBJECT*)psFeature,brightness);
 		}
 
-		brightness = lightDoFogAndIllumination(brightness,getCentreX()-featX,getCentreZ()-featY, &specular);
+		brightness = lightDoFogAndIllumination(brightness, getCentreX() - featX, getCentreZ() - featY, &specular);
 		if(psFeature->psStats->subType == FEAT_BUILDING ||
 		psFeature->psStats->subType == FEAT_SKYSCRAPER ||
 		psFeature->psStats->subType == FEAT_OIL_DRUM)
@@ -1812,7 +1786,7 @@ void	renderFeature(FEATURE *psFeature)
 		if(psFeature->psStats->subType == FEAT_OIL_RESOURCE)
 		{
 			vecTemp = psFeature->sDisplay.imd->points;
-			flattenImd(psFeature->sDisplay.imd,psFeature->x,psFeature->y,0);
+			flattenImd(psFeature->sDisplay.imd, psFeature->x, psFeature->y, 0);
 			/* currentGameFrame/2 set anim running - GJ hack */
 			pie_Draw3DShape(psFeature->sDisplay.imd, currentGameFrame/2, 0, brightness, specular, 0, 0);
 			psFeature->sDisplay.imd->points = vecTemp;
@@ -1822,10 +1796,16 @@ void	renderFeature(FEATURE *psFeature)
 			pie_Draw3DShape(psFeature->sDisplay.imd, 0, 0, brightness, specular, shadowFlags,0);
 		}
 
-		pie_RotateProject( 0, 0, 0, &sX, &sY );
-		psFeature->sDisplay.screenX = sX;
-		psFeature->sDisplay.screenY = sY;
-		targetAdd((BASE_OBJECT*)psFeature);
+		{
+			Vector3i zero = {0, 0, 0};
+			Vector2i s = {0, 0};
+
+			pie_RotateProject( &zero, &s );
+			psFeature->sDisplay.screenX = s.x;
+			psFeature->sDisplay.screenY = s.y;
+
+			targetAdd((BASE_OBJECT*)psFeature);
+		}
 
 		iV_MatrixEnd();
 	}
@@ -1838,7 +1818,6 @@ void renderProximityMsg(PROXIMITY_DISPLAY *psProxDisp)
 	VIEW_PROXIMITY	*pViewProximity = NULL;
 	SDWORD			x, y, r;
 	iIMDShape		*proxImd = NULL;
-//	SDWORD		centreX,centreZ;
 	UDWORD		brightness, specular;
 
 	//store the frame number for when deciding what has been clicked on
@@ -1876,8 +1855,6 @@ void renderProximityMsg(PROXIMITY_DISPLAY *psProxDisp)
 	{
 		ASSERT( FALSE,"Buggered proximity message type" );
 	}
-//	centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-//	centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
 	brightness = lightDoFogAndIllumination(pie_MAX_BRIGHT_LEVEL,getCentreX()-msgX,getCentreZ()-msgY, &specular);
 
 	dv.x = (msgX - player.p.x) - terrainMidX*TILE_UNITS;
@@ -1932,7 +1909,6 @@ void renderProximityMsg(PROXIMITY_DISPLAY *psProxDisp)
 		}
 	}
 
-//	iV_MatrixRotateY(DEG(gameTime/10));
 	iV_MatrixRotateY(-player.r.y);
 	iV_MatrixRotateX(-player.r.x);
 
@@ -1960,7 +1936,6 @@ void renderProximityMsg(PROXIMITY_DISPLAY *psProxDisp)
 void	renderStructure(STRUCTURE *psStructure)
 {
 	SDWORD			structX,structY;
-	SDWORD			sX,sY;
 	iIMDShape		*baseImd,*strImd;//*mountImd,*weaponImd,*flashImd;
 	iIMDShape		*mountImd[STRUCT_MAXWEAPS];
 	iIMDShape		*weaponImd[STRUCT_MAXWEAPS];
@@ -1974,7 +1949,7 @@ void	renderStructure(STRUCTURE *psStructure)
 	Vector3i dv;
 	SDWORD			i;
 	iIMDShape *lImd = NULL, *imd = NULL;
-	Vector3i *temp = NULL;
+	Vector3f *temp = NULL;
 	BOOL			bHitByElectronic = FALSE;
 	iIMDShape		*pRepImd;
 	REPAIR_FACILITY		*psRepairFac = NULL;
@@ -2039,7 +2014,7 @@ void	renderStructure(STRUCTURE *psStructure)
 				SDWORD strHeight;
 
 				// Get a copy of the points
-				memcpy( alteredPoints, imd->points, imd->npoints * sizeof(Vector3i) );
+				memcpy( alteredPoints, imd->points, imd->npoints * sizeof(Vector3f) );
 
 				// Get the height of the centre point for reference
 				strHeight = psStructure->z;//map_Height(structX,structY) + 64;
@@ -2078,7 +2053,7 @@ void	renderStructure(STRUCTURE *psStructure)
 		rz = player.p.z & (TILE_UNITS-1);
 
 		/* Translate */
-		iV_TRANSLATE(rx,0,-rz);
+		iV_TRANSLATE(rx, 0, -rz);
 
 		/* OK - here is where we establish which IMD to draw for the building - luckily static objects,
 		* buildings in other words are NOT made up of components - much quicker! */
@@ -2120,7 +2095,7 @@ void	renderStructure(STRUCTURE *psStructure)
 			/* Draw the building's base first */
 			baseImd = psStructure->pStructureType->pBaseIMD;
 
-			if(baseImd!=NULL)
+			if(baseImd != NULL)
 			{
 				pie_Draw3DShape(baseImd, 0, 0, buildingBrightness, specular, 0,0);
 			}
@@ -2133,16 +2108,16 @@ void	renderStructure(STRUCTURE *psStructure)
 
 			imd = psStructure->sDisplay.imd;
 
-			if(imd!=NULL && bHitByElectronic)
+			if(imd != NULL && bHitByElectronic)
 			{
 				// Get a copy of the points
-				memcpy(alteredPoints,imd->points,imd->npoints*sizeof(Vector3i));
+				memcpy(alteredPoints, imd->points, imd->npoints * sizeof(Vector3i));
 				for(i=0; i<imd->npoints; i++)
 				{
 					SDWORD yVar = (10 - rand() % 20);
 
-					alteredPoints[i].x +=yVar - (rand()%2*yVar);
-					alteredPoints[i].z +=yVar - (rand()%2*yVar);
+					alteredPoints[i].x += yVar - (rand()%2*yVar);
+					alteredPoints[i].z += yVar - (rand()%2*yVar);
 				}
 				temp = imd->points;
 				imd->points = alteredPoints;
@@ -2458,12 +2433,19 @@ void	renderStructure(STRUCTURE *psStructure)
 				}
 			}
 		}
-		pie_RotateProject( 0, 0, 0, &sX, &sY );
-		psStructure->sDisplay.screenX = sX;
-		psStructure->sDisplay.screenY = sY;
-		iV_MatrixEnd();
 
-		targetAdd((BASE_OBJECT*)psStructure);
+		{
+			Vector3i zero = {0, 0, 0};
+			Vector2i s = {0, 0};
+
+			pie_RotateProject( &zero, &s );
+			psStructure->sDisplay.screenX = s.x;
+			psStructure->sDisplay.screenY = s.y;
+
+			targetAdd((BASE_OBJECT*)psStructure);
+		}
+
+		iV_MatrixEnd();
 	}
 }
 
@@ -2472,8 +2454,7 @@ void	renderDeliveryPoint(FLAG_POSITION *psPosition)
 {
 	Vector3i dv;
 	SDWORD			x, y, r;
-	Vector3i *temp = NULL;
-//	SDWORD			centreX, centreZ;
+	Vector3f *temp = NULL;
 	SDWORD			buildingBrightness, specular;
 	//store the frame number for when deciding what has been clicked on
 	psPosition->frameNumber = currentGameFrame;
@@ -2495,7 +2476,6 @@ void	renderDeliveryPoint(FLAG_POSITION *psPosition)
 	iV_TRANSLATE(rx,0,-rz);
 
 	//quick check for invalid data
-	//ASSERT( psPosition->factoryType < NUM_FACTORY_TYPES &&
 	ASSERT( psPosition->factoryType < NUM_FLAG_TYPES && psPosition->factoryInc < MAX_FACTORY, "Invalid assembly point" );
 
 	if(!psPosition->selected)
@@ -2505,20 +2485,12 @@ void	renderDeliveryPoint(FLAG_POSITION *psPosition)
 			psPosition->coords.x, psPosition->coords.y,0);
 	}
 
-	pie_MatScale(50);				//they are all big now so make this one smaller too
+	pie_MatScale(50); // they are all big now so make this one smaller too
 
-//	centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-//	centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
+	buildingBrightness = lightDoFogAndIllumination(pie_MAX_BRIGHT_LEVEL,
+		getCentreX() - psPosition->coords.x, getCentreZ() - psPosition->coords.y, (UDWORD*)&specular);
 
-	buildingBrightness = pie_MAX_BRIGHT_LEVEL;
-
-	buildingBrightness = lightDoFogAndIllumination((UBYTE)buildingBrightness,
-		getCentreX()-psPosition->coords.x,getCentreZ()-psPosition->coords.y, (UDWORD*)&specular);
-
-//	pie_Draw3DShape(pAssemblyPointIMDs[psPosition->factoryInc], 0, 0,
-	//	buildingBrightness, 0, pie_TRANSLUCENT | pie_NO_BILINEAR, EFFECT_DELIVERY_POINT_TRANSPARENCY);
-	pie_Draw3DShape(pAssemblyPointIMDs[psPosition->factoryType][psPosition->factoryInc],
-		0, 0, buildingBrightness, specular, pie_NO_BILINEAR, 0);
+	pie_Draw3DShape(pAssemblyPointIMDs[psPosition->factoryType][psPosition->factoryInc], 0, 0, buildingBrightness, specular, pie_NO_BILINEAR, 0);
 
 	if(!psPosition->selected)
 	{
@@ -2537,15 +2509,13 @@ void	renderDeliveryPoint(FLAG_POSITION *psPosition)
 static BOOL	renderWallSection(STRUCTURE *psStructure)
 {
 	SDWORD			structX,structY;
-//	SDWORD			centreX,centreZ;
 	UDWORD			brightness;
 	iIMDShape		*imd;
 	SDWORD			rotation;
 	Vector3i			dv;
 	UDWORD			i;
-	Vector3i			*temp;
+	Vector3f			*temp;
 	UDWORD			buildingBrightness, specular;
-	SDWORD			sX,sY;
 	// HACK to be able to use static shadows for walls
 	// We just store a separate IMD for each direction
 	static iIMDShape otherDirections[3];
@@ -2597,7 +2567,7 @@ static BOOL	renderWallSection(STRUCTURE *psStructure)
 		fit tightly to the ground and to neighbours.
 		*/
 		imd = psStructure->pStructureType->pBaseIMD;
-		if(imd!=NULL)
+		if(imd != NULL)
 		{
 			UDWORD centreHeight;
 
@@ -2632,12 +2602,12 @@ static BOOL	renderWallSection(STRUCTURE *psStructure)
 		rz = player.p.z & (TILE_UNITS-1);
 
 		/* Translate */
-		iV_TRANSLATE(rx,0,-rz);
+		iV_TRANSLATE(rx, 0, -rz);
 
 		rotation = DEG( (int)psStructure->direction );
 		iV_MatrixRotateY(-rotation);
-	//	objectShimmy((BASE_OBJECT*)psStructure);
-		if(imd!=NULL)
+
+		if(imd != NULL)
 		{
 			// Make the imd pointer to the vertex list point to ours
 			temp = imd->points;
@@ -2688,9 +2658,15 @@ static BOOL	renderWallSection(STRUCTURE *psStructure)
 			imd = originalDirection;
 		}
 
-		pie_RotateProject( 0, 0, 0, &sX, &sY );
-		psStructure->sDisplay.screenX = sX;
-		psStructure->sDisplay.screenY = sY;
+		{
+			Vector3i zero = {0, 0, 0};
+			Vector2i s = {0, 0};
+
+			pie_RotateProject( &zero, &s );
+			psStructure->sDisplay.screenX = s.x;
+			psStructure->sDisplay.screenY = s.y;
+		}
+
 		iV_MatrixEnd();
 
 		return(TRUE);
@@ -2702,11 +2678,9 @@ static BOOL	renderWallSection(STRUCTURE *psStructure)
 void renderShadow( DROID *psDroid, iIMDShape *psShadowIMD )
 {
 	Vector3i			dv;
-	Vector3i			*pVecTemp;
+	Vector3f			*pVecTemp;
 	SDWORD			shadowScale;
 	UDWORD brightness, specular;
-//	SDWORD centreX, centreZ;
-
 
 	dv.x = (psDroid->x - player.p.x) - terrainMidX*TILE_UNITS;
 	if(psDroid->droidType == DROID_TRANSPORTER)
@@ -2746,10 +2720,6 @@ void renderShadow( DROID *psDroid, iIMDShape *psShadowIMD )
 		pie_MatRotX( DEG( psDroid->pitch ) );
 		pie_MatRotZ( DEG( psDroid->roll ) );
 	}
-
-	// set up lighting
-//	centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-//	centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
 
 	brightness = (UDWORD)lightDoFogAndIllumination(pie_MAX_BRIGHT_LEVEL,getCentreX()-psDroid->x,getCentreZ()-psDroid->y, &specular);
 
@@ -2806,10 +2776,10 @@ static void	drawDragBox( void )
 		}
 
 		// SHURCOOL: Determine the 4 corners of the selection box, and use them for consistent selection box rendering
-		minX = min(dragBox3D.x1, mX);
-		maxX = max(dragBox3D.x1, mX);
-		minY = min(dragBox3D.y1, mY);
-		maxY = max(dragBox3D.y1, mY);
+		minX = min(dragBox3D.x1, mouseXPos);
+		maxX = max(dragBox3D.x1, mouseXPos);
+		minY = min(dragBox3D.y1, mouseYPos);
+		maxY = max(dragBox3D.y1, mouseYPos);
 
 		// SHURCOOL: Reduce the box in size to produce a (consistent) pulsing inward effect
 		minX += dragBox3D.boxColourIndex/2;
@@ -2845,7 +2815,7 @@ static void drawWeaponReloadBar(BASE_OBJECT *psObj, WEAPON *psWeap, int weapon_s
 
 	/* ****************/
 	// display unit resistance instead of reload!
-	FRACT mulH;
+	float mulH;
 	DROID *psDroid;
 
 	if (ctrlShiftDown() && (psObj->type == OBJ_DROID))
@@ -2982,7 +2952,7 @@ UDWORD		i;
 BASE_OBJECT	*psClickedOn;
 BOOL		bMouseOverStructure = FALSE;
 BOOL		bMouseOverOwnStructure = FALSE;
-FRACT		mulH;
+float		mulH;
 
 	psClickedOn = mouseTarget();
 	if(psClickedOn!=NULL && psClickedOn->type == OBJ_STRUCTURE)
@@ -3243,45 +3213,6 @@ BASE_OBJECT		*psObj;
 	return(retVal);
 }
 
-static void drawDroidPowerBar(DROID *psDroid)
-{
-	return;
-}
-
-static void drawDroidRanking(DROID *psDroid)
-{
-	return;
-}
-
-static void drawDroidReloadBar(DROID *psDroid)
-{
-	return;
-}
-
-static BOOL doHighlight( DROID *psDroid )
-{
-	return(TRUE);
-}
-
-static void	showDroidSelection( DROID *psDroid )
-{
-	/* First, let's see if we need to - Get out if it's not selected and no appropriate to highlight */
-	if(!psDroid->selected && !doHighlight(psDroid))
-	{
-		/* No need - so get out now */
-		return;
-	}
-
-	/* Right, we're going to process this one, so first do power bars */
-	drawDroidPowerBar(psDroid);
-
-	/* Now, display it's rank */
-	drawDroidRanking(psDroid);
-
-	/* And the reload bars... */
-	drawDroidReloadBar(psDroid);
-}
-
 static void	drawDeliveryPointSelection(void)
 {
 	FLAG_POSITION	*psDelivPoint;
@@ -3319,7 +3250,7 @@ static void	drawDroidSelections( void )
 	BOOL			bBeingTracked;
 	UDWORD			i,index;
 	FEATURE			*psFeature;
-	FRACT			mulH;
+	float			mulH;
 
 	psClickedOn = mouseTarget();
 	if(psClickedOn!=NULL && psClickedOn->type == OBJ_DROID)
@@ -3768,10 +3699,9 @@ SDWORD	xShift,yShift, index;
 /* ---------------------------------------------------------------------------- */
 void	draw3dLine(Vector3i *src, Vector3i *dest, UBYTE col)
 {
-	Vector3i null, vec;
+	Vector3i zero = {0, 0, 0}, vec;
 	Vector2i srcS, destS;
 
-	null.x = null.y = null.z = 0;
 	vec.x = (src->x - player.p.x) - terrainMidX*TILE_UNITS;
 	vec.z = terrainMidY*TILE_UNITS - (src->z - player.p.z);
 	vec.y = src->y;
@@ -3787,7 +3717,7 @@ void	draw3dLine(Vector3i *src, Vector3i *dest, UBYTE col)
 	pie_TRANSLATE(rx,0,-rz);
 
 	/* Project - no rotation being done */
-	pie_RotProj(&null,&srcS);
+	pie_RotateProject(&zero, &srcS);
 	pie_MatEnd();
 
 	vec.x = (dest->x - player.p.x) - terrainMidX*TILE_UNITS;
@@ -3797,15 +3727,15 @@ void	draw3dLine(Vector3i *src, Vector3i *dest, UBYTE col)
 	iV_MatrixBegin();
 
 	/* Translate */
-	pie_TRANSLATE(vec.x,vec.y,vec.z);
+	pie_TRANSLATE(vec.x, vec.y, vec.z);
 	rx = player.p.x & (TILE_UNITS-1);
 	rz = player.p.z & (TILE_UNITS-1);
 
 	/* Translate */
-	pie_TRANSLATE(rx,0,-rz);
+	pie_TRANSLATE(rx, 0, -rz);
 
 	/* Project - no rotation being done */
-	pie_RotProj(&null,&destS);
+	pie_RotateProject(&zero, &destS);
 	pie_MatEnd();
 
 	iV_Line(srcS.x,srcS.y,destS.x,destS.y,col);
@@ -3815,18 +3745,12 @@ void	draw3dLine(Vector3i *src, Vector3i *dest, UBYTE col)
 	speeded up and the accuracy increased to allow variable size bouding boxes */
 void	calcScreenCoords(DROID *psDroid)
 {
-	//BOOL	setMouse = FALSE;
-	SDWORD	centX,centY,centZ;
-	SDWORD	cX, cY, cZ;
-	iIMDShape	*imd;
+	/* Get it's absolute dimensions */
+	Vector3i center = {0, 0, 0};
+	Vector2i center2 = {0, 0};
+	SDWORD cZ;
 	UDWORD	radius;
 	POINT	pt;
-
-	/* which IMD are we using? */
-	imd = psDroid->sDisplay.imd;
-
-	/* Get it's absolute dimensions */
-	centX = centY = centZ = 0;
 
 	/* How big a box do we want - will ultimately be calculated using xmax, ymax, zmax etc */
 	if(psDroid->droidType == DROID_TRANSPORTER)
@@ -3839,7 +3763,7 @@ void	calcScreenCoords(DROID *psDroid)
 	}
 
 	/* Pop matrices and get the screen corrdinates */
-	cZ = pie_RotateProject( centX, centY, centZ, &cX, &cY );
+	cZ = pie_RotateProject( &center, &center2 );
 
 	//Watermelon:added a crash protection hack...
 	if (cZ != 0)
@@ -3850,9 +3774,9 @@ void	calcScreenCoords(DROID *psDroid)
 	/* Deselect all the droids if we've released the drag box */
 	if(dragBox3D.status == DRAG_RELEASED)
 	{
-		pt.x = cX;
-		pt.y = cY;
-		if(inQuad(&pt,&dragQuad) && psDroid->player == selectedPlayer)
+		pt.x = center2.x;
+		pt.y = center2.y;
+		if(inQuad(&pt, &dragQuad) && psDroid->player == selectedPlayer)
 		{
 			//don't allow Transporter Droids to be selected here
 			//unless we're in multiPlayer mode!!!!
@@ -3862,10 +3786,10 @@ void	calcScreenCoords(DROID *psDroid)
 			}
 		}
 	}
-	cY -= 4;
+	center2.y -= 4;
 	/* Store away the screen coordinates so we can select the droids without doing a trasform */
-	psDroid->sDisplay.screenX = cX;
-	psDroid->sDisplay.screenY = cY;
+	psDroid->sDisplay.screenX = center2.x;
+	psDroid->sDisplay.screenY = center2.y;
 	psDroid->sDisplay.screenR = radius;
 }
 
@@ -4006,7 +3930,7 @@ static void preprocessTiles(void)
 							{
 								for(j = up; j <= down; j++)
 								{
-									SET_TILE_HIGHLIGHT(mapTile(i,j));
+									SET_TILE_HIGHLIGHT(mapTile(i, j));
 								}
 							}
 						}
@@ -4019,66 +3943,62 @@ static void preprocessTiles(void)
 }
 
 
+/*!
+ * Find the tile the mouse is currently over
+ */
 /* TODO This is slow - speed it up */
-static void	locateMouse(void)
+static void locateMouse(void)
 {
-	UDWORD	i,j;
-	POINT	pt;
-	QUAD	quad;
-	SDWORD	nearestZ = SDWORD_MAX;
-	SDWORD	tileZ;
-	BOOL	bWaterTile;
+	const POINT pt = {mouseXPos, mouseYPos};
+	unsigned int i;
+	int nearestZ = INT_MAX;
 
-	pt.x = mX;
-	pt.y = mY;
-	for(i=0; i<visibleXTiles; i++)
+	for(i = 0; i < visibleXTiles; ++i)
 	{
-		for(j=0; j<visibleYTiles; j++)
+		unsigned int j;
+		for(j = 0; j < visibleYTiles; ++j)
 		{
-			bWaterTile = tileScreenInfo[i][j].bWater;
+			bool bWaterTile = tileScreenInfo[i][j].bWater;
+			int tileZ = (bWaterTile ? tileScreenInfo[i][j].water.z : tileScreenInfo[i][j].screen.z);
 
-			tileZ = (bWaterTile ? tileScreenInfo[i][j].wz : tileScreenInfo[i][j].sz);
-			if(tileZ<=nearestZ)
+			if(tileZ <= nearestZ)
 			{
-				quad.coords[0].x = (bWaterTile ? tileScreenInfo[i][j].wx : tileScreenInfo[i][j].sx);
-				quad.coords[0].y = (bWaterTile ? tileScreenInfo[i][j].wy : tileScreenInfo[i][j].sy);
+				QUAD quad;
 
-				quad.coords[1].x = (bWaterTile ? tileScreenInfo[i][j+1].wx : tileScreenInfo[i][j+1].sx);
-				quad.coords[1].y = (bWaterTile ? tileScreenInfo[i][j+1].wy : tileScreenInfo[i][j+1].sy);
+				quad.coords[0].x = (bWaterTile ? tileScreenInfo[i+0][j+0].water.x : tileScreenInfo[i+0][j+0].screen.x);
+				quad.coords[0].y = (bWaterTile ? tileScreenInfo[i+0][j+0].water.y : tileScreenInfo[i+0][j+0].screen.y);
 
-				quad.coords[2].x = (bWaterTile ? tileScreenInfo[i+1][j+1].wx : tileScreenInfo[i+1][j+1].sx);
-				quad.coords[2].y = (bWaterTile ? tileScreenInfo[i+1][j+1].wy :tileScreenInfo[i+1][j+1].sy);
+				quad.coords[1].x = (bWaterTile ? tileScreenInfo[i+0][j+1].water.x : tileScreenInfo[i+0][j+1].screen.x);
+				quad.coords[1].y = (bWaterTile ? tileScreenInfo[i+0][j+1].water.y : tileScreenInfo[i+0][j+1].screen.y);
 
-				quad.coords[3].x = (bWaterTile ? tileScreenInfo[i+1][j].wx: tileScreenInfo[i+1][j].sx);
-				quad.coords[3].y = (bWaterTile ? tileScreenInfo[i+1][j].wy: tileScreenInfo[i+1][j].sy);
+				quad.coords[2].x = (bWaterTile ? tileScreenInfo[i+1][j+1].water.x : tileScreenInfo[i+1][j+1].screen.x);
+				quad.coords[2].y = (bWaterTile ? tileScreenInfo[i+1][j+1].water.y : tileScreenInfo[i+1][j+1].screen.y);
+
+				quad.coords[3].x = (bWaterTile ? tileScreenInfo[i+1][j+0].water.x : tileScreenInfo[i+1][j+0].screen.x);
+				quad.coords[3].y = (bWaterTile ? tileScreenInfo[i+1][j+0].water.y : tileScreenInfo[i+1][j+0].screen.y);
 
 				/* We've got a match for our mouse coords */
-				if(inQuad(&pt,&quad))
+				if (inQuad(&pt, &quad))
 				{
-					mouseTileX = playerXTile+j;
-					mouseTileY = playerZTile+i;
-					if(mouseTileX<0) mouseTileX = 0;
-					if(mouseTileX > mapWidth-1) mouseTileX = mapWidth-1;
-					if(mouseTileY<0) mouseTileY = 0;
-					if(mouseTileY > mapHeight-1) mouseTileY = mapHeight-1;
+					mouseTileX = playerXTile + j;
+					mouseTileY = playerZTile + i;
+					if (mouseTileX < 0)
+						mouseTileX = 0;
+					else if (mouseTileX > mapWidth-1)
+						mouseTileX = mapWidth - 1;
+					if (mouseTileY < 0)
+						mouseTileY = 0;
+					else if (mouseTileY > mapHeight-1)
+						mouseTileY = mapHeight - 1;
 
-					tile3dX = playerXTile+j;
-					tile3dY = playerZTile+i;
-					if( (tile3dX > 0) &&
-						(tile3dY > 0) &&
-						(tile3dX <= mapWidth-1) &&
-						(tile3dY <= mapHeight-1) )
-
-					tile3dOver = mapTile(tile3dX,tile3dY);
 					/* Store away z value */
 					nearestZ = tileZ;
 				}
 			}
 		}
 	}
-
-
 }
+
 
 // Render the sky and surroundings
 static void renderSurroundings(void)
@@ -4109,7 +4029,7 @@ static void renderSurroundings(void)
 	// Fogbox //
 	rx = (player.p.x) & (TILE_UNITS-1);
 	rz = (player.p.z) & (TILE_UNITS-1);
-	pie_TRANSLATE(-rx,-player.p.y,rz);
+	pie_TRANSLATE(-rx, -player.p.y, rz);
 
 	left  = TILE_UNITS * min(visibleXTiles/2, playerXTile+visibleXTiles/2+1);
 	right = TILE_UNITS * min(visibleXTiles/2, mapWidth-playerXTile-visibleXTiles/2);
@@ -4151,11 +4071,10 @@ static iIMDShape	*flattenImd(iIMDShape *imd, UDWORD structX, UDWORD structY, UDW
 {
 	UDWORD i, centreHeight;
 
-	ASSERT( imd->npoints < iV_IMD_MAX_POINTS,
-		"flattenImd: too many points in the PIE to flatten it" );
+	ASSERT( imd->npoints < iV_IMD_MAX_POINTS, "flattenImd: too many points in the PIE to flatten it" );
 
 	/* Get a copy of the points */
-	memcpy(alteredPoints,imd->points,imd->npoints*sizeof(Vector3i));
+	memcpy(alteredPoints, imd->points, imd->npoints * sizeof(Vector3i));
 
 	/* Get the height of the centre point for reference */
 	centreHeight = map_Height(structX,structY);
@@ -4170,7 +4089,7 @@ static iIMDShape	*flattenImd(iIMDShape *imd, UDWORD structX, UDWORD structY, UDW
 	switch(direction)
 	{
 	case 0:
-		for(i=0; i<(UDWORD)imd->npoints; i++)
+		for(i = 0; i < (UDWORD)imd->npoints; i++)
 		{
 			if (abs(alteredPoints[i].x) >= 63 || abs(alteredPoints[i].z) >= 63)
 			{
@@ -4330,7 +4249,6 @@ void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 		CLEAR_TILE_HIGHLIGHT(psTile);
 		bOutlined = TRUE;
 		//set tilenumber
-//		tileNumber = FOUNDATION_TEXTURE;
 		if ( i < (LAND_XGRD-1) && j < (LAND_YGRD-1) ) // FIXME
 		{
 			if (outlineColour3D == outlineOK3D)
@@ -4456,14 +4374,14 @@ void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 	/* Outline the tile if necessary */
 	if(!onWaterEdge && terrainOutline)
 	{
-		iV_Line(tileScreenInfo[i+0][j+0].sx, tileScreenInfo[i+0][j+0].sy,
-			tileScreenInfo[i+0][j+1].sx, tileScreenInfo[i+0][j+1].sy, 255);
-		iV_Line(tileScreenInfo[i+0][j+1].sx, tileScreenInfo[i+0][j+1].sy,
-			tileScreenInfo[i+1][j+1].sx, tileScreenInfo[i+1][j+1].sy, 255);
-		iV_Line(tileScreenInfo[i+1][j+1].sx, tileScreenInfo[i+1][j+1].sy,
-			tileScreenInfo[i+1][j+0].sx, tileScreenInfo[i+1][j+0].sy, 255);
-		iV_Line(tileScreenInfo[i+1][j+0].sx, tileScreenInfo[i+1][j+0].sy,
-			tileScreenInfo[i+0][j+0].sx, tileScreenInfo[i+0][j+0].sy, 255);
+		iV_Line(tileScreenInfo[i+0][j+0].screen.x, tileScreenInfo[i+0][j+0].screen.y,
+			tileScreenInfo[i+0][j+1].screen.x, tileScreenInfo[i+0][j+1].screen.y, 255);
+		iV_Line(tileScreenInfo[i+0][j+1].screen.x, tileScreenInfo[i+0][j+1].screen.y,
+			tileScreenInfo[i+1][j+1].screen.x, tileScreenInfo[i+1][j+1].screen.y, 255);
+		iV_Line(tileScreenInfo[i+1][j+1].screen.x, tileScreenInfo[i+1][j+1].screen.y,
+			tileScreenInfo[i+1][j+0].screen.x, tileScreenInfo[i+1][j+0].screen.y, 255);
+		iV_Line(tileScreenInfo[i+1][j+0].screen.x, tileScreenInfo[i+1][j+0].screen.y,
+			tileScreenInfo[i+0][j+0].screen.x, tileScreenInfo[i+0][j+0].screen.y, 255);
 	}
 
 	if(!onWaterEdge && bOutlined)
@@ -4596,25 +4514,25 @@ UDWORD	getSuggestedPitch( void )
 // -------------------------------------------------------------------------------------
 static void	trackHeight( SDWORD desiredHeight )
 {
-FRACT	fraction;
+float	fraction;
 UDWORD	pitch;
 SDWORD	angConcern;
 UDWORD	desPitch;
 
 		/* What fraction of a second did last game loop take */
-		fraction = (MAKEFRACT(frameTime2) / (FRACT)GAME_TICKS_PER_SEC);
+		fraction = (MAKEFRACT(frameTime2) / (float)GAME_TICKS_PER_SEC);
 
 		/* How far are we from desired hieght? */
-		separation = (FRACT)(desiredHeight - player.p.y);
+		separation = (float)(desiredHeight - player.p.y);
 
 		/* Work out accelertion... */
-		acceleration = MAKEINT(((ACCEL_CONSTANT*2)*separation - (VELOCITY_CONSTANT)*(FRACT)heightSpeed));
+		acceleration = MAKEINT(((ACCEL_CONSTANT*2)*separation - (VELOCITY_CONSTANT)*(float)heightSpeed));
 
 		/* ...and now speed */
-		heightSpeed += MAKEINT(((FRACT)acceleration * fraction));
+		heightSpeed += MAKEINT(((float)acceleration * fraction));
 
 		/* Adjust the height accordingly */
-		player.p.y += MAKEINT(((FRACT)heightSpeed * fraction));
+		player.p.y += MAKEINT(((float)heightSpeed * fraction));
 
 		/* Now do auto pitch as well, but only if we're not using mouselook and not tracking */
 		if(!getWarCamStatus() && !getRotActive())
@@ -4647,19 +4565,19 @@ UDWORD	desPitch;
 			else if(pitch>desPitch)
 			{
 				angConcern = DEG(360-pitch);
-				aSep = (FRACT)(angConcern-player.r.x);
-				aAccel = MAKEINT((((ACCEL_CONSTANT))*aSep - (VELOCITY_CONSTANT)*(FRACT)aSpeed));
-				aSpeed += MAKEINT(((FRACT)aAccel * fraction));
-				player.r.x += MAKEINT(((FRACT)aSpeed * fraction));
+				aSep = (float)(angConcern-player.r.x);
+				aAccel = MAKEINT((((ACCEL_CONSTANT))*aSep - (VELOCITY_CONSTANT)*(float)aSpeed));
+				aSpeed += MAKEINT(((float)aAccel * fraction));
+				player.r.x += MAKEINT(((float)aSpeed * fraction));
 			}
 			else
 			{
 				/* Else, move towards player's last selected pitch */
 				angConcern = DEG(360-desPitch);
-				aSep = (FRACT)(angConcern-player.r.x);
-				aAccel = MAKEINT((((ACCEL_CONSTANT))*aSep - (VELOCITY_CONSTANT)*(FRACT)aSpeed));
-				aSpeed += MAKEINT(((FRACT)aAccel * fraction));
-				player.r.x += MAKEINT(((FRACT)aSpeed * fraction));
+				aSep = (float)(angConcern-player.r.x);
+				aAccel = MAKEINT((((ACCEL_CONSTANT))*aSep - (VELOCITY_CONSTANT)*(float)aSpeed));
+				aSpeed += MAKEINT(((float)aAccel * fraction));
+				player.r.x += MAKEINT(((float)aSpeed * fraction));
 			}
 
 //			flushConsoleMessages();
@@ -5340,7 +5258,7 @@ static	void	addConstructionLine(DROID	*psDroid, STRUCTURE *psStructure)
 {
 	PIEVERTEX	pts[3];
 	Vector3i each;
-	Vector3i *point;
+	Vector3f *point;
 	UDWORD	pointIndex;
 	SDWORD	realY;
 	Vector3i null, vec;

@@ -31,12 +31,13 @@
 #include "lib/framework/frame.h"
 #include "difficulty.h"
 // ------------------------------------------------------------------------------------
-DIFFICULTY_LEVEL	presDifLevel = DL_NORMAL;
-FRACT				fDifPlayerModifier;
-FRACT				fDifEnemyModifier;
+
+static DIFFICULTY_LEVEL	presDifLevel = DL_NORMAL;
+static float		fDifPlayerModifier;
+static float		fDifEnemyModifier;
 
 
-void setModifiers(FRACT Player,FRACT Enemy)
+void setModifiers(float Player,float Enemy)
 {
 	fDifPlayerModifier = Player;
 	fDifEnemyModifier = Enemy;
@@ -91,21 +92,11 @@ SDWORD	modifyForDifficultyLevel(SDWORD basicVal,BOOL IsPlayer)
 {
 	SDWORD	retVal;
 
-// You can't garantee that we don't want damage modifiers in normal difficulty.
-//	/* Unmodified! */
-//	if(getDifficultyLevel() == DL_NORMAL)
-//	{
-//		return(basicVal);
-//	}
-
-//	retVal = basicVal*fDifModifier;
 	if(IsPlayer) {
 		retVal = (SDWORD)ROUND(basicVal*fDifPlayerModifier);
 	} else {
 		retVal = (SDWORD)ROUND(basicVal*fDifEnemyModifier);
 	}
-
-//	DBPRINTF(("%d : %d %d\n",IsPlayer,basicVal,retVal));
 
 	return retVal;
 }

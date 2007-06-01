@@ -91,6 +91,7 @@
 #include "display3d.h"			//for showRangeAtPos()
 #include "multimenu.h"
 #include "lib/script/chat_processing.h"
+#include "keymap.h"
 
 static INTERP_VAL	scrFunctionResult;	//function return value to be pushed to stack
 
@@ -5374,7 +5375,7 @@ STRUCTURE	*psStructure;
 FEATURE		*psFeature;
 BASE_OBJECT	*psObj;
 UDWORD		damagePercent;
-FRACT		divisor;
+float		divisor;
 UDWORD		newVal;
 
 	/* OK - let's get the vars */
@@ -11147,6 +11148,22 @@ BOOL scrGetTileStructure(void)
 BOOL scrPrintCallStack(void)
 {
 	scrOutputCallTrace();
+
+	return TRUE;
+}
+
+/*
+ * Returns true if game debug mode is on
+ */
+BOOL scrDebugModeEnabled(void)
+{
+
+	scrFunctionResult.v.bval = getDebugMappingStatus();
+	if (!stackPushResult(VAL_BOOL, &scrFunctionResult))
+	{
+		debug(LOG_ERROR, "scrDebugModeEnabled(): failed to push result");
+		return FALSE;
+	}
 
 	return TRUE;
 }

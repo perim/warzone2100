@@ -42,8 +42,6 @@
 #include "pietexture.h"
 #include "lib/ivis_common/pieclip.h"
 
-#define MIST
-
 /// Stores the from and to verticles from an edge
 typedef struct edge_
 {
@@ -141,7 +139,7 @@ static BOOL stencil_one_pass(void)
 /***************************************************************************/
 
 static Vector3f		scrPoints[pie_MAX_POINTS];
-static PIEVERTEX	pieVrts[pie_MAX_POLY_VERTS];
+static PIEVERTEXF	pieVrts[pie_MAX_POLY_VERTS];
 static SDWORD		pieCount = 0;
 static SDWORD		tileCount = 0;
 static SDWORD		polyCount = 0;
@@ -165,18 +163,13 @@ static inline void pie_PiePolyFrame(PIEPOLY *poly, SDWORD frame, BOOL bClip);
 static BOOL lighting = FALSE;
 static BOOL shadows = FALSE;
 
-void pie_BeginLighting(float x, float y, float z)
+void pie_BeginLighting(const Vector3f * light)
 {
-	float pos[4];
-	float zero[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-	float ambient[4] = {0.2f, 0.2f, 0.2f, 0.0f};
-	float diffuse[4] = {0.5f, 0.5f, 0.5f, 0.0f};
-	float specular[4] = {1.0f, 1.0f, 1.0f, 0.0f};
-
-	pos[0] = x;
-	pos[1] = y;
-	pos[2] = z;
-	pos[3] = 0;
+	const float pos[4] = {light->x, light->y, light->z, 0.0f};
+	const float zero[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+	const float ambient[4] = {0.3f, 0.3f, 0.3f, 1.0f};
+	const float diffuse[4] = {0.8f, 0.8f, 0.8f, 1.0f};
+	const float specular[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, zero);
 	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_FALSE);
@@ -186,7 +179,7 @@ void pie_BeginLighting(float x, float y, float z)
 	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
 	glEnable(GL_LIGHT0);
 
-	//lighting = TRUE;
+	lighting = TRUE;
 	shadows = TRUE;
 }
 
@@ -196,48 +189,31 @@ void pie_EndLighting(void)
 	lighting = FALSE;
 }
 
-static inline void Vector3f_Set(Vector3f* v, float x, float y, float z)
-{
-	v->x = x;
-	v->y = y;
-	v->z = z;
-}
-
-static inline void Vector3f_Sub(Vector3f* dest, Vector3f* op1, Vector3f* op2)
-{
-	dest->x = op1->x - op2->x;
-	dest->y = op1->y - op2->y;
-	dest->z = op1->z - op2->z;
-}
-
-static inline float Vector3f_SP(Vector3f* op1, Vector3f* op2)
-{
-	return op1->x * op2->x + op1->y * op2->y + op1->z * op2->z;
-}
-
-static inline void Vector3f_CP(Vector3f* dest, Vector3f* op1, Vector3f* op2)
-{
-	dest->x = op1->y * op2->z - op1->z * op2->y;
-	dest->y = op1->z * op2->x - op1->x * op2->z;
-	dest->z = op1->x * op2->y - op1->y * op2->x;
-}
 
 static inline void
-pie_Polygon(SDWORD numVerts, PIEVERTEX* pVrts, FRACT texture_offset, BOOL light)
+pie_Polygon(SDWORD numVerts, PIEVERTEXF* pVrts, BOOL light)
 {
 	SDWORD i;
 
-	if (numVerts < 1) {
+	if (numVerts < 1)
+	{
 		return;
-	} else if (numVerts == 1) {
+	}
+	else if (numVerts == 1)
+	{
 		glBegin(GL_POINTS);
-	} else if (numVerts == 2) {
+	}
+	else if (numVerts == 2)
+	{
 		glBegin(GL_LINE_STRIP);
-	} else {
-		if (light) {
-			float ambient[4] = { 1, 1, 1, 1 };
-			float diffuse[4] = { 1, 1, 1, 1 };
-			float specular[4] = { 1, 1, 1, 1 };
+	}
+	else
+	{
+		if (light)
+		{
+			float ambient[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			float diffuse[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			float specular[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 			float shininess = 10;
 
 			glEnable(GL_LIGHTING);
@@ -249,26 +225,24 @@ pie_Polygon(SDWORD numVerts, PIEVERTEX* pVrts, FRACT texture_offset, BOOL light)
 			glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shininess);
 		}
 		glBegin(GL_TRIANGLE_FAN);
-		if (light) {
-			Vector3f p1, p2, p3, v1, v2, n;
-			float l;
+		if (light)
+		{
+			Vector3f p1 = { pVrts[0].sx, pVrts[0].sy, pVrts[0].sz },
+					p2 = { pVrts[1].sx, pVrts[1].sy, pVrts[1].sz },
+	 				p3 = { pVrts[2].sx, pVrts[2].sy, pVrts[2].sz },
+	  				v1, v2, n;
 
-			Vector3f_Set(&p1, pVrts[0].sx, pVrts[0].sy, pVrts[0].sz);
-			Vector3f_Set(&p2, pVrts[1].sx, pVrts[1].sy, pVrts[1].sz);
-			Vector3f_Set(&p3, pVrts[2].sx, pVrts[2].sy, pVrts[2].sz);
 			Vector3f_Sub(&v1, &p3, &p1);
 			Vector3f_Sub(&v2, &p2, &p1);
 			Vector3f_CP(&n, &v1, &v2);
-			l = 1.0;
 
-			glNormal3f(n.x*l, n.y*l, n.z*l);
-			//printf("%f %f %f\n", n.x*l, n.y*l, n.z*l);
+			glNormal3f(n.x, n.y, n.z);
 		}
 	}
-	for (i = 0; i < numVerts; i++) {
+	for (i = 0; i < numVerts; i++)
+	{
 		glColor4ub(pVrts[i].light.byte.r, pVrts[i].light.byte.g, pVrts[i].light.byte.b, pVrts[i].light.byte.a);
-		glTexCoord2f(pVrts[i].tu, pVrts[i].tv+texture_offset);
-		//d3dVrts[i].specular = pVrts[i].specular.argb;
+		glTexCoord2f(pVrts[i].tu, pVrts[i].tv);
 		glVertex3f(pVrts[i].sx, pVrts[i].sy, pVrts[i].sz);
 	}
 	glEnd();
@@ -288,6 +262,7 @@ typedef struct {
 	iIMDShape*	shape;
 	int		flag;
 	int		flag_data;
+	Vector3f	light;
 } shadowcasting_shape_t;
 
 typedef struct {
@@ -307,50 +282,58 @@ static transluscent_shape_t* tshapes = NULL;
 static unsigned int tshapes_size = 0;
 static unsigned int nb_tshapes = 0;
 
-static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELIGHT specular,
-		      int pieFlag, int pieFlagData)
+static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELIGHT specular, int pieFlag, int pieFlagData)
 {
-	Sint32		tempY;
+	float tempY;
 	int i, n;
-	Vector3i		*pVertices;
-	Vector3f	*pPixels;
-	iIMDPoly	*pPolys;
-	PIEPOLY		piePoly;
-	VERTEXID	*index;
-	BOOL		light = lighting;
+	Vector3f *pVertices, *pPixels;
+	iIMDPoly *pPolys;
+	PIEPOLY piePoly;
+	VERTEXID *index;
+	BOOL light = lighting;
 
 	/* Set tranlucency */
-	if (pieFlag & pie_ADDITIVE) { //Assume also translucent
+	if (pieFlag & pie_ADDITIVE)
+	{ //Assume also translucent
 		pie_SetFogStatus(FALSE);
 		pie_SetRendMode(REND_ADDITIVE_TEX);
 		colour.byte.a = (UBYTE)pieFlagData;
 		pie_SetBilinear(TRUE);
 		light = FALSE;
-	} else if (pieFlag & pie_TRANSLUCENT) {
+	}
+	else if (pieFlag & pie_TRANSLUCENT)
+	{
 		pie_SetFogStatus(FALSE);
 		pie_SetRendMode(REND_ALPHA_TEX);
 		colour.byte.a = (UBYTE)pieFlagData;
 		pie_SetBilinear(FALSE);//never bilinear with constant alpha, gives black edges
 		light = FALSE;
-	} else {
+	}
+	else
+	{
 		if (pieFlag & pie_BUTTON)
 		{
 			pie_SetFogStatus(FALSE);
 			pie_SetDepthBufferStatus(DEPTH_CMP_LEQ_WRT_ON);
-		} else {
+		}
+		else
+		{
 			pie_SetFogStatus(TRUE);
 		}
 		pie_SetRendMode(REND_GOURAUD_TEX);
 		//if hardware fog then alpha is set else unused in decal mode
-		//colour.byte.a = MAX_UB_LIGHT;
-		if (pieFlag & pie_NO_BILINEAR) {
+		if (pieFlag & pie_NO_BILINEAR)
+		{
 			pie_SetBilinear(FALSE);
-		} else {
+		}
+		else
+		{
 			pie_SetBilinear(TRUE);
 		}
 	}
 
-	if (pieFlag & pie_RAISE) {
+	if (pieFlag & pie_RAISE)
+	{
 		pieFlagData = (shape->ymax * (pie_RAISE_SCALE - pieFlagData))/pie_RAISE_SCALE;
 	}
 
@@ -358,25 +341,24 @@ static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELI
 
 	//now draw the shape
 	//rotate and project points from shape->points to scrPoints
-	pVertices = shape->points;
-	pPixels = &scrPoints[0];
-
-	//--
-	for (i=0; i<shape->npoints; i++, pVertices++, pPixels++) {
+	for (i = 0, pVertices = shape->points, pPixels = scrPoints;
+			i < shape->npoints;
+			i++, pVertices++, pPixels++)
+	{
 		tempY = pVertices->y;
 		if (pieFlag & pie_RAISE)
 		{
 			tempY = pVertices->y - pieFlagData;
-			if (tempY < 0) tempY = 0;
+			if (tempY < 0)
+				tempY = 0;
 
 		}
 		else if (pieFlag & pie_HEIGHT_SCALED)
 		{
-			if(pVertices->y>0)
+			if(pVertices->y > 0)
 			{
-				tempY = (pVertices->y * pieFlagData)/pie_RAISE_SCALE;
+				tempY = (pVertices->y * pieFlagData) / pie_RAISE_SCALE;
 			}
-			//if (tempY < 0) tempY = 0;
 		}
 		pPixels->x = pVertices->x;
 		pPixels->y = tempY;
@@ -400,36 +382,33 @@ static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELI
 		}
 		for (n=0; n<pPolys->npnts; n++, index++)
 		{
-			pieVrts[n].sx = MAKEINT(scrPoints[*index].x);
-			pieVrts[n].sy = MAKEINT(scrPoints[*index].y);
-			pieVrts[n].sz = MAKEINT(scrPoints[*index].z);
+			pieVrts[n].sx = scrPoints[*index].x;
+			pieVrts[n].sy = scrPoints[*index].y;
+			pieVrts[n].sz = scrPoints[*index].z;
 			pieVrts[n].tu = pPolys->vrt[n].u;
 			pieVrts[n].tv = pPolys->vrt[n].v;
 			pieVrts[n].light.argb = colour.argb;
 			pieVrts[n].specular.argb = specular.argb;
 		}
 		piePoly.nVrts = pPolys->npnts;
-		piePoly.pVrts = &pieVrts[0];
+		piePoly.pVrts = pieVrts;
 
 		piePoly.pTexAnim = pPolys->pTexAnim;
 
-		if (piePoly.flags > 0) {
-			pie_PiePolyFrame(&piePoly,frame,light);	   // draw the polygon ... this is an inline function
+		if (piePoly.flags > 0)
+		{
+			pie_PiePolyFrame(&piePoly, frame, light); // draw the polygon ...
 		}
 	}
-	if (pieFlag & pie_BUTTON) {
+	if (pieFlag & pie_BUTTON)
+	{
 		pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_ON);
 	}
 }
 
-/// returns true if both vectors are equal
-static inline BOOL compare_point (Vector3i *A, Vector3i *B)
-{
-	return A->x == B->x && A->y == B->y && A->z == B->z;
-}
 
 /// returns true if the edges are adjacent
-static int compare_edge (EDGE *A, EDGE *B, Vector3i *pVertices )
+static int compare_edge (EDGE *A, EDGE *B, const Vector3f *pVertices )
 {
 	if(A->from == B->to)
 	{
@@ -437,10 +416,10 @@ static int compare_edge (EDGE *A, EDGE *B, Vector3i *pVertices )
 		{
 			return TRUE;
 		}
-		return compare_point(&pVertices[A->to], &pVertices[B->from]);
+		return Vector3f_compare(&pVertices[A->to], &pVertices[B->from]);
 	}
 
-	if(!compare_point(&pVertices[A->from], &pVertices[B->to]))
+	if(!Vector3f_compare(&pVertices[A->from], &pVertices[B->to]))
 	{
 		return FALSE;
 	}
@@ -449,20 +428,18 @@ static int compare_edge (EDGE *A, EDGE *B, Vector3i *pVertices )
 	{
 		return TRUE;
 	}
-	return compare_point(&pVertices[A->to], &pVertices[B->from]);
+	return Vector3f_compare(&pVertices[A->to], &pVertices[B->from]);
 }
 
 /// Add an edge to an edgelist
 /// Makes sure only silhouette edges are present
-static void addToEdgeList(int a, int b, EDGE *edgelist, int *edge_count, Vector3i *pVertices)
+static void addToEdgeList(int a, int b, EDGE *edgelist, int *edge_count, Vector3f *pVertices)
 {
-	EDGE newEdge;
+	EDGE newEdge = {a, b};
 	int i;
 	BOOL foundMatching = FALSE;
 
-	newEdge.from = a;
-	newEdge.to = b;
-	for(i=0;i<*edge_count;i++)
+	for(i = 0; i < *edge_count; i++)
 	{
 		if(edgelist[i].from < 0)
 		{
@@ -483,6 +460,7 @@ static void addToEdgeList(int a, int b, EDGE *edgelist, int *edge_count, Vector3
 	}
 }
 
+
 /// scale the height according to the flags
 static inline float scale_y(float y, int flag, int flag_data)
 {
@@ -498,12 +476,13 @@ static inline float scale_y(float y, int flag, int flag_data)
 	return tempY;
 }
 
+
 /// Draw the shadow for a shape
 static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* light)
 {
-	int i,j, n;
-	Vector3i		*pVertices;
-	iIMDPoly	*pPolys;
+	int i, j, n;
+	Vector3f *pVertices;
+	iIMDPoly *pPolys;
 	int edge_count = 0;
 	static EDGE *edgelist = NULL;
 	static int edgelistsize = 256;
@@ -522,11 +501,11 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 	}
 	else
 	{
-		pPolys = shape->polys;
-		for (i = 0; i < shape->npolys; ++i, ++pPolys) {
-			Vector3f p[3], v[2], normal;
+
+		for (i = 0, pPolys = shape->polys; i < shape->npolys; ++i, ++pPolys) {
+			Vector3f p[3], v[2], normal = {0.0f, 0.0f, 0.0f};
 			VERTEXID current, first;
-			for(j=0;j<3;j++)
+			for(j = 0; j < 3; j++)
 			{
 				current = pPolys->pindex[j];
 				Vector3f_Set(&p[j], pVertices[current].x, scale_y(pVertices[current].y, flag, flag_data), pVertices[current].z);
@@ -554,7 +533,7 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 					}
 				}
 				// back to the first
-				addToEdgeList(pPolys->pindex[ pPolys->npnts-1 ], first, edgelist, &edge_count, pVertices);
+				addToEdgeList(pPolys->pindex[pPolys->npnts-1], first, edgelist, &edge_count, pVertices);
 			}
 		}
 		//debug(LOG_WARNING, "we have %i edges", edge_count);
@@ -563,10 +542,9 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 		if(flag & pie_STATIC_SHADOW)
 		{
 			// first compact the current edgelist
-			j = 0;
-			for(i=0;i<edge_count;i++)
+			for(i = 0, j = 0; i < edge_count; i++)
 			{
-				if(edgelist[i].from<0)
+				if(edgelist[i].from < 0)
 				{
 					continue;
 				}
@@ -575,9 +553,9 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 			}
 			edge_count = j;
 			// then store it in the imd
-			shape->shadowEdgeList = malloc(sizeof(EDGE)*edge_count);
-			memcpy(shape->shadowEdgeList, edgelist, sizeof(EDGE)*edge_count);
 			shape->nShadowEdges = edge_count;
+			shape->shadowEdgeList = malloc(sizeof(EDGE) * shape->nShadowEdges);
+			memcpy(shape->shadowEdgeList, edgelist, sizeof(EDGE) * shape->nShadowEdges);
 		}
 	}
 
@@ -585,13 +563,11 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 	glBegin(GL_QUADS);
 	for(i=0;i<edge_count;i++)
 	{
-		int a,b;
-		a = drawlist[i].from;
+		int a = drawlist[i].from, b = drawlist[i].to;
 		if(a < 0)
 		{
 			continue;
 		}
-		b = drawlist[i].to;
 
 		glVertex3f(pVertices[b].x, scale_y(pVertices[b].y, flag, flag_data), pVertices[b].z);
 		glVertex3f(pVertices[b].x+light->x, scale_y(pVertices[b].y, flag, flag_data)+light->y, pVertices[b].z+light->z);
@@ -604,13 +580,16 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 	glDisable(GL_DEPTH_TEST);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-	glColor4ub(0xFF,0,0,0xFF);
+	glColor4ub(0xFF, 0, 0, 0xFF);
 	glBegin(GL_LINES);
-	for(i=0;i<edge_count;i++)
+	for(i = 0; i < edge_count; i++)
 	{
-		int a = drawlist[i].from;
-		if(a<0) continue;
-		int b = drawlist[i].to;
+		int a = drawlist[i].from, b = drawlist[i].to;
+		if(a < 0)
+		{
+			continue;
+		}
+
 		glVertex3f(pVertices[b].x, scale_y(pVertices[b].y, flag, flag_data), pVertices[b].z);
 		glVertex3f(pVertices[a].x, scale_y(pVertices[a].y, flag, flag_data), pVertices[a].z);
 	}
@@ -619,6 +598,23 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 	glEnable(GL_DEPTH_TEST);
 #endif
 }
+
+static void inverse_matrix(const float * src, float * dst)
+{
+	const float det = src[0]*src[5]*src[10] + src[4]*src[9]*src[2] + src[8]*src[1]*src[6] - src[2]*src[5]*src[8] - src[6]*src[9]*src[0] - src[10]*src[1]*src[4];
+	const float invdet = 1.0f/det;
+
+	dst[0] = invdet * (src[5]*src[10] - src[9]*src[6]);
+	dst[1] = invdet * (src[9]*src[2] - src[1]*src[10]);
+	dst[2] = invdet * (src[1]*src[6] - src[5]*src[2]);
+	dst[3] = invdet * (src[8]*src[6] - src[4]*src[10]);
+	dst[4] = invdet * (src[0]*src[10] - src[8]*src[2]);
+	dst[5] = invdet * (src[4]*src[2] - src[0]*src[6]);
+	dst[6] = invdet * (src[4]*src[9] - src[8]*src[5]);
+	dst[7] = invdet * (src[8]*src[1] - src[0]*src[9]);
+	dst[8] = invdet * (src[0]*src[5] - src[4]*src[1]);
+}
+
 
 void pie_CleanUp( void )
 {
@@ -643,12 +639,15 @@ void pie_Draw3DShape(iIMDShape *shape, int frame, int team, UDWORD col, UDWORD s
 	// Fix for transparent buildings and features!! */
 
 // WARZONE light as byte passed in colour so expand
-	if (col <= MAX_UB_LIGHT) {
+	if (col <= MAX_UB_LIGHT)
+	{
 		colour.byte.a = 255;//no fog
 		colour.byte.r = (UBYTE)col;
 		colour.byte.g = (UBYTE)col;
 		colour.byte.b = (UBYTE)col;
-	} else {
+	}
+	else
+	{
 		colour.argb = col;
 	}
 	specular.argb = spec;
@@ -658,16 +657,24 @@ void pie_Draw3DShape(iIMDShape *shape, int frame, int team, UDWORD col, UDWORD s
 		frame = team;
 	}
 
-	if (drawing_interface || !shadows) {
+	if (drawing_interface || !shadows)
+	{
 		pie_Draw3DShape2(shape, frame, colour, specular, pieFlag, pieFlagData);
-	} else {
-		if (pieFlag & (pie_ADDITIVE | pie_TRANSLUCENT)) {
-			if (tshapes_size <= nb_tshapes) {
-				if (tshapes_size == 0) {
+	}
+	else
+	{
+		if (pieFlag & (pie_ADDITIVE | pie_TRANSLUCENT))
+		{
+			if (tshapes_size <= nb_tshapes)
+			{
+				if (tshapes_size == 0)
+				{
 					tshapes_size = 64;
 					tshapes = (transluscent_shape_t*)malloc(tshapes_size*sizeof(transluscent_shape_t));
 					memset( tshapes, 0, tshapes_size*sizeof(transluscent_shape_t) );
-				} else {
+				}
+				else
+				{
 					unsigned int old_size = tshapes_size;
 					tshapes_size <<= 1;
 					tshapes = (transluscent_shape_t*)realloc(tshapes, tshapes_size*sizeof(transluscent_shape_t));
@@ -682,31 +689,51 @@ void pie_Draw3DShape(iIMDShape *shape, int frame, int team, UDWORD col, UDWORD s
 			tshapes[nb_tshapes].flag = pieFlag;
 			tshapes[nb_tshapes].flag_data = pieFlagData;
 			nb_tshapes++;
-		} else {
+		}
+		else
+		{
 			if(pieFlag & pie_SHADOW || pieFlag & pie_STATIC_SHADOW)
 			{
 				// draw a shadow
-				if (scshapes_size <= nb_scshapes) {
-					if (scshapes_size == 0) {
+				if (scshapes_size <= nb_scshapes)
+				{
+					if (scshapes_size == 0)
+					{
 						scshapes_size = 64;
 						scshapes = (shadowcasting_shape_t*)malloc(scshapes_size*sizeof(shadowcasting_shape_t));
 						memset( scshapes, 0, scshapes_size*sizeof(shadowcasting_shape_t) );
-					} else {
+					}
+					else
+					{
 						unsigned int old_size = scshapes_size;
 						scshapes_size <<= 1;
 						scshapes = (shadowcasting_shape_t*)realloc(scshapes, scshapes_size*sizeof(shadowcasting_shape_t));
 						memset( &scshapes[old_size], 0, (scshapes_size-old_size)*sizeof(shadowcasting_shape_t) );
 					}
 				}
+
 				glGetFloatv(GL_MODELVIEW_MATRIX, scshapes[nb_scshapes].matrix);
-				distance = scshapes[nb_scshapes].matrix[12]*scshapes[nb_scshapes].matrix[12];
-				distance += scshapes[nb_scshapes].matrix[13]*scshapes[nb_scshapes].matrix[13];
-				distance += scshapes[nb_scshapes].matrix[14]*scshapes[nb_scshapes].matrix[14];
+				distance = scshapes[nb_scshapes].matrix[12] * scshapes[nb_scshapes].matrix[12];
+				distance += scshapes[nb_scshapes].matrix[13] * scshapes[nb_scshapes].matrix[13];
+				distance += scshapes[nb_scshapes].matrix[14] * scshapes[nb_scshapes].matrix[14];
+
 				// if object is too far in the fog don't generate a shadow.
-				if (distance < 6000*6000) {
+				if (distance < 6000*6000)
+				{
+					float invmat[9], pos_light0[4];
+
+					inverse_matrix( scshapes[nb_scshapes].matrix, invmat );
+
+					// Calculate the light position relative to the object
+					glGetLightfv(GL_LIGHT0, GL_POSITION, pos_light0);
+					scshapes[nb_scshapes].light.x = invmat[0] * pos_light0[0] + invmat[3] * pos_light0[1] + invmat[6] * pos_light0[2];
+					scshapes[nb_scshapes].light.y = invmat[1] * pos_light0[0] + invmat[4] * pos_light0[1] + invmat[7] * pos_light0[2];
+					scshapes[nb_scshapes].light.z = invmat[2] * pos_light0[0] + invmat[5] * pos_light0[1] + invmat[8] * pos_light0[2];
+
 					scshapes[nb_scshapes].shape = shape;
 					scshapes[nb_scshapes].flag = pieFlag;
 					scshapes[nb_scshapes].flag_data = pieFlagData;
+
 					nb_scshapes++;
 				}
 			}
@@ -715,49 +742,23 @@ void pie_Draw3DShape(iIMDShape *shape, int frame, int team, UDWORD col, UDWORD s
 	}
 }
 
-static void inverse_matrix(float* src, float * dst)
-{
-	float det = src[0]*src[5]*src[10]+src[4]*src[9]*src[2]+src[8]*src[1]*src[6] -src[2]*src[5]*src[8]-src[6]*src[9]*src[0]-src[10]*src[1]*src[4];
-	float invdet = 1.0f/det;
 
-	dst[0] = invdet*(src[5]*src[10]-src[9]*src[6]);
-	dst[1] = invdet*(src[9]*src[2]-src[1]*src[10]);
-	dst[2] = invdet*(src[1]*src[6]-src[5]*src[2]);
-	dst[3] = invdet*(src[8]*src[6]-src[4]*src[10]);
-	dst[4] = invdet*(src[0]*src[10]-src[8]*src[2]);
-	dst[5] = invdet*(src[4]*src[2]-src[0]*src[6]);
-	dst[6] = invdet*(src[4]*src[9]-src[8]*src[5]);
-	dst[7] = invdet*(src[8]*src[1]-src[0]*src[9]);
-	dst[8] = invdet*(src[0]*src[5]-src[4]*src[1]);
-}
-
-static void pie_ShadowDrawLoop(float pos_lgt0[4])
+static void pie_ShadowDrawLoop(void)
 {
-	float invmat[9];
-	Vector3f light;
-	unsigned int i;
+	unsigned int i = 0;
 
 	for (i = 0; i < nb_scshapes; i++)
 	{
-		glLoadIdentity();
-		glMultMatrixf( scshapes[i].matrix );
-		inverse_matrix( scshapes[i].matrix, invmat );
-		light.x = invmat[0] * pos_lgt0[0] + invmat[3] * pos_lgt0[1] + invmat[6] * pos_lgt0[2];
-		light.y = invmat[1] * pos_lgt0[0] + invmat[4] * pos_lgt0[1] + invmat[7] * pos_lgt0[2];
-		light.z = invmat[2] * pos_lgt0[0] + invmat[5] * pos_lgt0[1] + invmat[8] * pos_lgt0[2];
-		pie_DrawShadow(scshapes[i].shape, scshapes[i].flag, scshapes[i].flag_data, &light);
+		glLoadMatrixf(scshapes[i].matrix);
+		pie_DrawShadow(scshapes[i].shape, scshapes[i].flag, scshapes[i].flag_data, &scshapes[i].light);
 	}
 }
 
+
 static void pie_DrawShadows(void)
 {
-	static BOOL dlist_defined = FALSE;
-	static GLuint dlist;
-	float pos_lgt0[4];
-	float width = pie_GetVideoBufferWidth();
-	float height = pie_GetVideoBufferHeight();
-
-	glGetLightfv(GL_LIGHT0, GL_POSITION, pos_lgt0);
+	const float width = pie_GetVideoBufferWidth();
+	const float height = pie_GetVideoBufferHeight();
 
 	pie_SetTexturePage(-1);
 
@@ -780,14 +781,10 @@ static void pie_DrawShadows(void)
 		glStencilOp(GL_KEEP, GL_KEEP, GL_INCR_WRAP_EXT);
 		glStencilFunc(GL_ALWAYS, 0, ~0);
 
-		pie_ShadowDrawLoop(pos_lgt0);
+		pie_ShadowDrawLoop();
 		glDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
 
 	} else {
-		if (!dlist_defined) {
-			dlist = glGenLists(1);
-			dlist_defined = TRUE;
-		}
 		// Setup stencil for back faces.
 		glStencilMask(~0);
 		glStencilFunc(GL_ALWAYS, 0, ~0);
@@ -795,14 +792,14 @@ static void pie_DrawShadows(void)
 		glCullFace(GL_BACK);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
 
-		pie_ShadowDrawLoop(pos_lgt0);
+		pie_ShadowDrawLoop();
 
 		// Setup stencil for front faces.
 		glCullFace(GL_FRONT);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_DECR);
 
 		// Draw shadows again
-		pie_ShadowDrawLoop(pos_lgt0);
+		pie_ShadowDrawLoop();
 	}
 
 	glEnable(GL_CULL_FACE);
@@ -818,10 +815,10 @@ static void pie_DrawShadows(void)
 	glLoadIdentity();
 	glDisable(GL_DEPTH_TEST);
 	glBegin(GL_TRIANGLE_STRIP);
-	glVertex2f(0, 0);
-	glVertex2f(width, 0);
-	glVertex2f(0, height);
-	glVertex2f(width, height);
+		glVertex2f(0, 0);
+		glVertex2f(width, 0);
+		glVertex2f(0, height);
+		glVertex2f(width, height);
 	glEnd();
 	pie_PerspectiveBegin();
 
@@ -837,17 +834,16 @@ static void pie_DrawShadows(void)
 
 static void pie_DrawRemainingTransShapes(void)
 {
-	unsigned int i;
+	unsigned int i = 0;
 
+	glPushMatrix();
 	for (i = 0; i < nb_tshapes; ++i)
 	{
-		glPushMatrix();
-		glLoadIdentity();
-		glMultMatrixf(tshapes[i].matrix);
+		glLoadMatrixf(tshapes[i].matrix);
 		pie_Draw3DShape2(tshapes[i].shape, tshapes[i].frame, tshapes[i].colour,
 				 tshapes[i].specular, tshapes[i].flag, tshapes[i].flag_data);
-		glPopMatrix();
 	}
+	glPopMatrix();
 
 	nb_tshapes = 0;
 }
@@ -870,10 +866,6 @@ void pie_RemainingPasses(void)
  * replaces all ivis blit functions
  *
  ***************************************************************************/
-//d3d loses edge pixels in triangle draw
-//this is a temporary correction that may become an option
-
-# define EDGE_CORRECTION 0
 
 void pie_DrawImage(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style)
 {
@@ -890,20 +882,12 @@ void pie_DrawImage(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style)
 	//set up 4 pie verts
 	glTexCoord2f(image->tu, image->tv);
 	glVertex2f(dest->x, dest->y);
-	//pieVrts[0].sz  = (SDWORD)INTERFACE_DEPTH;
-	//pieVrts[0].specular.argb = style->specular.argb;
-	glTexCoord2f(image->tu + image->tw + EDGE_CORRECTION, image->tv);
-	glVertex2f(dest->x + dest->w + EDGE_CORRECTION, dest->y);
-	//pieVrts[1].sz  = (SDWORD)INTERFACE_DEPTH;
-	//pieVrts[1].specular.argb = style->specular.argb;
-	glTexCoord2f(image->tu, image->tv + image->th + EDGE_CORRECTION);
-	glVertex2f(dest->x, dest->y + dest->h + EDGE_CORRECTION);
-	//pieVrts[3].sz  = (SDWORD)INTERFACE_DEPTH;
-	//pieVrts[3].specular.argb = style->specular.argb;
-	glTexCoord2f(image->tu + image->tw + EDGE_CORRECTION, image->tv + image->th + EDGE_CORRECTION);
-	glVertex2f(dest->x + dest->w + EDGE_CORRECTION, dest->y + dest->h + EDGE_CORRECTION);
-	//pieVrts[2].sz  = (SDWORD)INTERFACE_DEPTH;
-	//pieVrts[2].specular.argb = style->specular.argb;
+	glTexCoord2f(image->tu + image->tw, image->tv);
+	glVertex2f(dest->x + dest->w, dest->y);
+	glTexCoord2f(image->tu, image->tv + image->th);
+	glVertex2f(dest->x, dest->y + dest->h);
+	glTexCoord2f(image->tu + image->tw, image->tv + image->th);
+	glVertex2f(dest->x + dest->w, dest->y + dest->h);
 	glEnd();
 }
 
@@ -929,14 +913,14 @@ void pie_DrawImage270( PIEIMAGE *image, PIERECT *dest )
 
 	glBegin(GL_TRIANGLE_FAN);
 	glColor4ub(colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a);
-	glTexCoord2f(image->tu+image->tw+EDGE_CORRECTION, image->tv);
+	glTexCoord2f(image->tu+image->tw, image->tv);
 	glVertex2f(dest->x, dest->y);
-	glTexCoord2f(image->tu+image->tw+EDGE_CORRECTION, image->tv+image->th+EDGE_CORRECTION);
-	glVertex2f(dest->x+dest->h+EDGE_CORRECTION, dest->y);
-	glTexCoord2f(image->tu, image->tv+image->th+EDGE_CORRECTION);
-	glVertex2f(dest->x+dest->h+EDGE_CORRECTION, dest->y+dest->w+EDGE_CORRECTION);
+	glTexCoord2f(image->tu+image->tw, image->tv+image->th);
+	glVertex2f(dest->x+dest->h, dest->y);
+	glTexCoord2f(image->tu, image->tv+image->th);
+	glVertex2f(dest->x+dest->h, dest->y+dest->w);
 	glTexCoord2f(image->tu, image->tv);
-	glVertex2f(dest->x, dest->y+dest->w+EDGE_CORRECTION);
+	glVertex2f(dest->x, dest->y+dest->w);
 	glEnd();
 }
 
@@ -975,22 +959,28 @@ void pie_DrawRect( SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1, UDWORD colour )
  *
  ***************************************************************************/
 
-static void pie_PiePoly(PIEPOLY *poly, BOOL light)
+static inline void pie_PiePoly(PIEPOLY *poly, BOOL light)
 {
 	polyCount++;
 
-	if (poly->nVrts >= 3) {
-		if (poly->flags & PIE_COLOURKEYED) {
+	if (poly->nVrts >= 3)
+	{
+		if (poly->flags & PIE_COLOURKEYED)
+		{
 			pie_SetColourKeyedBlack(TRUE);
-		} else {
+		}
+		else
+		{
 			pie_SetColourKeyedBlack(FALSE);
 		}
 		pie_SetColourKeyedBlack(TRUE);
-		if (poly->flags & PIE_NO_CULL) {
+		if (poly->flags & PIE_NO_CULL)
+		{
 			glDisable(GL_CULL_FACE);
 		}
-		pie_Polygon(poly->nVrts, poly->pVrts, 0.0, light);
-		if (poly->flags & PIE_NO_CULL) {
+		pie_Polygon(poly->nVrts, poly->pVrts, light);
+		if (poly->flags & PIE_NO_CULL)
+		{
 			glEnable(GL_CULL_FACE);
 		}
 	}
@@ -998,7 +988,7 @@ static void pie_PiePoly(PIEPOLY *poly, BOOL light)
 
 static inline void pie_PiePolyFrame(PIEPOLY *poly, SDWORD frame, BOOL light)
 {
-int	uFrame, vFrame, j, framesPerLine;
+	int uFrame, vFrame, j, framesPerLine;
 
 	if ((poly->flags & iV_IMD_TEXANIM) && (frame != 0)) {
 		if (poly->pTexAnim != NULL) {
@@ -1043,7 +1033,7 @@ int	uFrame, vFrame, j, framesPerLine;
 void pie_DrawTexTriangle(PIEVERTEX *aVrts, void* psEffects)
 {
 	GLfloat offset = 0;
-	int i;
+	unsigned int i = 0;
 
 	/*	Since this is only used from within source for the terrain draw - we can backface cull the polygons.
 	*/

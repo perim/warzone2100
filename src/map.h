@@ -69,41 +69,33 @@ typedef enum _terrain_type
 #define TILE_NUMMASK	0x01ff
 #define TILE_BITMASK	0xfe00
 
-#define BITS_STRUCTURE	0x1
-#define BITS_FEATURE	0x2
 #define BITS_NODRAWTILE	0x4
-#define BITS_SMALLSTRUCTURE	0x8			// show small structures - tank traps / bunkers
 #define BITS_FPATHBLOCK	0x10		// bit set temporarily by find path to mark a blocking tile
-#define BITS_WALL		0x20
 #define BITS_GATEWAY	0x40		// bit set to show a gateway on the tile
 #define BITS_TALLSTRUCTURE 0x80		// bit set to show a tall structure which camera needs to avoid.
 
 #define TILE_IS_NOTBLOCKING(x)	(x->texture & TILE_NOTBLOCKING)
 
-#define TILE_IMPOSSIBLE(x)		((TILE_HAS_STRUCTURE(x)) && (TILE_HAS_FEATURE(x)))
-#define BITS_OCCUPIED			(BITS_STRUCTURE | BITS_FEATURE | BITS_WALL)
-#define TILE_OCCUPIED(x)		(x->tileInfoBits & BITS_OCCUPIED)
-#define TILE_HAS_STRUCTURE(x)	(x->tileInfoBits & BITS_STRUCTURE)
-#define TILE_HAS_FEATURE(x)		(x->tileInfoBits & BITS_FEATURE)
+#define TILE_OCCUPIED(x)		(x->psObject)
+#define TILE_HAS_STRUCTURE(x)		(x->psObject && x->psObject->type == OBJ_STRUCTURE)
+#define TILE_HAS_FEATURE(x)		(x->psObject && x->psObject->type == OBJ_FEATURE)
+#define TILE_HAS_WALL(x)		(TILE_HAS_STRUCTURE(x) \
+					&& (((STRUCTURE*)x->psObject)->pStructureType->type == REF_WALL \
+					    || ((STRUCTURE*)x->psObject)->pStructureType->type == REF_WALLCORNER))
 #define TILE_DRAW(x)			(!((x)->tileInfoBits & BITS_NODRAWTILE))
 #define TILE_HIGHLIGHT(x)		(x->texture & TILE_HILIGHT)
 #define TILE_HAS_TALLSTRUCTURE(x)	(x->tileInfoBits & BITS_TALLSTRUCTURE)
-#define TILE_HAS_SMALLSTRUCTURE(x)	(x->tileInfoBits & BITS_SMALLSTRUCTURE)
+#define TILE_HAS_SMALLSTRUCTURE(x)	(TILE_HAS_STRUCTURE(x) && ((STRUCTURE*)x->psObject)->pStructureType->height == 1)
 
 #define SET_TILE_NOTBLOCKING(x)	(x->texture |= TILE_NOTBLOCKING)
 #define CLEAR_TILE_NOTBLOCKING(x)	(x->texture &= ~TILE_NOTBLOCKING)
 
-#define SET_TILE_STRUCTURE(x)	(x->tileInfoBits = (UBYTE)(((x->tileInfoBits & (~BITS_OCCUPIED))) | BITS_STRUCTURE))
-#define SET_TILE_FEATURE(x)		(x->tileInfoBits = (UBYTE)(((x->tileInfoBits & (~BITS_OCCUPIED))) | BITS_FEATURE))
-#define SET_TILE_EMPTY(x)		(x->tileInfoBits = (UBYTE) (x->tileInfoBits & (~BITS_OCCUPIED)) )
 #define SET_TILE_NODRAW(x)		(x->tileInfoBits = (UBYTE)((x)->tileInfoBits | BITS_NODRAWTILE))
 #define CLEAR_TILE_NODRAW(x)	(x->tileInfoBits = (UBYTE)((x)->tileInfoBits & (~BITS_NODRAWTILE)))
 #define SET_TILE_HIGHLIGHT(x)	(x->texture = (UWORD)((x)->texture | TILE_HILIGHT))
 #define CLEAR_TILE_HIGHLIGHT(x)	(x->texture = (UWORD)((x)->texture & (~TILE_HILIGHT)))
 #define SET_TILE_TALLSTRUCTURE(x)	(x->tileInfoBits = (UBYTE)((x)->tileInfoBits | BITS_TALLSTRUCTURE))
 #define CLEAR_TILE_TALLSTRUCTURE(x)	(x->tileInfoBits = (UBYTE)((x)->tileInfoBits & (~BITS_TALLSTRUCTURE)))
-#define SET_TILE_SMALLSTRUCTURE(x)	(x->tileInfoBits = (UBYTE)((x)->tileInfoBits | BITS_SMALLSTRUCTURE))
-#define CLEAR_TILE_SMALLSTRUCTURE(x)	(x->tileInfoBits = (UBYTE)((x)->tileInfoBits & (~BITS_SMALLSTRUCTURE)))
 
 // Multiplier for the tile height
 #define	ELEVATION_SCALE	2
@@ -137,14 +129,8 @@ typedef struct _maptile
 	UBYTE			bMaxed;
 	UBYTE			level;
 	UBYTE			inRange;		// sensor range display.
+	BASE_OBJECT		*psObject;		// Any object sitting on the location (e.g. building)
 
-									// This is also used to store the tile flip flags
-//  What's been removed - 46 bytes per tile so far
-//	BASE_OBJECT		*psObject;		// Any object sitting on the location (e.g. building)
-//	UBYTE			onFire;			// Is tile on fire?
-//	UBYTE			rippleIndex;	// Current value in ripple table?
-//	BOOL			tileVisible[MAX_PLAYERS]; // Which players can see the tile?
-//	BOOL			triangleFlip;	// Is the triangle flipped?
 //	TYPE_OF_TERRAIN	type;			// The terrain type for the tile
 } MAPTILE;
 
@@ -164,22 +150,20 @@ extern UDWORD	mapWidth, mapHeight;
 extern MAPTILE *psMapTiles;
 
 /*
- * Note:
- * TILE_UNITS = (1 << TILE_SHIFT)
- *
  * Usage-Example:
  * tile_coordinate = (world_coordinate / TILE_UNITS) = (world_coordinate >> TILE_SHIFT)
  * world_coordinate = (tile_coordinate * TILE_UNITS) = (tile_coordinate << TILE_SHIFT)
  */
 
-/* The number of units accross a tile */
-#define TILE_UNITS	128
-
 /* The shift on a world coordinate to get the tile coordinate */
-#define TILE_SHIFT	7
+#define TILE_SHIFT 7
 
 /* The mask to get internal tile coords from a full coordinate */
-#define TILE_MASK	0x7f
+#define TILE_MASK 0x7f
+
+/* The number of units accross a tile */
+#define TILE_UNITS (1<<TILE_SHIFT)
+
 
 static inline UDWORD world_coord(UDWORD mapCoord)
 {
@@ -190,6 +174,9 @@ static inline UDWORD map_coord(UDWORD worldCoord)
 {
 	return worldCoord / TILE_UNITS;
 }
+
+/* maps a position down to the corner of a tile */
+#define map_round(coord) coord & (TILE_UNITS - 1)
 
 /* Shutdown the map module */
 extern BOOL mapShutdown(void);
@@ -203,12 +190,9 @@ extern BOOL mapLoad(char *pFileData, UDWORD fileSize);
 /* Save the map data */
 extern BOOL mapSave(char **ppFileData, UDWORD *pFileSize);
 
-/* A post process for the water tiles in map to ensure height integrity */
-extern void	mapWaterProcess( void );
-
 
 /* Return a pointer to the tile structure at x,y */
-static inline MAPTILE *mapTile(UDWORD x, UDWORD y)
+static inline WZ_DECL_PURE MAPTILE *mapTile(UDWORD x, UDWORD y)
 {
 	ASSERT( x < mapWidth,
 		"mapTile: x coordinate bigger than map width" );
@@ -219,12 +203,13 @@ static inline MAPTILE *mapTile(UDWORD x, UDWORD y)
 }
 
 /* Return height of tile at x,y */
-static inline SWORD map_TileHeight(UDWORD x, UDWORD y)
+static inline WZ_DECL_PURE SWORD map_TileHeight(UDWORD x, UDWORD y)
 {
-	if((x>=mapWidth) || (y>=mapHeight)) {
+	if ( x >= mapWidth || y >= mapHeight )
+	{
 		return 0;
 	}
-	return (SWORD)((psMapTiles[x + (y * mapWidth)].height) * ELEVATION_SCALE);
+	return (SWORD)(psMapTiles[x + (y * mapWidth)].height * ELEVATION_SCALE);
 }
 
 /*sets the tile height */
@@ -245,6 +230,13 @@ static inline BOOL tileOnMap(SDWORD x, SDWORD y)
 	return (x >= 0) && (x < (SDWORD)mapWidth) && (y >= 0) && (y < (SDWORD)mapHeight);
 }
 
+/* Return true if a tile is not too near the map edge and not outside of the map */
+static inline BOOL tileInsideBuildRange(SDWORD x, SDWORD y)
+{
+	return (x >= TOO_NEAR_EDGE) && (x < ((SDWORD)mapWidth - TOO_NEAR_EDGE)) &&
+		(y >= TOO_NEAR_EDGE) && (y < ((SDWORD)mapHeight - TOO_NEAR_EDGE));
+}
+
 /* Return whether a world coordinate is on the map */
 static inline BOOL worldOnMap(SDWORD x, SDWORD y)
 {
@@ -252,7 +244,7 @@ static inline BOOL worldOnMap(SDWORD x, SDWORD y)
 		   (y >= 0) && (y < ((SDWORD)mapHeight << TILE_SHIFT));
 }
 
-/* Store a map coordinate and it's associated tile, used by mapCalcLine */
+/* Store a map coordinate and it's associated tile */
 typedef struct _tile_coord
 {
 	UDWORD	x,y;
@@ -261,19 +253,6 @@ typedef struct _tile_coord
 
 /* The map tiles generated by map calc line */
 extern TILE_COORD	*aMapLinePoints;
-
-/* work along a line on the map storing the points in aMapLinePoints.
- * pNumPoints is set to the number of points generated.
- * The start and end points are in TILE coordinates.
- */
-extern void mapCalcLine(UDWORD startX, UDWORD startY,
-						UDWORD endX, UDWORD endY,
-						UDWORD *pNumPoints);
-
-/* Same as mapCalcLine, but does a wider line in the map */
-extern void mapCalcAALine(SDWORD X1, SDWORD Y1,
-				   SDWORD X2, SDWORD Y2,
-				   UDWORD *pNumPoints);
 
 /* Return height of x,y */
 extern SWORD map_Height(UDWORD x, UDWORD y);
@@ -290,7 +269,6 @@ UDWORD GetHeightOfMap(void);
 UDWORD GetWidthOfMap(void);
 extern BOOL	readVisibilityData(char *pFileData, UDWORD fileSize);
 extern BOOL	writeVisibilityData( char *pFileName );
-extern void	mapFreeTilesAndStrips( void );
 
 //scroll min and max values
 extern SDWORD		scrollMinX, scrollMaxX, scrollMinY, scrollMaxY;

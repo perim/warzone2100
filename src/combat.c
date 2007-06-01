@@ -24,12 +24,6 @@
  *
  */
 
-/* Turn on the damage printf's from combExplodeBullet */
-//#define DEBUG_GROUP1
-/* Turn on LOS printf's */
-//#define DEBUG_GROUP2
-/* Turn on Missed printf's */
-//#define DEBUG_GROUP3
 #include "lib/framework/frame.h"
 
 #include "objects.h"
@@ -50,12 +44,6 @@
 #include "order.h"
 #include "ai.h"
 #include "action.h"
-
-#define	EXPLOSION_AUDIO	0
-
-/* Number of tiles that missed bullets scatter from target */
-//#define DIRECT_SCATTERDIST 3
-//#define INDIRECT_SCATTERDIST 2
 
 /* minimum miss distance */
 #define MIN_MISSDIST	(TILE_UNITS/6)
@@ -369,7 +357,7 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	yDiff = abs(psAttacker->y - psTarget->y);
 	distSquared = xDiff*xDiff + yDiff*yDiff;
 	//Watermelon:dist
-	dist = (SDWORD)sqrt(distSquared);
+	dist = (SDWORD)sqrtf(distSquared);
 	longRange = proj_GetLongRange(psStats, (SDWORD)psAttacker->z-(SDWORD)psTarget->z);
 	if (distSquared <= (psStats->shortRange * psStats->shortRange) &&
 		distSquared >= (psStats->minRange * psStats->minRange))

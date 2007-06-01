@@ -131,9 +131,6 @@ void	droidUpdateRecoil( DROID *psDroid );
 UDWORD	getBound(UDWORD level);
 
 
-/*time to move to a new location (when building foundation) */
-//static void moveToNewTile(DROID *psDroid);
-
 // initialise droid module
 BOOL droidInit(void)
 {
@@ -1454,44 +1451,6 @@ void droidUpdate(DROID *psDroid)
 //		"unitUpdate (end): Unit at (0,0)" );
 }
 
-//void droidUpdate(DROID *psDroid)
-//{
-//	droidUpd(psDroid);
-//}
-
-// calculate the experience level of a droid
-/*SDWORD droidCalcExp(DROID *psDroid)
-{
-	// figure out a to hit mod based on kills
-	if (psDroid->numKills > 100)
-	{
-		return 6;
-	}
-	else if (psDroid->numKills > 50)
-	{
-		return 5;
-	}
-	else if (psDroid->numKills > 25)
-	{
-		return 4;
-	}
-	else if (psDroid->numKills > 10)
-	{
-		return 3;
-	}
-	else if (psDroid->numKills > 5)
-	{
-		return 2;
-	}
-	else if (psDroid->numKills > 1)
-	{
-		return 1;
-	}
-
-	return 0;
-}*/
-
-
 /* See if a droid is next to a structure */
 static BOOL droidNextToStruct(DROID *psDroid, BASE_OBJECT *psStruct)
 {
@@ -1533,36 +1492,6 @@ static BOOL droidNextToStruct(DROID *psDroid, BASE_OBJECT *psStruct)
 
 	return FALSE;
 }
-
-
-/* Set up a droid to build a foundation - returns true if successful */
-BOOL droidStartFoundation(DROID *psDroid)
-{
-//	SDWORD	height;
-
-	ASSERT( psDroid != NULL,
-		"unitStartFoundation: invalid unit pointer" );
-
-	/* See if we are starting a new structure */
-	if (psDroid->order == DORDER_BUILD || psDroid->order == DORDER_LINEBUILD)
-	{
-        //buildStructure() calls this now so don't need it twice! AB 14/12/98
-		//height = buildFoundation((STRUCTURE_STATS *)psDroid->psTarStats,
-		//				psDroid->orderX,psDroid->orderY);
-		//if (height >= 0)
-		{
-			//psDroid->actionHeight = (UWORD)height;
-            //psDroid->actionHeight = 0;  //not used here anymore
-			psDroid->actionStarted = gameTime;
-			psDroid->actionPoints = 0;
-			//psDroid->tileNumber = 0;
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
-
-
 
 static BOOL
 droidCheckBuildStillInProgress( void *psObj )
@@ -1613,9 +1542,7 @@ droidBuildStartAudioCallback( void *psObj )
 BOOL droidStartBuild(DROID *psDroid)
 {
 	STRUCTURE			*psStruct;
-	//FEATURE				*psCurr;
 	STRUCTURE_STATS		*psStructStat;
-	//MESSAGE				*psMessage;
 
 	ASSERT( psDroid != NULL,
 		"unitStartBuild: invalid unit pointer" );
@@ -1645,37 +1572,9 @@ BOOL droidStartBuild(DROID *psDroid)
 		asStructLimits[psDroid->player][psStructStat - asStructureStats].
 			currentQuantity++;
 
-		//The following is done in buildStructure now - AB 3/9/98
-		//if resource extractor - need to remove oil feature and prox Msg
-		/*if (psStruct->pStructureType->type == REF_RESOURCE_EXTRACTOR)
-		{
-			//find the resource at this point
-			for (psCurr = apsFeatureLists[0]; psCurr != NULL; psCurr = psCurr->psNext)
-			{
-				if (psCurr->psStats->subType == FEAT_OIL_RESOURCE)
-				{
-					if ((psCurr->x == psStruct->x) && (psCurr->y == psStruct->y))
-					{
-						//see if there is a proximity message at this location
-						psMessage = findMessage(psCurr, MSG_PROXIMITY, psStruct->player);
-						if (psMessage)
-						{
-							removeMessage(psMessage, psStruct->player);
-						}
-						//remove it from the map
-						removeFeature(psCurr);
-						//set the map to hold the resource extractor again
-						SET_TILE_STRUCTURE(mapTile(psCurr->x >> TILE_SHIFT,
-							psCurr->y >> TILE_SHIFT));
-					}
-				}
-			}
-		}*/
-
 		//commented out for demo - 2/1/98
 		//ASSERT( droidNextToStruct(psDroid, (BASE_OBJECT *)psStruct),
 		//	"droidStartBuild: did not build structure next to droid" );
-
 
 		if (bMultiPlayer)
 		{
@@ -1756,7 +1655,7 @@ static void addConstructorEffect(STRUCTURE *psStruct)
 BOOL droidUpdateBuild(DROID *psDroid)
 {
 //	UDWORD		widthRange,breadthRange;
-//	iVector		temp;
+//	Vector3i	temp;
 	UDWORD		pointsToAdd, constructPoints;//, powerPercent, buildPercent;
 	STRUCTURE	*psStruct;
 	//UDWORD		mapX, mapY, i, j;
@@ -1862,15 +1761,15 @@ BOOL droidUpdateBuild(DROID *psDroid)
 		{
 			for (j = 0; j < psStruct->pStructureType->baseBreadth+1; j++)
 			{
-				FRACT	divisor,illumin, currentIllumin;
+				float	divisor,illumin, currentIllumin;
 
 				divisor = (FOUNDATION_ILLUMIN + prev -
-					(FOUNDATION_ILLUMIN * prev)/(FRACT)100) / (FRACT)100;
+					(FOUNDATION_ILLUMIN * prev)/(float)100) / (float)100;
 				//work out what the initial value was before modifier was applied
 				currentIllumin = mapTile(mapX+i, mapY+j)->illumination;
 				illumin = currentIllumin / divisor;
-				divisor = ( FOUNDATION_ILLUMIN+current-(FOUNDATION_ILLUMIN*current)/(FRACT)100 )
-																			/ (FRACT)100;
+				divisor = ( FOUNDATION_ILLUMIN+current-(FOUNDATION_ILLUMIN*current)/(float)100 )
+																			/ (float)100;
 				illumin = illumin * divisor;
 				mapTile(mapX+i, mapY+j)->illumination = (UBYTE)illumin;
 			}
@@ -1970,171 +1869,6 @@ BOOL droidUpdateBuild(DROID *psDroid)
 	}
 	return TRUE;
 }
-
-//NEW VERSION WHEREBY THE GROUND IS LEVELLED IN ONE GO
-/* Update a construction droid while it is building a
-   foundation. Returns TRUE whilst foundation continues */
-BOOL droidUpdateFoundation(DROID *psDroid)
-{
-	//UBYTE				width, breadth;
-//	STRUCTURE_STATS		*psStructStats = (STRUCTURE_STATS *)psDroid->psTarStats;
-	//UDWORD				x;
-	//UDWORD				y;
-
-	ASSERT( psDroid->action == DACTION_BUILD_FOUNDATION,
-		"unitUpdateFoundation: unit is not building foundation" );
-	/*x = (SDWORD)psDroid->orderX - (SDWORD)(psStructStats->baseWidth * TILE_UNITS)/2;
-	y = (SDWORD)psDroid->orderY - (SDWORD)(psStructStats->baseBreadth * TILE_UNITS)/2;
-
-	x = (x >> TILE_SHIFT);
-	y = (y >> TILE_SHIFT);
-
-	//find a section that is not at the actionHeight
-	for (breadth = 0; breadth < (UBYTE)(psStructStats->baseBreadth + 1); breadth++)
-	{
-		for (width = 0; width < (UBYTE)(psStructStats->baseWidth + 1); width++)
-		{
-			//set the tile to the required foundation height
-			setTileHeight(x + width, y + breadth, psDroid->actionHeight);
-			// We need to raise features on raised tiles to the new height
-			if(TILE_HAS_FEATURE(mapTile(x+width,y+breadth)))
-			{
-				getTileFeature(x+width, y+breadth)->z =
-					psDroid->actionHeight;
-			}
-		}
-	}
-	//all must be at actionHeight
-	return FALSE;*/
-
-    //don't do this anymore since happens in one go and is called by buildStructure - see buildFlatten()!!
-    return FALSE;
-}
-
-//OLD VERSION WHEREBY THE GROUND IS LOWERED/RAISED TILE BY TILE
-/* Update a construction droid while it is building a
-   foundation. Returns TRUE whilst foundation continues */
-/*BOOL droidUpdateFoundation(DROID *psDroid)
-{
-	UBYTE				width, breadth, buildSpeed = 160, illumin;
-	STRUCTURE_STATS		*psStructStats = (STRUCTURE_STATS *)psDroid->psTarStats;
-	UDWORD				x = psDroid->orderX >> TILE_SHIFT;
-	UDWORD				y = psDroid->orderY >> TILE_SHIFT;
-	UDWORD				pointsToAdd, height;
-	SDWORD				newHeight;
-
-	ASSERT( psDroid->action == DACTION_BUILD_FOUNDATION,
-		"droidUpdateFoundation: droid is not building foundation" );
-
-	//we want this to happen almost immediately...so add lots each cycle
-	//pointsToAdd = 40 * (gameTime - psDroid->actionStarted) / GAME_TICKS_PER_SEC;
-	pointsToAdd = gameTime - psDroid->actionStarted;
-
-	//if time to raise a new section
-	if (pointsToAdd > psDroid->actionPoints)
-	{
-		//find a section that is not at the actionHeight
-		breadth = (UBYTE)(psDroid->tileNumber / (psStructStats->baseBreadth + 1));
-		for (; breadth < (UBYTE)(psStructStats->baseBreadth + 1); breadth++)
-		{
-			width = (UBYTE)(psDroid->tileNumber % (psStructStats->baseWidth + 1));
-			for (; width < (UBYTE)(psStructStats->baseWidth + 1); width++)
-			{
-
-				//set the illumination of the tile to FOUNDATION_ILLUM% darker
-				illumin = mapTile(x + width, y + breadth)->illumination;
-				DBPRINTF(("Start illum=%d\n",illumin);
-				illumin = (UBYTE)((FOUNDATION_ILLUMIN * illumin) / 100);
-				mapTile(x + width, y + breadth)->illumination = illumin;
-
-				height = map_TileHeight(x + width, y + breadth);
-				if (height < psDroid->actionHeight)
-				{
-					newHeight = height + (buildSpeed * (pointsToAdd -
-						psDroid->actionPoints));
-					if (newHeight > (SDWORD)psDroid->actionHeight)
-					{
-						//got to the right height
-						newHeight = psDroid->actionHeight;
-						//psDroid->tileNumber++;
-						moveToNewTile(psDroid);
-					}
-					setTileHeight(x + width, y + breadth, newHeight);
-					// We need to raise features on raised tiles to the new height
-					if(TILE_HAS_FEATURE(mapTile(x+width,y+breadth)))
-					{
-						getTileFeature(x+width,y+breadth)->z = newHeight;
-					}
-					psDroid->actionPoints = pointsToAdd;
-					return TRUE;
-				}
-				else if (height > psDroid->actionHeight)
-				{
-					newHeight = (SDWORD)(height - (buildSpeed * (pointsToAdd -
-						psDroid->actionPoints)));
-					if (newHeight < (SDWORD)psDroid->actionHeight)
-					{
-						//got to the right height
-						newHeight = psDroid->actionHeight;
-						//psDroid->tileNumber++;
-						moveToNewTile(psDroid);
-					}
-					setTileHeight(x + width, y + breadth, newHeight);
-					if(TILE_HAS_FEATURE(mapTile(x+width,y+breadth)))
-					{
-						getTileFeature(x+width,y+breadth)->z = newHeight;
-					}
-					psDroid->actionPoints = pointsToAdd;
-					return TRUE;
-				}
-				else
-				{
-					//already at the right height
-					//psDroid->tileNumber++;
-					moveToNewTile(psDroid);
-				}
-			}
-		}
-		//all must be at actionHeight
-		return FALSE;
-	}
-	//still building
-	return TRUE;
-}*/
-
-
-/*time to move to a new location (when building foundation) */
-/*void moveToNewTile(DROID *psDroid)
-{
-	UBYTE				breadth, width;
-	UDWORD				newX, newY;
-	STRUCTURE_STATS		*psStructStats = (STRUCTURE_STATS *)psDroid->psTarStats;
-	UDWORD				x = psDroid->orderX >> TILE_SHIFT;
-	UDWORD				y = psDroid->orderY >> TILE_SHIFT;
-
-	//increment the tile index
-	psDroid->tileNumber++;
-
-	//determine the tile now working on
-	breadth = (UBYTE)(psDroid->tileNumber / (psStructStats->baseBreadth + 1));
-	width = (UBYTE)(psDroid->tileNumber % (psStructStats->baseWidth + 1));
-	newX = x + width;
-	newY = y + breadth;
-
-	//find a free location near the tile
-	if (!pickATile(&newX, &newY,LOOK_FOR_EMPTY_TILE))
-	{
-		ASSERT( FALSE, "moveToNewTile: Unable to find a free location" );
-	}
-
-	//order the droid to move
-	psDroid->action = DACTION_FOUNDATION_WANDER;
-	newX = newX << TILE_SHIFT;
-	newY = newY << TILE_SHIFT;
-	psDroid->actionX = newX;
-	psDroid->actionY = newY;
-	moveDroidTo(psDroid, newX, newY);
-}*/
 
 BOOL droidStartDemolishing( DROID *psDroid )
 {
@@ -2480,7 +2214,7 @@ void	droidUpdateRecoil( DROID *psDroid )
 {
 UDWORD	percent;
 UDWORD	recoil;
-FRACT	fraction;
+float	fraction;
 //Watermelon:added multiple weapon update
 UBYTE	i = 0;
 UBYTE	num_weapons = 0;
@@ -3675,13 +3409,12 @@ UDWORD	calcTemplatePower(DROID_TEMPLATE *psTemplate)
 	UDWORD power, i;
 
 	//get the component power
-	power = (asBodyStats + psTemplate->asParts[COMP_BODY])->buildPower +
-	(asBrainStats + psTemplate->asParts[COMP_BRAIN])->buildPower +
-	//(asPropulsionStats + psTemplate->asParts[COMP_PROPULSION])->buildPower +
-	(asSensorStats + psTemplate->asParts[COMP_SENSOR])->buildPower +
-	(asECMStats + psTemplate->asParts[COMP_ECM])->buildPower +
-	(asRepairStats + psTemplate->asParts[COMP_REPAIRUNIT])->buildPower +
-	(asConstructStats + psTemplate->asParts[COMP_CONSTRUCT])->buildPower;
+	power = (asBodyStats + psTemplate->asParts[COMP_BODY])->buildPower;
+	power += (asBrainStats + psTemplate->asParts[COMP_BRAIN])->buildPower;
+	power += (asSensorStats + psTemplate->asParts[COMP_SENSOR])->buildPower;
+	power += (asECMStats + psTemplate->asParts[COMP_ECM])->buildPower;
+	power += (asRepairStats + psTemplate->asParts[COMP_REPAIRUNIT])->buildPower;
+	power += (asConstructStats + psTemplate->asParts[COMP_CONSTRUCT])->buildPower;
 
 	/* propulsion power points are a percentage of the bodys' power points */
 	power += (((asPropulsionStats + psTemplate->asParts[COMP_PROPULSION])->buildPower *
@@ -4781,7 +4514,7 @@ BOOL calcDroidMuzzleLocation(DROID *psDroid, Vector3i *muzzle, int weapon_slot)
 //	UDWORD turretType;
 //	UDWORD bodyType;
 	Vector3i barrel;
- 	iIMDShape		*psShape, *psWeapon, *psWeaponMount;
+ 	iIMDShape *psShape, *psWeapon, *psWeaponMount;
 
 	psShape = BODY_IMD(psDroid,psDroid->player);
 	//Watermelon:got rid of the macros...
@@ -4822,7 +4555,7 @@ BOOL calcDroidMuzzleLocation(DROID *psDroid, Vector3i *muzzle, int weapon_slot)
 				barrel.z = 0;
 			}
 
-			pie_ROTATE_TRANSLATE(barrel.x, barrel.z, barrel.y, muzzle->x, muzzle->z, muzzle->y);
+			pie_RotateTranslate3iv(&barrel, muzzle);
 			muzzle->z = -muzzle->z;
 
 			pie_MatEnd();
@@ -4871,7 +4604,7 @@ BOOL calcDroidMuzzleLocation(DROID *psDroid, Vector3i *muzzle, int weapon_slot)
 				barrel.z = 0;
 			}
 
-			pie_ROTATE_TRANSLATE(barrel.x, barrel.z, barrel.y, muzzle->x, muzzle->z, muzzle->y);
+			pie_RotateTranslate3iv(&barrel, muzzle);
 			muzzle->z = -muzzle->z;
 
 			pie_MatEnd();
@@ -6337,9 +6070,6 @@ BOOL cbSensorDroid(DROID *psDroid)
 	return FALSE;
 }
 
-//testing the new electronic warfare for multiPlayer - AB don't want to release with this in the game!!!!!!
-//#define TEST_EW 1
-
 // ////////////////////////////////////////////////////////////////////////////
 // give a droid from one player to another - used in Electronic Warfare and multiplayer
 //returns the droid created - for single player
@@ -6366,11 +6096,6 @@ DROID * giftSingleDroid(DROID *psD, UDWORD to)
 	{
 		return psD;
 	}
-
-#ifdef TEST_EW
-    bMultiPlayer = TRUE;
-#endif
-
 
     if (bMultiPlayer)
     {
@@ -6459,9 +6184,6 @@ DROID * giftSingleDroid(DROID *psD, UDWORD to)
 		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_UNITTAKEOVER);
 		psScrCBDroidTaken = NULL;
 
-#ifdef TEST_EW
-        bMultiPlayer = FALSE;
-#endif
         return NULL;
     }
 

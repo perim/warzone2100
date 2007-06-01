@@ -60,9 +60,9 @@ typedef struct environ_data
 {
 UBYTE	bProcess;
 UBYTE	type;
-FRACT	val;
+float	val;
 UBYTE	data;
-FRACT	vec;
+float	vec;
 }ENVIRON_DATA;
 
 // -------------------------------------------------------------------------------
@@ -132,12 +132,12 @@ void	environUpdate( void )
 {
 	UDWORD	i,j;
 	UDWORD	index;
-	FRACT	value,newValue;
-	FRACT	increment = 0;
-	FRACT	lowest = 0;
-	FRACT	highest = 0;
+	float	value,newValue;
+	float	increment = 0;
+	float	lowest = 0;
+	float	highest = 0;
 	UDWORD	startX,startY,endX,endY;
-	FRACT	fraction;
+	float	fraction;
 
 	//at the moment this function is getting called between levels and so crashes - quick check here for now
 	if (pEnvironData == NULL)
@@ -275,8 +275,8 @@ extern UDWORD map_MistValue(UDWORD x, UDWORD y)
 	tileY = y >> TILE_SHIFT;
 
 	/* Inter tile comp */
-	ox = (x & (TILE_UNITS-1));
-	oy = (y & (TILE_UNITS-1));
+	ox = map_round(x);
+	oy = map_round(y);
 
 	/* If this happens, then get quick height */
 	if(!x && !y)

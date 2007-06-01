@@ -301,21 +301,6 @@ UDWORD				outlineColour3D;
 // The last widget ID from widgRunScreen
 UDWORD				intLastWidget;
 
-///* The current mode of the widget screen */
-//enum _int_mode
-//{
-//	INT_NORMAL,		// Standard mode (just the reticule)
-//	INT_OPTION,		// Option screen
-//	INT_EDITSTAT,	// Stat screen up for placing objects
-//	INT_EDIT,		// Edit mode
-//	INT_OBJECT,		// Object screen
-//	INT_STAT,		// Object screen with stat screen
-//	INT_DESIGN,		// Design screen
-//	INT_INTELMAP,	// Intelligence Map
-//	INT_ORDER,
-//	//INT_TUTORIAL,	// Tutorial mode - message display
-//} intMode;
-
 INTMODE intMode;
 
 /* Which type of object is being displayed on the edit stats screen */
@@ -405,8 +390,6 @@ static FEATURE_STATS	**apsFeatureList;
 //needs to be UWORD sized for Patches
 static UWORD			*pList;
 static UWORD			*pSList;
-//static UBYTE			*pList;
-//static UBYTE			*pSList;
 
 /* Store a list of component stats pointers for the design screen */
 UDWORD			numComponent;
@@ -480,13 +463,10 @@ static void intSetStats(UDWORD id, BASE_STATS *psStats);
 /* If psSelected != NULL it specifies which stat should be hilited */
 static BOOL intAddStats(BASE_STATS **ppsStatsList, UDWORD numStats,
 						BASE_STATS *psSelected, BASE_OBJECT *psOwner);
-/* Remove the stats widgets from the widget screen */
-void intRemoveStats(void);
-void intRemoveStatsNoAnim(void);
 /* Process return codes from the stats screen */
 static void intProcessStats(UDWORD id);
 // clean up when an object dies
-void intObjectDied(UDWORD objID);
+static void intObjectDied(UDWORD objID);
 
 /* Add the build widgets to the widget screen */
 /* If psSelected != NULL it specifies which droid should be hilited */
@@ -545,28 +525,7 @@ static STRUCTURE* intCheckForStructure(UDWORD structType);
 static void intCheckReticuleButtons(void);
 
 // count the number of selected droids of a type
-SDWORD intNumSelectedDroids(UDWORD droidType);
-
-//// Move into drive.c when we create it.
-//void driveDissableControl(void)
-//{
-//}
-//
-//
-//void driveEnableControl(void)
-//{
-//}
-//
-//
-//void driveProcessCursorSnap(void)
-//{
-//	DBPRINTF(("driveProcessCursorSnap\n");
-//	if(VPadPressed(VPAD_MOUSERB)) {
-//		driveDissableControl();
-//		widgetsOn = TRUE;
-//		StartInterfaceSnap();
-//	}
-//}
+static SDWORD intNumSelectedDroids(UDWORD droidType);
 
 extern UWORD AsciiLookup[256];
 
@@ -912,9 +871,6 @@ static void intDoScreenRefresh(void)
 	if(IntRefreshPending) {
 		Refreshing = TRUE;
 
-/*		if( (widgGetFromID(psWScreen,IDOBJ_FORM) != NULL)
-		  && !(widgGetFromID(psWScreen,IDOBJ_FORM)->style & WIDG_HIDDEN)
-		  )*/
 		if (( (intMode == INT_OBJECT) ||
 			  (intMode == INT_STAT) ||
 			  (intMode == INT_CMDORDER) ||
@@ -975,13 +931,10 @@ static void intDoScreenRefresh(void)
 	//			intRemoveObjectNoAnim();
 	//		}
 
-//	DBPRINTF(("StatsWasUp %d\n",StatsWasUp);
-
 			switch(objMode)
 			{
 			case IOBJ_MANUFACTURE:	// The manufacture screen (factorys on bottom bar)
 			case IOBJ_RESEARCH:		// The research screen
-				//intUpdateObject((BASE_OBJECT *)interfaceStructList(),NULL,StatsWasUp);
 				//pass in the currently selected object
 				intUpdateObject((BASE_OBJECT *)interfaceStructList(),psObjSelected,
 					StatsWasUp);
@@ -991,7 +944,6 @@ static void intDoScreenRefresh(void)
 			case IOBJ_COMMAND:		// the command droid screen
 			case IOBJ_BUILDSEL:		// Selecting a position for a new structure
 			case IOBJ_DEMOLISHSEL:	// Selecting a structure to demolish
-				//intUpdateObject((BASE_OBJECT *)apsDroidLists[selectedPlayer],NULL,StatsWasUp);
 				//pass in the currently selected object
 				intUpdateObject((BASE_OBJECT *)apsDroidLists[selectedPlayer],psObjSelected,
 					StatsWasUp);
@@ -2157,25 +2109,32 @@ INT_RETVAL intRunWidgets(void)
 				if (psPositionStats->ref >= REF_STRUCTURE_START &&
 					psPositionStats->ref < REF_STRUCTURE_START + REF_RANGE)
 				{
-					intCalcStructCenter((STRUCTURE_STATS *)psPositionStats, structX,structY,
-												&structX,&structY);
-					psStructure = buildStructure((STRUCTURE_STATS *)psPositionStats,
-									structX, structY, selectedPlayer,FALSE);
+					STRUCTURE_STATS *psBuilding = (STRUCTURE_STATS *)psPositionStats;
+
+					intCalcStructCenter(psBuilding, structX, structY, &structX, &structY);
+					if (psBuilding->type == REF_DEMOLISH)
+					{
+						MAPTILE *psTile = mapTile(map_coord(structX), map_coord(structY));
+						FEATURE *psFeature = (FEATURE *)psTile->psObject;
+						psStructure = (STRUCTURE *)psTile->psObject; /* reuse var */
+
+						if (psStructure && psTile->psObject->type == OBJ_STRUCTURE)
+						{
+							removeStruct(psStructure, TRUE);
+						} 
+						else if (psFeature && psTile->psObject->type == OBJ_FEATURE) 
+						{
+							removeFeature(psFeature);
+						}
+						psStructure = NULL;
+					} else {
+						psStructure = buildStructure(psBuilding, structX, structY, 
+						                             selectedPlayer, FALSE);
+					}
 					if (psStructure)
 					{
 						psStructure->status = SS_BUILT;
 						buildingComplete(psStructure);
-						/*if (psStructure->pStructureType->type == REF_POWER_GEN)
-						{
-							//initPlayerPower();
-							capacityUpdate(psStructure);
-						}
-						else if (psStructure->pStructureType->type == REF_RESOURCE_EXTRACTOR ||
-							psStructure->pStructureType->type == REF_HQ)
-						{
-							//initPlayerPower();
-							extractedPowerUpdate(psStructure);
-						}*/
 					}
 				}
 				else if (psPositionStats->ref >= REF_FEATURE_START &&
@@ -3384,7 +3343,7 @@ void intDisplayWidgets(void)
 			screen_RestartBackDrop();
 
 			/*Add the radar to the design screen - only if player has HQ*/
-			bPlayerHasHQ = radarCheckForHQ(selectedPlayer);
+			bPlayerHasHQ = getHQExists(selectedPlayer);
 
 
 //			if(bPlayerHasHQ || (bMultiPlayer && (game.type == DMATCH)) )
@@ -3437,7 +3396,7 @@ void intNewObj(BASE_OBJECT *psObj)
 
 
 // clean up when an object dies
-void intObjectDied(UDWORD objID)
+static void intObjectDied(UDWORD objID)
 {
 	RENDERED_BUTTON		*psBut;
 	UDWORD				statsID, gubbinsID;
@@ -6224,15 +6183,6 @@ static BOOL setConstructionStats(BASE_OBJECT *psObj, BASE_STATS *psStats)
 			if(driveModeActive()) {
 				driveSelectionChanged();
 			}
-            /* Re-written to allow demolish order to be added to the queuing system
-
-            //make sure its not on the way to build something
-   		    orderDroid(psDroid,DORDER_STOP);
-            //clear out target (but not if queuing)
-            psDroid->psTarget = NULL;
-    		psDroid->psTarStats = (BASE_STATS *) structGetDemolishStat();
-
-            */
 			return TRUE;
 		}
 
@@ -7164,7 +7114,7 @@ DROID* intCheckForDroid(UDWORD droidType)
 
 
 // count the number of selected droids of a type
-SDWORD intNumSelectedDroids(UDWORD droidType)
+static SDWORD intNumSelectedDroids(UDWORD droidType)
 {
 	DROID	*psDroid;
 	SDWORD	num;
@@ -7230,6 +7180,8 @@ void intCheckReticuleButtons(void)
 					break;
 				case REF_HQ:
 					ReticuleEnabled[RETBUT_DESIGN].Enabled = TRUE;
+					break;
+				default:
 					break;
 			}
 		}

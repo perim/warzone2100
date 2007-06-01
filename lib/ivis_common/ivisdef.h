@@ -48,29 +48,6 @@
 #define iV_IMD_ANIM_FRAMES	8
 
 
-/***************************************************************************/
-/*
- *	Global Macros
- */
-/***************************************************************************/
-
-/***************************************************************************/
-/*
- *	Global Type Definitions
- */
-/***************************************************************************/
-//*************************************************************************
-//
-// Basic types (now defined in pieTypes.h)
-//
-//*************************************************************************
-
-//*************************************************************************
-//
-// Simple derived types (now defined in pieTypes.h)
-//
-//*************************************************************************
-
 //*************************************************************************
 //
 // screen surface structure
@@ -125,31 +102,31 @@ typedef struct {
 	Uint32 flags;
 	Sint32 zcentre;
 	int npnts;
-	Vector3i normal;
+	Vector3f normal;
 	VERTEXID *pindex;
-	iVertex *vrt;
-	iTexAnim *pTexAnim;		// warning.... this is not used on the playstation version !
+	fVertex *vrt;
+	iTexAnim *pTexAnim;
 } iIMDPoly;
 
 typedef struct iIMDShape {
 	Sint32 texpage;
 	Sint32 oradius, sradius, radius, visRadius, xmin, xmax, ymin, ymax, zmin, zmax;
 
-	Vector3i ocen;
-	UWORD	numFrames;
-	UWORD	animInterval;
+	Vector3f ocen;
+	UWORD numFrames;
+	UWORD animInterval;
 	int npoints;
-	int npolys;					// After BSP this number is not updated - it stays the number of pre-bsp polys
-	int nconnectors;			// After BSP this number is not updated - it stays the number of pre-bsp polys
+	int npolys; // After BSP this number is not updated - it stays the number of pre-bsp polys
+	int nconnectors; // After BSP this number is not updated - it stays the number of pre-bsp polys
 
-   Vector3i *points;
-   iIMDPoly *polys;		// After BSP this is not changed - it stays the original chunk of polys - not all are now used,and others not in this array are, see BSPNode for a tree of all the post BSP polys
-   Vector3i *connectors;		// After BSP this is not changed - it stays the original chunk of polys - not all are now used,and others not in this array are, see BSPNode for a tree of all the post BSP polys
+	Vector3f *points;
+	iIMDPoly *polys; // After BSP this is not changed - it stays the original chunk of polys - not all are now used,and others not in this array are, see BSPNode for a tree of all the post BSP polys
+	Vector3f *connectors; // After BSP this is not changed - it stays the original chunk of polys - not all are now used,and others not in this array are, see BSPNode for a tree of all the post BSP polys
 
 	int ntexanims;
 	iTexAnim **texanims;
 
-	struct iIMDShape *next;		// next pie in multilevel pies (NULL for non multilevel !)
+	struct iIMDShape *next; // next pie in multilevel pies (NULL for non multilevel !)
 
 	void *shadowEdgeList;
 	unsigned int nShadowEdges;
@@ -163,34 +140,31 @@ typedef struct iIMDShape {
 //*************************************************************************
 
 typedef struct {
-	UBYTE Type[4];
-	UWORD Version;
-	UWORD NumImages;
-	UWORD BitDepth;
-	UWORD NumTPages;
-	UBYTE TPageFiles[16][16];
-	UBYTE PalFile[16];
+	uint16_t Version;
+	uint16_t NumImages;
+	uint16_t BitDepth;
+	uint16_t NumTPages;
+	uint8_t TPageFiles[16][16];
 } IMAGEHEADER;
 
 
 typedef struct {
-//	UDWORD HashValue
-	UWORD TPageID;
-	UWORD PalID;
-	UWORD Tu,Tv;
-	UWORD Width;
-	UWORD Height;
-	SWORD XOffset;
-	SWORD YOffset;
+	uint16_t TPageID;
+	uint16_t Tu;
+	uint16_t Tv;
+	uint16_t Width;
+	uint16_t Height;
+	int16_t XOffset;
+	int16_t YOffset;
 } IMAGEDEF;
 
 
 typedef struct {
 	IMAGEHEADER Header;
 	iTexture *TexturePages;
-	UWORD NumCluts;
-	UWORD TPageIDs[16];
-	UWORD ClutIDs[48];
+	unsigned short NumCluts;
+	unsigned short TPageIDs[16];
+	unsigned short ClutIDs[48];
 	IMAGEDEF *ImageDefs;
 } IMAGEFILE;
 

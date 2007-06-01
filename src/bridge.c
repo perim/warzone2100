@@ -40,6 +40,9 @@ Alex McLean, Pumpkin Studios EIDOS Interactive, 1998.
 Handles rendering and placement of bridging sections for
 traversing water and ravines?! My guess is this won't make it into
 the final game, but we'll see...
+
+He was right. It did not make the final game. The code below
+is unused. Can it be reused? - Per, 2007
 */
 
 
@@ -142,8 +145,8 @@ BOOL	renderBridgeSection(STRUCTURE *psStructure)
 			pie_TRANSLATE(dv.x,dv.y,dv.z);
 
 			/* Get the x,z translation components */
-			rx = player.p.x & (TILE_UNITS-1);
-			rz = player.p.z & (TILE_UNITS-1);
+			rx = map_round(player.p.x);
+			rz = map_round(player.p.z);
 
 			/* Translate */
 			pie_TRANSLATE(rx,0,-rz);

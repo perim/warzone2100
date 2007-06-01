@@ -420,7 +420,6 @@ if(bMultiPlayer)
 /* Recalculates the lighting values for a tile */
 void	kf_RecalcLighting( void )
 {
-		//initLighting();
         initLighting(0, 0, mapWidth, mapHeight);
 		addConsoleMessage("Lighting values for all tiles recalculated",DEFAULT_JUSTIFY);
 }
@@ -476,18 +475,6 @@ void	kf_TriFlip( void )
 	psTile = mapTile(mouseTileX,mouseTileY);
 	TOGGLE_TRIFLIP(psTile);
 //	addConsoleMessage("Triangle flip status toggled",DEFAULT_JUSTIFY);
-/*
-	// This seems to be some kind of fire effect test that was added
-	// here of all places for some unknown reason. - Per
-	iVector	pos;
-		pos.x = mouseTileX*TILE_UNITS + TILE_UNITS/2;
-		pos.z = mouseTileY*TILE_UNITS + TILE_UNITS/2;
-		pos.y = map_Height(pos.x,pos.x);
-		effectGiveAuxVar(50);
-		effectGiveAuxVarSec(10000);
-
-		addEffect(&pos,EFFECT_FIRE,FIRE_TYPE_LOCALISED,FALSE,NULL,0);
-*/
 }
 
 // --------------------------------------------------------------------------
@@ -703,8 +690,8 @@ void	kf_SystemClose( void )
 /* Zooms out from display */
 void	kf_ZoomOut( void )
 {
-FRACT	fraction;
-FRACT	zoomInterval;
+float	fraction;
+float	zoomInterval;
 
 	fraction = MAKEFRACT(frameTime2)/GAME_TICKS_PER_SEC;
 	zoomInterval = fraction * MAP_ZOOM_RATE;
@@ -750,8 +737,8 @@ void	kf_RadarZoomOut( void )
 /* Zooms in the map */
 void	kf_ZoomIn( void )
 {
-FRACT	fraction;
-FRACT	zoomInterval;
+float	fraction;
+float	zoomInterval;
 
 	fraction = MAKEFRACT(frameTime2)/GAME_TICKS_PER_SEC;
 	zoomInterval = fraction * MAP_ZOOM_RATE;
@@ -813,8 +800,8 @@ void	kf_ExpandScreen( void )
 /* Spins the world round left */
 void	kf_RotateLeft( void )
 {
-FRACT	fraction;
-FRACT	rotAmount;
+float	fraction;
+float	rotAmount;
 
 	fraction = MAKEFRACT(frameTime2)/GAME_TICKS_PER_SEC;
 	rotAmount = fraction * MAP_SPIN_RATE;
@@ -825,8 +812,8 @@ FRACT	rotAmount;
 /* Spins the world right */
 void	kf_RotateRight( void )
 {
-FRACT	fraction;
-FRACT	rotAmount;
+float	fraction;
+float	rotAmount;
 
 	fraction = MAKEFRACT(frameTime2)/GAME_TICKS_PER_SEC;
 	rotAmount = fraction * MAP_SPIN_RATE;
@@ -841,8 +828,8 @@ FRACT	rotAmount;
 /* Pitches camera back */
 void	kf_PitchBack( void )
 {
-FRACT	fraction;
-FRACT	pitchAmount;
+float	fraction;
+float	pitchAmount;
 
 //#ifdef ALEXM
 //SDWORD	pitch;
@@ -882,8 +869,8 @@ FRACT	pitchAmount;
 /* Pitches camera foward */
 void	kf_PitchForward( void )
 {
-FRACT	fraction;
-FRACT	pitchAmount;
+float	fraction;
+float	pitchAmount;
 
 	fraction = MAKEFRACT(frameTime2)/GAME_TICKS_PER_SEC;
 	pitchAmount = fraction * MAP_PITCH_RATE;
@@ -2426,7 +2413,7 @@ void	kf_ToggleShadows( void )
 }
 // --------------------------------------------------------------------------
 
-FRACT available_speed[] = {
+float available_speed[] = {
 	FRACTCONST(1, 8),
 	FRACTCONST(1, 4),
 	FRACTCONST(1, 2),
@@ -2443,7 +2430,7 @@ unsigned int nb_available_speeds = 11;
 
 void kf_SpeedUp( void )
 {
-	FRACT	mod;
+	float	mod;
 
 	if ( (!bMultiPlayer || (NetPlay.bComms==0) )  && !bInTutorial)
 	{
@@ -2470,7 +2457,7 @@ void kf_SpeedUp( void )
 
 void kf_SlowDown( void )
 {
-	FRACT	mod;
+	float	mod;
 
 	if ( (!bMultiPlayer || (NetPlay.bComms==0) )  && !bInTutorial)
 	{

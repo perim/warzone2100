@@ -39,6 +39,7 @@
 #include "message.h"
 #include "researchdef.h"
 #include "lib/sound/sound.h"
+#include "lib/sound/audio_id.h"
 
 #include "multiplay.h"
 
@@ -1145,6 +1146,14 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 		break;
 	case ST_SOUND:
 		// find audio id
+
+		// don't use sound if it's disabled
+		if (audio_Disabled())
+		{
+			psVal->v.ival = NO_SOUND;
+			break;
+		}
+
 		pName = pBuffer;
 		index = audio_GetTrackID( pName );
 		if (index == SAMPLE_NOT_FOUND)

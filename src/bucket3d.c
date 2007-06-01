@@ -74,22 +74,11 @@ UDWORD resourceCounter;
 SDWORD zMax;
 SDWORD zMin;
 SDWORD worldMax,worldMin;
-#ifdef _DEBUG
-UDWORD	rejected;
-#endif
 
 /* function prototypes */
-SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject);
-SDWORD bucketCalculateState(RENDER_TYPE objectType, void* pObject);
-void testRender(void);
+static SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject);
+static SDWORD bucketCalculateState(RENDER_TYPE objectType, void* pObject);
 
-/* code */
-#ifdef _DEBUG
-UDWORD	getBucketRejected( void )
-{
-	return(rejected);
-}
-#endif
 /* reset object list */
 BOOL bucketSetupList(void)
 {
@@ -106,9 +95,6 @@ BOOL bucketSetupList(void)
 	{
 		bucketArray[i] = NULL;
 	}
-#ifdef _DEBUG
-	rejected = 0;
-#endif
 	return TRUE;
 }
 
@@ -214,9 +200,6 @@ extern BOOL bucketAddTypeToList(RENDER_TYPE objectType, void* pObject)
 			psStructure->sDisplay.frameNumber = 0;
 		}
 
-#ifdef _DEBUG
-		rejected++;
-#endif
 		return TRUE;
 	}
 
@@ -327,13 +310,8 @@ extern BOOL bucketRenderCurrentList(void)
 		bucketArray[z] = NULL;
 	}
 
-//	testRender();
-
-
 	//reset the tag array
 	resourceCounter = 0;
-//	iV_NumberOut(worldMax,100,100,255);
- //	iV_NumberOut(worldMin,100,200,255);
 	zMax = SDWORD_MIN;
 	zMin = SDWORD_MAX;
 	worldMax = SDWORD_MIN;
@@ -341,7 +319,7 @@ extern BOOL bucketRenderCurrentList(void)
 	return TRUE;
 }
 
-SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
+static SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
 {
 	SDWORD				z = 0, radius;
 	SDWORD				px, pz;
@@ -374,7 +352,7 @@ SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
  			position.y = (SDWORD)position.y;
 
 			/* 16 below is HACK!!! */
-			z = pie_RotProj(&position,&pixel) - 16;
+			z = pie_RotateProject(&position,&pixel) - 16;
 #ifdef BUCKET_CLIP
 			if (z > 0)
 			{
@@ -419,7 +397,7 @@ SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
 
 				position.y = psSimpObj->z;
 
-				z = pie_RotProj(&position,&pixel);
+				z = pie_RotateProject(&position,&pixel);
 	#ifdef BUCKET_CLIP
 				if (z > 0)
 				{
@@ -468,7 +446,7 @@ SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
 #endif
 			}
 
-			z = pie_RotProj(&position,&pixel);
+			z = pie_RotateProject(&position,&pixel);
 #ifdef BUCKET_CLIP
 			if (z > 0)
 			{
@@ -496,7 +474,7 @@ SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
 
 			position.y = psSimpObj->z+2;
 
-			z = pie_RotProj(&position,&pixel);
+			z = pie_RotateProject(&position,&pixel);
 #ifdef BUCKET_CLIP
 			if (z > 0)
 			{
@@ -539,7 +517,7 @@ SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
 			iV_MatrixRotateZ( -psCompObj->orientation.y );
 			iV_MatrixRotateX( -psCompObj->orientation.x );
 
-			z = pie_RotProj(&position,&pixel);
+			z = pie_RotateProject(&position,&pixel);
 #ifdef BUCKET_CLIP
 			/*	Don't do this for animations
 			if (z > 0)
@@ -577,7 +555,7 @@ SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
 
 			psBStats = asBodyStats + psDroid->asBits[COMP_BODY].nStat;
 			droidSize = psBStats->pIMD->radius;
-			z = pie_RotProj(&position,&pixel) - (droidSize*2);
+			z = pie_RotateProject(&position,&pixel) - (droidSize*2);
 #ifdef BUCKET_CLIP
 			if (z > 0)
 			{
@@ -621,7 +599,7 @@ SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
  				position.y = ((BASE_OBJECT *)((PROXIMITY_DISPLAY *)pObject)->
 					psMessage->pViewData)->z;
 			}
-			z = pie_RotProj(&position,&pixel);
+			z = pie_RotateProject(&position,&pixel);
 #ifdef BUCKET_CLIP
 			if (z > 0)
 			{
@@ -658,7 +636,7 @@ SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
  			position.y = (SDWORD)((EFFECT*)pObject)->position.y;
 
 			/* 16 below is HACK!!! */
-			z = pie_RotProj(&position,&pixel) - 16;
+			z = pie_RotateProject(&position,&pixel) - 16;
 #ifdef BUCKET_CLIP
 			if (z > 0)
 			{
@@ -691,7 +669,7 @@ SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
 				coords.y - player.p.z);
  			position.y = ((FLAG_POSITION*)pObject)->coords.z;
 
-			z = pie_RotProj(&position,&pixel);
+			z = pie_RotateProject(&position,&pixel);
 #ifdef BUCKET_CLIP
 			if (z > 0)
 			{
@@ -717,7 +695,7 @@ SDWORD bucketCalculateZ(RENDER_TYPE objectType, void* pObject)
 	return z;
 }
 
-SDWORD bucketCalculateState(RENDER_TYPE objectType, void* pObject)
+static SDWORD bucketCalculateState(RENDER_TYPE objectType, void* pObject)
 {
 	SDWORD				z = 0;
 	iIMDShape*			pie;
@@ -796,72 +774,4 @@ SDWORD bucketCalculateState(RENDER_TYPE objectType, void* pObject)
 
 	z *= (BUCKET_RANGE/NUM_BUCKETS);//stretch the dummy depth so its right when its compressed into the bucket array
 	return z;
-}
-
-void testRender(void)
-{
-
-
-	pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_OFF);
-	//render test line
-	pie_Line(CLIP_LEFT, CLIP_TOP, CLIP_RIGHT, CLIP_TOP, 2);
-	pie_Line(CLIP_RIGHT, CLIP_TOP, CLIP_RIGHT, CLIP_BOTTOM, 2);
-	pie_Line(CLIP_RIGHT, CLIP_BOTTOM, CLIP_LEFT, CLIP_BOTTOM, 2);
-	pie_Line(CLIP_LEFT, CLIP_BOTTOM, CLIP_LEFT, CLIP_TOP, 2);
-
-/*	pie_Line(320, 200, 320, 100, 2);
-	pie_Line(301, 100, 319, 100, 2);
-	pie_Line(319, 200, 301, 200, 2);
-	pie_Line(300, 100, 300, 200, 2);
-
-	pie_Box(520, 450, 540, 470, 2);
-	pie_BoxFillIndex(560, 450, 580, 470, 2);
-	pie_UniTransBoxFill(600, 450, 620, 470, 0x0000007f, 0x0f);
-
-
-	pie_Box(400, 100, 463, 163, 2);
-
-	pie_SetBilinear(FALSE);
-
-	image.texPage = 0;
-	image.tu = 0;
-	image.tv = 0;
-	image.tw = 63;
-	image.th = 63;
-	dest.x = 400;
-	dest.y = 100;
-	dest.w = 63;
-	dest.h = 63;
-
-
-	pie_DrawImage(&image, &dest, &style);
-
-	image.texPage = 0;
-	image.tu = 0;
-	image.tv = 0;
-	image.tw = 63;
-	image.th = 31;
-	dest.x = 500;
-	dest.y = 100;
-	dest.w = 63;
-	dest.h = 31;
-
-
-	pie_DrawImage(&image, &dest, &style);
-
-	image.texPage = 0;
-	image.tu = 0;
-	image.tv = 0;
-	image.tw = 31;
-	image.th = 63;
-	dest.x = 400;
-	dest.y = 200;
-	dest.w = 31;
-	dest.h = 63;
-
-
-	pie_DrawImage(&image, &dest, &style);
-*/
-	pie_SetDepthBufferStatus(DEPTH_CMP_LEQ_WRT_ON);
-
 }

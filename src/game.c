@@ -584,10 +584,10 @@ typedef struct _save_move_control
 	SDWORD	srcX,srcY,targetX,targetY;
 
 	/* Stuff for John's movement update */
-	FRACT	fx,fy;						// droid location as a fract
-//	FRACT	dx,dy;						// x and y change for current direction
+	float	fx,fy;						// droid location as a fract
+//	float	dx,dy;						// x and y change for current direction
 	// NOTE: this is supposed to replace Speed
-	FRACT	speed;						// Speed of motion
+	float	speed;						// Speed of motion
 	SWORD	boundX,boundY;				// Vector for the end of path boundary
 	SWORD	dir;						// direction of motion (not the direction the droid is facing)
 
@@ -1526,7 +1526,6 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		if (psMapTiles)
 		{
 //			free(psMapTiles);
-//			mapFreeTilesAndStrips();
 		}
 		if (aMapLinePoints)
 		{
@@ -2823,7 +2822,6 @@ error:
 	if (psMapTiles)
 	{
 //		free(psMapTiles);
-//		mapFreeTilesAndStrips();
 	}
 	if (aMapLinePoints)
 	{
@@ -5236,7 +5234,7 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 	{
 		psDroid->resistance = (SWORD)psSaveDroid->resistance;
 		memcpy(&psDroid->sMove, &psSaveDroid->sMove, sizeof(SAVE_MOVE_CONTROL));
-		psDroid->sMove.fz= (FRACT)psDroid->z;
+		psDroid->sMove.fz= (float)psDroid->z;
 		if (psDroid->sMove.psFormation != NULL)
 		{
 			psDroid->sMove.psFormation = NULL;
@@ -6648,7 +6646,9 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
 				psRepair = ((REPAIR_FACILITY *)psStructure->pFunctionality);
 				psRepair->psDeliveryPoint = NULL;
 				psRepair->psObj = NULL;
-                psRepair->currentPtsAdded = 0;
+				psRepair->currentPtsAdded = 0;
+				break;
+			default:
 				break;
 		}
 	}
@@ -7081,6 +7081,8 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
                     psRepair->psDeliveryPoint = NULL;
 				}
 				break;
+			default:
+				break;
 		}
 		//get the base body points
 		psStructure->body = (UWORD)structureBody(psStructure);
@@ -7152,7 +7154,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 	REPAIR_FACILITY			*psRepair;
 	REARM_PAD				*psReArmPad;
 	STRUCTURE_STATS			*psStats = NULL;
-    STRUCTURE_STATS			*psModule;
+	STRUCTURE_STATS			*psModule;
 	UDWORD					capacity;
 	UDWORD					count, statInc;
 	BOOL					found;
@@ -7161,8 +7163,6 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 	UDWORD					i;
 	UDWORD					sizeOfSaveStructure = 0;
 	UDWORD					researchId;
-
-
 
 	if (version <= VERSION_20)
 	{
@@ -7348,12 +7348,12 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 		switch (psStructure->pStructureType->type)
 		{
 			case REF_FACTORY:
-            case REF_VTOL_FACTORY:
-            case REF_CYBORG_FACTORY:
+			case REF_VTOL_FACTORY:
+			case REF_CYBORG_FACTORY:
 				//if factory save the current build info
 				psFactory = ((FACTORY *)psStructure->pFunctionality);
 				psFactory->capacity = 0;//capacity reset during module build (UBYTE)psSaveStructure->capacity;
-                //this is set up during module build - if the stats have changed it will also set up with the latest value
+				//this is set up during module build - if the stats have changed it will also set up with the latest value
 				//psFactory->productionOutput = (UBYTE)psSaveStructure->output;
 				psFactory->quantity = (UBYTE)psSaveStructure->quantity;
 				psFactory->timeStarted = psSaveStructure->droidTimeStarted;
@@ -7520,6 +7520,8 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
                     psReArmPad = ((REARM_PAD *)psStructure->pFunctionality);
 					psReArmPad->timeStarted = 0;
 				}
+				break;
+			default:
 				break;
 		}
 		//get the base body points

@@ -410,7 +410,8 @@ BOOL startConnectionScreen(void)
 	InitialProto	= 0;
 	safeSearch		= FALSE;
 
-	NETuseNetwork(TRUE);								// don't pretend!!
+	// don't pretend!! (Giel: don't pretend what?)
+	NetPlay.bComms = TRUE; // use network = TRUE
 
 	addSideText(FRONTEND_SIDETEXT,  FRONTEND_SIDEX, FRONTEND_SIDEY,_("CONNECTION"));
 
@@ -1484,7 +1485,8 @@ UDWORD addPlayerBox(BOOL players)
 				sFormInit.pDisplay = displayPlayer;//intDisplayButtonHilight;
 				sFormInit.pUserData = (void*) i;
 				widgAddForm(psWScreen, &sFormInit);
-				addFESlider(MULTIOP_SKSLIDE+i,sFormInit.id, 43,9,	  20,game.skDiff[i], 0);
+				addFESlider(MULTIOP_SKSLIDE+i,sFormInit.id, 43,9, DIFF_SLIDER_STOPS,
+					(game.skDiff[i] <= DIFF_SLIDER_STOPS ? game.skDiff[i] : DIFF_SLIDER_STOPS / 2), 0);	//set to 50% (value of UBYTE_MAX == human player)
 			}
 		}
 	}
@@ -2196,7 +2198,7 @@ static void processMultiopWidgets(UDWORD id)
 				{
 					if (game.skDiff[i] == 0)
 					{
-						game.skDiff[i] = 10;
+						game.skDiff[i] = (DIFF_SLIDER_STOPS / 2);
 					}
 
 					break;
@@ -2721,7 +2723,7 @@ BOOL startMultiOptions(BOOL bReenter)
 		{
 //			game.skirmishPlayers[i] = 1; // clear out skirmish setting
 //			game.skDiff[i] = (rand()%19)+1;	//1-20
-			game.skDiff[i] = 10;
+			game.skDiff[i] = (DIFF_SLIDER_STOPS / 2);
 		}
 
 /*		//set defaults for game.
@@ -2767,11 +2769,6 @@ BOOL startMultiOptions(BOOL bReenter)
 			ingame.numStructureLimits = 0;
 			free(ingame.pStructureLimits);
 		}
-
-		// check the registry for setup entries and set game options.
-//#ifndef NOREGCHECK
-//		NETcheckRegistryEntries("Warzone2100",S_WARZONEGUID);		// check for registry entries.. warn if not ok...
-//#endif
 
 		if(NetPlay.bLobbyLaunched)
 		{

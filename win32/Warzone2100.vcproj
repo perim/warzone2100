@@ -417,10 +417,6 @@
 					RelativePath="..\lib\netplay\netplay.c"
 					>
 				</File>
-				<File
-					RelativePath="..\lib\netplay\netusers_stub.c"
-					>
-				</File>
 			</Filter>
 			<Filter
 				Name="script"
@@ -1638,6 +1634,10 @@
 			</File>
 			<File
 				RelativePath="..\lib\ivis_common\pietypes.h"
+				>
+			</File>
+			<File
+				RelativePath="..\lib\ivis_common\pievector.h"
 				>
 			</File>
 			<File

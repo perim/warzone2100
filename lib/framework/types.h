@@ -33,6 +33,7 @@
 
 #include "platform.h"
 
+// Defines C99 types for C99 incompatible compilers (e.g. MSVC)
 #include <SDL/SDL_types.h>
 
 #ifdef WZ_CC_MSVC
@@ -51,12 +52,12 @@
 #endif // WZ_CC_MSVC
 
 /* Basic numeric types */
-typedef Uint8 UBYTE;
-typedef Sint8 SBYTE;
-typedef Uint16 UWORD;
-typedef Sint16 SWORD;
-typedef Uint32 UDWORD;
-typedef Sint32 SDWORD;
+typedef uint8_t  UBYTE;
+typedef int8_t   SBYTE;
+typedef uint16_t UWORD;
+typedef int16_t  SWORD;
+typedef uint32_t UDWORD;
+typedef int32_t  SDWORD;
 
 #ifndef WZ_OS_WIN
 
@@ -70,6 +71,24 @@ typedef struct
 
 #endif /* !WZ_OS_WIN */
 
+// If we are C99 compatible, the "bool" macro will be defined in <stdbool.h> (as _Bool)
+#if defined(WZ_C99)
+# include <stdbool.h>
+#else
+// Pretend we are C99 compatible (well, for the bool type then)
+# ifndef bool
+#  define bool BOOL
+# endif
+# ifndef true
+#  define true (1)
+# endif
+# ifndef false
+#  define false (0)
+# endif
+# ifndef __bool_true_false_are_defined
+#  define __bool_true_false_are_defined (1)
+# endif
+#endif /* WZ_C99 */
 
 /* Numeric size defines */
 #define UBYTE_MAX	0xff

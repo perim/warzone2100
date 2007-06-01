@@ -46,8 +46,8 @@
 #define DEG_60	(DEG_360/6)
 #define DEG(X)	(DEG_1 * (X))
 
-#define FP12_SHIFT			12
-#define FP12_MULTIPLIER			(1<<12)
+#define FP12_SHIFT 12
+#define FP12_MULTIPLIER (1<<12)
 #define STRETCHED_Z_SHIFT		10		//stretchs z range for (1000 to 4000) to (8000 to 32000)
 #define	MAX_Z				(32000.0f)	//raised to 32000 from 6000 when stretched
 #define	INV_MAX_Z			(0.00003125f)	//1/32000
@@ -63,8 +63,6 @@
 #define INV_TEX_SIZE			(0.00390625f)
 
 
-
-#define MAX_FILE_PATH		256
 #define pie_MAX_POLY_SIZE	16
 
 //Effects
@@ -103,9 +101,6 @@
  *	Global Definitions (MACROS)
  */
 /***************************************************************************/
-#define pie_MIN(a,b)	(((a) < (b)) ? (a) : (b))
-#define pie_MAX(a,b)	(((a) > (b)) ? (a) : (b))
-#define pie_ABS(a)		(((a) < 0) ? (-(a)) : (a))
 
 #define pie_ADDLIGHT(l,x)						\
 (((l)->byte.r > (MAX_UB_LIGHT - (x))) ? ((l)->byte.r = MAX_UB_LIGHT) : ((l)->byte.r +=(x)));		\
@@ -132,6 +127,7 @@ typedef struct {UBYTE b, g, r, a;} PIELIGHTBYTES; //for byte fields in a DWORD
 typedef union  {PIELIGHTBYTES byte; UDWORD argb;} PIELIGHT;
 typedef struct {UBYTE r, g, b, a;} PIEVERTLIGHT;
 typedef struct {SDWORD sx, sy, sz; UWORD tu, tv; PIELIGHT light, specular;} PIEVERTEX;
+typedef struct {float sx, sy, sz, tu, tv; PIELIGHT light, specular;} PIEVERTEXF;
 
 typedef struct {SWORD x, y, w, h;} PIERECT; //screen rectangle
 typedef struct {SDWORD texPage; SWORD tu, tv, tw, th;} PIEIMAGE; //an area of texture
@@ -150,16 +146,10 @@ typedef struct
 typedef struct {
 	UDWORD flags;
 	SDWORD nVrts;
-	PIEVERTEX *pVrts;
+	PIEVERTEXF *pVrts;
 	iTexAnim *pTexAnim;
 } PIEPOLY;
 
-
-/***************************************************************************/
-/*
- *	Global Variables
- */
-/***************************************************************************/
 
 /***************************************************************************/
 /*
@@ -174,7 +164,7 @@ extern void pie_DrawTexTriangle(PIEVERTEX *aVrts, void* psEffects);
 
 extern void pie_GetResetCounts(SDWORD* pPieCount, SDWORD* pTileCount, SDWORD* pPolyCount, SDWORD* pStateCount);
 
-void pie_BeginLighting(float x, float y, float z);
+void pie_BeginLighting(const Vector3f * light);
 void pie_EndLighting(void);
 void pie_RemainingPasses(void);
 

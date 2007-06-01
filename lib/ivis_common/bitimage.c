@@ -26,158 +26,115 @@
 #include "ivispatch.h"
 #include "bitimage.h"
 #include "lib/framework/frameresource.h"
+#include <physfs.h>
 
 
-static BOOL LoadTextureFile(char *FileName, iTexture *TPage, int *TPageID);
-
-UWORD iV_GetImageWidth(IMAGEFILE *ImageFile, UWORD ID)
+static unsigned short LoadTextureFile(const char *FileName, iTexture *pSprite)
 {
-	assert(ID < ImageFile->Header.NumImages);
-	return ImageFile->ImageDefs[ID].Width;
-}
+	unsigned int i;
 
-UWORD iV_GetImageHeight(IMAGEFILE *ImageFile, UWORD ID)
-{
-	assert(ID < ImageFile->Header.NumImages);
-	return ImageFile->ImageDefs[ID].Height;
-}
+	debug(LOG_TEXTURE, "LoadTextureFile: %s", FileName);
 
-SWORD iV_GetImageXOffset(IMAGEFILE *ImageFile, UWORD ID)
-{
-	assert(ID < ImageFile->Header.NumImages);
-	return ImageFile->ImageDefs[ID].XOffset;
-}
+	ASSERT(resPresent("IMGPAGE", FileName), "Texture file \"%s\" not preloaded.", FileName);
 
-SWORD iV_GetImageYOffset(IMAGEFILE *ImageFile, UWORD ID)
-{
-	assert(ID < ImageFile->Header.NumImages);
-	return ImageFile->ImageDefs[ID].YOffset;
-}
+	*pSprite = *(iTexture*)resGetData("IMGPAGE", FileName);
+	debug(LOG_TEXTURE, "Load texture from resource cache: %s (%d, %d)",
+	      FileName, pSprite->width, pSprite->height);
 
-UWORD iV_GetImageCenterX(IMAGEFILE *ImageFile, UWORD ID)
-{
-	assert(ID < ImageFile->Header.NumImages);
-	return ImageFile->ImageDefs[ID].XOffset + ImageFile->ImageDefs[ID].Width/2;
-}
-
-UWORD iV_GetImageCenterY(IMAGEFILE *ImageFile, UWORD ID)
-{
-	assert(ID < ImageFile->Header.NumImages);
-	return ImageFile->ImageDefs[ID].YOffset + ImageFile->ImageDefs[ID].Height/2;
-}
-
-IMAGEFILE *iV_LoadImageFile(char *FileData, WZ_DECL_UNUSED UDWORD FileSize)
-{
-	char *Ptr;
-	IMAGEHEADER *Header;
-	IMAGEFILE *ImageFile;
-	IMAGEDEF *ImageDef;
-	int i;
-
-	Ptr = FileData;
-
-	Header = (IMAGEHEADER*)Ptr;
-	Ptr += sizeof(IMAGEHEADER);
-
-	endian_uword(&Header->Version);
-	endian_uword(&Header->NumImages);
-	endian_uword(&Header->BitDepth);
-	endian_uword(&Header->NumTPages);
-
-	ImageFile = (IMAGEFILE*)malloc(sizeof(IMAGEFILE));
-	if(ImageFile == NULL) {
-		debug( LOG_ERROR, "Out of memory" );
-		return NULL;
-	}
-
-
-	ImageFile->TexturePages = (iTexture*)malloc(sizeof(iTexture)*Header->NumTPages);
-	if(ImageFile->TexturePages == NULL) {
-		debug( LOG_ERROR, "Out of memory" );
-		return NULL;
-	}
-
-	ImageFile->ImageDefs = (IMAGEDEF*)malloc(sizeof(IMAGEDEF)*Header->NumImages);
-	if(ImageFile->ImageDefs == NULL) {
-		debug( LOG_ERROR, "Out of memory" );
-		return NULL;
-	}
-
-	ImageFile->Header = *Header;
-
-	// Load the texture pages.
-	for (i = 0; i < Header->NumTPages; i++) {
-		int tmp=0;	/* Workaround for MacOS gcc 4.0.0 bug. */
-		LoadTextureFile((char*)Header->TPageFiles[i],
-				&ImageFile->TexturePages[i],
-				&tmp);
-		ImageFile->TPageIDs[i] = tmp;
-	}
-
-	ImageDef = (IMAGEDEF*)Ptr;
-
-	for(i=0; i<Header->NumImages; i++) {
-		endian_uword(&ImageDef->TPageID);
-		endian_uword(&ImageDef->PalID);
-		endian_uword(&ImageDef->Tu);
-		endian_uword(&ImageDef->Tv);
-		endian_uword(&ImageDef->Width);
-		endian_uword(&ImageDef->Height);
-		endian_sword(&ImageDef->XOffset);
-		endian_sword(&ImageDef->YOffset);
-
-		ImageFile->ImageDefs[i] = *ImageDef;
-		if( (ImageDef->Width <= 0) || (ImageDef->Height <= 0) ) {
-			debug( LOG_ERROR, "Illegal image size" );
-			return NULL;
+	/* Have we already loaded this one? */
+	for (i = 0; i < _TEX_INDEX; ++i)
+	{
+		if (strcasecmp(FileName, _TEX_PAGE[i].name) == 0)
+		{
+			debug(LOG_TEXTURE, "LoadTextureFile: already loaded");
+			return _TEX_PAGE[i].id;
 		}
-		ImageDef++;
 	}
+
+	return pie_AddTexPage(pSprite, FileName, 1, TRUE);
+}
+
+static inline IMAGEFILE* iV_AllocImageFile(size_t NumTPages, size_t NumImages)
+{
+	const size_t totalSize = sizeof(IMAGEFILE) + sizeof(iTexture) * NumTPages + sizeof(IMAGEDEF) * NumImages;
+
+	IMAGEFILE* ImageFile = malloc(totalSize);
+	if (ImageFile == NULL)
+	{
+		debug(LOG_ERROR, "iV_AllocImageFile: Out of memory");
+		return NULL;
+	}
+
+	// Set member pointers to their respective areas in the allocated memory area
+	ImageFile->TexturePages = (iTexture*)(ImageFile + 1);
+	ImageFile->ImageDefs = (IMAGEDEF*)(ImageFile->TexturePages + NumTPages);
 
 	return ImageFile;
 }
 
+IMAGEFILE *iV_LoadImageFile(const char *fileName)
+{
+	IMAGEFILE *ImageFile;
+	IMAGEDEF* ImageDef;
+	unsigned int i;
+
+	IMAGEHEADER Header;
+	PHYSFS_file* fileHandle;
+
+	fileHandle = PHYSFS_openRead(fileName);
+	if (!fileHandle)
+	{
+		debug(LOG_ERROR, "iV_LoadImageFromFile: PHYSFS_openRead failed (opening %s) with error: %s", fileName, PHYSFS_getLastError());
+		return NULL;
+	}
+
+	// Read header from file
+	PHYSFS_readULE16 (fileHandle, &Header.Version);
+	PHYSFS_readULE16 (fileHandle, &Header.NumImages);
+	PHYSFS_readULE16 (fileHandle, &Header.BitDepth);
+	PHYSFS_readULE16 (fileHandle, &Header.NumTPages);
+	PHYSFS_read      (fileHandle, &Header.TPageFiles, sizeof(Header.TPageFiles), 1);
+
+	ImageFile = iV_AllocImageFile(Header.NumTPages, Header.NumImages);
+	if(ImageFile == NULL)
+	{
+		PHYSFS_close(fileHandle);
+		return NULL;
+	}
+
+	ImageFile->Header = Header;
+
+	// Load the texture pages.
+	for (i = 0; i < Header.NumTPages; i++)
+	{
+		ImageFile->TPageIDs[i] = LoadTextureFile((char *)Header.TPageFiles[i], &ImageFile->TexturePages[i]);
+	}
+
+	for(ImageDef = &ImageFile->ImageDefs[0]; ImageDef != &ImageFile->ImageDefs[Header.NumImages]; ++ImageDef)
+	{
+		// Read image definition from file
+		PHYSFS_readULE16(fileHandle, &ImageDef->TPageID);
+		PHYSFS_readULE16(fileHandle, &ImageDef->Tu);
+		PHYSFS_readULE16(fileHandle, &ImageDef->Tv);
+		PHYSFS_readULE16(fileHandle, &ImageDef->Width);
+		PHYSFS_readULE16(fileHandle, &ImageDef->Height);
+		PHYSFS_readSLE16(fileHandle, &ImageDef->XOffset);
+		PHYSFS_readSLE16(fileHandle, &ImageDef->YOffset);
+
+		if( (ImageDef->Width <= 0) || (ImageDef->Height <= 0) ) {
+			debug( LOG_ERROR, "iV_LoadImageFromFile: Illegal image size" );
+			free(ImageFile);
+			PHYSFS_close(fileHandle);
+			return NULL;
+		}
+	}
+
+	PHYSFS_close(fileHandle);
+
+	return ImageFile;
+}
 
 void iV_FreeImageFile(IMAGEFILE *ImageFile)
 {
-
-//	for(i=0; i<ImageFile->Header.NumTPages; i++) {
-//		free(ImageFile->TexturePages[i].bmp);
-//	}
-
-	free(ImageFile->TexturePages);
-	free(ImageFile->ImageDefs);
 	free(ImageFile);
-}
-
-
-static BOOL LoadTextureFile(char *FileName, iTexture *pSprite, int *texPageID)
-{
-	unsigned int i=0;
-
-	debug(LOG_TEXTURE, "LoadTextureFile: %s", FileName);
-
-	if (!resPresent("IMGPAGE",FileName)) {
-		debug(LOG_ERROR, "Texture file \"%s\" not preloaded.", FileName);
-		assert(FALSE);
-		return FALSE;
-	} else {
-		*pSprite = *(iTexture*)resGetData("IMGPAGE", FileName);
-		debug(LOG_TEXTURE, "Load texture from resource cache: %s (%d, %d)",
-		      FileName, pSprite->width, pSprite->height);
-	}
-
-	/* We have already loaded this one? */
-	while (i < _TEX_INDEX) {
-		if (strcasecmp(FileName, _TEX_PAGE[i].name) == 0) {
-			*texPageID = _TEX_PAGE[i].id;
-			debug(LOG_TEXTURE, "LoadTextureFile: already loaded");
-			return TRUE;
-		}
-		i++;
-	}
-
-	*texPageID = pie_AddTexPage(pSprite, FileName, 1, TRUE);
-
-	return TRUE;
 }

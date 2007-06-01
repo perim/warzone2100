@@ -122,7 +122,7 @@ typedef enum
 
 #define MAX_EFFECTS	500
 
-#define	GRAVITON_GRAVITY	((FRACT)-800)
+#define	GRAVITON_GRAVITY	((float)-800)
 #define	EFFECT_X_FLIP		0x1
 #define	EFFECT_Y_FLIP		0x2
 #define	EFFECT_CYCLIC		0x4
@@ -249,8 +249,5 @@ BOOL readFXData(char *pFileData, UDWORD fileSize);
 extern BOOL	writeFXData( char *pFileName );
 extern	void	effectSetSize(UDWORD size);
 extern void	effectSetLandLightSpec(LAND_LIGHT_SPEC spec);
-
-
-
 
 #endif

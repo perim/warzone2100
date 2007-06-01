@@ -24,7 +24,6 @@
 
 typedef enum {
 	GS_TITLE_SCREEN,
-	GS_MISSION_SCREEN,
 	GS_NORMAL,
 	GS_SAVEGAMELOAD
 } GS_GAMEMODE;
@@ -34,7 +33,7 @@ extern BOOL gameInitialised;
 extern BOOL frontendInitialised;
 extern BOOL bDisableLobby;
 
-extern GS_GAMEMODE GetGameMode(void);
+extern GS_GAMEMODE GetGameMode(void) WZ_DECL_PURE;
 extern void SetGameMode(GS_GAMEMODE status);
 
 extern char SaveGamePath[];

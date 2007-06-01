@@ -89,10 +89,8 @@ char * multiplay_mods[MAX_MODS] = { NULL };
 // Warzone 2100 . Pumpkin Studios
 
 //flag to indicate when initialisation is complete
-BOOL	videoInitialised = FALSE;
 BOOL	gameInitialised = FALSE;
-BOOL	frontendInitialised = FALSE;
-BOOL	bDisableLobby;
+BOOL	bDisableLobby = FALSE;
 char	SaveGamePath[MAX_PATH];
 char	ScreenDumpPath[MAX_PATH];
 char	MultiForcesPath[MAX_PATH];
@@ -113,14 +111,13 @@ extern void debug_callback_stderr( void**, const char * );
 extern void debug_callback_win32debug( void**, const char * );
 
 
-void setFramerateLimit(Uint32 fpsLimit)
+void setFramerateLimit(int fpsLimit)
 {
-	SDL_initFramerate( &wzFPSmanager );
 	SDL_setFramerate( &wzFPSmanager, fpsLimit );
 }
 
 
-Uint32 getFramerateLimit(void)
+int getFramerateLimit(void)
 {
 	return SDL_getFramerate( &wzFPSmanager );
 }
@@ -427,9 +424,6 @@ static void startTitleLoop(void)
 		exit(EXIT_FAILURE);
 	}
 	frontendInitVars();
-
-	// set a flag for the trigger/event system to indicate initialisation is complete
-	frontendInitialised = TRUE;
 }
 
 
@@ -444,7 +438,6 @@ static void stopTitleLoop(void)
 		debug( LOG_ERROR, "Shutting down after failure" );
 		exit(EXIT_FAILURE);
 	}
-	frontendInitialised = FALSE;
 }
 
 
@@ -509,7 +502,7 @@ static void stopGameLoop(void)
  */
 static void initSaveGameLoad(void)
 {
-	SetGameMode(GS_SAVEGAMELOAD);
+	SetGameMode(GS_NORMAL);
 
 	screen_RestartBackDrop();
 	// load up a save game
@@ -519,8 +512,6 @@ static void initSaveGameLoad(void)
 		exit(EXIT_FAILURE);
 	}
 	screen_StopBackDrop();
-
-	SetGameMode(GS_NORMAL);
 }
 
 
@@ -609,13 +600,13 @@ static void runTitleLoop(void)
 /*!
  * Activation (focus change) eventhandler
  */
-static void handleActiveEvent(SDL_Event * event)
+static void handleActiveEvent(SDL_ActiveEvent * activeEvent)
 {
 	// Ignore focus loss through SDL_APPMOUSEFOCUS, since it mostly happens accidentialy
 	// active.state is a bitflag! Mixed events (eg. APPACTIVE|APPMOUSEFOCUS) will thus not be ignored.
-	if ( event->active.state != SDL_APPMOUSEFOCUS )
+	if ( activeEvent->state != SDL_APPMOUSEFOCUS )
 	{
-		if ( event->active.gain == 1 )
+		if ( activeEvent->gain == 1 )
 		{
 			debug( LOG_NEVER, "WM_SETFOCUS\n");
 			if (focusState != FOCUS_IN)
@@ -654,28 +645,30 @@ static void mainLoop(void)
 
 	while (TRUE)
 	{
+		frameUpdate(); // General housekeeping
+
 		/* Deal with any windows messages */
 		while (SDL_PollEvent(&event))
 		{
 			switch (event.type)
 			{
-				// This is uneccessary if we don't have the focus (either we don't get any events or they can't be dealt with anyway)
-				if (focusState == FOCUS_IN)
-				{
-					case SDL_KEYUP:
-					case SDL_KEYDOWN:
-						inputHandleKeyEvent(&event);
-						break;
-					case SDL_MOUSEBUTTONUP:
-					case SDL_MOUSEBUTTONDOWN:
-						inputHandleMouseButtonEvent(&event);
-						break;
-					case SDL_MOUSEMOTION:
-						inputHandleMouseMotionEvent(&event);
-						break;
-				}
+				case SDL_KEYUP:
+				case SDL_KEYDOWN:
+					inputHandleKeyEvent(&event.key);
+					break;
+				case SDL_MOUSEBUTTONUP:
+				case SDL_MOUSEBUTTONDOWN:
+					inputHandleMouseButtonEvent(&event.button);
+					break;
+				case SDL_MOUSEMOTION:
+					inputHandleMouseMotionEvent(&event.motion);
+					break;
 				case SDL_ACTIVEEVENT:
-					handleActiveEvent(&event);
+					 // Ignore this event during multiplayer games since it breaks the game when one player suddenly pauses!
+					if (!bMultiPlayer)
+					{
+						handleActiveEvent(&event.active);
+					}
 					break;
 				case SDL_QUIT:
 					return;
@@ -686,10 +679,10 @@ static void mainLoop(void)
 
 		if (focusState == FOCUS_IN)
 		{
-			gameTimeUpdate(); // Update gametime. FIXME There is probably code duplicated with MaintainFrameStuff
-
 			if (loop_GetVideoStatus())
+			{
 				videoLoop(); // Display the video if neccessary
+			}
 			else switch (GetGameMode())
 			{
 				case GS_NORMAL: // Run the gameloop code
@@ -702,7 +695,7 @@ static void mainLoop(void)
 					break;
 			}
 
-			frameUpdate(); // General housekeeping
+			gameTimeUpdate(); // Update gametime. FIXME There is probably code duplicated with MaintainFrameStuff
 		}
 
 		SDL_framerateDelay(&wzFPSmanager);
@@ -734,28 +727,30 @@ int main(int argc, char *argv[])
 	debug_init();
 	atexit( debug_exit );
 
+#ifdef DEBUG
+	debug( LOG_WZ, "Warzone 2100 - Version %s - Built %s - DEBUG", VERSION, __DATE__ );
+#else
+	debug( LOG_WZ, "Warzone 2100 - Version %s - Built %s", VERSION, __DATE__ );
+#endif
+
 	debug_register_callback( debug_callback_stderr, NULL, NULL, NULL );
-#if defined(WZ_OS_WIN) && defined(DEBUG)
-//	debug_register_callback( debug_callback_win32debug, NULL, NULL, NULL );
-#endif // WZ_OS_WIN && DEBUG
+#if defined(WZ_OS_WIN) && defined(DEBUG_INSANE)
+	debug_register_callback( debug_callback_win32debug, NULL, NULL, NULL );
+#endif // WZ_OS_WIN && DEBUG_INSANE
 
 	// find early boot info
 	if ( !ParseCommandLineEarly(argc, argv) ) {
 		return -1;
 	}
 
-#ifdef DEBUG
-	debug( LOG_WZ, "Warzone 2100 - Version %s - Built %s - DEBUG", VERSION, __DATE__ );
-#else
-	debug( LOG_WZ, "Warzone 2100 - Version %s - Built %s", VERSION, __DATE__ );
-#endif
 	/*** Initialize translations ***/
 	setlocale(LC_ALL, "");
 	(void)bindtextdomain(PACKAGE, LOCALEDIR);
 	(void)textdomain(PACKAGE);
 
-	/*** Initialize PhysicsFS ***/
+	SDL_initFramerate( &wzFPSmanager );
 
+	/*** Initialize PhysicsFS ***/
 	PHYSFS_init(argv[0]);
 	initialize_PhysicsFS();
 
@@ -775,8 +770,6 @@ int main(int argc, char *argv[])
 	war_SetDefaultStates();
 
 	debug(LOG_MAIN, "initializing");
-
-	bDisableLobby = FALSE;
 
 	loadConfig();
 	atexit( closeConfig );
@@ -813,13 +806,11 @@ int main(int argc, char *argv[])
 	if (psPaletteBuffer == NULL)
 	{
 		debug( LOG_ERROR, "Out of memory" );
-		abort();
 		return -1;
 	}
 	if ( !loadFileToBuffer("palette.bin", (char*)psPaletteBuffer, ( 256 * sizeof(iColour) + 1 ), &pSize) )
 	{
 		debug( LOG_ERROR, "Couldn't load palette data" );
-		abort();
 		return -1;
 	}
 	pal_AddNewPalette(psPaletteBuffer);

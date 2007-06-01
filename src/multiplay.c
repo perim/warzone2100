@@ -151,8 +151,8 @@ BOOL multiplayerWinSequence(BOOL firstCall)
 	static Vector3i pos;
 	Vector3i pos2;
 	static UDWORD last=0;
-	FRACT		fraction;
-	FRACT		rotAmount;
+	float		fraction;
+	float		rotAmount;
 	STRUCTURE	*psStruct;
 
 	if(firstCall)
@@ -679,9 +679,6 @@ BOOL recvMessage(void)
 				recvDestroyStructure(&msg);
 				break;
 
-//			case NET_WAYPOINT:					// add waypoint to droids.
-//				recvDroidWaypoint(&msg);
-//				break;
 			case NET_SECONDARY:					// set a droids secondary order level.
 				recvDroidSecondary(&msg);
 				break;
@@ -1996,7 +1993,7 @@ char *getPlayerColourName(SDWORD player)
 
 	if (player < end)
 	{
-		strcpy(tempString, _(playerColors[player]));
+		strcpy(tempString, _(playerColors[ getPlayerColour(player) ]));
 	}
 	else
 	{

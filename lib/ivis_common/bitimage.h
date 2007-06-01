@@ -21,14 +21,50 @@
 #define __INCLUDED_BITIMAGE__
 
 
-UWORD iV_GetImageWidth(IMAGEFILE *ImageFile,UWORD ID);
-UWORD iV_GetImageHeight(IMAGEFILE *ImageFile,UWORD ID);
-SWORD iV_GetImageXOffset(IMAGEFILE *ImageFile,UWORD ID);
-SWORD iV_GetImageYOffset(IMAGEFILE *ImageFile,UWORD ID);
-UWORD iV_GetImageCenterX(IMAGEFILE *ImageFile,UWORD ID);
-UWORD iV_GetImageCenterY(IMAGEFILE *ImageFile,UWORD ID);
+static inline WZ_DECL_PURE unsigned short iV_GetImageWidth(const IMAGEFILE *ImageFile, const unsigned short ID)
+{
+	assert(ID < ImageFile->Header.NumImages);
+	return ImageFile->ImageDefs[ID].Width;
+}
 
-IMAGEFILE *iV_LoadImageFile(char *FileData, UDWORD FileSize);
-void iV_FreeImageFile(IMAGEFILE *ImageFile);
+
+static inline WZ_DECL_PURE unsigned short iV_GetImageHeight(const IMAGEFILE *ImageFile, const unsigned short ID)
+{
+	assert(ID < ImageFile->Header.NumImages);
+	return ImageFile->ImageDefs[ID].Height;
+}
+
+
+static inline WZ_DECL_PURE short iV_GetImageXOffset(const IMAGEFILE *ImageFile, const unsigned short ID)
+{
+	assert(ID < ImageFile->Header.NumImages);
+	return ImageFile->ImageDefs[ID].XOffset;
+}
+
+
+static inline WZ_DECL_PURE short iV_GetImageYOffset(const IMAGEFILE *ImageFile, const unsigned short ID)
+{
+	assert(ID < ImageFile->Header.NumImages);
+	return ImageFile->ImageDefs[ID].YOffset;
+}
+
+
+static inline WZ_DECL_PURE unsigned short iV_GetImageCenterX(const IMAGEFILE *ImageFile, const unsigned short ID)
+{
+	assert(ID < ImageFile->Header.NumImages);
+	return ImageFile->ImageDefs[ID].XOffset + ImageFile->ImageDefs[ID].Width/2;
+}
+
+
+static inline WZ_DECL_PURE unsigned short iV_GetImageCenterY(const IMAGEFILE *ImageFile, const unsigned short ID)
+{
+	assert(ID < ImageFile->Header.NumImages);
+	return ImageFile->ImageDefs[ID].YOffset + ImageFile->ImageDefs[ID].Height/2;
+}
+
+
+extern IMAGEFILE *iV_LoadImageFile(const char *FileData);
+extern void iV_FreeImageFile(IMAGEFILE *ImageFile);
+
 
 #endif
