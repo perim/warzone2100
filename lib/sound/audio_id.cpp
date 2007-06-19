@@ -527,6 +527,16 @@ AudioIDmap::AudioIDmap() :
 
 sndTrackID AudioIDmap::GetAvailableID(const std::string& fileName)
 {
+    sndTrackID idNum = GetID(fileName);
+
+    if (idNum != 0)
+        return idNum;
+
+    return GetUniqueID(fileName);
+}
+
+sndTrackID AudioIDmap::GetID(const std::string& fileName)
+{
     // Lookup an ID number for the given fileName
     std::map<std::string, sndTrackID>::const_iterator IDpair = _map.find(fileName);
 
@@ -536,7 +546,7 @@ sndTrackID AudioIDmap::GetAvailableID(const std::string& fileName)
         return IDpair->second;
     }
 
-    return GetUniqueID(fileName);
+    return 0;
 }
 
 sndTrackID AudioIDmap::GetUniqueID(const std::string& fileName)

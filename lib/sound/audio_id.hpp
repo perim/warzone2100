@@ -39,6 +39,12 @@ class AudioIDmap
          */
         sndTrackID GetAvailableID(const std::string& fileName);
 
+        /** Retrieves the mapped ID number or zero if none is specified
+         *  \param fileName the file to retrieve an ID number for
+         *  \return a non-zero ID number when succesfull, or zero when no ID number could by found
+         */
+        sndTrackID GetID(const std::string& fileName);
+
         /** Provides a reference to an instance of AudioIDmap
          *  If there currently exists no instance of AudioIDmap it creates one
          *  \return a reference to a singleton instance of AudioIDmap&
