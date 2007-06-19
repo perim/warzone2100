@@ -323,36 +323,38 @@
 		<Unit filename="lib/sequence/sequence_stub.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="lib/sound/aud.h" />
-		<Unit filename="lib/sound/audio.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="lib/sound/audio.h" />
-		<Unit filename="lib/sound/audio_id.c">
-			<Option compilerVar="CC" />
-		</Unit>
+		<Unit filename="lib/sound/audio_id.cpp" />
 		<Unit filename="lib/sound/audio_id.h" />
-		<Unit filename="lib/sound/cdaudio.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="lib/sound/cdaudio.h" />
-		<Unit filename="lib/sound/mixer.h" />
-		<Unit filename="lib/sound/oggvorbis.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="lib/sound/oggvorbis.h" />
-		<Unit filename="lib/sound/openal_track.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="lib/sound/playlist.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="lib/sound/playlist.h" />
-		<Unit filename="lib/sound/track.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="lib/sound/track.h" />
-		<Unit filename="lib/sound/tracklib.h" />
+		<Unit filename="lib/sound/audio_id.hpp" />
+		<Unit filename="lib/sound/constants.cpp" />
+		<Unit filename="lib/sound/constants.hpp" />
+		<Unit filename="lib/sound/decoding.cpp" />
+		<Unit filename="lib/sound/decoding.hpp" />
+		<Unit filename="lib/sound/general/databuffer.cpp" />
+		<Unit filename="lib/sound/general/databuffer.hpp" />
+		<Unit filename="lib/sound/general/geometry.hpp" />
+		<Unit filename="lib/sound/interface.cpp" />
+		<Unit filename="lib/sound/interface/devicelist.cpp" />
+		<Unit filename="lib/sound/interface/devicelist.hpp" />
+		<Unit filename="lib/sound/interface/stringarray.cpp" />
+		<Unit filename="lib/sound/interface/stringarray.hpp" />
+		<Unit filename="lib/sound/openal/buffer.cpp" />
+		<Unit filename="lib/sound/openal/buffer.hpp" />
+		<Unit filename="lib/sound/openal/context.cpp" />
+		<Unit filename="lib/sound/openal/context.hpp" />
+		<Unit filename="lib/sound/openal/device.cpp" />
+		<Unit filename="lib/sound/openal/device.hpp" />
+		<Unit filename="lib/sound/openal/devicelist.cpp" />
+		<Unit filename="lib/sound/openal/devicelist.hpp" />
+		<Unit filename="lib/sound/openal/source.cpp" />
+		<Unit filename="lib/sound/openal/source.hpp" />
+		<Unit filename="lib/sound/sound.h" />
+		<Unit filename="lib/sound/stream.cpp" />
+		<Unit filename="lib/sound/stream.hpp" />
+		<Unit filename="lib/sound/templates.hpp" />
+		<Unit filename="lib/sound/track.cpp" />
+		<Unit filename="lib/sound/track.hpp" />
+		<Unit filename="lib/sound/types.h" />
 		<Unit filename="lib/widget/bar.c">
 			<Option compilerVar="CC" />
 		</Unit>
