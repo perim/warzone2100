@@ -508,7 +508,7 @@ static BOOL addToViewDataList(VIEWDATA *psViewData, UBYTE numData)
 }
 
 /*load the view data for the messages from the file */
-VIEWDATA *loadViewData(char *pViewMsgData, UDWORD bufferSize)
+VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 {
 	UDWORD				i, id, dataInc, seqInc, numFrames, numData, count, count2;
 	VIEWDATA			*psViewData, *pData;
@@ -894,14 +894,12 @@ VIEWDATA *loadViewData(char *pViewMsgData, UDWORD bufferSize)
 }
 
 /*get the view data identified by the name */
-VIEWDATA * getViewData(char *pName)
+VIEWDATA * getViewData(const char *pName)
 {
-	//VIEWDATA		*psViewData;// = asViewData;
-	VIEWDATA_LIST	*psList;
-	//UDWORD			i;
-	UBYTE			i;
+	VIEWDATA_LIST *psList = NULL;
+	unsigned int i = 0;
 
-	ASSERT( strlen(pName)< MAX_STR_SIZE,"getViewData: verbose message name" );
+	ASSERT( strlen(pName) < MAX_STR_SIZE, "getViewData: verbose message name" );
 
 	for (psList = apsViewData; psList != NULL; psList = psList->psNext)
 	{
@@ -954,10 +952,13 @@ void viewDataShutDown(VIEWDATA *psViewData)
 				checkMessages((MSG_VIEWDATA *)psViewData);
 
 				free(psViewData->pName);
+				psViewData->pName = NULL;
+
 				//free the space allocated for the text messages
 				if (psViewData->numText)
 				{
 					free(psViewData->ppTextMsg);
+					psViewData->ppTextMsg = NULL;
 				}
 
 				//free the space allocated for multiple sequences
@@ -972,13 +973,16 @@ void viewDataShutDown(VIEWDATA *psViewData)
 							if (psViewReplay->pSeqList[seqInc].numText)
 							{
 								free(psViewReplay->pSeqList[seqInc].ppTextMsg);
+								psViewReplay->pSeqList[seqInc].ppTextMsg = NULL;
 							}
 							if (psViewReplay->pSeqList[seqInc].pAudio)
 							{
 								free(psViewReplay->pSeqList[seqInc].pAudio);
+								psViewReplay->pSeqList[seqInc].pAudio = NULL;
 							}
 						}
 						free(psViewReplay->pSeqList);
+						psViewReplay->pSeqList = NULL;
 					}
 				}
 				else if (psViewData->type == VIEW_RES)
@@ -987,11 +991,15 @@ void viewDataShutDown(VIEWDATA *psViewData)
 					if (psViewRes->pAudio)
 					{
 						free(psViewRes->pAudio);
+						psViewRes->pAudio = NULL;
 					}
 				}
 				free(psViewData->pData);
+				psViewData->pData = NULL;
 			}
 			free(psList->psViewData);
+			psList->psViewData = NULL;
+
 			//remove viewData list from the heap
 			if (psList == apsViewData)
 			{

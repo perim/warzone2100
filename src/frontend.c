@@ -114,12 +114,12 @@ BOOL CancelPressed(void)
 
 void processFrontendSnap(BOOL bHideCursor)
 {
-	static POINT point,opoint;
+	static Vector2i point = {0, 0}, old_point = {0, 0};
 
 	point.x = mouseX();
 	point.y = mouseY();
 
-	if(point.x != opoint.x ||  point.y  != opoint.y)
+	if(point.x != old_point.x || point.y != old_point.y)
 	{
 		bUsingKeyboard = FALSE;
 	}
@@ -128,26 +128,26 @@ void processFrontendSnap(BOOL bHideCursor)
 	{
 		if(keyPressed(KEY_RIGHTARROW))
 		{
-			bUsingKeyboard	= TRUE;
-			GotoDirectionalSnap(&InterfaceSnap,SNAP_RIGHT,0,0);
+			bUsingKeyboard = TRUE;
+			GotoDirectionalSnap(&InterfaceSnap, SNAP_RIGHT, 0, 0);
 		}
 		else if(keyPressed(KEY_LEFTARROW))
 		{
-			bUsingKeyboard	= TRUE;
-			GotoDirectionalSnap(&InterfaceSnap,SNAP_LEFT,0,0);
+			bUsingKeyboard = TRUE;
+			GotoDirectionalSnap(&InterfaceSnap, SNAP_LEFT, 0, 0);
 		}
 	}
 	if(keyPressed(KEY_UPARROW))
 	{
-		bUsingKeyboard	= TRUE;
-		bUsingSlider	= FALSE;
-		GotoDirectionalSnap(&InterfaceSnap,SNAP_UP,0,0);
+		bUsingKeyboard = TRUE;
+		bUsingSlider = FALSE;
+		GotoDirectionalSnap(&InterfaceSnap, SNAP_UP, 0, 0);
 	}
 	else if(keyPressed(KEY_DOWNARROW))
 	{
-		bUsingKeyboard	= TRUE;
-		bUsingSlider	= FALSE;
-		GotoDirectionalSnap(&InterfaceSnap,SNAP_DOWN,0,0);
+		bUsingKeyboard = TRUE;
+		bUsingSlider = FALSE;
+		GotoDirectionalSnap(&InterfaceSnap, SNAP_DOWN, 0, 0);
 	}
 
 	if (!keyDown(KEY_LALT) && !keyDown(KEY_RALT)/* Check for toggling display mode */
@@ -171,8 +171,8 @@ void processFrontendSnap(BOOL bHideCursor)
 		bUsingKeyboard = FALSE;
 	}
 
-	opoint.x = mouseX();
-	opoint.y = mouseY();
+	old_point.x = mouseX();
+	old_point.y = mouseY();
 }
 
 
@@ -1446,7 +1446,7 @@ static void displayTitleBitmap(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 // show warzone logo
 void displayLogo(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
 {
-	iV_DrawTransImage(FrontImages,IMAGE_FE_LOGO,xOffset+psWidget->x,yOffset+psWidget->y);
+	iV_DrawImage(FrontImages,IMAGE_FE_LOGO,xOffset+psWidget->x,yOffset+psWidget->y);
 }
 
 
@@ -1550,10 +1550,10 @@ static void displayBigSlider(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, U
 	SWORD sx;
 
 
-	iV_DrawTransImage(IntImages,IMAGE_SLIDER_BIG,x+STAT_SLD_OX,y+STAT_SLD_OY);			// draw bdrop
+	iV_DrawImage(IntImages,IMAGE_SLIDER_BIG,x+STAT_SLD_OX,y+STAT_SLD_OY);			// draw bdrop
 
 	sx = (SWORD)((Slider->width-3 - Slider->barSize) * Slider->pos / Slider->numStops);	// determine pos.
-	iV_DrawTransImage(IntImages,IMAGE_SLIDER_BIGBUT,x+3+sx,y+3);								//draw amount
+	iV_DrawImage(IntImages,IMAGE_SLIDER_BIGBUT,x+3+sx,y+3);								//draw amount
 
 
 }

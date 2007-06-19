@@ -32,7 +32,6 @@
 #include "lib/script/script.h"
 #include "lib/gamelib/gtime.h"
 #include "map.h"
-#include "edit2d.h"
 #include "droid.h"
 #include "action.h"
 #include "game.h"
@@ -395,7 +394,7 @@ typedef struct save_game_v19
 #define GAME_SAVE_V20			\
 	GAME_SAVE_V19;				\
 	UBYTE bDroidsToSafetyFlag;	\
-	POINT	asVTOLReturnPos[MAX_PLAYERS]
+	Vector2i asVTOLReturnPos[MAX_PLAYERS]
 
 typedef struct save_game_v20
 {
@@ -1530,6 +1529,7 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		if (aMapLinePoints)
 		{
 			free(aMapLinePoints);
+			aMapLinePoints = NULL;
 		}
 		//clear all the messages?
 		releaseAllProxDisp();
@@ -1697,7 +1697,7 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 			setDroidsToSafetyFlag(saveGameData.bDroidsToSafetyFlag);
 			for (inc = 0; inc < MAX_PLAYERS; inc++)
 			{
-				memcpy(&asVTOLReturnPos[inc],&(saveGameData.asVTOLReturnPos[inc]),sizeof(POINT));
+				memcpy(&asVTOLReturnPos[inc], &(saveGameData.asVTOLReturnPos[inc]), sizeof(Vector2i));
 			}
 		}
 
@@ -1705,7 +1705,7 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		{
 			for (inc = 0; inc < MAX_PLAYERS; inc++)
 			{
-				memcpy(&asRunData[inc],&(saveGameData.asRunData[inc]),sizeof(RUN_DATA));
+				memcpy(&asRunData[inc], &(saveGameData.asRunData[inc]), sizeof(RUN_DATA));
 			}
 		}
 
@@ -1881,7 +1881,7 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 				pTemplate = pNext)
 			{
 				pNext = pTemplate->psNext;
-				HEAP_FREE(psTemplateHeap, pTemplate);
+				free(pTemplate);
 			}
 			apsDroidTemplates[0] = NULL;
 		}
@@ -1896,7 +1896,7 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 				{
 					DROID_TEMPLATE	*psTempl;
 					psTempl = apsDroidTemplates[inc]->psNext;
-					HEAP_FREE(psTemplateHeap, apsDroidTemplates[inc]);
+					free(apsDroidTemplates[inc]);
 					apsDroidTemplates[inc] = psTempl;
 				}
 			}
@@ -2826,6 +2826,7 @@ error:
 	if (aMapLinePoints)
 	{
 		free(aMapLinePoints);
+		aMapLinePoints = NULL;
 	}
 	psMapTiles = NULL;
 	aMapLinePoints = NULL;
@@ -3922,7 +3923,7 @@ BOOL gameLoadV(char *pFileData, UDWORD filesize, UDWORD version)
 		setDroidsToSafetyFlag(psSaveGame->bDroidsToSafetyFlag);
 		for (inc = 0; inc < MAX_PLAYERS; inc++)
 		{
-			memcpy(&asVTOLReturnPos[inc],&(psSaveGame->asVTOLReturnPos[inc]),sizeof(POINT));
+			memcpy(&asVTOLReturnPos[inc], &(psSaveGame->asVTOLReturnPos[inc]), sizeof(Vector2i));
 		}
 	}
 
@@ -3930,7 +3931,7 @@ BOOL gameLoadV(char *pFileData, UDWORD filesize, UDWORD version)
 	{
 		for (inc = 0; inc < MAX_PLAYERS; inc++)
 		{
-			memcpy(&asRunData[inc],&(psSaveGame->asRunData[inc]),sizeof(RUN_DATA));
+			memcpy(&asRunData[inc], &(psSaveGame->asRunData[inc]), sizeof(RUN_DATA));
 		}
 	}
 
@@ -4244,7 +4245,7 @@ BOOL writeGameFile(char *pFileName, SDWORD saveType)
 	psSaveGame->bDroidsToSafetyFlag = (UBYTE)getDroidsToSafetyFlag();
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
-		memcpy(&(psSaveGame->asVTOLReturnPos[i]),&asVTOLReturnPos[i],sizeof(POINT));
+		memcpy(&(psSaveGame->asVTOLReturnPos[i]), &asVTOLReturnPos[i], sizeof(Vector2i));
 	}
 
 	//version 22
@@ -5912,7 +5913,6 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 				}
 			}
 			psSaveDroid->body = psCurr->body;
-//			psSaveDroid->activeWeapon = psCurr->activeWeapon;
 			//psSaveDroid->numWeaps = psCurr->numWeaps;
 			/*for (i=0; i < psCurr->numWeaps; i++)
 			{
@@ -8439,9 +8439,10 @@ BOOL loadSaveTemplateV7(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		}
 
 		//create the Template
-		if (!HEAP_ALLOC(psTemplateHeap, (void**) &psTemplate))
+		psTemplate = malloc(sizeof(DROID_TEMPLATE));
+		if (psTemplate == NULL)
 		{
-			debug( LOG_ERROR, "Out of memory" );
+			debug(LOG_ERROR, "loadSaveTemplateV7: Out of memory");
 			abort();
 			goto error;
 		}
@@ -8480,7 +8481,7 @@ BOOL loadSaveTemplateV7(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		if (!found)
 		{
 			//ignore this record
-			HEAP_FREE(psTemplateHeap, psTemplate);
+			free(psTemplate);
 			continue;
 		}
 		psTemplate->numWeaps = psSaveTemplate->numWeaps;
@@ -8505,7 +8506,7 @@ BOOL loadSaveTemplateV7(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		if (!found)
 		{
 			//ignore this record
-			HEAP_FREE(psTemplateHeap, psTemplate);
+			free(psTemplate);
 			continue;
 		}
 
@@ -8571,9 +8572,10 @@ BOOL loadSaveTemplateV14(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		}
 
 		//create the Template
-		if (!HEAP_ALLOC(psTemplateHeap, (void**) &psTemplate))
+		psTemplate = malloc(sizeof(DROID_TEMPLATE));
+		if (psTemplate == NULL)
 		{
-			debug( LOG_ERROR, "Out of memory" );
+			debug(LOG_ERROR, "loadSaveTemplateV14: Out of memory");
 			abort();
 			goto error;
 		}
@@ -8614,7 +8616,7 @@ BOOL loadSaveTemplateV14(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		if (!found)
 		{
 			//ignore this record
-			HEAP_FREE(psTemplateHeap, psTemplate);
+			free(psTemplate);
 			continue;
 		}
 		psTemplate->numWeaps = psSaveTemplate->numWeaps;
@@ -8638,7 +8640,7 @@ BOOL loadSaveTemplateV14(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		if (!found)
 		{
 			//ignore this record
-			HEAP_FREE(psTemplateHeap, psTemplate);
+			free(psTemplate);
 			continue;
 		}
 
@@ -8734,9 +8736,10 @@ BOOL loadSaveTemplateV(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		}
 
 		//create the Template
-		if (!HEAP_ALLOC(psTemplateHeap, (void**) &psTemplate))
+		psTemplate = malloc(sizeof(DROID_TEMPLATE));
+		if (psTemplate == NULL)
 		{
-			debug( LOG_ERROR, "Out of memory" );
+			debug(LOG_ERROR, "loadSaveTemplateV: Out of memory");
 			abort();
 			goto error;
 		}
@@ -8794,7 +8797,7 @@ BOOL loadSaveTemplateV(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		if (!found)
 		{
 			//ignore this record
-			HEAP_FREE(psTemplateHeap, psTemplate);
+			free(psTemplate);
 			continue;
 		}
 		psTemplate->numWeaps = psSaveTemplate->numWeaps;
@@ -8820,7 +8823,7 @@ BOOL loadSaveTemplateV(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		if (!found)
 		{
 			//ignore this record
-			HEAP_FREE(psTemplateHeap, psTemplate);
+			free(psTemplate);
 			continue;
 		}
 

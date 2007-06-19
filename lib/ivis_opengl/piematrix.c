@@ -30,7 +30,6 @@
 
 #include <SDL/SDL_opengl.h>
 
-#include "lib/ivis_common/ivi.h"
 #include "lib/ivis_common/piedef.h"
 #include "lib/ivis_common/pieclip.h"
 #include "piematrix.h"
@@ -184,13 +183,10 @@ SDWORD aSinTable[SC_TABLESIZE + (SC_TABLESIZE/4)];
 //******
 
 static void pie_MatReset(void)
-
 {
-// printf("pie_MatReset\n");
 	psMatrix = &aMatrixStack[0];
 
 	// make 1st matrix identity
-
 	*psMatrix = _MATRIX_ID;
 
 	glLoadIdentity();
@@ -203,13 +199,10 @@ static void pie_MatReset(void)
 //******
 
 void pie_MatBegin(void)
-
 {
 	_MATRIX_INDEX++;
-	if (_MATRIX_INDEX > 3)
-	{
-		ASSERT( _MATRIX_INDEX < MATRIX_MAX,"pie_MatBegin past top of the stack" );
-	}
+	ASSERT( _MATRIX_INDEX < MATRIX_MAX, "pie_MatBegin past top of the stack" );
+
 	psMatrix++;
 	aMatrixStack[_MATRIX_INDEX] = aMatrixStack[_MATRIX_INDEX-1];
 
@@ -223,10 +216,10 @@ void pie_MatBegin(void)
 //******
 
 void pie_MatEnd(void)
-
 {
 	_MATRIX_INDEX--;
-	ASSERT( _MATRIX_INDEX >= 0,"pie_MatEnd of the bottom of the stack" );
+	ASSERT( _MATRIX_INDEX >= 0, "pie_MatEnd of the bottom of the stack" );
+
 	psMatrix--;
 
 	glPopMatrix();
@@ -529,5 +522,5 @@ void pie_MatInit(void)
 	pie_MatReset();
 
 
-	iV_DEBUG0("geo[_geo_setup] = setup successful\n");
+	debug(LOG_3D, "geo[_geo_setup] = setup successful\n");
 }

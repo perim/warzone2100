@@ -36,7 +36,6 @@
 #define ConnectionSize		255			// max size of a connection description.
 #define MaxProtocols		12			// max number of returnable protocols.
 #define MaxGames		12			// max number of concurrently playable games to allow.
-//#define USE_DIRECTPLAY_PROTOCOL			// use DX6 protocol.
 
 #define SESSION_JOINDISABLED	1
 
@@ -168,8 +167,8 @@ extern NETMSG*	NETmanglePacket(NETMSG *msg);
 extern void	NETunmanglePacket(NETMSG *msg);
 extern BOOL	NETmangleData(UDWORD *input, UDWORD *result, UDWORD dataSize);
 extern BOOL	NETunmangleData(UDWORD *input, UDWORD *result, UDWORD dataSize);
-extern UBYTE	NEThashVal(UDWORD value);
-extern UDWORD	NEThashBuffer(char *pData, UDWORD size);
+extern UBYTE NEThashVal(UDWORD value);
+extern UDWORD NEThashBuffer(const char *pData, UDWORD size);
 
 extern void NETsetMasterserverName(const char* hostname);
 extern void NETsetMasterserverPort(unsigned int port);

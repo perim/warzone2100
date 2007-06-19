@@ -4,7 +4,6 @@ lib/framework/configfile.c
 lib/framework/SDL_framerate.c
 lib/framework/frameresource.c
 lib/framework/frame.c
-lib/framework/heap.c
 lib/framework/treap.c
 lib/framework/exceptionhandler.c
 lib/framework/trig.c
@@ -35,7 +34,6 @@ lib/ivis_opengl/piepalette.c
 lib/ivis_opengl/textdraw.c
 lib/ivis_opengl/ivi.c
 lib/ivis_opengl/tex.c
-lib/ivis_opengl/rendfunc.c
 lib/ivis_opengl/rendmode.c
 lib/ivis_opengl/screen.c
 lib/ivis_opengl/piematrix.c
@@ -66,7 +64,6 @@ lib/sequence/adpcm.c
 lib/sequence/sequence_stub.c
 src/ai.c
 src/miscimd.c
-src/edit2d.c
 src/gateway.c
 src/edit3d.c
 src/radar.c
@@ -94,7 +91,6 @@ src/multibot.c
 src/feature.c
 src/multiint.c
 src/display3d.c
-src/disp2d.c
 src/multiopt.c
 src/multistruct.c
 src/geometry.c

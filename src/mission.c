@@ -195,7 +195,7 @@ static BOOL             bDroidsToSafety;
 static BOOL				g_bMissionResult;
 
 // return positions for vtols
-POINT	asVTOLReturnPos[MAX_PLAYERS];
+Vector2i asVTOLReturnPos[MAX_PLAYERS];
 
 
 static UBYTE   missionCountDown;
@@ -362,7 +362,7 @@ void initMission(void)
 	}
 
 	// init the vtol return pos
-	memset(asVTOLReturnPos, 0, sizeof(POINT)*MAX_PLAYERS);
+	memset(asVTOLReturnPos, 0, sizeof(Vector2i)*MAX_PLAYERS);
 
     bDroidsToSafety = FALSE;
 
@@ -377,7 +377,7 @@ void initMission(void)
 // reset the vtol landing pos
 void resetVTOLLandingPos(void)
 {
-	memset(asVTOLReturnPos, 0, sizeof(POINT)*MAX_PLAYERS);
+	memset(asVTOLReturnPos, 0, sizeof(Vector2i)*MAX_PLAYERS);
 }
 
 //this is called everytime the game is quit
@@ -2552,7 +2552,7 @@ void missionResetDroids(void)
 					    DBPRINTF(("missionResetDroids: tile occupied\n");
 	    `				removeDroid(psDroid, apsDroidLists);
 					    droidRelease(psDroid);
-					    HEAP_FREE(psDroidHeap, psDroid);
+					    free(psDroid);
 				    }*/
 /*				    mapX = psDroid->x >> TILE_SHIFT;
 				    mapY = psDroid->y >> TILE_SHIFT;
@@ -4091,7 +4091,7 @@ void missionDestroyObjects(void)
 				removeDroidBase(psDroid);
 //				droidRemove(psDroid, apsDroidLists);
 //				droidRelease(psDroid);
-//				HEAP_FREE(psDroidHeap, psDroid);
+//				free(psDroid);
 				psDroid = psNext;
 			}
 
@@ -4106,7 +4106,7 @@ void missionDestroyObjects(void)
 				removeDroidBase(psDroid);
 //				droidRemove(psDroid, apsDroidLists);
 //				droidRelease(psDroid);
-//				HEAP_FREE(psDroidHeap, psDroid);
+//				free(psDroid);
 				psDroid = psNext;
 			}
             mission.apsDroidLists[Player] = NULL;

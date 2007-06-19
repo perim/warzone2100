@@ -169,57 +169,15 @@ void cmdDroidMultiExpBoost(BOOL bDoit)
 	bMultiExpBoost = bDoit;
 }
 
-
-// get the experience level of a command droid
-SDWORD cmdDroidGetLevel(DROID *psCommander)
+BOOL cmdGetDroidMultiExpBoost()
 {
-	SDWORD	numKills = psCommander->numKills;
-
-	// commanders do not need as much experience in multiplayer
-	if (bMultiExpBoost)
-	{
-		numKills *= 2;
-	}
-	if (numKills > 2047)
-	{
-		return 8;
-	}
-	else if (numKills > 1023)
-	{
-		return 7;
-	}
-	else if (numKills > 511)
-	{
-		return 6;
-	}
-	else if (numKills > 255)
-	{
-		return 5;
-	}
-	else if (numKills > 127)
-	{
-		return 4;
-	}
-	else if (numKills > 63)
-	{
-		return 3;
-	}
-	else if (numKills > 32)
-	{
-		return 2;
-	}
-	else if (numKills > 15)
-	{
-		return 1;
-	}
-
-	return 0;
+	return bMultiExpBoost;
 }
 
 // get the maximum group size for a command droid
-SDWORD cmdDroidMaxGroup(DROID *psCommander)
+unsigned int cmdDroidMaxGroup(DROID *psCommander)
 {
-	return cmdDroidGetLevel(psCommander) * 2 + 6;
+	return getDroidLevel(psCommander) * 2 + 6;
 }
 
 // update the kills of a command droid if psKiller is in a command group
@@ -239,22 +197,26 @@ void cmdDroidUpdateKills(DROID *psKiller)
 }
 
 // get the level of a droids commander, if any
-SDWORD cmdGetCommanderLevel(DROID *psDroid)
+unsigned int cmdGetCommanderLevel(DROID *psDroid)
 {
 	DROID	*psCommander;
 
 	ASSERT( psDroid != NULL,
 		"cmdGetCommanderLevel: invalid droid pointer" );
 
-	if ( (psDroid->psGroup != NULL) &&
-		 (psDroid->psGroup->type == GT_COMMAND) )
+	// If this droid is not the member of a Commander's group
+	// Return an experience level of 0
+	if ((psDroid->psGroup == NULL) ||
+	    (psDroid->psGroup->type != GT_COMMAND))
 	{
-		psCommander = psDroid->psGroup->psCommander;
-
-		return cmdDroidGetLevel(psCommander);
+		return 0;
 	}
 
-	return 0;
+	// Retrieve this group's commander
+	psCommander = psDroid->psGroup->psCommander;
+
+	// Return the experience level of this commander
+	return getDroidLevel(psCommander);
 }
 
 // Selects all droids for a given commander

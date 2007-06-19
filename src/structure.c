@@ -462,17 +462,17 @@ static void structureType(STRUCTURE_STATS *pStructure, char *pType)
 		pStructure->type = REF_SAT_UPLINK;
 		return;
 	}
-	ASSERT( FALSE, "Unknown Structure Type" );
+	ASSERT(!"unknown structure type", "structureType: Unknown Structure Type");
 }
 
 
-static char *getStructName(STRUCTURE_STATS	 *psStruct)
+static const char *getStructName(STRUCTURE_STATS *psStruct)
 {
 	return getName(psStruct->pName);
 }
 
 /*returns the structure strength based on the string name passed in */
-static UBYTE getStructStrength(char *pStrength)
+static UBYTE getStructStrength(const char *pStrength)
 {
 	if (!strcmp(pStrength, "SOFT"))
 	{
@@ -490,10 +490,8 @@ static UBYTE getStructStrength(char *pStrength)
 	{
 		return STRENGTH_BUNKER;
 	}
-	else
-	{
-		return INVALID_STRENGTH;
-	}
+
+	return INVALID_STRENGTH;
 }
 
 
@@ -712,15 +710,15 @@ void initModulePIEsNoMods(char *GfxFile,UDWORD i,STRUCTURE_STATS *psStructure)
 #endif
 
 /* load the Structure stats from the Access database */
-BOOL loadStructureStats(char *pStructData, UDWORD bufferSize)
+BOOL loadStructureStats(const char *pStructData, UDWORD bufferSize)
 {
-	char				*pData;
-	UDWORD				NumStructures = 0, i, inc, player, numWeaps, weapSlots;
+	const unsigned int NumStructures = numCR(pStructData, bufferSize);
+	UDWORD i, inc, player, numWeaps, weapSlots;
 	char				StructureName[MAX_NAME_SIZE], foundation[MAX_NAME_SIZE],
 						type[MAX_NAME_SIZE], techLevel[MAX_NAME_SIZE],
 						strength[MAX_NAME_SIZE];
 	char				GfxFile[MAX_NAME_SIZE], baseIMD[MAX_NAME_SIZE];
-	char				ecmType[MAX_NAME_SIZE],sensorType[MAX_NAME_SIZE];
+	char				ecmType[MAX_NAME_SIZE], sensorType[MAX_NAME_SIZE];
 	STRUCTURE_STATS		*psStructure, *pStartStats;
 	ECM_STATS*			pECMType;
 	SENSOR_STATS*		pSensorType;
@@ -747,12 +745,6 @@ BOOL loadStructureStats(char *pStructData, UDWORD bufferSize)
 		powerModuleIMDs[module] = NULL;
 	}
 
-
-	//keep the start so we release it at the end
-	pData = pStructData;
-
-	NumStructures = numCR(pStructData, bufferSize);
-
 	asStructureStats = (STRUCTURE_STATS*)malloc(sizeof(STRUCTURE_STATS)* NumStructures);
 	numStructureStats = NumStructures;
 
@@ -769,9 +761,10 @@ BOOL loadStructureStats(char *pStructData, UDWORD bufferSize)
 	//get the start of the structure_stats storage
 	psStructure = asStructureStats;
 
-	for (i=0; i < NumStructures; i++)
+	for (i = 0; i < NumStructures; i++)
 	{
 		memset(psStructure, 0, sizeof(STRUCTURE_STATS));
+
 		//read the data into the storage - the data is delimeted using comma's
 		GfxFile[0] = '\0';
 		StructureName[0] = '\0';
@@ -1039,10 +1032,10 @@ void setCurrentStructQuantity(BOOL displayError)
 }
 
 //Load the weapons assigned to Structure in the Access database
-BOOL loadStructureWeapons(char *pWeaponData, UDWORD bufferSize)
+BOOL loadStructureWeapons(const char *pWeaponData, UDWORD bufferSize)
 {
-	char				*pStartWeaponData;
-	UDWORD				NumToAlloc = 0, i,incS, incW;
+	const unsigned int NumToAlloc = numCR(pWeaponData, bufferSize);
+	UDWORD				i, incS, incW;
 	char				StructureName[MAX_NAME_SIZE];//, WeaponName[MAX_NAME_SIZE];
 	//Watermelon:weaponName array
 	char				WeaponName[STRUCT_MAXWEAPS][MAX_NAME_SIZE];
@@ -1050,10 +1043,6 @@ BOOL loadStructureWeapons(char *pWeaponData, UDWORD bufferSize)
 	WEAPON_STATS		*pWeapon = asWeaponStats;
 	BOOL				weaponFound, structureFound;
 	UBYTE				j;
-
-	pStartWeaponData = pWeaponData;
-
-	NumToAlloc = numCR(pWeaponData, bufferSize);
 
 	for (i=0; i < NumToAlloc; i++)
 	{
@@ -1120,18 +1109,16 @@ BOOL loadStructureWeapons(char *pWeaponData, UDWORD bufferSize)
 }
 
 //Load the programs assigned to Droids in the Access database
-BOOL loadStructureFunctions(char *pFunctionData, UDWORD bufferSize)
+BOOL loadStructureFunctions(const char *pFunctionData, UDWORD bufferSize)
 {
-	char				*pStartFunctionData;
-	UDWORD				NumToAlloc = 0,i,incS, incF;
+	const unsigned int NumToAlloc = numCR(pFunctionData, bufferSize);
+	UDWORD				i, incS, incF;
 	char				StructureName[MAX_NAME_SIZE], FunctionName[MAX_NAME_SIZE];
 	STRUCTURE_STATS		*pStructure = asStructureStats;
 	FUNCTION			*pFunction, **pStartFunctions = asFunctions;
 	BOOL				functionFound, structureFound;
 
-	pStartFunctionData = pFunctionData;
 
-	NumToAlloc = numCR(pFunctionData, bufferSize);
 
 	for (i=0; i < NumToAlloc; i++)
 	{
@@ -1233,11 +1220,12 @@ BOOL loadStructureFunctions(char *pFunctionData, UDWORD bufferSize)
 }
 
 /*Load the Structure Strength Modifiers from the file exported from Access*/
-BOOL loadStructureStrengthModifiers(char *pStrengthModData, UDWORD bufferSize)
+BOOL loadStructureStrengthModifiers(const char *pStrengthModData, UDWORD bufferSize)
 {
+	const unsigned int NumRecords = numCR(pStrengthModData, bufferSize);
 	STRUCT_STRENGTH		strengthInc;
 	WEAPON_EFFECT		effectInc;
-	UDWORD				NumRecords = 0, i, j, modifier;
+	UDWORD				i, j, modifier;
 	char				weaponEffectName[MAX_NAME_SIZE], strengthName[MAX_NAME_SIZE];
 
 	//initialise to 100%
@@ -1248,8 +1236,6 @@ BOOL loadStructureStrengthModifiers(char *pStrengthModData, UDWORD bufferSize)
 			asStructStrengthModifier[i][j] = 100;
 		}
 	}
-
-	NumRecords = numCR(pStrengthModData, bufferSize);
 
 	for (i=0; i < NumRecords; i++)
 	{
@@ -1304,11 +1290,13 @@ BOOL structureStatsShutDown(void)
 		if (pStructure->numFuncs > 0)
 		{
 			free(pStructure->asFuncList);
+			pStructure->asFuncList = NULL;
 		}
 	}
 
 	if(numStructureStats) {
 		free(asStructureStats);
+		asStructureStats = NULL;
 	}
 
 	//free up the structLimits structure
@@ -1316,6 +1304,7 @@ BOOL structureStatsShutDown(void)
 	{
 		if(asStructLimits[inc]) {
 			free(asStructLimits[inc]);
+			asStructLimits[inc] = NULL;
 		}
 	}
 
@@ -1323,13 +1312,18 @@ BOOL structureStatsShutDown(void)
 }
 
 
-/* Do damage to a Structure.
-* Returns TRUE if the Structure is destroyed
-*/
+/* Deals damage to a Structure.
+ * \param psStructure structure to deal damage to
+ * \param damage amount of damage to deal
+ * \param weaponClass the class of the weapon that deals the damage
+ * \param weaponSubClass the subclass of the weapon that deals the damage
+ * \return TRUE when the dealt damage destroys the structure, FALSE when the structure survives
+ */
 BOOL structureDamage(STRUCTURE *psStructure, UDWORD damage, UDWORD weaponClass,
 					UDWORD weaponSubClass)
 {
-	UDWORD		penDamage, armourDamage;
+	// Do at least one point of damage
+	unsigned int actualDamage = 1;
 
 	ASSERT( psStructure != NULL,
 		"structureDamage: Invalid Structure pointer" );
@@ -1337,7 +1331,7 @@ BOOL structureDamage(STRUCTURE *psStructure, UDWORD damage, UDWORD weaponClass,
 	debug( LOG_ATTACK, "structureDamage(%d): body %d armour %d damage: %d\n",
 		psStructure->id, psStructure->body, psStructure->armour, damage);
 
-	//EMP cannons do not work on Structures
+	// EMP cannons do not work on Structures
 	if (weaponSubClass == WSC_EMP)
 	{
 		return FALSE;
@@ -1347,63 +1341,39 @@ BOOL structureDamage(STRUCTURE *psStructure, UDWORD damage, UDWORD weaponClass,
 	{
 		// Player inflicting damage on enemy.
 		damage = (UDWORD) modifyForDifficultyLevel( (SDWORD) damage,TRUE);
-	} else {
+	}
+	else
+	{
 		// Enemy inflicting damage on player.
 		damage = (UDWORD) modifyForDifficultyLevel( (SDWORD) damage,FALSE);
 	}
 
-	//store the time it was hit
+	// Store the time it was hit and by what kind of weapon it was hit with
 	psStructure->timeLastHit = gameTime;
+	psStructure->lastHitWeapon = weaponSubClass;
 
-	// tell the cluster system it has been attacked
+	// Tell the cluster system it has been attacked
 	clustObjectAttacked((BASE_OBJECT *)psStructure);
 
 	if (damage > psStructure->armour)
 	{
-		/* Damage has penetrated - reduce armour and body points */
-		penDamage = damage - psStructure->armour;
-		debug( LOG_ATTACK, "        penetrated: %d\n", penDamage);
-		if (penDamage >= psStructure->body)
-		{
-			/* structure destroyed */
-			debug( LOG_ATTACK, "        DESTROYED\n");
-			return destroyStruct(psStructure);
-		}
-		else
-		{
-			psStructure->body = (UWORD)(psStructure->body  - (UWORD)penDamage);
-		}
-
-		/* Do damage to armour */
-		armourDamage = (damage / PEN_ARMOUR_DAMAGE_FACTOR) + 1;
+		// Damage has penetrated the armour
+		actualDamage = damage - psStructure->armour;
+		debug( LOG_ATTACK, "        penetrated: %d\n", actualDamage);
 	}
-	else
+
+	// If the shell did sufficient damage to destroy the structure 
+	if (actualDamage >= psStructure->body)
 	{
-		/* Damage didn't penetrate - only reduce armour */
-		armourDamage = (damage / ARMOUR_DAMAGE_FACTOR) + 1;
-
-		/* Do one point of damage to body */
-		debug( LOG_ATTACK, "        not penetrated - 1 point damage\n");
-		if (psStructure->body == 1)
-		{
-			debug( LOG_ATTACK, "        DESTROYED\n");
-			return destroyStruct(psStructure);
-		}
-		else
-		{
-			psStructure->body -= 1;
-		}
+		debug( LOG_ATTACK, "        DESTROYED\n");
+		destroyStruct(psStructure);
+		return TRUE;
 	}
 
-	/* Actually reduce the Structure's armour */
+	// Substract the dealt damage from the structure's remaining body points
+	psStructure->body -= actualDamage;
+
 	debug( LOG_ATTACK, "        body left: %d armour left: %d\n", psStructure->body, psStructure->armour);
-
-	//only overwrite if the last weapon to hit was not an EMP - need the time value for this
-	if (psStructure->lastHitWeapon != WSC_EMP)
-	{
-		psStructure->timeLastHit = gameTime;
-		psStructure->lastHitWeapon = weaponSubClass;
-	}
 
 	return FALSE;
 }
@@ -1710,7 +1680,7 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 		max = pStructureType - asStructureStats;
 		if (max > numStructureStats)
 		{
-			ASSERT( FALSE, "buildStructure: Invalid structure type" );
+			ASSERT(!"invalid structure type", "buildStructure: Invalid structure type");
 			return NULL;
 		}
 
@@ -1724,7 +1694,7 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 				//NEVER EVER EVER WANT MORE THAN 5 FACTORIES
 				if (asStructLimits[selectedPlayer][max].currentQuantity > MAX_FACTORY)
 				{
-					ASSERT(FALSE, "buildStructure: trying to build too many factories (%d max)", MAX_FACTORY);
+					ASSERT(!"attempting to construct too many factories", "buildStructure: trying to build too many factories (%d max)", MAX_FACTORY);
 					return NULL;
 				}
 			}
@@ -1733,14 +1703,14 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 				//can only cope with MAX_OBJECTS research facilities
 				if (asStructLimits[selectedPlayer][max].currentQuantity > MAX_OBJECTS)
 				{
-					ASSERT(FALSE, "buildStructure: trying to build too many research facilities (%d max)", MAX_OBJECTS);
+					ASSERT(!"attempting to construct too many research facilities", "buildStructure: trying to build too many research facilities (%d max)", MAX_OBJECTS);
 					return NULL;
 				}
 			}
 			//HARD_CODE don't ever want more than one Las Sat structure
 			if (isLasSat(pStructureType) && getLasSatExists(selectedPlayer))
 			{
-				ASSERT(FALSE, "buildStructure: trying to build too many Las Sat (1 max)");
+				ASSERT(!"attempting to build more than 1 Las Sat center", "buildStructure: trying to build too many Las Sat (1 max)");
 				return NULL;
 			}
 			//HARD_CODE don't ever want more than one Sat Uplink structure
@@ -1748,7 +1718,7 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 			{
 				if (asStructLimits[selectedPlayer][max].currentQuantity > 0)
 				{
-					ASSERT(FALSE, "buildStructure: trying to build too many Sat Uplinks (1 max)");
+					ASSERT(!"attempting to build more than 1 Sat Uplink", "buildStructure: trying to build too many Sat Uplinks (1 max)");
 					return NULL;
 				}
 			}
@@ -1762,13 +1732,13 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 		if(((x >> TILE_SHIFT) < TOO_NEAR_EDGE) || ((x >> TILE_SHIFT) > (
 			mapWidth - TOO_NEAR_EDGE)))
 		{
-			ASSERT(FALSE, "buildStructure: x coord (%u) too near edge (req. distance is %u)", x, TOO_NEAR_EDGE);
+			ASSERT(!"attempting to build too closely to map-edge", "buildStructure: x coord (%u) too near edge (req. distance is %u)", x, TOO_NEAR_EDGE);
 			return NULL;
 		}
 		if(((y >> TILE_SHIFT) < TOO_NEAR_EDGE) || ((y >> TILE_SHIFT) > (
 			mapHeight - TOO_NEAR_EDGE)))
 		{
-			ASSERT(FALSE, "buildStructure: y coord (%u) too near edge (req. distance is %u)", y, TOO_NEAR_EDGE);
+			ASSERT(!"attempting to build too closely to map-edge", "buildStructure: y coord (%u) too near edge (req. distance is %u)", y, TOO_NEAR_EDGE);
 			return NULL;
 		}
 
@@ -1785,7 +1755,8 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 		}
 
 		// allocate memory for and initialize a structure object
-		if (!createStruct(player, &psBuilding))
+		psBuilding = createStruct(player);
+		if (psBuilding == NULL)
 		{
 			return NULL;
 		}
@@ -1806,19 +1777,19 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 		//set up the imd to use for the display
 		psBuilding->sDisplay.imd = pStructureType->pIMD;
 
-		//if resource extractor - need to remove oil feature and prox Msg
+		/* if resource extractor - need to remove oil feature first, but do not do any
+		 * consistency checking here - save games do not have any feature to remove
+		 * to remove when placing oil derricks! */
 		if (pStructureType->type == REF_RESOURCE_EXTRACTOR)
 		{
 			FEATURE *psFeature = getTileFeature(map_coord(x), map_coord(y));
 
-			if (psFeature->psStats->subType == FEAT_OIL_RESOURCE)
+			if (psFeature && psFeature->psStats->subType == FEAT_OIL_RESOURCE)
 			{
 				// remove it from the map
 				turnOffMultiMsg(TRUE); // dont send this one!
 				removeFeature(psFeature);
 				turnOffMultiMsg(FALSE);
-			} else {
-				ASSERT(FALSE, "buildStructure: Tried to build derrick but feature is not oil at (%u, %u)!", x, y);
 			}
 		}
 
@@ -1852,7 +1823,7 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 				{
 					ASSERT(!(TILE_HAS_STRUCTURE(psTile)),
 					       "buildStructure: building %s at (%d, %d) but found %s already at (%d, %d)",
-					       pStructureType->pName, mapX, mapY, 
+					       pStructureType->pName, mapX, mapY,
 					       getTileStructure(mapX + width, mapY + breadth)->pStructureType->pName,
 					       mapX + width, mapY + breadth);
 				}
@@ -1860,7 +1831,7 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 				psTile->psObject = (BASE_OBJECT*)psBuilding;
 
 				// if it's a tall structure then flag it in the map.
-				if(psBuilding->sDisplay.imd->ymax > TALLOBJECT_YMAX) 
+				if(psBuilding->sDisplay.imd->ymax > TALLOBJECT_YMAX)
 				{
 					SET_TILE_TALLSTRUCTURE(psTile);
 				}
@@ -2027,7 +1998,7 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 		if(!setFunctionality(psBuilding, pStructureType->type))
 		{
 			removeStructFromMap(psBuilding);
-			HEAP_FREE(psStructHeap, psBuilding);
+			free(psBuilding);
 			//better reset these if you couldn't build the structure!
 			if (FromSave && player == selectedPlayer && missionLimboExpand())
 			{
@@ -2069,7 +2040,7 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 
 		if (psBuilding == NULL)
 		{
-			ASSERT(FALSE, "No owning structure for this module - %s", getStructName(pStructureType));
+			ASSERT(!"module has no owning structure", "No owning structure for this module - %s", getStructName(pStructureType));
 			return FALSE;
 		}
 		if (pStructureType->type == REF_FACTORY_MODULE)
@@ -2286,9 +2257,10 @@ BOOL setFunctionality(STRUCTURE	*psBuilding, UDWORD functionType)
 			}
 
 			//allocate the necessary space
-			if (!createStructFunc(&psBuilding->pFunctionality))
+			psBuilding->pFunctionality = malloc(sizeof(FUNCTIONALITY));
+			if (psBuilding->pFunctionality == NULL)
 			{
-				debug( LOG_ERROR, "Out of memory" );
+				debug(LOG_ERROR, "setFunctionality: Out of memory");
 				abort();
 				return FALSE;
 			}
@@ -2322,17 +2294,17 @@ BOOL setFunctionality(STRUCTURE	*psBuilding, UDWORD functionType)
 			addFlagPosition(psFactory->psAssemblyPoint);
 			switch(functionType)
 			{
-			case REF_FACTORY:
-				setFlagPositionInc(psFactory, psBuilding->player, FACTORY_FLAG);
-				break;
-			case REF_CYBORG_FACTORY:
-				setFlagPositionInc(psFactory, psBuilding->player, CYBORG_FLAG);
-				break;
-			case REF_VTOL_FACTORY:
-				setFlagPositionInc(psFactory, psBuilding->player, VTOL_FLAG);
-				break;
-			default:
-				ASSERT( FALSE, "setFunctionality: Invalid factory type" );
+				case REF_FACTORY:
+					setFlagPositionInc(psFactory, psBuilding->player, FACTORY_FLAG);
+					break;
+				case REF_CYBORG_FACTORY:
+					setFlagPositionInc(psFactory, psBuilding->player, CYBORG_FLAG);
+					break;
+				case REF_VTOL_FACTORY:
+					setFlagPositionInc(psFactory, psBuilding->player, VTOL_FLAG);
+					break;
+				default:
+					ASSERT(!"invalid factory type", "setFunctionality: Invalid factory type");
 			}
 
 			psFactory->psFormation = NULL;
@@ -2349,9 +2321,10 @@ BOOL setFunctionality(STRUCTURE	*psBuilding, UDWORD functionType)
 				return FALSE;
 			}
 			//try and create the Structure
-			if (!createStructFunc(&psBuilding->pFunctionality))
+			psBuilding->pFunctionality = malloc(sizeof(FUNCTIONALITY));
+			if (psBuilding->pFunctionality == NULL)
 			{
-				debug( LOG_ERROR, "Out of memory" );
+				debug(LOG_ERROR, "setFunctionality: Out of memory");
 				abort();
 				return FALSE;
 			}
@@ -2376,9 +2349,10 @@ BOOL setFunctionality(STRUCTURE	*psBuilding, UDWORD functionType)
 			}
 
 			//try and create the Structure
-			if (!createStructFunc(&psBuilding->pFunctionality))
+			psBuilding->pFunctionality = malloc(sizeof(FUNCTIONALITY));
+			if (psBuilding->pFunctionality == NULL)
 			{
-				debug( LOG_ERROR, "Out of memory" );
+				debug(LOG_ERROR, "setFunctionality: Out of memory");
 				abort();
 				return FALSE;
 			}
@@ -2407,9 +2381,10 @@ BOOL setFunctionality(STRUCTURE	*psBuilding, UDWORD functionType)
 			}
 
 			//try and create the Structure
-			if (!createStructFunc(&psBuilding->pFunctionality))
+			psBuilding->pFunctionality = malloc(sizeof(FUNCTIONALITY));
+			if (psBuilding->pFunctionality == NULL)
 			{
-				debug( LOG_ERROR, "Out of memory" );
+				debug(LOG_ERROR, "setFunctionality: Out of memory");
 				abort();
 				return FALSE;
 			}
@@ -2462,9 +2437,10 @@ BOOL setFunctionality(STRUCTURE	*psBuilding, UDWORD functionType)
 			}
 
 			//try and create the Structure
-			if (!createStructFunc(&psBuilding->pFunctionality))
+			psBuilding->pFunctionality = malloc(sizeof(FUNCTIONALITY));
+			if (psBuilding->pFunctionality == NULL)
 			{
-				debug( LOG_ERROR, "Out of memory" );
+				debug(LOG_ERROR, "setFunctionality: Out of memory");
 				abort();
 				return FALSE;
 			}
@@ -2515,9 +2491,10 @@ BOOL setFunctionality(STRUCTURE	*psBuilding, UDWORD functionType)
 				return FALSE;
 			}
 			//try and create the Structure
-			if (!createStructFunc(&psBuilding->pFunctionality))
+			psBuilding->pFunctionality = malloc(sizeof(FUNCTIONALITY));
+			if (psBuilding->pFunctionality == NULL)
 			{
-				debug( LOG_ERROR, "Out of memory" );
+				debug(LOG_ERROR, "setFunctionality: Out of memory");
 				abort();
 				return FALSE;
 			}
@@ -2549,19 +2526,19 @@ void assignFactoryCommandDroid(STRUCTURE *psStruct, DROID *psCommander)
 
 	switch(psStruct->pStructureType->type)
 	{
-	case REF_FACTORY:
-		typeFlag = FACTORY_FLAG;
-		break;
-	case REF_VTOL_FACTORY:
-		typeFlag = VTOL_FLAG;
-		break;
-	case REF_CYBORG_FACTORY:
-		typeFlag = CYBORG_FLAG;
-		break;
-	default:
-		ASSERT( FALSE,"assignfactorycommandUnit: unknown factory type" );
-		typeFlag = FACTORY_FLAG;
-		break;
+		case REF_FACTORY:
+			typeFlag = FACTORY_FLAG;
+			break;
+		case REF_VTOL_FACTORY:
+			typeFlag = VTOL_FLAG;
+			break;
+		case REF_CYBORG_FACTORY:
+			typeFlag = CYBORG_FLAG;
+			break;
+		default:
+			ASSERT(!"unknown factory type", "assignfactorycommandUnit: unknown factory type");
+			typeFlag = FACTORY_FLAG;
+			break;
 	}
 
 	// removing a commander from a factory
@@ -4113,7 +4090,7 @@ void structureRelease(STRUCTURE *psBuilding)
 		}
 
 		//free up the space used by the functionality array
-		removeStructFunc(psBuilding->pFunctionality);
+		free(psBuilding->pFunctionality);
 	}
 
 	// remove the object from the grid
@@ -4468,7 +4445,7 @@ BOOL validLocation(BASE_STATS *psStats, UDWORD x, UDWORD y, UDWORD player,
 				break;
 			case NUM_DIFF_BUILDINGS:
 			case REF_BRIDGE:
-				ASSERT(FALSE, "validLocation: Bad structure type %u", psBuilding->type);
+				ASSERT(!"invalid structure type", "validLocation: Bad structure type %u", psBuilding->type);
 				break;
 			case REF_HQ:
 			case REF_FACTORY:
@@ -5581,7 +5558,7 @@ void findAssemblyPointPosition(UDWORD *pX, UDWORD *pY, UDWORD player)
 		return;
 	}
 	/* If we got this far, then we failed - passed in values will be unchanged */
-	ASSERT( FALSE, "findAssemblyPointPosition: unable to find a valid location!" );
+	ASSERT(!"unable to find a valid location", "findAssemblyPointPosition: unable to find a valid location!");
 }
 
 
@@ -5640,23 +5617,23 @@ void setFlagPositionInc(void *pFunctionality, UDWORD player, UBYTE factoryType)
 #ifdef DEBUG
 		switch (factoryType)
 		{
-		case FACTORY_FLAG:
-			pType = "Factory";
-			break;
-		case CYBORG_FLAG:
-			pType = "Cyborg Factory";
-			break;
-		case VTOL_FLAG:
-			pType = "VTOL Factory";
-			break;
-		case REPAIR_FLAG:
-			pType = "Repair Facility";
-			break;
-		default:
-			pType = "";
-			break;
+			case FACTORY_FLAG:
+				pType = "Factory";
+				break;
+			case CYBORG_FLAG:
+				pType = "Cyborg Factory";
+				break;
+			case VTOL_FLAG:
+				pType = "VTOL Factory";
+				break;
+			case REPAIR_FLAG:
+				pType = "Repair Facility";
+				break;
+			default:
+				pType = "";
+				break;
 		}
-		ASSERT( FALSE, "Building more than %d %s for player %d", MAX_FACTORY, pType, player );
+		ASSERT(!"building more factories than allowed", "Building more than %d %s for player %d", MAX_FACTORY, pType, player);
 #endif
 		inc = 1;
 	}
@@ -5907,7 +5884,7 @@ void checkForResExtractors(STRUCTURE *psBuilding)
 
 	if (psBuilding->pStructureType->type != REF_POWER_GEN)
 	{
-		ASSERT( FALSE, "checkForResExtractors: invalid structure type" );
+		ASSERT(!"invalid structure type", "checkForResExtractors: invalid structure type");
 		return;
 	}
 	psPowerGen = (POWER_GEN *)psBuilding->pFunctionality;
@@ -5986,7 +5963,7 @@ void checkForPowerGen(STRUCTURE *psBuilding)
 
 	if (psBuilding->pStructureType->type != REF_RESOURCE_EXTRACTOR)
 	{
-		ASSERT( FALSE, "checkForPowerGen: invalid structure type" );
+		ASSERT(!"invalid structure type", "checkForPowerGen: invalid structure type");
 		return;
 	}
 	psRE = (RES_EXTRACTOR *)psBuilding->pFunctionality;
@@ -6041,7 +6018,7 @@ void informPowerGen(STRUCTURE *psStruct)
 
 	if (psStruct->pStructureType->type != REF_RESOURCE_EXTRACTOR)
 	{
-		ASSERT( FALSE, "informPowerGen: invalid structure type" );
+		ASSERT(!"invalid structure type", "informPowerGen: invalid structure type");
 		return;
 	}
 
@@ -6072,7 +6049,7 @@ void releaseResExtractor(STRUCTURE *psRelease)
 
 	if (psRelease->pStructureType->type != REF_RESOURCE_EXTRACTOR)
 	{
-		ASSERT( FALSE, "releaseResExtractor:Invalid structure type" );
+		ASSERT(!"invalid structure type", "releaseResExtractor:Invalid structure type");
 		return;
 	}
 
@@ -6111,7 +6088,7 @@ void releasePowerGen(STRUCTURE *psRelease)
 
 	if (psRelease->pStructureType->type != REF_POWER_GEN)
 	{
-		ASSERT( FALSE, "releasePowerGen:Invalid structure type" );
+		ASSERT(!"invalid structure type", "releasePowerGen: Invalid structure type");
 		return;
 	}
 
@@ -6397,14 +6374,14 @@ BOOL electronicDamage(BASE_OBJECT *psTarget, UDWORD damage, UBYTE attackPlayer)
 		psDroid = (DROID *)psTarget;
 		bCompleted = FALSE;
 
-		ASSERT( psDroid != NULL, "electronicDamage: Invalid Droid pointer" );
+		ASSERT(psDroid != NULL, "electronicDamage: Invalid Droid pointer");
 
 		//in multiPlayer cannot attack a Transporter with EW
 		if (bMultiPlayer)
 		{
 			if (psDroid->droidType == DROID_TRANSPORTER)
 			{
-				ASSERT( FALSE, "electronicDamage: Cannot attack a Transporter in multiPlayer" );
+				ASSERT(!"can't attack a Transporter while in multiplayer", "electronicDamage: Cannot attack a Transporter in multiPlayer");
 				return TRUE;
 			}
 		}
@@ -6523,110 +6500,76 @@ BOOL validStructResistance(STRUCTURE *psStruct)
 
 
 /*Access functions for the upgradeable stats of a structure*/
-UDWORD	structureBody(STRUCTURE *psStructure)
+UDWORD structureBody(const STRUCTURE *psStructure)
 {
-	STRUCTURE_STATS		*psStats;
-	UBYTE				player;//, i;
-
-	psStats = psStructure->pStructureType;
-	player = psStructure->player;
+	const STRUCTURE_STATS *psStats = psStructure->pStructureType;
+	const UBYTE player = psStructure->player;
 
 	switch(psStats->type)
 	{
-		//wall/defence structures
-	case REF_DEFENSE:
-	case REF_WALL:
-	case REF_WALLCORNER:
-	case REF_BLASTDOOR:
-		return (psStats->bodyPoints + (psStats->bodyPoints *
-			asWallDefenceUpgrade[player].body)/100);
-		break;
-	default:
-		//all other structures
-		return (structureBaseBody(psStructure) + (structureBaseBody(psStructure) *
-			asStructureUpgrade[player].body)/100);
-		break;
+		// wall/defence structures:
+		case REF_DEFENSE:
+		case REF_WALL:
+		case REF_WALLCORNER:
+		case REF_BLASTDOOR:
+			return psStats->bodyPoints + (psStats->bodyPoints * asWallDefenceUpgrade[player].body)/100;
+		// all other structures:
+		default:
+			return structureBaseBody(psStructure) + (structureBaseBody(psStructure) * asStructureUpgrade[player].body)/100;
 	}
 }
 
 
 /*this returns the Base Body points of a structure - regardless of upgrade*/
-UDWORD	structureBaseBody(STRUCTURE *psStructure)
+UDWORD structureBaseBody(const STRUCTURE *psStructure)
 {
-	STRUCTURE_STATS		*psStats;
-	UBYTE				player, capacity;
-	UDWORD				body;
+	const STRUCTURE_STATS *psStats = psStructure->pStructureType;
 
-	ASSERT( psStructure != NULL,
-		"structureBaseBody: invalid structure pointer" );
-
-	psStats = psStructure->pStructureType;
-	player = psStructure->player;
+	ASSERT( psStructure != NULL, "structureBaseBody: invalid structure pointer" );
 
 	switch(psStats->type)
 	{
-		//modules may be attached
-	case REF_FACTORY:
-	case REF_VTOL_FACTORY:
-		ASSERT( psStructure->pFunctionality != NULL,
-			"structureBaseBody: invalid structure functionality pointer" );
-		if (((FACTORY *)psStructure->pFunctionality)->capacity > 0)
-		{
-			body = 0;
-			capacity = ((FACTORY *)psStructure->pFunctionality)->capacity;
-			while (capacity)
+		// modules may be attached:
+		case REF_FACTORY:
+		case REF_VTOL_FACTORY:
+			ASSERT( psStructure->pFunctionality != NULL, "structureBaseBody: invalid structure functionality pointer" );
+			if (((FACTORY *)psStructure->pFunctionality)->capacity > 0)
 			{
-				body += asStructureStats[factoryModuleStat].bodyPoints;
-				capacity--;
+				//add on the default for the factory
+				return psStats->bodyPoints + asStructureStats[factoryModuleStat].bodyPoints * ((FACTORY*)psStructure->pFunctionality)->capacity;
 			}
-			//add on the default for the factory
-			body += psStats->bodyPoints;
-			return body;
-		}
-		else
-		{
-			//no modules
+			else
+			{
+				//no modules
+				return psStats->bodyPoints;
+			}
+		case REF_RESEARCH:
+			ASSERT( psStructure->pFunctionality != NULL, "structureBaseBody: invalid structure functionality pointer" );
+			if (((RESEARCH_FACILITY *)psStructure->pFunctionality)->capacity > 0)
+			{
+				//add on the default for the factory
+				return psStats->bodyPoints + asStructureStats[researchModuleStat].bodyPoints;
+			}
+			else
+			{
+				//no modules
+				return psStats->bodyPoints;
+			}
+		case REF_POWER_GEN:
+			ASSERT( psStructure->pFunctionality != NULL, "structureBaseBody: invalid structure functionality pointer" );
+			if (((POWER_GEN *)psStructure->pFunctionality)->capacity > 0)
+			{
+				//add on the default for the factory
+				return psStats->bodyPoints + asStructureStats[powerModuleStat].bodyPoints;
+			}
+			else
+			{
+				//no modules
+				return psStats->bodyPoints;
+			}
+		// all other structures:
+		default:
 			return psStats->bodyPoints;
-		}
-		break;
-	case REF_RESEARCH:
-		ASSERT( psStructure->pFunctionality != NULL,
-			"structureBaseBody: invalid structure functionality pointer" );
-		if (((RESEARCH_FACILITY *)psStructure->pFunctionality)->capacity > 0)
-		{
-			body = 0;
-			body = asStructureStats[researchModuleStat].bodyPoints;
-			//add on the default for the factory
-			body += psStats->bodyPoints;
-			return body;
-		}
-		else
-		{
-			//no modules
-			return psStats->bodyPoints;
-		}
-		break;
-	case REF_POWER_GEN:
-		ASSERT( psStructure->pFunctionality != NULL,
-			"structureBaseBody: invalid structure functionality pointer" );
-		if (((POWER_GEN *)psStructure->pFunctionality)->capacity > 0)
-		{
-			body = 0;
-			body = asStructureStats[powerModuleStat].bodyPoints;
-			//add on the default for the factory
-			body += psStats->bodyPoints;
-			return body;
-		}
-		else
-		{
-			//no modules
-			return psStats->bodyPoints;
-		}
-
-		//all other structures
-	default:
-		return psStats->bodyPoints;
-		break;
 	}
 }
 
@@ -7419,7 +7362,7 @@ void checkDeliveryPoints(UDWORD version)
 							// add an assembly point
 							if (!createFlagPosition(&psRepair->psDeliveryPoint, psStruct->player))
 							{
-								ASSERT( FALSE,"checkDeliveryPoints: unable to create new delivery point for repair facility" );
+								ASSERT(!"can't create new deilivery point for repair facility", "checkDeliveryPoints: unable to create new delivery point for repair facility");
 								return;
 							}
 							addFlagPosition(psRepair->psDeliveryPoint);

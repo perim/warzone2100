@@ -82,10 +82,6 @@ FP_NODE		**apsClosed;
 FP_NODE		**apsOpen;
 #endif
 
-// object heap to store nodes
-OBJ_HEAP	*psFPNodeHeap;
-
-
 /*#define NUM_DIR		4
 // Convert a direction into an offset
 // dir 0 => x = 0, y = -1
@@ -100,7 +96,7 @@ static POINT aDirOffset[NUM_DIR] =
 #define NUM_DIR		8
 // Convert a direction into an offset
 // dir 0 => x = 0, y = -1
-static POINT aDirOffset[NUM_DIR] =
+static Vector2i aDirOffset[NUM_DIR] =
 {
 	{ 0, 1},
 	{-1, 1},
@@ -130,12 +126,6 @@ static void ClearAstarNodes(void)
 // Initialise the findpath routine
 BOOL astarInitialise(void)
 {
-	// Create the node heap
-	if (!HEAP_CREATE(&psFPNodeHeap, sizeof(FP_NODE), FPATH_NODEINIT, FPATH_NODEEXT))
-	{
-		return FALSE;
-	}
-
 #if OPEN_LIST == 2
 	apsNodes = (FP_NODE**)malloc(sizeof(FP_NODE *) * FPATH_TABLESIZE);
 	if (!apsNodes)
@@ -166,12 +156,14 @@ BOOL astarInitialise(void)
 // Shutdown the findpath routine
 void fpathShutDown(void)
 {
-	HEAP_DESTROY(psFPNodeHeap);
 #if OPEN_LIST == 2
 	free(apsNodes);
+	apsNodes = NULL;
 #else
 	free(apsOpen);
 	free(apsClosed);
+	apsOpen = NULL;
+	apsClosed = NULL;
 #endif
 }
 
@@ -342,26 +334,24 @@ static void fpathHashReset(void)
 		while (apsNodes[i])
 		{
 			psNext = apsNodes[i]->psNext;
-			HEAP_FREE(psFPNodeHeap, apsNodes[i]);
+			free(apsNodes[i]);
 			apsNodes[i] = psNext;
 		}
 #else
 		while (apsOpen[i])
 		{
 			psNext = apsOpen[i]->psNext;
-			HEAP_FREE(psFPNodeHeap, apsOpen[i]);
+			free(apsOpen[i]);
 			apsOpen[i] = psNext;
 		}
 		while (apsClosed[i])
 		{
 			psNext = apsClosed[i]->psNext;
-			HEAP_FREE(psFPNodeHeap, apsClosed[i]);
+			free(apsClosed[i]);
 			apsClosed[i] = psNext;
 		}
 #endif
 	}
-
-	HEAP_RESET(psFPNodeHeap);
 }
 
 
@@ -627,7 +617,7 @@ static void fpathOpenAdd(FP_NODE *psNode)
 		psNode->psOpen = psCurr;
 		psPrev->psOpen = psNode;
 		debug( LOG_MOVEMENT, ("OpenAdd: after %d,%d dist %d\n",
-			psPrev->x,psPrev->y, psPrev->dist);
+			psPrev->x,psPrev->y, psPrev->dist));
 	}
 }
 
@@ -701,7 +691,7 @@ static void fpathOpenRemove(FP_NODE *psNode)
 
 	if (psOpen == NULL)
 	{
-		ASSERT( FALSE, "fpathOpenRemove: NULL list" );
+		ASSERT(!"empty/NULL list", "fpathOpenRemove: NULL list");
 		return;
 	}
 	else if (psNode == psOpen)
@@ -724,7 +714,7 @@ static void fpathOpenRemove(FP_NODE *psNode)
 		}
 		else
 		{
-			ASSERT( FALSE, "fpathOpenRemove: failed to find node" );
+			ASSERT(!"unable to find node", "fpathOpenRemove: failed to find node");
 			return;
 		}
 	}
@@ -750,10 +740,11 @@ static SDWORD fpathEstimate(SDWORD x, SDWORD y, SDWORD fx, SDWORD fy)
 // Generate a new node
 static FP_NODE *fpathNewNode(SDWORD x, SDWORD y, SDWORD dist, FP_NODE *psRoute)
 {
-	FP_NODE	*psNode;
+	FP_NODE	*psNode = malloc(sizeof(FP_NODE));
 
-	if (!HEAP_ALLOC(psFPNodeHeap, (void**) &psNode))
+	if (psNode == NULL)
 	{
+		debug(LOG_ERROR, "fpathNewNode: Out of memory");
 		return NULL;
 	}
 
@@ -979,7 +970,7 @@ BOOL fpathAStarRoute(ASTAR_ROUTE *psRoutePoints,
 			}
 			else
 			{
-				ASSERT( FALSE,"fpathAStarRoute: the open and closed lists are f***ed" );
+				ASSERT(!"the open and closed lists are fried/wrong", "fpathAStarRoute: the open and closed lists are f***ed");
 			}
 		}
 
@@ -1073,6 +1064,7 @@ static 	FP_NODE		*psNearest, *psRoute;
 		{
 			goto exit_error;
 		}
+		// estimate the estimated distance/moves
 		psCurr->est = (SWORD)fpathEstimate(psCurr->x, psCurr->y, tileFX, tileFY);
 		psOpen = NULL;
 		fpathOpenAdd(psCurr);
@@ -1107,8 +1099,18 @@ static 	FP_NODE		*psNearest, *psRoute;
 
 		astarOuter += 1;
 
+		// loop through possible moves in 8 directions to find a valid move
 		for(dir=0; dir<NUM_DIR; dir+=1)
 		{
+			/* make non-orthogonal-adjacent moves' dist a bit longer/cost a bit more
+			   5  6  7
+			     \|/
+			   4 -I- 0
+			     /|\  
+			   3  2  1
+			   odd:orthogonal-adjacent tiles even:non-orthogonal-adjacent tiles
+			   odd ones get extra 4 units(1.414 times) of distance/costs
+			*/
 			if (dir % 2 == 0)
 			{
 				currDist = psCurr->dist + 10;
@@ -1175,7 +1177,7 @@ static 	FP_NODE		*psNearest, *psRoute;
 			}
 			else
 			{
-				ASSERT( FALSE,"fpathAStarRoute: the open and closed lists are f***ed" );
+				ASSERT(!"the open and closed lists are fried/wrong", "fpathAStarRoute: the open and closed lists are f***ed");
 			}
 		}
 

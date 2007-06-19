@@ -161,6 +161,7 @@ void recvOptions(NETMSG *pMsg)
 	{
 			ingame.numStructureLimits = 0;
 			free(ingame.pStructureLimits);
+			ingame.pStructureLimits = NULL;
 	}
 
 	NetGet(pMsg,pos,player2dpid);
@@ -545,6 +546,7 @@ BOOL multiShutdown(void)
 	{
 		ingame.numStructureLimits = 0;
 		free(ingame.pStructureLimits);
+		ingame.pStructureLimits = NULL;
 	}
 
 	return TRUE;
@@ -556,10 +558,11 @@ BOOL multiShutdown(void)
 
 BOOL addTemplate(UDWORD player, DROID_TEMPLATE *psNew)
 {
-	DROID_TEMPLATE	*psTempl;
+	DROID_TEMPLATE	*psTempl = malloc(sizeof(DROID_TEMPLATE));
 
-	if (!HEAP_ALLOC(psTemplateHeap, (void**) &psTempl))
+	if (psTempl == NULL)
 	{
+		debug(LOG_ERROR, "addTemplate: Out of memory");
 		return FALSE;
 	}
 	memcpy(psTempl, psNew, sizeof(DROID_TEMPLATE));
@@ -604,7 +607,7 @@ BOOL copyTemplateSet(UDWORD from,UDWORD to)
 	while(apsDroidTemplates[to])				// clear the old template out.
 	{
 		psTempl = apsDroidTemplates[to]->psNext;
-		HEAP_FREE(psTemplateHeap, apsDroidTemplates[to]);
+		free(apsDroidTemplates[to]);
 		apsDroidTemplates[to] = psTempl;
 	}
 
@@ -1103,6 +1106,7 @@ BOOL multiGameShutdown(void)
 	{
 		ingame.numStructureLimits = 0;
 		free(ingame.pStructureLimits);
+		ingame.pStructureLimits = NULL;
 	}
 
 	ingame.localJoiningInProgress   = FALSE;	// clean up

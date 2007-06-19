@@ -289,11 +289,15 @@ static BOOL loadFile2(const char *pFileName, char **ppFileData, UDWORD *pFileSiz
 	PHYSFS_sint64 length_read;
 
 	pfile = PHYSFS_openRead(pFileName);
-	if (!pfile) {
-		if (hard_fail) {
+	if (!pfile)
+	{
+		if (hard_fail)
+		{
 			debug(LOG_ERROR, "loadFile2: file %s could not be opened: %s", pFileName, PHYSFS_getLastError());
-			assert(FALSE);
-		} else {
+			assert(!"unable to open file");
+		}
+		else
+		{
 			debug(LOG_WARNING, "loadFile2: optional file %s could not be opened: %s", pFileName, PHYSFS_getLastError());
 		}
 		return FALSE;
@@ -302,16 +306,21 @@ static BOOL loadFile2(const char *pFileName, char **ppFileData, UDWORD *pFileSiz
 
 	//debug(LOG_WZ, "loadFile2: %s opened, size %i", pFileName, filesize);
 
-	if (AllocateMem == TRUE) {
+	if (AllocateMem)
+	{
 		// Allocate a buffer to store the data and a terminating zero
 		*ppFileData = (char*)malloc(filesize + 1);
-		if (*ppFileData == NULL) {
+		if (*ppFileData == NULL)
+		{
 			debug(LOG_ERROR, "loadFile2: Out of memory loading %s", pFileName);
 			assert(FALSE);
 			return FALSE;
 		}
-	} else {
-		if (filesize > *pFileSize) {
+	}
+	else
+	{
+		if (filesize > *pFileSize)
+		{
 			debug(LOG_ERROR, "loadFile2: No room for file %s", pFileName);
 			assert(FALSE);
 			return FALSE;
@@ -321,15 +330,28 @@ static BOOL loadFile2(const char *pFileName, char **ppFileData, UDWORD *pFileSiz
 
 	/* Load the file data */
 	length_read = PHYSFS_read(pfile, *ppFileData, 1, filesize);
-	if (length_read != filesize) {
-		free( *ppFileData );
+	if (length_read != filesize)
+	{
+		if (AllocateMem)
+		{
+			free(*ppFileData);
+			*ppFileData = NULL;
+		}
+
 		debug(LOG_ERROR, "loadFile2: Reading %s short: %s",
 		      pFileName, PHYSFS_getLastError());
 		assert(FALSE);
 		return FALSE;
 	}
-	if (!PHYSFS_close(pfile)) {
-		free( *ppFileData );
+
+	if (!PHYSFS_close(pfile))
+	{
+		if (AllocateMem)
+		{
+			free(*ppFileData);
+			*ppFileData = NULL;
+		}
+
 		debug(LOG_ERROR, "loadFile2: Error closing %s: %s", pFileName,
 		      PHYSFS_getLastError());
 		assert(FALSE);
@@ -430,42 +452,60 @@ BOOL loadFileToBufferNoError(const char *pFileName, char *pFileBuffer, UDWORD bu
 /***************************************************************************/
 UDWORD HashString( const char *c )
 {
-	UDWORD	iHashValue, i;
+	UDWORD	iHashValue;
 
-	assert(c!=NULL);
-	assert(*c!=0x0);
+	assert(c != NULL);
+	assert(*c != 0x0);
 
-	for ( iHashValue=0; *c; ++c )
+	for (iHashValue = 0; *c; ++c)
 	{
+		unsigned int i;
 		iHashValue = ( iHashValue << ONE_EIGHTH ) + *c;
 
-		if ( (i = iHashValue & HIGH_BITS) != 0 )
+		i = iHashValue & HIGH_BITS;
+		if ( i != 0 )
 		{
 			iHashValue = ( iHashValue ^ ( i >> THREE_QUARTERS ) ) &
 							~HIGH_BITS;
 		}
 	}
-//	printf("%%%%%%%% String:%s Hash:%0x\n",String,iHashValue);
+	debug(LOG_NEVER, "HashString: string: %s, hash: %0x\n", c, iHashValue);
 	return iHashValue;
+}
+
+/* Converts lower case ASCII characters into upper case characters
+ * \param c the character to convert
+ * \return an upper case ASCII character
+ */
+static inline char upcaseASCII(char c)
+{
+	// If this is _not_ a lower case character simply return
+	if (c < 'a' || c > 'z')
+		return c;
+	// Otherwise substract 32 to make the lower case character an upper case one
+	else
+		return c - 32;
 }
 
 UDWORD HashStringIgnoreCase( const char *c )
 {
-	UDWORD	iHashValue, i;
+	UDWORD	iHashValue;
 
-	assert(c!=NULL);
-	assert(*c!=0x0);
+	assert(c != NULL);
+	assert(*c != 0x0);
 
-	for ( iHashValue=0; *c; ++c )
+	for (iHashValue=0; *c; ++c)
 	{
-		iHashValue = ( iHashValue << ONE_EIGHTH ) + ((*c)&(0xdf));
+		unsigned int i;
+		iHashValue = ( iHashValue << ONE_EIGHTH ) + upcaseASCII(*c);
 
-		if ( (i = iHashValue & HIGH_BITS) != 0 )
+		i = iHashValue & HIGH_BITS;
+		if ( i != 0 )
 		{
 			iHashValue = ( iHashValue ^ ( i >> THREE_QUARTERS ) ) &
 							~HIGH_BITS;
 		}
 	}
-//	printf("%%%%%%%% (Ignorcase) String:%s Hash:%0x\n",String,iHashValue);
+	debug(LOG_NEVER, "HashStringIgnoreCase: string: %s, hash: %0x\n", c, iHashValue);
 	return iHashValue;
 }

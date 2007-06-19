@@ -10,7 +10,6 @@ SRC=	ivi.c \
 	piepalette.c \
 	piestate.c \
 	pietexture.c \
-	rendfunc.c \
 	rendmode.c \
 	screen.c \
 	tex.c \

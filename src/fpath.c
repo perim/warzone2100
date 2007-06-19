@@ -59,7 +59,7 @@
 #define NUM_DIR		8
 // Convert a direction into an offset
 // dir 0 => x = 0, y = -1
-static POINT aDirOffset[NUM_DIR] =
+static Vector2i aDirOffset[NUM_DIR] =
 {
 	{ 0, 1},
 	{-1, 1},
@@ -421,6 +421,8 @@ static BOOL fpathEndPointCallback(SDWORD x, SDWORD y, SDWORD dist)
 	return TRUE;
 }
 
+/* To plan a path from psObj's current position to 2D position Vector(targetX,targetY)
+without taking obstructions in to consideration */
 void fpathSetDirectRoute( BASE_OBJECT *psObj, SDWORD targetX, SDWORD targetY )
 {
 	MOVE_CONTROL *psMoveCntl;

@@ -33,15 +33,10 @@
 #include "lib/ivis_common/rendmode.h"
 #include "lib/ivis_common/piepalette.h"
 
-/* The widget heaps */
-OBJ_HEAP	*psFormHeap;
-OBJ_HEAP	*psCFormHeap;
-OBJ_HEAP	*psTFormHeap;
-
 /* Control whether single tabs are displayed */
 #define NO_DISPLAY_SINGLE_TABS 1
 
-static void formFreeTips(W_TABFORM *psForm);
+static inline void formFreeTips(W_TABFORM *psForm);
 
 /* Store the position of a tab */
 typedef struct _tab_pos
@@ -104,12 +99,8 @@ static void formSetDefaultColours(W_FORM *psForm)
 static BOOL formCreatePlain(W_FORM **ppsWidget, W_FORMINIT *psInit)
 {
 	/* Allocate the required memory */
-#if W_USE_MALLOC
 	*ppsWidget = (W_FORM *)malloc(sizeof(W_FORM));
 	if (*ppsWidget == NULL)
-#else
-	if (!HEAP_ALLOC(psFormHeap, (void**) ppsWidget))
-#endif
 	{
 		ASSERT( FALSE, "formCreatePlain: Out of memory" );
 		return FALSE;
@@ -156,11 +147,7 @@ static void formFreePlain(W_FORM *psWidget)
 		"formFreePlain: Invalid form pointer" );
 
 	widgReleaseWidgetList(psWidget->psWidgets);
-#if W_USE_MALLOC
 	free(psWidget);
-#else
-	HEAP_FREE(psFormHeap, psWidget);
-#endif
 }
 
 
@@ -168,12 +155,8 @@ static void formFreePlain(W_FORM *psWidget)
 static BOOL formCreateClickable(W_CLICKFORM **ppsWidget, W_FORMINIT *psInit)
 {
 	/* Allocate the required memory */
-#if W_USE_MALLOC
 	*ppsWidget = (W_CLICKFORM *)malloc(sizeof(W_CLICKFORM));
 	if (*ppsWidget == NULL)
-#else
-	if (!HEAP_ALLOC(psCFormHeap, (void**) ppsWidget))
-#endif
 	{
 		ASSERT( FALSE, "formCreateClickable: Out of memory" );
 		return FALSE;
@@ -209,26 +192,7 @@ static BOOL formCreateClickable(W_CLICKFORM **ppsWidget, W_FORMINIT *psInit)
 	}
 	(*ppsWidget)->psWidgets = NULL;
 	(*ppsWidget)->psLastHiLite = NULL;
-	if (psInit->pTip)
-	{
-#if W_USE_STRHEAP
-		if (!widgAllocCopyString(&(*ppsWidget)->pTip, psInit->pTip))
-		{
-			ASSERT( FALSE, "formCreateClickable: Out of string memory" );
-#if W_USE_MALLOC
-			free(*ppsWidget);
-#else
-			HEAP_FREE(psCFormHeap, *ppsWidget);
-#endif
-			return FALSE;
-		}
-#endif
-		(*ppsWidget)->pTip = psInit->pTip;
-	}
-	else
-	{
-		(*ppsWidget)->pTip = NULL;
-	}
+	(*ppsWidget)->pTip = psInit->pTip;
 	formSetDefaultColours((W_FORM *)*ppsWidget);
 
 	formInitialise((W_FORM *)*ppsWidget);
@@ -244,18 +208,8 @@ static void formFreeClickable(W_CLICKFORM *psWidget)
 		"formFreePlain: Invalid form pointer" );
 
 	widgReleaseWidgetList(psWidget->psWidgets);
-#if W_USE_STRHEAP
-	if (psWidget->pTip)
-	{
-		widgFreeString(psWidget->pTip);
-	}
-#endif
 
-#if W_USE_MALLOC
 	free(psWidget);
-#else
-	HEAP_FREE(psCFormHeap, psWidget);
-#endif
 }
 
 
@@ -295,12 +249,8 @@ static BOOL formCreateTabbed(W_TABFORM **ppsWidget, W_FORMINIT *psInit)
 	}
 
 	/* Allocate the required memory */
-#if W_USE_MALLOC
 	*ppsWidget = (W_TABFORM *)malloc(sizeof(W_TABFORM));
 	if (*ppsWidget == NULL)
-#else
-	if (!HEAP_ALLOC(psTFormHeap, (void**) ppsWidget))
-#endif
 	{
 		ASSERT( FALSE, "formCreateTabbed: Out of memory" );
 		return FALSE;
@@ -312,26 +262,12 @@ static BOOL formCreateTabbed(W_TABFORM **ppsWidget, W_FORMINIT *psInit)
 	for(major=0; major<psInit->numMajor; major++)
 	{
 		/* Check for a tip for the major tab */
-		if (psInit->apMajorTips[major])
-		{
-#if W_USE_STRHEAP
-			(void)widgAllocCopyString(&psMajor->pTip, psInit->apMajorTips[major]);
-#else
-			psMajor->pTip = psInit->apMajorTips[major];
-#endif
-		}
+		psMajor->pTip = psInit->apMajorTips[major];
+
 		/* Check for tips for the minor tab */
 		for(minor=0; minor<psInit->aNumMinors[major]; minor++)
 		{
-			if (psInit->apMinorTips[major][minor])
-			{
-#if W_USE_STRHEAP
-				(void)widgAllocCopyString(&(psMajor->asMinor[minor].pTip),
-										  psInit->apMinorTips[major][minor]);
-#else
-				psMajor->asMinor[minor].pTip = psInit->apMinorTips[major][minor];
-#endif
-			}
+			psMajor->asMinor[minor].pTip = psInit->apMinorTips[major][minor];
 		}
 		psMajor++;
 	}
@@ -391,31 +327,9 @@ static BOOL formCreateTabbed(W_TABFORM **ppsWidget, W_FORMINIT *psInit)
 }
 
 /* Free the tips strings for a tabbed form */
-static void formFreeTips(W_TABFORM *psForm)
+static inline void formFreeTips(W_TABFORM *psForm)
 {
-#if W_USE_STRHEAP
-	UDWORD		minor,major;
-	W_MAJORTAB	*psMajor;
-
-	psMajor = psForm->asMajor;
-	for(major = 0; major < psForm->numMajor; major++)
-	{
-		if (psMajor->pTip)
-		{
-			widgFreeString(psMajor->pTip);
-		}
-		for(minor = 0; minor < psMajor->numMinor; minor++)
-		{
-			if (psMajor->asMinor[minor].pTip)
-			{
-				widgFreeString(psMajor->asMinor[minor].pTip);
-			}
-		}
-		psMajor++;
-	}
-#else
 	psForm = psForm;
-#endif
 }
 
 /* Free a tabbed form widget */
@@ -436,11 +350,7 @@ static void formFreeTabbed(W_TABFORM *psWidget)
 		widgReleaseWidgetList(psCurr);
 		psCurr = formGetAllWidgets(&sGetAll);
 	}
-#if W_USE_MALLOC
 	free(psWidget);
-#else
-	HEAP_FREE(psTFormHeap, psWidget);
-#endif
 }
 
 

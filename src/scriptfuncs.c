@@ -6713,7 +6713,7 @@ BOOL scrTutorialTemplates(void)
 	// Delete the template.
 	if(psCurr)
 	{
-		HEAP_FREE(psTemplateHeap, psCurr);
+		free(psCurr);
 	}
 	else
 	{

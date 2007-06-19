@@ -74,6 +74,7 @@
 # define WZ_WRITEDIR "Warzone 2100"
 #elif defined(WZ_OS_MAC)
 # include <CoreServices/CoreServices.h>
+# include <unistd.h>
 # define WZ_WRITEDIR "Warzone 2100"
 #else
 # define WZ_WRITEDIR ".warzone2100"
@@ -223,7 +224,7 @@ static void getPlatformUserDir(char * tmpstr)
 	if (!error)
 		error = FSpMakeFSRef(&fsspec, &fsref);
 	if (!error)
-		error = FSRefMakePath(&fsref, tmpstr, MAX_PATH);
+		error = FSRefMakePath(&fsref, (UInt8 *) tmpstr, MAX_PATH);
 	if (!error)
 		strcat( tmpstr, PHYSFS_getDirSeparator() );
 	else
@@ -762,7 +763,7 @@ int main(int argc, char *argv[])
 	make_dir(MultiCustomMapsPath, "multiplay", "custommaps");
 
 	/* Put these files in the writedir root */
-	strcpy(RegFilePath, "config");
+	setRegistryFilePath("config");
 	strcpy(KeyMapPath, "keymap.map");
 	strcpy(UserMusicPath, "music");
 
@@ -815,6 +816,7 @@ int main(int argc, char *argv[])
 	}
 	pal_AddNewPalette(psPaletteBuffer);
 	free(psPaletteBuffer);
+	psPaletteBuffer = NULL;
 	atexit(pal_ShutDown);
 
 	pie_LoadBackDrop(SCREEN_RANDOMBDROP);

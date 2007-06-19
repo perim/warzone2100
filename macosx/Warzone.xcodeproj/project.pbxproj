@@ -109,7 +109,6 @@
 		0246A0C30BD3CBD5004D1C70 /* exceptionhandler.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A0A10BD3CBD5004D1C70 /* exceptionhandler.c */; };
 		0246A0C40BD3CBD5004D1C70 /* frame.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A0A30BD3CBD5004D1C70 /* frame.c */; };
 		0246A0C50BD3CBD5004D1C70 /* frameresource.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A0A60BD3CBD5004D1C70 /* frameresource.c */; };
-		0246A0C60BD3CBD5004D1C70 /* heap.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A0A90BD3CBD5004D1C70 /* heap.c */; };
 		0246A0C70BD3CBD5004D1C70 /* input.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A0AB0BD3CBD5004D1C70 /* input.c */; };
 		0246A0C80BD3CBD5004D1C70 /* resource_lexer.l in Sources */ = {isa = PBXBuildFile; fileRef = 0246A0B10BD3CBD5004D1C70 /* resource_lexer.l */; };
 		0246A0C90BD3CBD5004D1C70 /* resource_parser.y in Sources */ = {isa = PBXBuildFile; fileRef = 0246A0B20BD3CBD5004D1C70 /* resource_parser.y */; };
@@ -200,13 +199,11 @@
 		0246A2A10BD3CCDC004D1C70 /* data.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1C40BD3CCDB004D1C70 /* data.c */; };
 		0246A2A20BD3CCDC004D1C70 /* design.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1C70BD3CCDB004D1C70 /* design.c */; };
 		0246A2A30BD3CCDC004D1C70 /* difficulty.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1C90BD3CCDB004D1C70 /* difficulty.c */; };
-		0246A2A40BD3CCDC004D1C70 /* disp2d.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1CB0BD3CCDB004D1C70 /* disp2d.c */; };
 		0246A2A50BD3CCDC004D1C70 /* display.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1CD0BD3CCDB004D1C70 /* display.c */; };
 		0246A2A60BD3CCDC004D1C70 /* display3d.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1CF0BD3CCDB004D1C70 /* display3d.c */; };
 		0246A2A70BD3CCDC004D1C70 /* drive.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1D30BD3CCDB004D1C70 /* drive.c */; };
 		0246A2A80BD3CCDC004D1C70 /* droid.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1D50BD3CCDB004D1C70 /* droid.c */; };
 		0246A2A90BD3CCDC004D1C70 /* e3demo.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1D80BD3CCDB004D1C70 /* e3demo.c */; };
-		0246A2AA0BD3CCDC004D1C70 /* edit2d.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1DA0BD3CCDB004D1C70 /* edit2d.c */; };
 		0246A2AB0BD3CCDC004D1C70 /* edit3d.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1DC0BD3CCDB004D1C70 /* edit3d.c */; };
 		0246A2AC0BD3CCDC004D1C70 /* effects.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1DE0BD3CCDB004D1C70 /* effects.c */; };
 		0246A2AD0BD3CCDC004D1C70 /* environ.c in Sources */ = {isa = PBXBuildFile; fileRef = 0246A1E00BD3CCDB004D1C70 /* environ.c */; };
@@ -851,8 +848,6 @@
 		0246A0A60BD3CBD5004D1C70 /* frameresource.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = frameresource.c; path = ../lib/framework/frameresource.c; sourceTree = SOURCE_ROOT; };
 		0246A0A70BD3CBD5004D1C70 /* frameresource.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = frameresource.h; path = ../lib/framework/frameresource.h; sourceTree = SOURCE_ROOT; };
 		0246A0A80BD3CBD5004D1C70 /* gettext.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = gettext.h; path = ../lib/framework/gettext.h; sourceTree = SOURCE_ROOT; };
-		0246A0A90BD3CBD5004D1C70 /* heap.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = heap.c; path = ../lib/framework/heap.c; sourceTree = SOURCE_ROOT; };
-		0246A0AA0BD3CBD5004D1C70 /* heap.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = heap.h; path = ../lib/framework/heap.h; sourceTree = SOURCE_ROOT; };
 		0246A0AB0BD3CBD5004D1C70 /* input.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = input.c; path = ../lib/framework/input.c; sourceTree = SOURCE_ROOT; };
 		0246A0AC0BD3CBD5004D1C70 /* input.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = input.h; path = ../lib/framework/input.h; sourceTree = SOURCE_ROOT; };
 		0246A0AD0BD3CBD5004D1C70 /* listmacs.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = listmacs.h; path = ../lib/framework/listmacs.h; sourceTree = SOURCE_ROOT; };
@@ -1043,8 +1038,6 @@
 		0246A1C80BD3CCDB004D1C70 /* design.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = design.h; path = ../src/design.h; sourceTree = SOURCE_ROOT; };
 		0246A1C90BD3CCDB004D1C70 /* difficulty.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = difficulty.c; path = ../src/difficulty.c; sourceTree = SOURCE_ROOT; };
 		0246A1CA0BD3CCDB004D1C70 /* difficulty.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = difficulty.h; path = ../src/difficulty.h; sourceTree = SOURCE_ROOT; };
-		0246A1CB0BD3CCDB004D1C70 /* disp2d.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = disp2d.c; path = ../src/disp2d.c; sourceTree = SOURCE_ROOT; };
-		0246A1CC0BD3CCDB004D1C70 /* disp2d.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = disp2d.h; path = ../src/disp2d.h; sourceTree = SOURCE_ROOT; };
 		0246A1CD0BD3CCDB004D1C70 /* display.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = display.c; path = ../src/display.c; sourceTree = SOURCE_ROOT; };
 		0246A1CE0BD3CCDB004D1C70 /* display.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = display.h; path = ../src/display.h; sourceTree = SOURCE_ROOT; };
 		0246A1CF0BD3CCDB004D1C70 /* display3d.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = display3d.c; path = ../src/display3d.c; sourceTree = SOURCE_ROOT; };
@@ -1760,8 +1753,6 @@
 				0246A0A60BD3CBD5004D1C70 /* frameresource.c */,
 				0246A0A70BD3CBD5004D1C70 /* frameresource.h */,
 				0246A0A80BD3CBD5004D1C70 /* gettext.h */,
-				0246A0A90BD3CBD5004D1C70 /* heap.c */,
-				0246A0AA0BD3CBD5004D1C70 /* heap.h */,
 				0246A0AB0BD3CBD5004D1C70 /* input.c */,
 				0246A0AC0BD3CBD5004D1C70 /* input.h */,
 				0246A0AD0BD3CBD5004D1C70 /* listmacs.h */,
@@ -2015,8 +2006,6 @@
 				0246A1C80BD3CCDB004D1C70 /* design.h */,
 				0246A1C90BD3CCDB004D1C70 /* difficulty.c */,
 				0246A1CA0BD3CCDB004D1C70 /* difficulty.h */,
-				0246A1CB0BD3CCDB004D1C70 /* disp2d.c */,
-				0246A1CC0BD3CCDB004D1C70 /* disp2d.h */,
 				0246A1CD0BD3CCDB004D1C70 /* display.c */,
 				0246A1CE0BD3CCDB004D1C70 /* display.h */,
 				0246A1CF0BD3CCDB004D1C70 /* display3d.c */,
@@ -3303,7 +3292,6 @@
 				0246A0C30BD3CBD5004D1C70 /* exceptionhandler.c in Sources */,
 				0246A0C40BD3CBD5004D1C70 /* frame.c in Sources */,
 				0246A0C50BD3CBD5004D1C70 /* frameresource.c in Sources */,
-				0246A0C60BD3CBD5004D1C70 /* heap.c in Sources */,
 				0246A0C70BD3CBD5004D1C70 /* input.c in Sources */,
 				0246A0C90BD3CBD5004D1C70 /* resource_parser.y in Sources */,
 				0246A0C80BD3CBD5004D1C70 /* resource_lexer.l in Sources */,
@@ -3394,13 +3382,11 @@
 				0246A2A10BD3CCDC004D1C70 /* data.c in Sources */,
 				0246A2A20BD3CCDC004D1C70 /* design.c in Sources */,
 				0246A2A30BD3CCDC004D1C70 /* difficulty.c in Sources */,
-				0246A2A40BD3CCDC004D1C70 /* disp2d.c in Sources */,
 				0246A2A50BD3CCDC004D1C70 /* display.c in Sources */,
 				0246A2A60BD3CCDC004D1C70 /* display3d.c in Sources */,
 				0246A2A70BD3CCDC004D1C70 /* drive.c in Sources */,
 				0246A2A80BD3CCDC004D1C70 /* droid.c in Sources */,
 				0246A2A90BD3CCDC004D1C70 /* e3demo.c in Sources */,
-				0246A2AA0BD3CCDC004D1C70 /* edit2d.c in Sources */,
 				0246A2AB0BD3CCDC004D1C70 /* edit3d.c in Sources */,
 				0246A2AC0BD3CCDC004D1C70 /* effects.c in Sources */,
 				0246A2AD0BD3CCDC004D1C70 /* environ.c in Sources */,
@@ -3857,10 +3843,12 @@
 				COPY_PHASE_STRIP = NO;
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_AUTO_VECTORIZATION = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					__MACOSX__,
 					"$(inherited)",
 				);
+				OTHER_CFLAGS = "$(inherited)";
 				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
 			};
 			name = Debug;
@@ -3875,10 +3863,12 @@
 				COPY_PHASE_STRIP = YES;
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_AUTO_VECTORIZATION = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					__MACOSX__,
 					"$(inherited)",
 				);
+				OTHER_CFLAGS = "$(inherited)";
 				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
 			};
 			name = Release;
@@ -3896,6 +3886,7 @@
 				FRAMEWORK_SEARCH_PATHS_QUOTED_1 = "\"$(SYSTEM_DEVELOPER_DIR)/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks\"";
 				FRAMEWORK_SEARCH_PATHS_QUOTED_2 = "\"$(SRCROOT)/build/Debug\"";
 				FRAMEWORK_SEARCH_PATHS_QUOTED_3 = "\"$(SYSTEM_DEVELOPER_DIR)/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks\"";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -3940,6 +3931,7 @@
 				FRAMEWORK_SEARCH_PATHS_QUOTED_1 = "\"$(SYSTEM_DEVELOPER_DIR)/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks\"";
 				FRAMEWORK_SEARCH_PATHS_QUOTED_2 = "\"$(SRCROOT)/build/Debug\"";
 				FRAMEWORK_SEARCH_PATHS_QUOTED_3 = "\"$(SYSTEM_DEVELOPER_DIR)/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks\"";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_MODEL_TUNING = G5;

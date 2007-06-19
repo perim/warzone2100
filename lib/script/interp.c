@@ -955,7 +955,7 @@ exit_with_error:
 
 	TRCPRINTF( "*** ERROR EXIT ***\n" );
 
-	ASSERT(FALSE, "interpRunScript: error while executing a script");
+	ASSERT(!"error while executing a script", "interpRunScript: error while executing a script");
 
 	bInterpRunning = FALSE;
 	return FALSE;
@@ -1213,6 +1213,7 @@ static inline void destroyVarEnvironment(SCRIPT_CONTEXT *psContext, UDWORD envIn
 		}
 
 		free( varEnvironment[envIndex] );
+		varEnvironment[envIndex] = NULL;
 	}
 }
 

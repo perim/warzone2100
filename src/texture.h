@@ -29,10 +29,16 @@ extern void freeTileTextures( void );
 
 typedef struct _tileTexInfo
 {
-UDWORD	xOffset;	// Offset into texture page to left hand edge
-UDWORD	yOffset;	// Offset into texture page to top hand edge
-UDWORD	texPage;	// Which textpage is the tile in? TileNumber/16 basically;
+	UDWORD xOffset; // Offset into texture page to left hand edge
+	UDWORD yOffset; // Offset into texture page to top hand edge
+	UDWORD texPage; // Which textpage is the tile in? TileNumber/16 basically;
 } TILE_TEX_INFO;
+
+#define PAGE_WIDTH              512
+#define PAGE_HEIGHT             512
+#define TILES_IN_PAGE_COLUMN (PAGE_WIDTH / TILE_WIDTH)
+#define TILES_IN_PAGE_ROW (PAGE_HEIGHT / TILE_HEIGHT)
+#define TILES_IN_PAGE (TILES_IN_PAGE_COLUMN * TILES_IN_PAGE_ROW)
 
 #define MAX_TILES 100
 extern TILE_TEX_INFO	tileTexInfo[MAX_TILES];

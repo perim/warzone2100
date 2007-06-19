@@ -23,12 +23,14 @@
  *
  * Load IMD (.pie) files
  *
- * updated to load version 4 files
+ * - Changes at version 4:
+ *   - pcx name as string
+ *   - pcx filepath
+ *   - cut down vertex list
  *
- * changes at version 4:
- * - pcx name as string
- * - pcx filepath
- * - cut down vertex list
+ * - Changes at version 5_pre:
+ *   - float coordinate support
+ *   - ...
  */
 
 #include "lib/framework/frame.h"
@@ -41,13 +43,12 @@
 #include "ivispatch.h"
 #include "tex.h" // texture page loading
 
+
 // Static variables
 static VERTEXID vertexTable[iV_IMD_MAX_POINTS];
 
-// local prototypes
-static iIMDShape *_imd_load_level(char **FileData, char *FileDataEnd, int nlevels);
 
-static BOOL AtEndOfFile(char *CurPos, char *EndOfFile)
+static BOOL AtEndOfFile(const char *CurPos, const char *EndOfFile)
 {
 	while ( *CurPos == 0x00 || *CurPos == 0x09 || *CurPos == 0x0a || *CurPos == 0x0d || *CurPos == 0x20 )
 	{
@@ -65,154 +66,6 @@ static BOOL AtEndOfFile(char *CurPos, char *EndOfFile)
 	return FALSE;
 }
 
-// ppFileData is incremented to the end of the file on exit!
-iIMDShape *iV_ProcessIMD( char **ppFileData, char *FileDataEnd )
-{
-	char		texfile[MAX_PATH]; // Last loaded texture page filename
-	char		*pFileData = *ppFileData;
-	int 		cnt;
-	char		buffer[MAX_PATH], texType[MAX_PATH], ch; //, *str;
-	int		i, nlevels, pwidth, pheight;
-	iIMDShape	*s, *psShape;
-	UDWORD		level;
-	Sint32		imd_version;
-	Uint32		imd_flags; // FIXME UNUSED
-	char		*pFileName = GetLastResourceFilename();
-	BOOL		bTextured = FALSE;
-
-	if (sscanf(pFileData, "%s %d%n", buffer, &imd_version, &cnt) != 2)
-	{
-		debug(LOG_ERROR, "iV_ProcessIMD %s bad version: (%s)", pFileName, buffer);
-		assert(FALSE);
-		return NULL;
-	}
-	pFileData += cnt;
-
-	if (strcmp(IMD_NAME, buffer) != 0 && strcmp(PIE_NAME, buffer) !=0 )
-	{
-		debug(LOG_ERROR, "iV_ProcessIMD %s not an IMD file (%s %d)", pFileName, buffer, imd_version);
-		return NULL;
-	}
-
-	//Now supporting version 4 files
-	if (imd_version < 2 || imd_version > 4)
-	{
-		debug(LOG_ERROR, "iV_ProcessIMD %s version %d not supported", pFileName, imd_version);
-		return NULL;
-	}
-
-	/* Flags are ignored now. Reading them in just to pass the buffer. */
-	if (sscanf(pFileData, "%s %x%n", buffer, &imd_flags, &cnt) != 2)
-	{
-		debug(LOG_ERROR, "iV_ProcessIMD %s bad flags: %s", pFileName, buffer);
-		return NULL;
-	}
-	pFileData += cnt;
-
-	/* This can be either texture or levels */
-	if (sscanf(pFileData, "%s %d%n", buffer, &nlevels, &cnt) != 2)
-	{
-		debug(LOG_ERROR, "iV_ProcessIMD %s expecting TEXTURE or LEVELS: %s", pFileName, buffer);
-		return NULL;
-	}
-	pFileData += cnt;
-
-	// get texture page if specified
-	if (strncmp(buffer, "TEXTURE", 7) == 0)
-	{
-		/* the first parameter for textures is always ignored; which is why we ignore
-		 * nlevels read in above */
-		ch = *pFileData++;
-
-		// Run up to the dot or till the buffer is filled. Leave room for the extension.
-		for( i = 0; i < MAX_PATH-5 && (ch = *pFileData++) != EOF && ch != '.'; i++ )
-		{
- 			texfile[i] = (char)ch;
-		}
-		texfile[i] = '\0';
-
-		if (sscanf(pFileData, "%s%n", texType, &cnt) != 1)
-		{
-			debug(LOG_ERROR, "iV_ProcessIMD %s texture info corrupt: %s", pFileName, buffer);
-			return NULL;
-		}
-		pFileData += cnt;
-
-		if (strcmp(texType, "png") != 0)
-		{
-			debug(LOG_ERROR, "iV_ProcessIMD %s: only png textures supported", pFileName);
-			return NULL;
-		}
-		strcat(texfile, ".png");
-
-		if (sscanf(pFileData, "%d %d%n", &pwidth, &pheight, &cnt) != 2)
-		{
-			debug(LOG_ERROR, "iV_ProcessIMD %s bad texture size: %s", pFileName, buffer);
-			return NULL;
-		}
-		pFileData += cnt;
-		pie_MakeTexPageName(texfile);
-
-		/* Now read in LEVELS directive */
-		if (sscanf(pFileData, "%s %d%n", buffer, &nlevels, &cnt) != 2)
-		{
-			debug(LOG_ERROR, "iV_ProcessIMD %s bad levels info: %s", pFileName, buffer);
-			return NULL;
-		}
-		pFileData += cnt;
-
-		bTextured = TRUE;
-	}
-
-	if (strncmp(buffer, "LEVELS", 6) != 0)
-	{
-		debug(LOG_ERROR, "iV_ProcessIMD: expecting 'LEVELS' directive (%s)", buffer);
-		return NULL;
-	}
-
-	/* Read first LEVEL directive */
-	if (sscanf(pFileData, "%s %d%n", buffer, &level, &cnt) != 2)
-	{
-		iV_Error(0xff, "(_load_level) file corrupt -J");
-		return NULL;
-	}
-	pFileData += cnt;
-
-	if (strncmp(buffer, "LEVEL", 5) != 0)
-	{
-		debug(LOG_ERROR, "iV_ProcessIMD(2): expecting 'LEVELS' directive (%s)", buffer);
-		return NULL;
-	}
-
-	s = _imd_load_level(&pFileData, FileDataEnd, nlevels);
-	if (s == NULL)
-	{
-		debug(LOG_ERROR, "iV_ProcessIMD %s unsuccessful", pFileName);
-		return NULL;
-	}
-
-	// load texture page if specified
-	if (bTextured)
-	{
-		int texpage = -1;
-
-		texpage = iV_GetTexture(texfile);
-		if (texpage < 0)
-		{
-			debug(LOG_ERROR, "iV_ProcessIMD %s could not load tex page %s", pFileName, texfile);
-			return NULL;
-		}
-		/* assign tex page to levels */
-		for (psShape = s; psShape != NULL; psShape = psShape->next)
-		{
-			psShape->texpage = texpage;
-		}
-	}
-
-	*ppFileData = pFileData;
-	return s;
-}
-
 
 /*!
  * Load shape level polygons
@@ -225,9 +78,9 @@ iIMDShape *iV_ProcessIMD( char **ppFileData, char *FileDataEnd )
  * \post s->polys allocated (iFSDPoly * s->npolys)
  * \post s->pindex allocated for each poly
  */
-static BOOL _imd_load_polys( char **ppFileData, iIMDShape *s )
+static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 {
-	char *pFileData = *ppFileData;
+	const char *pFileData = *ppFileData;
 	int i, j, cnt;
 	iIMDPoly *poly;
 	int nFrames, pbRate, tWidth, tHeight;
@@ -248,7 +101,7 @@ static BOOL _imd_load_polys( char **ppFileData, iIMDShape *s )
 
 		if (sscanf(pFileData, "%x %d%n", &flags, &npnts, &cnt) != 2)
 		{
-			iV_Error(0xff, "(_load_polys) [poly %d] error loading flags and npoints", i);
+			debug(LOG_ERROR, "(_load_polys) [poly %d] error loading flags and npoints", i);
 		}
 		pFileData += cnt;
 
@@ -258,13 +111,13 @@ static BOOL _imd_load_polys( char **ppFileData, iIMDShape *s )
 		poly->pindex = (VERTEXID*)malloc(sizeof(VERTEXID) * poly->npnts);
 		if (poly->pindex == NULL)
 		{
-			iV_Error(0xff, "(_load_polys) [poly %d] memory alloc fail (poly indices)", i);
+			debug(LOG_ERROR, "(_load_polys) [poly %d] memory alloc fail (poly indices)", i);
 			return FALSE;
 		}
 		poly->vrt = (fVertex*)malloc(sizeof(fVertex) * poly->npnts);
 		if (poly->vrt == NULL)
 		{
-			iV_Error(0xff, "(_load_polys) [poly %d] memory alloc fail (vertex struct)", i);
+			debug(LOG_ERROR, "(_load_polys) [poly %d] memory alloc fail (vertex struct)", i);
 			return FALSE;
 		}
 
@@ -311,14 +164,14 @@ static BOOL _imd_load_polys( char **ppFileData, iIMDShape *s )
 			poly->pTexAnim = (iTexAnim*)malloc(sizeof(iTexAnim));
 			if (poly->pTexAnim == NULL)
 			{
-				iV_Error(0xff, "(_load_polys) [poly %d] memory alloc fail (iTexAnim struct)", i);
+				debug(LOG_ERROR, "(_load_polys) [poly %d] memory alloc fail (iTexAnim struct)", i);
 				return FALSE;
 			}
 
 			// even the psx needs to skip the data
 			if (sscanf(pFileData, "%d %d %d %d%n", &nFrames, &pbRate, &tWidth, &tHeight, &cnt) != 4)
 			{
-				iV_Error(0xff, "(_load_polys) [poly %d] error reading texanim data", i);
+				debug(LOG_ERROR, "(_load_polys) [poly %d] error reading texanim data", i);
 				return FALSE;
 			}
 			pFileData += cnt;
@@ -349,14 +202,14 @@ static BOOL _imd_load_polys( char **ppFileData, iIMDShape *s )
 				float VertexU, VertexV;
 				if (sscanf(pFileData, "%f %f%n", &VertexU, &VertexV, &cnt) != 2)
 				{
-					iV_Error(0xff, "(_load_polys) [poly %d] error reading tex outline", i);
+					debug(LOG_ERROR, "(_load_polys) [poly %d] error reading tex outline", i);
 					return FALSE;
 				}
 				pFileData += cnt;
 
 				poly->vrt[j].u = VertexU;
 				poly->vrt[j].v = VertexV;
-				poly->vrt[j].g = 255;
+				poly->vrt[j].g = UINT8_MAX;
 			}
 		}
 	}
@@ -367,9 +220,9 @@ static BOOL _imd_load_polys( char **ppFileData, iIMDShape *s )
 }
 
 
-static BOOL ReadPoints( char **ppFileData, iIMDShape *s )
+static BOOL ReadPoints( const char **ppFileData, iIMDShape *s )
 {
-	char *pFileData = *ppFileData;
+	const char *pFileData = *ppFileData;
 	int cnt, i, j, lastPoint = 0, match = -1;
 	Vector3f newVector = {0.0f, 0.0f, 0.0f};
 
@@ -377,7 +230,7 @@ static BOOL ReadPoints( char **ppFileData, iIMDShape *s )
 	{
 		if (sscanf(pFileData, "%f %f %f%n", &newVector.x, &newVector.y, &newVector.z, &cnt) != 3)
 		{
-			iV_Error(0xff, "(_load_points) file corrupt -K");
+			debug(LOG_ERROR, "(_load_points) file corrupt -K");
 			return FALSE;
 		}
 		pFileData += cnt;
@@ -425,9 +278,8 @@ static BOOL ReadPoints( char **ppFileData, iIMDShape *s )
 }
 
 
-static BOOL _imd_load_points( char **ppFileData, iIMDShape *s )
+static BOOL _imd_load_points( const char **ppFileData, iIMDShape *s )
 {
-	int i;
 	Vector3f *p = NULL;
 	Sint32 tempXMax, tempXMin, tempZMax, tempZMin, extremeX, extremeZ;
 	Sint32 xmax, ymax, zmax;
@@ -457,7 +309,7 @@ static BOOL _imd_load_points( char **ppFileData, iIMDShape *s )
 	vxmin.x = vymin.y = vzmin.z = FP12_MULTIPLIER;
 
 	// set up bounding data for minimum number of vertices
-	for (i = 0, p = s->points; i < s->npoints; i++, p++)
+	for (p = s->points; p < s->points + s->npoints; p++)
 	{
 		if (p->x > s->xmax)
 			s->xmax = p->x;
@@ -609,7 +461,7 @@ static BOOL _imd_load_points( char **ppFileData, iIMDShape *s )
 	rad = sqrt(rad_sq);
 
 	// second pass (find tight sphere)
-	for (i = 0, p = s->points; i < s->npoints; i++, p++)
+	for (p = s->points; p < s->points + s->npoints; p++)
 	{
 		dx = p->x - cen.x;
 		dy = p->y - cen.y;
@@ -630,14 +482,14 @@ static BOOL _imd_load_points( char **ppFileData, iIMDShape *s )
 			cen.x = (rad*cen.x + old_to_new*p->x) / old_to_p;
 			cen.y = (rad*cen.y + old_to_new*p->y) / old_to_p;
 			cen.z = (rad*cen.z + old_to_new*p->z) / old_to_p;
-			iV_DEBUG4("NEW SPHERE: cen,rad = %d %d %d, %d\n", cen.x, cen.y, cen.z, rad);
+			debug(LOG_3D, "NEW SPHERE: cen,rad = %f %f %f, %f\n", cen.x, cen.y, cen.z, rad);
 		}
 	}
 
 	s->ocen = cen;
 	s->oradius = rad;
-	iV_DEBUG2("radius, sradius, %d, %d\n", s->radius, s->sradius);
-	iV_DEBUG4("SPHERE: cen,rad = %d %d %d,  %d\n", s->ocen.x, s->ocen.y, s->ocen.z, s->oradius);
+	debug(LOG_3D, "radius, sradius, %d, %d\n", s->radius, s->sradius);
+	debug(LOG_3D, "SPHERE: cen,rad = %f %f %f, %d\n", s->ocen.x, s->ocen.y, s->ocen.z, s->oradius);
 
 // END: tight bounding sphere
 
@@ -655,24 +507,24 @@ static BOOL _imd_load_points( char **ppFileData, iIMDShape *s )
  * \pre s->nconnectors set
  * \post s->connectors allocated
  */
-static BOOL _imd_load_connectors(char **ppFileData, iIMDShape *s)
+static BOOL _imd_load_connectors(const char **ppFileData, iIMDShape *s)
 {
-	char *pFileData = *ppFileData;
-	int cnt, i;
+	const char *pFileData = *ppFileData;
+	int cnt;
 	Vector3f *p = NULL, newVector = {0.0f, 0.0f, 0.0f};
 
 	s->connectors = (Vector3f*)malloc(sizeof(Vector3f) * s->nconnectors);
 	if (s->connectors == NULL)
 	{
-		iV_Error(0xff, "(_load_connectors) MALLOC fail");
+		debug(LOG_ERROR, "(_load_connectors) MALLOC fail");
 		return FALSE;
 	}
 
-	for (i = 0, p = s->connectors; i < s->nconnectors; i++, p++)
+	for (p = s->connectors; p < s->connectors + s->nconnectors; p++)
 	{
 		if (sscanf(pFileData, "%f %f %f%n", &newVector.x, &newVector.y, &newVector.z, &cnt) != 3)
 		{
-			iV_Error(0xff, "(_load_connectors) file corrupt -M");
+			debug(LOG_ERROR, "(_load_connectors) file corrupt -M");
 			return FALSE;
 		}
 		pFileData += cnt;
@@ -694,12 +546,12 @@ static BOOL _imd_load_connectors(char **ppFileData, iIMDShape *s)
  * \pre ppFileData loaded
  * \post s allocated
  */
-static iIMDShape *_imd_load_level(char **ppFileData, char *FileDataEnd, int nlevels)
+static iIMDShape *_imd_load_level(const char **ppFileData, const char *FileDataEnd, int nlevels)
 {
-	char *pFileData = *ppFileData;
+	const char *pFileData = *ppFileData;
+	char buffer[MAX_PATH] = {'\0'};
 	int cnt = 0, n = 0;
 	iIMDShape *s = NULL;
-	char buffer[MAX_PATH] = {'\0'};
 
 	if (nlevels == 0)
 		return NULL;
@@ -780,7 +632,7 @@ static iIMDShape *_imd_load_level(char **ppFileData, char *FileDataEnd, int nlev
 		// might be "BSP" or "LEVEL"
 		if (strcmp(buffer, "LEVEL") == 0)
 		{
-			iV_DEBUG2("imd[_load_level] = npoints %d, npolys %d\n", s->npoints, s->npolys);
+			debug(LOG_3D, "imd[_load_level] = npoints %d, npolys %d\n", s->npoints, s->npolys);
 			s->next = _imd_load_level(&pFileData, FileDataEnd, nlevels - 1);
 		}
 		else if (strcmp(buffer, "CONNECTORS") == 0)
@@ -791,7 +643,7 @@ static iIMDShape *_imd_load_level(char **ppFileData, char *FileDataEnd, int nlev
 		}
 		else
 		{
-			iV_Error(0xff, "(_load_level) unexpected directive %s %d", buffer, &n);
+			debug(LOG_ERROR, "(_load_level) unexpected directive %s %d", buffer, n);
 			break;
 		}
 	}
@@ -799,4 +651,160 @@ static iIMDShape *_imd_load_level(char **ppFileData, char *FileDataEnd, int nlev
 	*ppFileData = pFileData;
 
 	return s;
+}
+
+
+/*!
+ * Load ppFileData into a shape
+ * \param ppFileData Data from the IMD file
+ * \param FileDataEnd Endpointer
+ * \return The shape, constructed from the data read
+ */
+// ppFileData is incremented to the end of the file on exit!
+iIMDShape *iV_ProcessIMD( const char **ppFileData, const char *FileDataEnd )
+{
+	const char *pFileName = GetLastResourceFilename(); // Last loaded texture page filename
+	const char *pFileData = *ppFileData;
+	char buffer[MAX_PATH], texfile[MAX_PATH];
+	int cnt, nlevels;
+	iIMDShape *shape, *psShape;
+	UDWORD level;
+	Sint32 imd_version;
+	Uint32 imd_flags; // FIXME UNUSED
+	BOOL bTextured = FALSE;
+
+	if (sscanf(pFileData, "%s %d%n", buffer, &imd_version, &cnt) != 2)
+	{
+		debug(LOG_ERROR, "iV_ProcessIMD %s bad version: (%s)", pFileName, buffer);
+		assert(FALSE);
+		return NULL;
+	}
+	pFileData += cnt;
+
+	if (strcmp(IMD_NAME, buffer) != 0 && strcmp(PIE_NAME, buffer) !=0 )
+	{
+		debug(LOG_ERROR, "iV_ProcessIMD %s not an IMD file (%s %d)", pFileName, buffer, imd_version);
+		return NULL;
+	}
+
+	//Now supporting version 4 files
+	if (imd_version < 2 || imd_version > 5)
+	{
+		debug(LOG_ERROR, "iV_ProcessIMD %s version %d not supported", pFileName, imd_version);
+		return NULL;
+	}
+
+	/* Flags are ignored now. Reading them in just to pass the buffer. */
+	if (sscanf(pFileData, "%s %x%n", buffer, &imd_flags, &cnt) != 2)
+	{
+		debug(LOG_ERROR, "iV_ProcessIMD %s bad flags: %s", pFileName, buffer);
+		return NULL;
+	}
+	pFileData += cnt;
+
+	/* This can be either texture or levels */
+	if (sscanf(pFileData, "%s %d%n", buffer, &nlevels, &cnt) != 2)
+	{
+		debug(LOG_ERROR, "iV_ProcessIMD %s expecting TEXTURE or LEVELS: %s", pFileName, buffer);
+		return NULL;
+	}
+	pFileData += cnt;
+
+	// get texture page if specified
+	if (strncmp(buffer, "TEXTURE", 7) == 0)
+	{
+		int i, pwidth, pheight;
+		char ch, texType[MAX_PATH];
+
+		/* the first parameter for textures is always ignored; which is why we ignore
+		 * nlevels read in above */
+		ch = *pFileData++;
+
+		// Run up to the dot or till the buffer is filled. Leave room for the extension.
+		for( i = 0; i < MAX_PATH-5 && (ch = *pFileData++) != EOF && ch != '.'; i++ )
+		{
+ 			texfile[i] = (char)ch;
+		}
+		texfile[i] = '\0';
+
+		if (sscanf(pFileData, "%s%n", texType, &cnt) != 1)
+		{
+			debug(LOG_ERROR, "iV_ProcessIMD %s texture info corrupt: %s", pFileName, buffer);
+			return NULL;
+		}
+		pFileData += cnt;
+
+		if (strcmp(texType, "png") != 0)
+		{
+			debug(LOG_ERROR, "iV_ProcessIMD %s: only png textures supported", pFileName);
+			return NULL;
+		}
+		strcat(texfile, ".png");
+		pie_MakeTexPageName(texfile);
+
+		if (sscanf(pFileData, "%d %d%n", &pwidth, &pheight, &cnt) != 2)
+		{
+			debug(LOG_ERROR, "iV_ProcessIMD %s bad texture size: %s", pFileName, buffer);
+			return NULL;
+		}
+		pFileData += cnt;
+
+		/* Now read in LEVELS directive */
+		if (sscanf(pFileData, "%s %d%n", buffer, &nlevels, &cnt) != 2)
+		{
+			debug(LOG_ERROR, "iV_ProcessIMD %s bad levels info: %s", pFileName, buffer);
+			return NULL;
+		}
+		pFileData += cnt;
+
+		bTextured = TRUE;
+	}
+
+	if (strncmp(buffer, "LEVELS", 6) != 0)
+	{
+		debug(LOG_ERROR, "iV_ProcessIMD: expecting 'LEVELS' directive (%s)", buffer);
+		return NULL;
+	}
+
+	/* Read first LEVEL directive */
+	if (sscanf(pFileData, "%s %d%n", buffer, &level, &cnt) != 2)
+	{
+		debug(LOG_ERROR, "(_load_level) file corrupt -J");
+		return NULL;
+	}
+	pFileData += cnt;
+
+	if (strncmp(buffer, "LEVEL", 5) != 0)
+	{
+		debug(LOG_ERROR, "iV_ProcessIMD(2): expecting 'LEVELS' directive (%s)", buffer);
+		return NULL;
+	}
+
+	shape = _imd_load_level(&pFileData, FileDataEnd, nlevels);
+	if (shape == NULL)
+	{
+		debug(LOG_ERROR, "iV_ProcessIMD %s unsuccessful", pFileName);
+		return NULL;
+	}
+
+	// load texture page if specified
+	if (bTextured)
+	{
+		int texpage = -1;
+
+		texpage = iV_GetTexture(texfile);
+		if (texpage < 0)
+		{
+			debug(LOG_ERROR, "iV_ProcessIMD %s could not load tex page %s", pFileName, texfile);
+			return NULL;
+		}
+		/* assign tex page to levels */
+		for (psShape = shape; psShape != NULL; psShape = psShape->next)
+		{
+			psShape->texpage = texpage;
+		}
+	}
+
+	*ppFileData = pFileData;
+	return shape;
 }

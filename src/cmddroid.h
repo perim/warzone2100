@@ -56,11 +56,8 @@ extern void cmdDroidClearDesignator(UDWORD player);
 // get the index of the command droid
 extern SDWORD cmdDroidGetIndex(DROID *psCommander);
 
-// get the experience level of a command droid
-extern SDWORD cmdDroidGetLevel(DROID *psCommander);
-
 // get the maximum group size for a command droid
-extern SDWORD cmdDroidMaxGroup(DROID *psCommander);
+extern unsigned int cmdDroidMaxGroup(DROID *psCommander);
 
 // update the kills of a command droid if psKiller is in a command group
 extern void cmdDroidUpdateKills(DROID *psKiller);
@@ -72,7 +69,7 @@ extern SDWORD cmdDroidHitMod(DROID *psDroid);
 extern SDWORD cmdDroidEvasionMod(DROID *psDroid);
 
 // get the level of a droids commander, if any
-extern SDWORD cmdGetCommanderLevel(DROID *psDroid);
+extern unsigned int cmdGetCommanderLevel(DROID *psDroid);
 
 // Select all droids assigned to the passed in command droids
 extern void	cmdSelectSubDroids(DROID *psDroid);
@@ -80,6 +77,8 @@ extern void	cmdSelectSubDroids(DROID *psDroid);
 // note that commander experience should be increased
 extern void cmdDroidMultiExpBoost(BOOL bDoit);
 
+// check whether commander experience should be increased
+extern BOOL cmdGetDroidMultiExpBoost(void);
 
 #endif
 

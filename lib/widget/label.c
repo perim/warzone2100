@@ -33,9 +33,6 @@
 // FIXME Direct iVis implementation include!
 #include "lib/ivis_common/rendmode.h"
 
-/* The widget heaps */
-OBJ_HEAP	*psLabHeap;
-
 /* Create a button widget data structure */
 BOOL labelCreate(W_LABEL **ppsWidget, W_LABINIT *psInit)
 {
@@ -48,34 +45,14 @@ BOOL labelCreate(W_LABEL **ppsWidget, W_LABINIT *psInit)
 	}
 
 	/* Allocate the required memory */
-#if W_USE_MALLOC
 	*ppsWidget = (W_LABEL *)malloc(sizeof(W_LABEL));
 	if (*ppsWidget == NULL)
-#else
-	if (!HEAP_ALLOC(psLabHeap, (void**) ppsWidget))
-#endif
 	{
 		ASSERT( FALSE, "Out of memory" );
 		return FALSE;
 	}
 	/* Allocate the memory for the tip and copy it if necessary */
-	if (psInit->pTip)
-	{
-#if W_USE_STRHEAP
-		if (!widgAllocCopyString(&(*ppsWidget)->pTip, psInit->pTip))
-		{
-			/* Out of memory - just carry on without the tip */
-			ASSERT( FALSE, "buttonCreate: Out of memory" );
-			(*ppsWidget)->pTip = NULL;
-		}
-#else
-		(*ppsWidget)->pTip = psInit->pTip;
-#endif
-	}
-	else
-	{
-		(*ppsWidget)->pTip = NULL;
-	}
+	(*ppsWidget)->pTip = psInit->pTip;
 
 	/* Initialise the structure */
 	(*ppsWidget)->type = WIDG_LABEL;
@@ -102,7 +79,10 @@ BOOL labelCreate(W_LABEL **ppsWidget, W_LABINIT *psInit)
 
 	if (psInit->pText)
 	{
-		widgCopyString((*ppsWidget)->aText, psInit->pText);
+		strncpy((*ppsWidget)->aText, psInit->pText, sizeof((*ppsWidget)->aText));
+
+		// Terminate the string with a NUL character
+		(*ppsWidget)->aText[sizeof((*ppsWidget)->aText) - 1] = '\0';
 	}
 	else
 	{
@@ -116,21 +96,10 @@ BOOL labelCreate(W_LABEL **ppsWidget, W_LABINIT *psInit)
 /* Free the memory used by a button */
 void labelFree(W_LABEL *psWidget)
 {
-#if W_USE_STRHEAP
-	if (psWidget->pTip)
-	{
-		widgFreeString(psWidget->pTip);
-	}
-#endif
-
 	ASSERT( psWidget != NULL,
 		"labelFree: Invalid label pointer" );
 
-#if W_USE_MALLOC
 	free(psWidget);
-#else
-	HEAP_FREE(psLabHeap, psWidget);
-#endif
 }
 
 

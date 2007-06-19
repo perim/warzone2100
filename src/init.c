@@ -35,6 +35,7 @@
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/rendmode.h"
 #include "lib/ivis_common/tex.h"
+#include "lib/ivis_common/ivi.h"
 #include "lib/netplay/netplay.h"
 #include "lib/script/script.h"
 #include "lib/sound/sound.h"
@@ -1051,6 +1052,7 @@ void systemShutdown(void)
 
 	debug(LOG_MAIN, "shutting down graphics subsystem");
 	free(DisplayBuffer);
+	DisplayBuffer = NULL;
 	iV_ShutDown();
 	levShutDown();
 	widgShutDown();
@@ -1067,9 +1069,7 @@ init_ObjectDead( void * psObj )
 	DROID		*psDroid;
 	STRUCTURE	*psStructure;
 
-	/* check is valid pointer */
-	ASSERT( psBaseObj != NULL,
-			"init_ObjectDead: game object pointer invalid\n" );
+	CHECK_OBJECT(psBaseObj);
 
 	if ( psBaseObj->died == TRUE )
 	{
@@ -1163,7 +1163,7 @@ BOOL frontendInitialise(const char *ResourceFile)
 	}
 #endif
 
-	FrontImages = (IMAGEFILE*)resGetData("IMG","frend.img");
+	FrontImages = (IMAGEFILE*)resGetData("IMG", "frend.img");
 	FEFont = iV_CreateFontIndirect(FrontImages,FEAsciiLookup,4);
 
    	/* Shift the interface initialisation here temporarily so that it
@@ -1265,7 +1265,7 @@ BOOL stageOneInitialise(void)
 		return FALSE;
 	}
 
-	iV_Reset();			// Reset the IV library
+	iV_Reset(); // Reset the IV library
 
 	if (!stringsInitialise())	/* Initialise the string system */
 	{
@@ -1296,13 +1296,6 @@ BOOL stageOneInitialise(void)
 	{
 		return FALSE;
 	}
-
-#ifdef DISP2D
-	if (!disp2DInitialise())
-	{
-		return FALSE;
-	}
-#endif
 
 	if ( !anim_Init( anim_GetShapeFunc ) )
 	{
@@ -1414,7 +1407,7 @@ BOOL stageOneShutDown(void)
 	formationShutDown();
 	releasePlayerPower();
 
-    ResearchRelease();
+	ResearchRelease();
 
 	//free up the gateway stuff?
 	gwShutDown();
@@ -1442,20 +1435,7 @@ BOOL stageOneShutDown(void)
 		return FALSE;
 	}
 
-
-#ifdef DISP2D
-	if (!disp2DShutdown())
-	{
-		return FALSE;
-	}
-#endif
-
-
-
-
 	pie_TexShutDown();
-
-
 
 	viewDataHeapShutDown();
 

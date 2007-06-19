@@ -118,15 +118,18 @@ BOOL resLoad(const char *pResFile, SDWORD blockID,
 	debug(LOG_WZ, "resLoad: loading %s", pResFile);
 
 	// Load the RES file; allocate memory for a wrf, and load it
-	if (!loadFile(pResFile, &pBuffer, &size)) {
+	if (!loadFile(pResFile, &pBuffer, &size))
+	{
 		debug(LOG_ERROR, "resLoad: failed to load %s", pResFile);
 		return FALSE;
 	}
 
 	// and parse it
 	resSetInputBuffer(pBuffer, size);
-	if (res_parse() != 0) {
+	if (res_parse() != 0)
+	{
 		debug(LOG_ERROR, "resLoad: failed to parse %s", pResFile);
+		free(pBuffer);
 		return FALSE;
 	}
 
@@ -329,13 +332,15 @@ static BOOL RetreiveResourceFile(char *ResourceName, RESOURCEFILE **NewResource)
 static void FreeResourceFile(RESOURCEFILE *OldResource)
 {
 	switch (OldResource->type)
-	  {
+	{
 		case RESFILETYPE_LOADED:
 			free(OldResource->pBuffer);
+			OldResource->pBuffer = NULL;
 			break;
+
 		default:
 			debug(LOG_WARNING, "resource not freed");
-	  }
+	}
 
 
 	// Remove from the list
@@ -519,43 +524,36 @@ void *resGetData(const char *pType, const char *pID)
 {
 	RES_TYPE	*psT;
 	RES_DATA	*psRes;
-	UDWORD HashedType;
 	// Find the correct type
-
-	HashedType=HashString(pType);	// la da la
-//printf("[resGetData] entering with %s / %s  = %0x\n",pID,pType,HashedType);
+	UDWORD HashedType = HashString(pType);
+	UDWORD HashedID = HashStringIgnoreCase(pID);
 
 	for(psT = psResTypes; psT != NULL; psT = psT->psNext )
 	{
-		if (psT->HashedType==HashedType)
+		if (psT->HashedType == HashedType)
 		{
 			break;
 		}
 	}
+
 	if (psT == NULL)
 	{
 		ASSERT( FALSE, "resGetData: Unknown type: %s", pType );
 		return NULL;
 	}
 
+	for(psRes = psT->psRes; psRes != NULL; psRes = psRes->psNext)
 	{
-		UDWORD HashedID=HashStringIgnoreCase(pID);
-		for(psRes = psT->psRes; psRes; psRes = psRes->psNext)
+		if (psRes->HashedID == HashedID)
 		{
-			if (psRes->HashedID==HashedID)
-			{
-				/* We found it */
-//				printf("[resGetData] looking for %s = %0x  ******found!\n",pID,HashedID);
-				break;
-			}
+			/* We found it */
+			break;
 		}
 	}
 
 	if (psRes == NULL)
 	{
 		ASSERT( psRes != NULL, "resGetData: Unknown ID: %s", pID );
-//		resLoadFile(pType,pID);
-//		resGetData(pType,pID);
 		return NULL;
 	}
 
@@ -665,21 +663,28 @@ void resReleaseAll(void)
 
 	for(psT = psResTypes; psT != NULL; psT = psNT)
 	{
-		for(psRes = psT->psRes; psRes; psRes = psNRes) {
-			if (psRes->usage == 0) {
+		for(psRes = psT->psRes; psRes; psRes = psNRes)
+		{
+			if (psRes->usage == 0)
+			{
 				debug(LOG_WZ, "resReleaseAll: %s resource: %s(%04x) not used", psT->aType,
 				      psRes->aID, psRes->HashedID);
 			}
-			if(psT->release != NULL) {
-				psT->release( psRes->pData );
-			} else {
-				ASSERT( FALSE,"resReleaseAll: NULL release function" );
+			if (psT->release != NULL)
+			{
+				psT->release(psRes->pData);
 			}
+			else
+			{
+				// Do we actually need an assertion here ?? Isn't a NULL release function legal?
+				ASSERT(!"No release function", "resReleaseAll: NULL release function");
+			}
+
 			psNRes = psRes->psNext;
 			free(psRes);
 		}
-		psNT = psT->psNext;
 
+		psNT = psT->psNext;
 		free(psT);
 	}
 
@@ -698,10 +703,12 @@ void resReleaseBlockData(SDWORD blockID)
 		psPRes = NULL;
 		for(psRes = psT->psRes; psRes; psRes = psNRes)
 		{
-			ASSERT( psRes != NULL,"resReleaseBlockData: null pointer passed into loop" );
+			ASSERT(psRes != NULL, "resReleaseBlockData: null pointer passed into loop");
 
-			if (psRes->blockID == blockID) {
-				if (psRes->usage == 0) {
+			if (psRes->blockID == blockID)
+			{
+				if (psRes->usage == 0)
+				{
 					debug(LOG_WZ, "resReleaseBlockData: %s resource: %s(%04x) not used", psT->aType, psRes->aID,
 					      psRes->HashedID);
 				}
@@ -731,10 +738,9 @@ void resReleaseBlockData(SDWORD blockID)
 				psPRes = psRes;
 				psNRes = psRes->psNext;
 			}
-			ASSERT( psNRes != (RES_DATA *)0xdddddddd,"resReleaseBlockData: next data (next pointer) already freed" );
 		}
+
 		psNT = psT->psNext;
-		ASSERT( psNT != (RES_TYPE *)0xdddddddd,"resReleaseBlockData: next data (next pointer) already freed" );
 	}
 }
 

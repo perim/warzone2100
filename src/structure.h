@@ -100,11 +100,11 @@ extern BOOL IsPlayerDroidLimitReached(UDWORD PlayerNumber);
 extern BOOL IsPlayerStructureLimitReached(UDWORD PlayerNumber);
 extern BOOL CheckHaltOnMaxUnitsReached(STRUCTURE *psStructure);
 
-extern BOOL loadStructureStats(char *pStructData, UDWORD bufferSize);
-extern BOOL loadStructureWeapons(char *pWeaponData, UDWORD bufferSize);
-extern BOOL loadStructureFunctions(char *pFunctionData, UDWORD bufferSize);
+extern BOOL loadStructureStats(const char *pStructData, UDWORD bufferSize);
+extern BOOL loadStructureWeapons(const char *pWeaponData, UDWORD bufferSize);
+extern BOOL loadStructureFunctions(const char *pFunctionData, UDWORD bufferSize);
 /*Load the Structure Strength Modifiers from the file exported from Access*/
-extern BOOL loadStructureStrengthModifiers(char *pStrengthModData, UDWORD bufferSize);
+extern BOOL loadStructureStrengthModifiers(const char *pStrengthModData, UDWORD bufferSize);
 
 extern BOOL	structureStatsShutDown(void);
 
@@ -202,7 +202,7 @@ extern BOOL placeDroid(STRUCTURE *psStructure, UDWORD *droidX, UDWORD *droidY);
 //extern BOOL getPowerGenExists(UDWORD player);
 
 /* is this a lassat structure? */
-static inline bool isLasSat(STRUCTURE_STATS *pStructureType)
+static inline BOOL isLasSat(STRUCTURE_STATS *pStructureType)
 {
 	return (pStructureType->psWeapStat[0]
 	        && pStructureType->psWeapStat[0]->weaponSubClass == WSC_LAS_SAT);
@@ -270,11 +270,11 @@ stat type*/
 extern BOOL checkSpecificStructExists(UDWORD structInc, UDWORD player);
 
 /*Access functions for the upgradeable stats of a structure*/
-extern UDWORD	structureBody(STRUCTURE * psStruct);
+extern UDWORD	structureBody(const STRUCTURE *psStruct);
 extern UDWORD	structureArmour(STRUCTURE_STATS *psStats, UBYTE player);
 extern UDWORD	structureResistance(STRUCTURE_STATS *psStats, UBYTE player);
 /*this returns the Base Body points of a structure - regardless of upgrade*/
-extern UDWORD	structureBaseBody(STRUCTURE *psStructure);
+extern UDWORD	structureBaseBody(const STRUCTURE *psStructure);
 
 extern void hqReward(UBYTE losingPlayer, UBYTE rewardPlayer);
 

@@ -20,10 +20,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "lib/ivis_common/ivi.h"
 #include "lib/ivis_common/rendmode.h"
 #include "lib/ivis_common/pieclip.h"
-#include "lib/ivis_common/rendfunc.h"
 #include "lib/ivis_common/textdraw.h"
 #include "lib/ivis_common/piepalette.h"
 #include "lib/ivis_common/piestate.h"
@@ -69,7 +67,7 @@ iSurface *iV_SurfaceCreate(Uint32 flags, int width, int height, int xp, int yp, 
 	s->clip.top = 0;
 	s->clip.bottom = height-1;
 
-	iV_DEBUG2("vid[SurfaceCreate] = created surface width %d, height %d\n",width,height);
+	debug(LOG_3D, "vid[SurfaceCreate] = created surface width %d, height %d\n",width,height);
 
 	return s;
 }
@@ -86,48 +84,6 @@ void iV_SurfaceDestroy(iSurface *s)
 		free(s);
 }
 
-//*************************************************************************
-//*** assign renderer
-//*
-//******
-
-void rend_Assign(iSurface *s)
-{
-	iV_RenderAssign(s);
-
-	/* Need to look into this - won't the unwanted called still set render surface? */
-	psRendSurface = s;
-}
-
-
-// pre VideoOpen
-void rend_AssignScreen(void)
-{
-	iV_RenderAssign(&rendSurface);
-}
-
-int iV_GetDisplayWidth(void)
-{
-	return rendSurface.width;
-}
-
-int iV_GetDisplayHeight(void)
-{
-	return rendSurface.height;
-}
-
-//*************************************************************************
-//
-// function pointers for render assign
-//
-//*************************************************************************
-
-void (*iV_ppBitmap)(iBitmap *bmp, int x, int y, int w, int h, int ow);
-void (*iV_ppBitmapTrans)(iBitmap *bmp, int x, int y, int w, int h, int ow);
-void (*iV_SetTransFilter)(UDWORD rgb,UDWORD tablenumber);
-void (*iV_UniBitmapDepth)(int texPage, int u, int v, int srcWidth, int srcHeight,
-						int x, int y, int destWidth, int destHeight, unsigned char brightness, int depth);
-void (*iV_SetTransImds)(BOOL trans);
 
 //*************************************************************************
 //
@@ -140,9 +96,7 @@ void iV_RenderAssign(iSurface *s)
 	/* Need to look into this - won't the unwanted called still set render surface? */
 	psRendSurface = s;
 
-	iV_SetTransFilter = SetTransFilter;
-
-	iV_DEBUG0("vid[RenderAssign] = assigned renderer :\n");
-	iV_DEBUG5("usr %d\nflags %x\nxcentre, ycentre %d\nbuffer %p\n",
-			s->usr,s->flags,s->xcentre,s->ycentre,s->buffer);
+	debug(LOG_3D, "vid[RenderAssign] = assigned renderer :\n");
+	debug(LOG_3D, "flags %x\nxcentre %d, ycentre %d\nbuffer %p\n",
+			s->flags, s->xcentre, s->ycentre, s->buffer);
 }

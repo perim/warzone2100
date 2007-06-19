@@ -31,7 +31,6 @@
 
 #include "objects.h"
 #include "loop.h"
-#include "edit2d.h"
 #include "map.h"
 
 /* Includes direct access to render library */
@@ -44,7 +43,6 @@
 
 #include "display3d.h"
 #include "edit3d.h"
-#include "disp2d.h"
 #include "structure.h"
 #include "research.h"
 #include "function.h"
@@ -1512,8 +1510,8 @@ intChooseSystemStats( DROID_TEMPLATE *psTemplate )
 
 static const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 {
-	COMP_BASE_STATS		*psStats;
-	char				*pStr;
+	COMP_BASE_STATS *psStats = NULL;
+
 	/*
 		First we check for the special cases of the Transporter & Cyborgs
 	*/
@@ -1521,13 +1519,12 @@ static const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 	{
 		return _("Transporter");
 	}
+
 	/*
 		Now get the normal default droid name based on its components
-
 	*/
-	aCurrName[0]=0;		// Reset string to null
+	aCurrName[0] = '\0'; // Reset string to null
 	psStats = intChooseSystemStats( psTemplate );
-
 	if ( psTemplate->asWeaps[0]					!= 0 ||
 		 psTemplate->asParts[COMP_CONSTRUCT]	!= 0 ||
 		 psTemplate->asParts[COMP_SENSOR]		!= 0 ||
@@ -1535,11 +1532,9 @@ static const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 		 psTemplate->asParts[COMP_REPAIRUNIT]   != 0 ||
 		 psTemplate->asParts[COMP_BRAIN]		!= 0    )
 	{
-		pStr = getStatName( psStats );
+		const char * pStr = getStatName( psStats );
 		strcpy( aCurrName, pStr );
 		strcat( aCurrName, " " );
-//		DBPRINTF(("%s",aCurrName));
-//	DBPRINTF(("a) templ=%p stat=%p name=%s\n",psTemplate,psStats,pStr);
 	}
 
 	if ( psTemplate->numWeaps > 1 )
@@ -1550,7 +1545,7 @@ static const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 	psStats = (COMP_BASE_STATS *) (asBodyStats + psTemplate->asParts[COMP_BODY]);
 	if ( psTemplate->asParts[COMP_BODY] != 0 )
 	{
-		pStr = getStatName( psStats );
+		const char * pStr = getStatName( psStats );
 
 		if ( strlen( aCurrName ) + strlen( pStr ) > WIDG_MAXSTR )
 		{
@@ -1560,13 +1555,12 @@ static const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 
 		strcat( aCurrName, pStr );
 		strcat( aCurrName, " " );
-//		DBPRINTF(("b) templ=%p stat=%p name=%s\n",psTemplate,psStats,pStr);
 	}
 
 	psStats = (COMP_BASE_STATS *) (asPropulsionStats + psTemplate->asParts[COMP_PROPULSION]);
 	if ( psTemplate->asParts[COMP_PROPULSION] != 0 )
 	{
-		pStr = getStatName( psStats );
+		const char * pStr = getStatName( psStats );
 
 		if ( strlen( aCurrName ) + strlen( pStr ) > WIDG_MAXSTR )
 		{
@@ -1575,10 +1569,7 @@ static const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 		}
 
 		strcat( aCurrName, pStr );
-//		DBPRINTF(("c) templ=%p stat=%p name=%s\n",psTemplate,psStats,pStr);
 	}
-
-//	DBPRINTF(("TEMPLATE NAME [%s]\n",aCurrName);
 
 	return aCurrName;
 }
@@ -2612,22 +2603,22 @@ static BOOL intAddSystemButtons(SDWORD mode)
 	// lock down the correct button
 	switch (mode)
 	{
-	case IDES_TURRET:
-	case IDES_TURRET_A:
-	case IDES_TURRET_B:
-		widgSetButtonState(psWScreen, IDDES_WEAPONS, WBUT_LOCK);
-		break;
-	case IDES_BRAIN:
-/*
-		widgSetButtonState(psWScreen, IDDES_COMMAND, WBUT_LOCK);
-		break;
-*/
-	case IDES_SYSTEM:
-		widgSetButtonState(psWScreen, IDDES_SYSTEMS, WBUT_LOCK);
-		break;
-	default:
-		ASSERT( FALSE, "intAddSystemButtons: unexpected mode" );
-		break;
+		case IDES_TURRET:
+		case IDES_TURRET_A:
+		case IDES_TURRET_B:
+			widgSetButtonState(psWScreen, IDDES_WEAPONS, WBUT_LOCK);
+			break;
+		case IDES_BRAIN:
+#if 0
+			widgSetButtonState(psWScreen, IDDES_COMMAND, WBUT_LOCK);
+			break;
+#endif
+		case IDES_SYSTEM:
+			widgSetButtonState(psWScreen, IDDES_SYSTEMS, WBUT_LOCK);
+			break;
+		default:
+			ASSERT(!"invalid/unexpected mode", "intAddSystemButtons: unexpected mode");
+			break;
 	}
 
 	return TRUE;
@@ -3054,12 +3045,9 @@ static BOOL intAddExtraSystemButtons(UDWORD sensorIndex, UDWORD ecmIndex,
 /* Set the bar graphs for the system clickable */
 static void intSetSystemStats(COMP_BASE_STATS *psStats)
 {
-	W_FORM	*psForm;
+	W_FORM *psForm;
 
-	ASSERT( psStats != NULL,
-//			 (((UBYTE *)psStats >= (UBYTE *)asCommandDroids) &&
-//			  ((UBYTE *)psStats < (UBYTE *)asCommandDroids + sizeof(asCommandDroids))),
-		"intSetSystemStats: Invalid stats pointer" );
+	ASSERT( psStats != NULL, "intSetSystemStats: Invalid stats pointer" );
 
 	/* set form tip to stats string */
 	widgSetTip( psWScreen, IDDES_SYSTEMFORM, getStatName(psStats) );
@@ -4705,7 +4693,7 @@ void intProcessDesign(UDWORD id)
 				// Delete the template.
                 //before deleting the template, need to make sure not being used in production
                 deleteTemplateFromProduction(psTempl, (UBYTE)selectedPlayer);
-				HEAP_FREE(psTemplateHeap, psTempl);
+				free(psTempl);
 
 				/* get previous template and set as current */
 				psTempl = apsTemplateList[i-1];
@@ -5124,7 +5112,6 @@ static void intDisplayStatForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 	iV_DrawImage(IntImages,(UWORD)(IMAGE_DES_STATBACKLEFT),x0,y0);
 	iV_DrawImageRect(IntImages,IMAGE_DES_STATBACKMID,
 				x0+iV_GetImageWidth(IntImages,IMAGE_DES_STATBACKLEFT),y0,
-				0,0,
 				Form->width-iV_GetImageWidth(IntImages,IMAGE_DES_STATBACKLEFT)-iV_GetImageWidth(IntImages,IMAGE_DES_STATBACKRIGHT),
 				iV_GetImageHeight(IntImages,IMAGE_DES_STATBACKMID) );
 	iV_DrawImage(IntImages,IMAGE_DES_STATBACKRIGHT,
@@ -5290,9 +5277,10 @@ static BOOL saveTemplate(void)
 		if ( psTempl == NULL )
 		{
 			/* The design needs a new template in the list */
-			if (!HEAP_ALLOC(psTemplateHeap, (void**) &psTempl))
+			psTempl = malloc(sizeof(DROID_TEMPLATE));
+			if (psTempl == NULL)
 			{
-				debug( LOG_NEVER, "saveTemplate: heap alloc failed\n" );
+				debug(LOG_ERROR, "saveTemplate: Out of memory");
 				return FALSE;
 			}
 

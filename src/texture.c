@@ -31,8 +31,6 @@
 #include "radar.h"
 
 #define MAX_TERRAIN_PAGES	20
-#define PAGE_WIDTH		512
-#define PAGE_HEIGHT		512
 // 4 byte depth == 32 bpp
 #define PAGE_DEPTH		4
 #define TEXTURE_PAGE_SIZE	PAGE_WIDTH*PAGE_HEIGHT*PAGE_DEPTH
@@ -46,10 +44,8 @@ SDWORD	numTexturePages;
 int		pageId[MAX_TERRAIN_PAGES];
 
 /* Texture page and coordinates for each tile */
-TILE_TEX_INFO	tileTexInfo[MAX_TILES];
+TILE_TEX_INFO tileTexInfo[MAX_TILES];
 
-static UDWORD	getTileXIndex(UDWORD tileNumber);
-static UDWORD	getTileYIndex(UDWORD tileNumber);
 static void getRectFromPage(UDWORD width, UDWORD height, unsigned char *src, UDWORD bufWidth, unsigned char *dest);
 static void putRectIntoPage(UDWORD width, UDWORD height, unsigned char *dest, UDWORD bufWidth, unsigned char *src);
 static void buildTileIndexes(void);
@@ -238,7 +234,7 @@ BOOL getTileRadarColours(void)
 
 void freeTileTextures(void)
 {
-	UDWORD	i;
+	unsigned int i;
 
 	for (i = 0; i < numTexturePages; i++)
 	{
@@ -246,70 +242,55 @@ void freeTileTextures(void)
 	}
 }
 
-static UDWORD	getTileXIndex(UDWORD tileNumber)
+static inline WZ_DECL_CONST unsigned int getTileXIndex(unsigned int tileNumber)
 {
-	UDWORD	texPage;
-	UDWORD	tileInPage;
-	UDWORD	xIndex;
-
-	texPage = tileNumber/16;
-	tileInPage = tileNumber - (texPage*16);
-	xIndex = tileInPage%4;
-	return(xIndex);
+	return (tileNumber % TILES_IN_PAGE) % TILES_IN_PAGE_COLUMN;
 }
 
-static UDWORD	getTileYIndex(UDWORD tileNumber)
+static inline WZ_DECL_CONST unsigned int getTileYIndex(unsigned int tileNumber)
 {
-	UDWORD	texPage;
-	UDWORD	tileInPage;
-	UDWORD	yIndex;
-
-	texPage = tileNumber/16;
-	tileInPage = tileNumber - (texPage*16);
-	yIndex = tileInPage/4;
-	return(yIndex);
+	return (tileNumber % TILES_IN_PAGE) / TILES_IN_PAGE_ROW;
 }
-
 
 /* Extracts a rectangular buffer from a source buffer, storing result in one contiguous
    chunk	*/
 static void getRectFromPage(UDWORD width, UDWORD height, unsigned char *src, UDWORD bufWidth, unsigned char *dest)
 {
-	UDWORD	i,j;
+	unsigned int i, j;
 
-	for (i=0; i<height; i++)
+	for (i = 0; i < height; i++)
 	{
-		for(j=0; j<width*PAGE_DEPTH; j++)
+		for(j = 0; j < width * PAGE_DEPTH; j++)
 		{
 			*dest++ = *src++;
 		}
-		src+=(bufWidth-width)*PAGE_DEPTH;
+		src += (bufWidth - width) * PAGE_DEPTH;
 	}
 }
 
 /* Inserts a rectangle into a dest rectangle */
 static void putRectIntoPage(UDWORD width, UDWORD height, unsigned char *dest, UDWORD bufWidth, unsigned char *src)
 {
-UDWORD	i,j;
+	unsigned int i, j;
 
-	for(i=0; i<height; i++)
+	for(i = 0; i < height; i++)
 	{
-		for(j=0; j<width*PAGE_DEPTH; j++)
+		for(j = 0; j < width * PAGE_DEPTH; j++)
 		{
 			*dest++ = *src++;
 		}
-		dest+=(bufWidth-width)*PAGE_DEPTH;
+		dest += (bufWidth - width) * PAGE_DEPTH;
 	}
 }
 
 static void buildTileIndexes(void)
 {
-	UDWORD	i;
+	unsigned int i;
 
-	for(i=0; i<MAX_TILES; i++)
+	for(i = 0; i < MAX_TILES; i++)
 	{
 		tileTexInfo[i].xOffset = getTileXIndex(i);
 		tileTexInfo[i].yOffset = getTileYIndex(i);
-		tileTexInfo[i].texPage = pageId[(i/16)];//(i/16) + firstTexturePage;
+		tileTexInfo[i].texPage = pageId[i / TILES_IN_PAGE];
 	}
 }

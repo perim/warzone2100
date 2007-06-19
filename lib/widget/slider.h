@@ -25,9 +25,6 @@
 #ifndef _slider_h
 #define _slider_h
 
-/* The widget heaps */
-extern OBJ_HEAP	*psSldHeap;
-
 /* Slider state */
 #define SLD_DRAG		0x0001		// Slider is being dragged
 #define SLD_HILITE		0x0002		// Slider is hilited
@@ -42,7 +39,7 @@ typedef struct _w_slider
 	UWORD		barSize;			// Thickness of slider bar
 	UWORD		pos;				// Current stop position of the slider
 	UWORD		state;				// Slider state
-	char		*pTip;				// Tool tip
+	const char	*pTip;				// Tool tip
 } W_SLIDER;
 
 /* Create a slider widget data structure */

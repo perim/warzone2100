@@ -320,6 +320,8 @@ BOOL seq_ReleaseVideoBuffers(void)
 {
 	free(pVideoBuffer);
 	free(pVideoPalette);
+	pVideoBuffer = NULL;
+	pVideoPalette = NULL;
 	return TRUE;
 }
 
