@@ -24,8 +24,8 @@
 #ifndef SOUND_DECODING_HPP
 #define SOUND_DECODING_HPP
 
-#include <physfs.h>
-#include <string>
+#include <istream>
+#include <boost/shared_ptr.hpp>
 #include <vorbis/vorbisfile.h>
 #include "general/databuffer.hpp"
 
@@ -33,10 +33,10 @@ class soundDecoding
 {
     public:
         /** Constructor
-         *  \param fileName file to decode from
+         *  \param input istream to decode from
          *  \param Seekable if false this disables seeking, this is faster and adviseable for streams
          */
-        soundDecoding(std::string fileName, bool Seekable);
+        soundDecoding(boost::shared_ptr<std::istream> input, bool Seekable);
 
         /** Destructor
          */
@@ -94,15 +94,8 @@ class soundDecoding
         void allowsSeeking(const bool& bSeek);
 
     private:
-        static size_t ovB_read(void *ptr, size_t size, size_t nmemb, void *datasource);
-        static int ovB_seek(void *datasource, ogg_int64_t offset, int whence);
-        static int ovB_close(void *datasource);
-        static long ovB_tell(void *datasource);
-
-        static const ov_callbacks oggVorbis_callbacks;
-
-        // Internal identifier towards PhysicsFS
-        PHYSFS_file* _fileHandle;
+        // Input stream to read input data from
+        boost::shared_ptr<std::istream> _input;
 
         // Wether to allow seeking or not
         bool         _allowSeeking;
@@ -112,6 +105,12 @@ class soundDecoding
 
         // Internal data
         vorbis_info* _VorbisInfo;
+
+        static const ov_callbacks oggVorbis_callbacks;
+        static size_t ovB_read(void *ptr, size_t size, size_t nmemb, void *datasource);
+        static int ovB_seek(void *datasource, ogg_int64_t offset, int whence);
+        static int ovB_close(void *datasource);
+        static long ovB_tell(void *datasource);
 };
 
 #endif // SOUND_DECODING_HPP

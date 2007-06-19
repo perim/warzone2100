@@ -25,54 +25,51 @@
 #include "constants.hpp"
 #include "templates.hpp"
 #include <vorbis/vorbisfile.h>
+#include <stdexcept>
+#include <string>
 
 size_t soundDecoding::ovB_read(void *ptr, size_t size, size_t nmemb, void *datasource)
 {
-    PHYSFS_file* fileHandle = reinterpret_cast<soundDecoding*>(datasource)->_fileHandle;
-    return PHYSFS_read(fileHandle, ptr, 1, size*nmemb);
+    soundDecoding& decoder = *static_cast<soundDecoding*> (datasource);
+
+    return decoder._input->readsome(static_cast<std::istream::char_type*>(ptr), size * nmemb);
 }
 
 int soundDecoding::ovB_seek(void *datasource, ogg_int64_t offset, int whence)
 {
+    soundDecoding& decoder = *static_cast<soundDecoding*> (datasource);
+
     // check to see if seeking is allowed
-    if (!reinterpret_cast<soundDecoding*>(datasource)->_allowSeeking)
+    if (!decoder._allowSeeking)
         return -1;
 
-    PHYSFS_file* fileHandle = reinterpret_cast<soundDecoding*>(datasource)->_fileHandle;
-
-    int curPos, fileSize, newPos;
+    std::ios_base::seekdir seekDir;
 
     switch (whence)
     {
         // Seek to absolute position
         case SEEK_SET:
-            newPos = offset;
+            seekDir = std::ios::beg;
             break;
 
         // Seek `offset` ahead
         case SEEK_CUR:
-            curPos = PHYSFS_tell(fileHandle);
-            if (curPos == -1)
-                return -1;
-
-            newPos = curPos + offset;
+            seekDir = std::ios::cur;
             break;
 
         // Seek backwards from the end of the file
         case SEEK_END:
-            fileSize = PHYSFS_fileLength(fileHandle);
-            if (fileSize == -1)
-                return -1;
-
-            newPos = fileSize - 1 - offset;
+            seekDir = std::ios::end;
             break;
+
+        // Unknown seek direction: return failure
+        default:
+            return -1;
     }
 
-    // PHYSFS_seek return value of non-zero means success
-    if (PHYSFS_seek(fileHandle, newPos) != 0)
-        return newPos;   // success
-    else
-        return -1;  // failure
+    decoder._input->seekg(offset, seekDir);
+
+    return decoder._input->tellg();
 }
 
 int soundDecoding::ovB_close(void *datasource)
@@ -82,8 +79,9 @@ int soundDecoding::ovB_close(void *datasource)
 
 long soundDecoding::ovB_tell(void *datasource)
 {
-    PHYSFS_file* fileHandle = reinterpret_cast<soundDecoding*>(datasource)->_fileHandle;
-    return PHYSFS_tell(fileHandle);
+    soundDecoding& decoder = *static_cast<soundDecoding*> (datasource);
+
+    return decoder._input->tellg();
 }
 
 const ov_callbacks soundDecoding::oggVorbis_callbacks =
@@ -94,36 +92,29 @@ const ov_callbacks soundDecoding::oggVorbis_callbacks =
     ovB_tell
 };
 
-soundDecoding::soundDecoding(std::string fileName, bool Seekable)
+soundDecoding::soundDecoding(boost::shared_ptr<std::istream> input, bool Seekable) :
+    _input(input)
 {
-    _allowSeeking = Seekable;
-
-    if (!PHYSFS_exists(fileName.c_str()))
-        throw std::string("decoding: PhysFS: File Not Found");
-
-    _fileHandle = PHYSFS_openRead(fileName.c_str());
-    if (!_fileHandle)
-        throw std::string("decoding: PhysFS returned NULL upon PHYSFS_openRead call");
-
     int error = ov_open_callbacks(this, &_oggVorbisStream, NULL, 0, oggVorbis_callbacks);
     if (error < 0)
-        throw std::string("decoding: VorbisFile returned an error while opening; errorcode: " + to_string(error));
+        throw std::runtime_error(std::string("decoding: VorbisFile returned an error while opening; errorcode: " + to_string(error)));
 
     _VorbisInfo = ov_info(&_oggVorbisStream, -1);
 }
 
 soundDecoding::~soundDecoding()
 {
-    PHYSFS_close(_fileHandle);
+    ov_clear(&_oggVorbisStream);
 }
 
 void soundDecoding::reset()
 {
-    PHYSFS_seek(_fileHandle, 0);
+    ov_clear(&_oggVorbisStream);
+    _input->seekg(0);
 
     int error = ov_open_callbacks(this, &_oggVorbisStream, NULL, 0, oggVorbis_callbacks);
     if (error < 0)
-        throw std::string("decoding: VorbisFile returned an error while opening; errorcode: " + to_string(error));
+        throw std::runtime_error(std::string("decoding: VorbisFile returned an error while opening; errorcode: " + to_string(error)));
 
     _VorbisInfo = ov_info(&_oggVorbisStream, -1);
 }
@@ -165,7 +156,7 @@ const soundDataBuffer soundDecoding::decode(std::size_t bufferSize)
         else
             if(result < 0)
                 //throw errorString(result);
-                throw std::string("error decoding OggVorbis stream; errorcode: " + to_string(result) + " with buffersize: " + to_string(bufferSize));
+                throw std::runtime_error(std::string("error decoding OggVorbis stream; errorcode: " + to_string(result) + " with buffersize: " + to_string(bufferSize)));
             else
                 break;
     }
@@ -201,7 +192,7 @@ unsigned int soundDecoding::getCurrentSample()
     int samplePos = ov_pcm_tell(&_oggVorbisStream);
 
     if (samplePos == OV_EINVAL)
-        throw std::string("soundDecoding::getCurrentSample: ov_pcm_tell: invalid argument");
+        throw std::runtime_error(std::string("soundDecoding::getCurrentSample: ov_pcm_tell: invalid argument"));
     else
         return samplePos;
 }

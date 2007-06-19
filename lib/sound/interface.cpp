@@ -25,6 +25,8 @@
  *  This file provides an interface so that C-code is capable of using the soundlibrary.
  */
 
+#include "decoding.hpp"
+
 // Declares library C-interface
 #include "sound.h"
 
@@ -43,6 +45,7 @@ extern "C" {
 }
 
 #include "audio_id.hpp"
+#include "general/physfs_stream.hpp"
 
 #include <map>
 #include <list>
@@ -167,8 +170,11 @@ sndStreamID sound_Create2DStream(const char* fileName)
 
     try
     {
+        // Open file
+        boost::shared_ptr<PhysFS::ifstream> file(new PhysFS::ifstream(fileName));
+
         // Construct decoder object
-        boost::shared_ptr<soundDecoding> decoder(new soundDecoding(fileName, false));
+        boost::shared_ptr<soundDecoding> decoder(new soundDecoding(file, false));
 
         // Construct streaming object
         boost::shared_ptr<soundStream> stream(new soundStream(sndContext, decoder));
@@ -282,8 +288,11 @@ void sound_Update(void)
 
 TrackHandle sound_LoadTrackFromFile(const char* fileName)
 {
+    // Open file
+    boost::shared_ptr<PhysFS::ifstream> file(new PhysFS::ifstream(fileName));
+
     // Construct decoder object
-    soundDecoding decoder(fileName, true);
+    soundDecoding decoder(file, true);
 
     // Decode the track
     soundDataBuffer buffer(decoder.decode());
