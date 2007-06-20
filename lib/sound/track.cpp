@@ -22,6 +22,14 @@
 */
 
 #include "track.hpp"
+extern "C" {
+#include "lib/framework/frame.h"
+#include "lib/gamelib/gtime.h"
+#undef bool
+#undef true
+#undef false
+#undef __bool_true_false_are_defined
+}
 
 namespace Sound
 {
@@ -70,5 +78,15 @@ namespace Sound
     std::string Track::fileName() const
     {
         return _fileName;
+    }
+
+    unsigned int Track::lastFinished() const
+    {
+        return _lastFinished;
+    }
+
+    void Track::finished()
+    {
+        _lastFinished = gameTime;
     }
 }

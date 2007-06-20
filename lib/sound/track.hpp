@@ -44,6 +44,9 @@ namespace Sound
             void setFilename(const std::string& fName);
             std::string fileName() const;
 
+            unsigned int lastFinished() const;
+            void finished();
+
         private:
             bool         _loop;
             float        _volume;

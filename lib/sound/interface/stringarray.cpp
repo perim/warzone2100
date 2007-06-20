@@ -23,6 +23,7 @@
 
 #include "stringarray.hpp"
 #include "../templates.hpp"
+#include <algorithm>
 
 namespace Sound
 {
@@ -33,20 +34,23 @@ namespace Sound
             // Allocate memory
             target = new char[source.length() + 1];
 
-            // Mark the end of the C-string
-            target[source.length()] = 0;
-
             // Insert data
-            memcpy(target, source.c_str(), source.length());
+            std::copy(source.begin(), source.end(), target);
+
+            // Mark the end of the C-string
+            target[source.length()] = '\0';
         }
 
         StringArray::StringArray(const std::vector<std::string>& _arr) :
             _cArray(new const char*[_arr.size() + 1])
         {
+            // Copy all strings from the vector into the string array
+            for_each2(_arr.begin(), _arr.end(),
+                      const_cast<char**> (&_cArray[0]), const_cast<char**> (&_cArray[_arr.size()]),
+                      _Append);
+
             // Mark the end of the array
             _cArray[_arr.size()] = NULL;
-
-            for_each2(_arr.begin(), _arr.end(), const_cast<char**>(_cArray), const_cast<char**>(&(_cArray[_arr.size()])), _Append);
         }
 
         StringArray::~StringArray()
