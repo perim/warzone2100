@@ -333,6 +333,7 @@
 		<Unit filename="lib/sound/general/databuffer.cpp" />
 		<Unit filename="lib/sound/general/databuffer.hpp" />
 		<Unit filename="lib/sound/general/geometry.hpp" />
+		<Unit filename="lib/sound/general/physfs_stream.hpp" />
 		<Unit filename="lib/sound/interface.cpp" />
 		<Unit filename="lib/sound/interface/devicelist.cpp" />
 		<Unit filename="lib/sound/interface/devicelist.hpp" />
