@@ -24,58 +24,61 @@
 #include "context.hpp"
 #include <string>
 
-soundContext::soundContext(boost::shared_ptr<soundDevice> sndDevice) : listener(this), device(sndDevice)
+namespace OpenAL
 {
-    alcGetError(device->getALCDeviceID());
-
-    // Create a new rendering context
-    sndContext = alcCreateContext(device->getALCDeviceID(), NULL);
-
-    switch (alcGetError(device->getALCDeviceID()))
+    soundContext::soundContext(boost::shared_ptr<soundDevice> sndDevice) : listener(this), device(sndDevice)
     {
-        case ALC_NO_ERROR:
-            return;
-        case ALC_INVALID_VALUE:
-            throw std::string("An additional context cannot be created for this device.");
-        case ALC_INVALID_DEVICE:
-            throw std::string("The specified device is not a valid output device.");
-    }
-}
+        alcGetError(device->getALCDeviceID());
 
-soundContext::~soundContext()
-{
-    if ( sndContext != NULL )
+        // Create a new rendering context
+        sndContext = alcCreateContext(device->getALCDeviceID(), NULL);
+
+        switch (alcGetError(device->getALCDeviceID()))
+        {
+            case ALC_NO_ERROR:
+                return;
+            case ALC_INVALID_VALUE:
+                throw std::string("An additional context cannot be created for this device.");
+            case ALC_INVALID_DEVICE:
+                throw std::string("The specified device is not a valid output device.");
+        }
+    }
+
+    soundContext::~soundContext()
     {
-        alcMakeContextCurrent(NULL);
-        alcDestroyContext(sndContext);
-        sndContext = NULL;
+        if ( sndContext != NULL )
+        {
+            alcMakeContextCurrent(NULL);
+            alcDestroyContext(sndContext);
+            sndContext = NULL;
+        }
     }
-}
 
-soundContext::soundListener::soundListener(soundContext* sndContext) : context(sndContext)
-{
-}
+    soundContext::soundListener::soundListener(soundContext* sndContext) : context(sndContext)
+    {
+    }
 
-void soundContext::soundListener::setRotation(float pitch, float yaw, float roll)
-{
-    context->makeCurrent();
-    // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
-}
+    void soundContext::soundListener::setRotation(float pitch, float yaw, float roll)
+    {
+        context->makeCurrent();
+        // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
+    }
 
-void soundContext::soundListener::setRotation(int pitch, int yaw, int roll)
-{
-    context->makeCurrent();
-    // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
-}
+    void soundContext::soundListener::setRotation(int pitch, int yaw, int roll)
+    {
+        context->makeCurrent();
+        // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
+    }
 
-void soundContext::soundListener::getRotation(float& pitch, float& yaw, float& roll)
-{
-    context->makeCurrent();
-    // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
-}
+    void soundContext::soundListener::getRotation(float& pitch, float& yaw, float& roll)
+    {
+        context->makeCurrent();
+        // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
+    }
 
-void soundContext::soundListener::getRotation(int& pitch, int& yaw, int& roll)
-{
-    context->makeCurrent();
-    // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
+    void soundContext::soundListener::getRotation(int& pitch, int& yaw, int& roll)
+    {
+        context->makeCurrent();
+        // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
+    }
 }

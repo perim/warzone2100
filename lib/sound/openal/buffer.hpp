@@ -27,48 +27,51 @@
 #include <AL/al.h>
 #include "../general/databuffer.hpp"
 
-// Needed to be able to declare this class a friend of soundBuffer
-class soundSource;
-
-class soundBuffer
+namespace OpenAL
 {
-    public:
+    // Necessary to be able to declare this class a friend of soundBuffer
+    class soundSource;
 
-        /** Creates an OpenAL buffer
-         */
-        soundBuffer();
-        soundBuffer(const soundDataBuffer& data);
-        virtual ~soundBuffer();
+    class soundBuffer
+    {
+        public:
 
-        /** Fills the buffer with the provided data
-         *  \param data a buffer containing the sounddata
-         */
-        void bufferData(const soundDataBuffer& data);
+            /** Creates an OpenAL buffer
+             */
+            soundBuffer();
+            soundBuffer(const soundDataBuffer& data);
+            virtual ~soundBuffer();
 
-        /** Retrieves the duration of this buffer
-         *  \return the duration of the sounddata in this buffer, expressed in seconds
-         */
-        inline float duration() const;
+            /** Fills the buffer with the provided data
+             *  \param data a buffer containing the sounddata
+             */
+            void bufferData(const soundDataBuffer& data);
 
-    private:
-        // Private copy constructor and copy assignment operator ensures this class cannot be copied
-        soundBuffer( const soundBuffer& );
-        const soundBuffer& operator=( const soundBuffer& );
+            /** Retrieves the duration of this buffer
+             *  \return the duration of the sounddata in this buffer, expressed in seconds
+             */
+            inline float duration() const;
 
-        /** Handles the creation of the buffer
-         *  Makes sure an OpenAL buffer is created and related errors are dealt with
-         */
-        inline void createBuffer();
+        private:
+            // Private copy constructor and copy assignment operator ensures this class cannot be copied
+            soundBuffer( const soundBuffer& );
+            const soundBuffer& operator=( const soundBuffer& );
 
-    private:
-        // Internal identifier towards OpenAL
-        ALuint buffer;
+            /** Handles the creation of the buffer
+             *  Makes sure an OpenAL buffer is created and related errors are dealt with
+             */
+            inline void createBuffer();
 
-        // Needed so that soundSource can attach (or queue/unqueue) soundBuffer's OpenAL buffer to its OpenAL source
-        friend class soundSource;
+        private:
+            // Internal identifier towards OpenAL
+            ALuint buffer;
 
-    protected:
-        float _duration; // duration of sounddata in this buffer in seconds
-};
+            // Needed so that soundSource can attach (or queue/unqueue) soundBuffer's OpenAL buffer to its OpenAL source
+            friend class soundSource;
+
+        protected:
+            float _duration; // duration of sounddata in this buffer in seconds
+    };
+}
 
 #endif // SOUND_OPENAL_BUFFER_HPP

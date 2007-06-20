@@ -24,51 +24,54 @@
 #include "buffer.hpp"
 #include <string>
 
-soundBuffer::soundBuffer() : _duration(0)
+namespace OpenAL
 {
-    createBuffer();
-}
-
-soundBuffer::soundBuffer(const soundDataBuffer& data) : _duration(0)
-{
-    createBuffer();
-    bufferData(data);
-}
-
-inline void soundBuffer::createBuffer()
-{
-    // Clear error state
-    alGetError();
-
-    alGenBuffers(1, &buffer);
-
-    if (alGetError() != AL_NO_ERROR)
-        throw std::string("soundBuffer: alGenBuffers error, possibly out of memory");
-}
-
-soundBuffer::~soundBuffer()
-{
-    alDeleteBuffers(1, &buffer);
-}
-
-void soundBuffer::bufferData(const soundDataBuffer& data)
-{
-    // Clear error state
-    alGetError();
-
-    alBufferData(buffer, ((data.channelCount() == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16), data, data.size(), data.frequency());
-
-    switch (alGetError())
+    soundBuffer::soundBuffer() : _duration(0)
     {
-        case AL_INVALID_VALUE:
-            throw std::string("soundBuffer: alBufferData error: invalid size parameter, buffer is in use or NULL pointer passed as data");
+        createBuffer();
     }
 
-    unsigned int samplecount = data.size() / data.channelCount() / data.bytesPerSample();
-    _duration = samplecount / data.frequency();
-}
+    soundBuffer::soundBuffer(const soundDataBuffer& data) : _duration(0)
+    {
+        createBuffer();
+        bufferData(data);
+    }
 
-inline float soundBuffer::duration() const
-{
-    return _duration;
+    inline void soundBuffer::createBuffer()
+    {
+        // Clear error state
+        alGetError();
+
+        alGenBuffers(1, &buffer);
+
+        if (alGetError() != AL_NO_ERROR)
+            throw std::string("soundBuffer: alGenBuffers error, possibly out of memory");
+    }
+
+    soundBuffer::~soundBuffer()
+    {
+        alDeleteBuffers(1, &buffer);
+    }
+
+    void soundBuffer::bufferData(const soundDataBuffer& data)
+    {
+        // Clear error state
+        alGetError();
+
+        alBufferData(buffer, ((data.channelCount() == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16), data, data.size(), data.frequency());
+
+        switch (alGetError())
+        {
+            case AL_INVALID_VALUE:
+                throw std::string("soundBuffer: alBufferData error: invalid size parameter, buffer is in use or NULL pointer passed as data");
+        }
+
+        unsigned int samplecount = data.size() / data.channelCount() / data.bytesPerSample();
+        _duration = samplecount / data.frequency();
+    }
+
+    inline float soundBuffer::duration() const
+    {
+        return _duration;
+    }
 }

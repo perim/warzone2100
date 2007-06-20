@@ -30,218 +30,221 @@
 #include "context.hpp"
 #include "../general/geometry.hpp"
 
-// Needed to declare pointers for soundBuffer
-class soundBuffer;
-
-class soundSource : public Geometry
+namespace OpenAL
 {
-    public:
+    // Necessary to declare pointers for soundBuffer
+    class soundBuffer;
 
-        enum sourceState {
-            initial,
-            playing,
-            paused,
-            stopped,
+    class soundSource : public Geometry
+    {
+        public:
 
-            undefined
-        };
+            enum sourceState {
+                initial,
+                playing,
+                paused,
+                stopped,
 
-    public:
+                undefined
+            };
 
-        // Constructors
+        public:
 
-        /** For the creation of a multibuffer, streaming, buffer
-         *  \param sndContext the context in which sound from this source should be rendered
-         *  \param b2D wether to play as a 2D sound (without distance attenuation, doppler effect, etc.)
-         */
-        soundSource(boost::shared_ptr<soundContext> sndContext);
+            // Constructors
 
-        /** For the creation of a single-buffer source (mostly SFX, or other non-streaming sounds)
-         *  \param sndContext the context in which sound from this source should be rendered
-         *  \param sndBuffer the buffer to play from
-         *  \param b2D       wether to play as a 2D sound (without distance attenuation, doppler effect, etc.)
-         */
-        soundSource(boost::shared_ptr<soundContext> sndContext, boost::shared_ptr<soundBuffer> sndBuffer);
+            /** For the creation of a multibuffer, streaming, buffer
+             *  \param sndContext the context in which sound from this source should be rendered
+             *  \param b2D wether to play as a 2D sound (without distance attenuation, doppler effect, etc.)
+             */
+            soundSource(boost::shared_ptr<soundContext> sndContext);
 
-        ~soundSource();
+            /** For the creation of a single-buffer source (mostly SFX, or other non-streaming sounds)
+             *  \param sndContext the context in which sound from this source should be rendered
+             *  \param sndBuffer the buffer to play from
+             *  \param b2D       wether to play as a 2D sound (without distance attenuation, doppler effect, etc.)
+             */
+            soundSource(boost::shared_ptr<soundContext> sndContext, boost::shared_ptr<soundBuffer> sndBuffer);
 
-        /** Sets the source's buffer.
-         *  In case of a non streaming source this function sets the buffer for the source.
-         *  \throw std::string containing error message on failure
-         */
-        void setBuffer(boost::shared_ptr<soundBuffer> sndBuffer);
+            ~soundSource();
 
-        /** Wether all sound routed through this source will be rendered as 2D.
-         *  \return true if all routed sound is displayed 2D, false otherwise
-         */
-        inline bool is2D()
-        {
-            return bIs2D;
-        }
+            /** Sets the source's buffer.
+             *  In case of a non streaming source this function sets the buffer for the source.
+             *  \throw std::string containing error message on failure
+             */
+            void setBuffer(boost::shared_ptr<soundBuffer> sndBuffer);
 
-        /** Wether this source is used for streaming sound
-         *  \return true if this source uses buffer queues to stream from, false otherwise
-         */
-        inline bool isStream()
-        {
-            return bIsStream;
-        }
+            /** Wether all sound routed through this source will be rendered as 2D.
+             *  \return true if all routed sound is displayed 2D, false otherwise
+             */
+            inline bool is2D()
+            {
+                return bIs2D;
+            }
 
-        /** Retrieve the currect state of the source
-         *  \return an enum representing the current play-state of the source
-         */
-        sourceState getState();
+            /** Wether this source is used for streaming sound
+             *  \return true if this source uses buffer queues to stream from, false otherwise
+             */
+            inline bool isStream()
+            {
+                return bIsStream;
+            }
 
-        /** Append a buffer to the end of the queue
-         *  \param sndBuffer buffer to append to the end of the queue
-         */
-        void queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer);
+            /** Retrieve the currect state of the source
+             *  \return an enum representing the current play-state of the source
+             */
+            sourceState getState();
 
-        /** Remove a finished buffer from the top of the queue
-         *  \return the buffer that was unqueued
-         */
-        boost::shared_ptr<soundBuffer> unqueueBuffer();
+            /** Append a buffer to the end of the queue
+             *  \param sndBuffer buffer to append to the end of the queue
+             */
+            void queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer);
 
-        /** Tells OpenAL to start playing
-         */
-        inline virtual bool play()
-        {
-            context->makeCurrent();
+            /** Remove a finished buffer from the top of the queue
+             *  \return the buffer that was unqueued
+             */
+            boost::shared_ptr<soundBuffer> unqueueBuffer();
 
-            // Clear current error state
-            alGetError();
+            /** Tells OpenAL to start playing
+             */
+            inline virtual bool play()
+            {
+                context->makeCurrent();
 
-            alSourcePlay(source);
+                // Clear current error state
+                alGetError();
 
-            if(alGetError() != AL_NO_ERROR)
-                return false;
+                alSourcePlay(source);
 
-            return true;
-        }
+                if(alGetError() != AL_NO_ERROR)
+                    return false;
 
-        /** Tells OpenAL to stop playing
-         */
-        inline virtual void stop()
-        {
-            context->makeCurrent();
-            alSourceStop(source);
-        }
+                return true;
+            }
 
-        inline unsigned int numProcessedBuffers()
-        {
-            context->makeCurrent();
+            /** Tells OpenAL to stop playing
+             */
+            inline virtual void stop()
+            {
+                context->makeCurrent();
+                alSourceStop(source);
+            }
 
-            int count;
-            alGetSourcei(source, AL_BUFFERS_PROCESSED, &count);
+            inline unsigned int numProcessedBuffers()
+            {
+                context->makeCurrent();
 
-            return count;
-        }
+                int count;
+                alGetSourcei(source, AL_BUFFERS_PROCESSED, &count);
 
-        /** Sets the position of the source
-         *  \param x X-coordinate of source
-         *  \param y Y-coordinate of source
-         *  \param z Z-coordinate of source
-         */
-        inline virtual void setPosition(float x, float y, float z)
-        {
-            context->makeCurrent();
-            alSource3f(source, AL_POSITION, x, y, z);
-        }
+                return count;
+            }
 
-        inline virtual void setPosition(int x, int y, int z)
-        {
-            context->makeCurrent();
-            alSource3i(source, AL_POSITION, x, y, z);
-        }
+            /** Sets the position of the source
+             *  \param x X-coordinate of source
+             *  \param y Y-coordinate of source
+             *  \param z Z-coordinate of source
+             */
+            inline virtual void setPosition(float x, float y, float z)
+            {
+                context->makeCurrent();
+                alSource3f(source, AL_POSITION, x, y, z);
+            }
 
-        /** Retrieves the position of the source
-         *  \param x this will be used to return the X-coordinate in
-         *  \param y this will be used to return the Y-coordinate in
-         *  \param z this will be used to return the Z-coordinate in
-         */
-        inline virtual void getPosition(float& x, float& y, float& z)
-        {
-            context->makeCurrent();
-            alGetSource3f(source, AL_POSITION, &x, &y, &z);
-        }
-        inline virtual void getPosition(int& x, int& y, int& z)
-        {
-            context->makeCurrent();
-            alGetSource3i(source, AL_POSITION, &x, &y, &z);
-        }
+            inline virtual void setPosition(int x, int y, int z)
+            {
+                context->makeCurrent();
+                alSource3i(source, AL_POSITION, x, y, z);
+            }
 
-        // Functions for setting/getting rotation
-        // * Is this implementation of setting/getting AL_DIRECTION correct?
-        // * Honestly I can't tell, because the OpenAL specification neglects
-        // * to mention how the vector of 3 values is used for specifying direction
-        inline virtual void setRotation(float pitch, float yaw, float roll)
-        {
-            context->makeCurrent();
-            alSource3f(source, AL_DIRECTION, pitch, yaw, roll);
-        }
-        inline virtual void setRotation(int pitch, int yaw, int roll)
-        {
-            context->makeCurrent();
-            alSource3i(source, AL_DIRECTION, pitch, yaw, roll);
-        }
+            /** Retrieves the position of the source
+             *  \param x this will be used to return the X-coordinate in
+             *  \param y this will be used to return the Y-coordinate in
+             *  \param z this will be used to return the Z-coordinate in
+             */
+            inline virtual void getPosition(float& x, float& y, float& z)
+            {
+                context->makeCurrent();
+                alGetSource3f(source, AL_POSITION, &x, &y, &z);
+            }
+            inline virtual void getPosition(int& x, int& y, int& z)
+            {
+                context->makeCurrent();
+                alGetSource3i(source, AL_POSITION, &x, &y, &z);
+            }
 
-        inline virtual void getRotation(float& pitch, float& yaw, float& roll)
-        {
-            context->makeCurrent();
-            alGetSource3f(source, AL_DIRECTION, &pitch, &yaw, &roll);
-        }
-        inline virtual void getRotation(int& pitch, int& yaw, int& roll)
-        {
-            context->makeCurrent();
-            alGetSource3i(source, AL_DIRECTION, &pitch, &yaw, &roll);
-        }
+            // Functions for setting/getting rotation
+            // * Is this implementation of setting/getting AL_DIRECTION correct?
+            // * Honestly I can't tell, because the OpenAL specification neglects
+            // * to mention how the vector of 3 values is used for specifying direction
+            inline virtual void setRotation(float pitch, float yaw, float roll)
+            {
+                context->makeCurrent();
+                alSource3f(source, AL_DIRECTION, pitch, yaw, roll);
+            }
+            inline virtual void setRotation(int pitch, int yaw, int roll)
+            {
+                context->makeCurrent();
+                alSource3i(source, AL_DIRECTION, pitch, yaw, roll);
+            }
 
-        // Functions for setting/getting velocity
-        inline virtual void setVelocity(float x, float y, float z)
-        {
-            context->makeCurrent();
-            alSource3f(source, AL_VELOCITY, x, y, z);
-        }
-        inline virtual void setVelocity(int x, int y, int z)
-        {
-            context->makeCurrent();
-            alSource3i(source, AL_VELOCITY, x, y, z);
-        }
+            inline virtual void getRotation(float& pitch, float& yaw, float& roll)
+            {
+                context->makeCurrent();
+                alGetSource3f(source, AL_DIRECTION, &pitch, &yaw, &roll);
+            }
+            inline virtual void getRotation(int& pitch, int& yaw, int& roll)
+            {
+                context->makeCurrent();
+                alGetSource3i(source, AL_DIRECTION, &pitch, &yaw, &roll);
+            }
 
-        inline virtual void getVelocity(float& x, float& y, float& z)
-        {
-            context->makeCurrent();
-            alGetSource3f(source, AL_VELOCITY, &x, &y, &z);
-        }
-        inline virtual void getVelocity(int& x, int& y, int& z)
-        {
-            context->makeCurrent();
-            alGetSource3i(source, AL_VELOCITY, &x, &y, &z);
-        }
+            // Functions for setting/getting velocity
+            inline virtual void setVelocity(float x, float y, float z)
+            {
+                context->makeCurrent();
+                alSource3f(source, AL_VELOCITY, x, y, z);
+            }
+            inline virtual void setVelocity(int x, int y, int z)
+            {
+                context->makeCurrent();
+                alSource3i(source, AL_VELOCITY, x, y, z);
+            }
 
-    private:
-        /** Handles the creation of the source
-         *  Makes sure an OpenAL source is created and related errors are dealt with
-         */
-        inline void createSource();
+            inline virtual void getVelocity(float& x, float& y, float& z)
+            {
+                context->makeCurrent();
+                alGetSource3f(source, AL_VELOCITY, &x, &y, &z);
+            }
+            inline virtual void getVelocity(int& x, int& y, int& z)
+            {
+                context->makeCurrent();
+                alGetSource3i(source, AL_VELOCITY, &x, &y, &z);
+            }
 
-    private:
-        // Private copy constructor and copy assignment operator ensures this class cannot be copied
-        soundSource( const soundSource& );
-        const soundSource& operator=( const soundSource& );
+        private:
+            /** Handles the creation of the source
+             *  Makes sure an OpenAL source is created and related errors are dealt with
+             */
+            inline void createSource();
 
-    private:
-        // Identifier towards OpenAL
-        ALuint source;
+        private:
+            // Private copy constructor and copy assignment operator ensures this class cannot be copied
+            soundSource( const soundSource& );
+            const soundSource& operator=( const soundSource& );
 
-        // Internal data
-        boost::shared_ptr<soundContext> context;
-        boost::shared_ptr<soundBuffer>  buffer;
-        std::vector< boost::shared_ptr<soundBuffer> > buffers;
+        private:
+            // Identifier towards OpenAL
+            ALuint source;
 
-        // Internal state
-        const bool bIs2D;
-        const bool bIsStream;
-};
+            // Internal data
+            boost::shared_ptr<soundContext> context;
+            boost::shared_ptr<soundBuffer>  buffer;
+            std::vector< boost::shared_ptr<soundBuffer> > buffers;
+
+            // Internal state
+            const bool bIs2D;
+            const bool bIsStream;
+    };
+}
 
 #endif // SOUND_OPENAL_SOURCE_HPP

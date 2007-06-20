@@ -27,7 +27,7 @@
 #include <string>
 #include "constants.hpp"
 
-soundStream::soundStream(boost::shared_ptr<soundContext> sndContext, boost::shared_ptr<soundDecoding> PCM) : soundSource(sndContext), decoder(PCM), bufferSize(OpenAL_BufferSize)
+soundStream::soundStream(boost::shared_ptr<OpenAL::soundContext> sndContext, boost::shared_ptr<soundDecoding> PCM) : soundSource(sndContext), decoder(PCM), bufferSize(OpenAL_BufferSize)
 {
 }
 
@@ -43,7 +43,7 @@ bool soundStream::update()
 
     for (unsigned int update = numProcessedBuffers() ; update != 0 ; --update)
     {
-        boost::shared_ptr<soundBuffer> buffer(unqueueBuffer());
+        boost::shared_ptr<OpenAL::soundBuffer> buffer(unqueueBuffer());
 
         buffersFull = stream(buffer);
 
@@ -54,7 +54,7 @@ bool soundStream::update()
     return buffersFull;
 }
 
-bool soundStream::stream(boost::shared_ptr<soundBuffer> buffer)
+bool soundStream::stream(boost::shared_ptr<OpenAL::soundBuffer> buffer)
 {
     // Fill the buffer with decoded PCM data
     soundDataBuffer pcm = decoder->decode(bufferSize);
@@ -73,8 +73,8 @@ bool soundStream::play()
         return true;
 
     // Create two streaming buffers
-    boost::shared_ptr<soundBuffer> buf1(new soundBuffer);
-    boost::shared_ptr<soundBuffer> buf2(new soundBuffer);
+    boost::shared_ptr<OpenAL::soundBuffer> buf1(new OpenAL::soundBuffer);
+    boost::shared_ptr<OpenAL::soundBuffer> buf2(new OpenAL::soundBuffer);
 
     // Fill the buffers with sounddata
     if (!stream(buf1))

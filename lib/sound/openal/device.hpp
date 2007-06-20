@@ -29,35 +29,38 @@
 
 #include <string>
 
-class soundDevice
+namespace OpenAL
 {
-    public:
-        /** Default constructor
-         *  This function constructs the soundDevice class,
-         *  and intializes the default sound device.
-         */
-        soundDevice();
+    class soundDevice
+    {
+        public:
+            /** Default constructor
+             *  This function constructs the soundDevice class,
+             *  and intializes the default sound device.
+             */
+            soundDevice();
 
-        /** Constructs by opening specified device
-         *  \param deviceName the name of the device to open with OpenAL
-         *  \throw std::string object with error messsage on failure
-         */
-        soundDevice(const std::string deviceName);
-        ~soundDevice();
+            /** Constructs by opening specified device
+             *  \param deviceName the name of the device to open with OpenAL
+             *  \throw std::string object with error messsage on failure
+             */
+            soundDevice(const std::string deviceName);
+            ~soundDevice();
 
-        inline ALCdevice* getALCDeviceID()
-        {
-            return sndDevice;
-        }
+            inline ALCdevice* getALCDeviceID()
+            {
+                return sndDevice;
+            }
 
-    private:
-        // Private copy constructor and copy assignment operator ensures this class cannot be copied
-        soundDevice( const soundDevice& );
-        const soundDevice& operator=( const soundDevice& );
+        private:
+            // Private copy constructor and copy assignment operator ensures this class cannot be copied
+            soundDevice( const soundDevice& );
+            const soundDevice& operator=( const soundDevice& );
 
-    private:
-        // Identifier towards OpenAL
-        ALCdevice* sndDevice;
-};
+        private:
+            // Identifier towards OpenAL
+            ALCdevice* sndDevice;
+    };
+}
 
 #endif // SOUND_OPENAL_DEVICE_HPP

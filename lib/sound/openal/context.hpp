@@ -33,118 +33,121 @@
 #include <boost/smart_ptr.hpp>
 #include "../general/geometry.hpp"
 
-class soundContext
+namespace OpenAL
 {
-    public:
-        /** Default constructor
-         *  This function constructs the soundBase class,
-         *  and optionally intializes the sound device already.
-         *  \param init whether the default (system/os default) sound device should be initialized at construction.
-         */
-        soundContext(boost::shared_ptr<soundDevice> sndDevice);
-        ~soundContext();
+    class soundContext
+    {
+        public:
+            /** Default constructor
+             *  This function constructs the soundBase class,
+             *  and optionally intializes the sound device already.
+             *  \param init whether the default (system/os default) sound device should be initialized at construction.
+             */
+            soundContext(boost::shared_ptr<soundDevice> sndDevice);
+            ~soundContext();
 
 
-        /** makes this soundContext current
-         *  Uses OpenAL function alcMakeContextCurrent to make this function current.
-         *  This function and it's effect should be used as few as possible (if at all).
-         */
-        inline void makeCurrent()
-        {
-            alcMakeContextCurrent(sndContext);
-        }
+            /** makes this soundContext current
+             *  Uses OpenAL function alcMakeContextCurrent to make this function current.
+             *  This function and it's effect should be used as few as possible (if at all).
+             */
+            inline void makeCurrent()
+            {
+                alcMakeContextCurrent(sndContext);
+            }
 
-    public:
-        class soundListener : public Geometry
-        {
-            public:
-                soundListener(soundContext* sndContext);
+        public:
+            class soundListener : public Geometry
+            {
+                public:
+                    soundListener(soundContext* sndContext);
 
-                /** Sets the position of the listener
-                 *  \param x X-coordinate of listener
-                 *  \param y Y-coordinate of listener
-                 *  \param z Z-coordinate of listener
-                 */
-                inline virtual void setPosition(float x, float y, float z)
-                {
-                    context->makeCurrent();
-                    alListener3f(AL_POSITION, x, y, z);
-                }
-                inline virtual void setPosition(int x, int y, int z)
-                {
-                    context->makeCurrent();
-                    alListener3i(AL_POSITION, x, y, z);
-                }
+                    /** Sets the position of the listener
+                     *  \param x X-coordinate of listener
+                     *  \param y Y-coordinate of listener
+                     *  \param z Z-coordinate of listener
+                     */
+                    inline virtual void setPosition(float x, float y, float z)
+                    {
+                        context->makeCurrent();
+                        alListener3f(AL_POSITION, x, y, z);
+                    }
+                    inline virtual void setPosition(int x, int y, int z)
+                    {
+                        context->makeCurrent();
+                        alListener3i(AL_POSITION, x, y, z);
+                    }
 
-                /** Retrieves the position of the listener
-                 *  \param x this will be used to return the X-coordinate in
-                 *  \param y this will be used to return the Y-coordinate in
-                 *  \param z this will be used to return the Z-coordinate in
-                 */
-                inline virtual void getPosition(float& x, float& y, float& z)
-                {
-                    context->makeCurrent();
-                    alGetListener3f(AL_POSITION, &x, &y, &z);
-                }
-                inline virtual void getPosition(int& x, int& y, int& z)
-                {
-                    context->makeCurrent();
-                    alGetListener3i(AL_POSITION, &x, &y, &z);
-                }
+                    /** Retrieves the position of the listener
+                     *  \param x this will be used to return the X-coordinate in
+                     *  \param y this will be used to return the Y-coordinate in
+                     *  \param z this will be used to return the Z-coordinate in
+                     */
+                    inline virtual void getPosition(float& x, float& y, float& z)
+                    {
+                        context->makeCurrent();
+                        alGetListener3f(AL_POSITION, &x, &y, &z);
+                    }
+                    inline virtual void getPosition(int& x, int& y, int& z)
+                    {
+                        context->makeCurrent();
+                        alGetListener3i(AL_POSITION, &x, &y, &z);
+                    }
 
-                /** Sets the listener orientation.
-                 *  Sets the orientation of the listener to "look" at a certain direction,
-                 *  see http://en.wikipedia.org/wiki/Flight_dynamics for more information.
-                 *  \param pitch the "height" the listener is pointed at (i.e. in on screen terms)
-                 *  \param yaw the orientation to the "left and right" (rotation about vertical axis)
-                 *  \param roll just see the wikipedia article ;-) it has a nice pic explaining this way better
-                 */
-                virtual void setRotation(float pitch, float yaw, float roll);
-                virtual void setRotation(int pitch, int yaw, int roll);
+                    /** Sets the listener orientation.
+                     *  Sets the orientation of the listener to "look" at a certain direction,
+                     *  see http://en.wikipedia.org/wiki/Flight_dynamics for more information.
+                     *  \param pitch the "height" the listener is pointed at (i.e. in on screen terms)
+                     *  \param yaw the orientation to the "left and right" (rotation about vertical axis)
+                     *  \param roll just see the wikipedia article ;-) it has a nice pic explaining this way better
+                     */
+                    virtual void setRotation(float pitch, float yaw, float roll);
+                    virtual void setRotation(int pitch, int yaw, int roll);
 
-                virtual void getRotation(float& pitch, float& yaw, float& roll);
-                virtual void getRotation(int& pitch, int& yaw, int& roll);
+                    virtual void getRotation(float& pitch, float& yaw, float& roll);
+                    virtual void getRotation(int& pitch, int& yaw, int& roll);
 
 
-                inline virtual void setVelocity(float x, float y, float z)
-                {
-                    context->makeCurrent();
-                    alListener3f(AL_VELOCITY, x, y, z);
-                }
-                inline virtual void setVelocity(int x, int y, int z)
-                {
-                    context->makeCurrent();
-                    alListener3i(AL_VELOCITY, x, y, z);
-                }
+                    inline virtual void setVelocity(float x, float y, float z)
+                    {
+                        context->makeCurrent();
+                        alListener3f(AL_VELOCITY, x, y, z);
+                    }
+                    inline virtual void setVelocity(int x, int y, int z)
+                    {
+                        context->makeCurrent();
+                        alListener3i(AL_VELOCITY, x, y, z);
+                    }
 
-                inline virtual void getVelocity(float& x, float& y, float& z)
-                {
-                    context->makeCurrent();
-                    alGetListener3f(AL_VELOCITY, &x, &y, &z);
-                }
-                inline virtual void getVelocity(int& x, int& y, int& z)
-                {
-                    context->makeCurrent();
-                    alGetListener3i(AL_VELOCITY, &x, &y, &z);
-                }
+                    inline virtual void getVelocity(float& x, float& y, float& z)
+                    {
+                        context->makeCurrent();
+                        alGetListener3f(AL_VELOCITY, &x, &y, &z);
+                    }
+                    inline virtual void getVelocity(int& x, int& y, int& z)
+                    {
+                        context->makeCurrent();
+                        alGetListener3i(AL_VELOCITY, &x, &y, &z);
+                    }
 
-            private:
-                soundContext* context;
-        };
+                private:
+                    soundContext* context;
+            };
 
-        soundListener listener;
+            soundListener listener;
 
-    private:
-        // Private copy constructor and copy assignment operator ensures this class cannot be copied
-        soundContext( const soundContext& );
-        const soundContext& operator=( const soundContext& );
+        private:
+            // Private copy constructor and copy assignment operator ensures this class cannot be copied
+            soundContext( const soundContext& );
+            const soundContext& operator=( const soundContext& );
 
-    private:
-        // Identifier towards OpenAL
-        ALCcontext* sndContext;
+        private:
+            // Identifier towards OpenAL
+            ALCcontext* sndContext;
 
-        // Parent. This smart pointer is here only to keep the device alive while the context is.
-        boost::shared_ptr<soundDevice> device;
-};
+            // Parent. This smart pointer is here only to keep the device alive while the context is.
+            boost::shared_ptr<soundDevice> device;
+    };
+}
 
 #endif // SOUND_OPENAL_CONTEXT_HPP

@@ -30,31 +30,34 @@
 #include <vector>
 #include <string>
 
-// Singleton class
-class soundDeviceList : public std::vector<std::string>
+namespace OpenAL
 {
-    public:
-        /** Provides a reference to an instance of soundDeviceList
-         *  If there currently exists no instance of soundDeviceList it creates one
-         *  \return a reference to a singleton instance of soundDeviceList
-         */
-        static const soundDeviceList& Instance();
+    // Singleton class
+    class soundDeviceList : public std::vector<std::string>
+    {
+        public:
+            /** Provides a reference to an instance of soundDeviceList
+             *  If there currently exists no instance of soundDeviceList it creates one
+             *  \return a reference to a singleton instance of soundDeviceList
+             */
+            static const soundDeviceList& Instance();
 
-        /** Destroys the singleton instance of soundDeviceList if it exists
-         */
-        static void DestroyInstance();
+            /** Destroys the singleton instance of soundDeviceList if it exists
+             */
+            static void DestroyInstance();
 
-    protected:
-        soundDeviceList();
+        protected:
+            soundDeviceList();
 
-    private:
-        // Private copy constructor and copy assignment operator ensures this class cannot be copied
-        soundDeviceList( const soundDeviceList& );
-        const soundDeviceList& operator=( const soundDeviceList& );
+        private:
+            // Private copy constructor and copy assignment operator ensures this class cannot be copied
+            soundDeviceList( const soundDeviceList& );
+            const soundDeviceList& operator=( const soundDeviceList& );
 
-    private:
-        // Singleton instance pointer
-        static soundDeviceList* _instance;
-};
+        private:
+            // Singleton instance pointer
+            static soundDeviceList* _instance;
+    };
+}
 
 #endif // SOUND_OPENAL_DEVICELIST_HPP

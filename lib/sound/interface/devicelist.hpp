@@ -31,7 +31,7 @@ namespace interfaceUtil
 {
 
     // Singleton class
-    class DeviceList : public soundDeviceList, public CArray
+    class DeviceList : public OpenAL::soundDeviceList, public CArray
     {
         public:
             /** Provides a reference to an instance of DeviceList

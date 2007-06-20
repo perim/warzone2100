@@ -27,7 +27,7 @@
 #include <string>
 #include "openal/buffer.hpp"
 
-class soundTrack : public soundBuffer
+class soundTrack : public OpenAL::soundBuffer
 {
     public:
         soundTrack(const soundDataBuffer& data);

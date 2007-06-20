@@ -23,54 +23,57 @@
 
 #include "devicelist.hpp"
 
-// Initialize singleton pointer to zero
-soundDeviceList* soundDeviceList::_instance = 0;
-
-// Device enumeration stuff
-soundDeviceList::soundDeviceList()
+namespace OpenAL
 {
-    // This function call should never fail according to the OpenAL specs (not with these params)
-    // So as long as std::vector doesn't throw any exceptions there should occur no problems
-    const char* DeviceList = static_cast<const char*>(alcGetString(NULL, ALC_DEVICE_SPECIFIER));
+    // Initialize singleton pointer to zero
+    soundDeviceList* soundDeviceList::_instance = 0;
 
-    // Default NULL device (which might very well be /dev/null)
-    push_back(std::string());
-
-    if (DeviceList)
+    // Device enumeration stuff
+    soundDeviceList::soundDeviceList()
     {
-        // The returned C-string DeviceList has its entries separated by one NUL char (0x00),
-        // and the list itself is terminated by two NUL chars.
-        while (*DeviceList != 0x00)
-        {
-            // Append the current list entry to the list
-            push_back(std::string(DeviceList));
+        // This function call should never fail according to the OpenAL specs (not with these params)
+        // So as long as std::vector doesn't throw any exceptions there should occur no problems
+        const char* DeviceList = static_cast<const char*>(alcGetString(NULL, ALC_DEVICE_SPECIFIER));
 
-            // Move to the next entry in the list
-            // strlen really only detects the position of the first NUL char in the array
-            DeviceList += strlen(DeviceList) + 1;
+        // Default NULL device (which might very well be /dev/null)
+        push_back(std::string());
+
+        if (DeviceList)
+        {
+            // The returned C-string DeviceList has its entries separated by one NUL char (0x00),
+            // and the list itself is terminated by two NUL chars.
+            while (*DeviceList != 0x00)
+            {
+                // Append the current list entry to the list
+                push_back(std::string(DeviceList));
+
+                // Move to the next entry in the list
+                // strlen really only detects the position of the first NUL char in the array
+                DeviceList += strlen(DeviceList) + 1;
+            }
+        }
+        else
+        {
+            //fprintf(stderr, "soundLib: alcGetString returning NULL; ALC_ERROR: %d\n", alcGetError(NULL));
         }
     }
-    else
-    {
-        //fprintf(stderr, "soundLib: alcGetString returning NULL; ALC_ERROR: %d\n", alcGetError(NULL));
-    }
-}
 
-const soundDeviceList& soundDeviceList::Instance()
-{
-    if (_instance == 0)
+    const soundDeviceList& soundDeviceList::Instance()
     {
-        _instance = new soundDeviceList;
+        if (_instance == 0)
+        {
+            _instance = new soundDeviceList;
+        }
+
+        return *_instance;
     }
 
-    return *_instance;
-}
-
-void soundDeviceList::DestroyInstance()
-{
-    if (_instance)
+    void soundDeviceList::DestroyInstance()
     {
-        delete _instance;
-        _instance = 0;
+        if (_instance)
+        {
+            delete _instance;
+            _instance = 0;
+        }
     }
 }

@@ -61,11 +61,10 @@ extern "C" {
 static bool Initialized = false;
 
 // OpenAL device specific stuff
-static boost::shared_ptr<soundDevice> sndDevice;
-static boost::shared_array<char*> DeviceList;
+static boost::shared_ptr<OpenAL::soundDevice> sndDevice;
 
 // OpenAL rendering contexts (can be rendered in parallel)
-static boost::shared_ptr<soundContext> sndContext;
+static boost::shared_ptr<OpenAL::soundContext> sndContext;
 
 // Some containers of exported objects (through ID numbers)
 static std::map<sndStreamID, boost::shared_ptr<soundStream> > sndStreams;
@@ -74,7 +73,7 @@ static std::map<sndTrackID, boost::weak_ptr<soundTrack> > sndTracks;
 static std::list<boost::shared_ptr<soundTrack> > resourceTracks;
 
 // Makes sure sound sources are kept alive until they're not needed anymore
-static std::list<boost::shared_ptr<soundSource> > sndSamples;
+static std::list<boost::shared_ptr<OpenAL::soundSource> > sndSamples;
 
 // The ID numbers
 static sndStreamID nextStreamID = 0;
@@ -92,9 +91,9 @@ BOOL sound_InitLibraryWithDevice(unsigned int deviceNum)
     try
     {
         // Open device (default dev (0) usually is "Generic Hardware")
-        sndDevice = boost::shared_ptr<soundDevice>(new soundDevice(interfaceUtil::DeviceList::Instance().at(deviceNum)));
+        sndDevice = boost::shared_ptr<OpenAL::soundDevice>(new OpenAL::soundDevice(interfaceUtil::DeviceList::Instance().at(deviceNum)));
 
-        sndContext = boost::shared_ptr<soundContext>(new soundContext(sndDevice));
+        sndContext = boost::shared_ptr<OpenAL::soundContext>(new OpenAL::soundContext(sndDevice));
 
         // Always clear this list to make sure we're not using memory only necessary once
         interfaceUtil::DeviceList::DestroyInstance();
@@ -272,12 +271,12 @@ void sound_Update(void)
 
     // We're not using a for loop here because we need to have control over the iterator's increment operation.
     // This is because as soon as we erase an iterator it becomes invalid that includes its increment operator
-    std::list<boost::shared_ptr<soundSource> >::iterator sample = sndSamples.begin();
+    std::list<boost::shared_ptr<OpenAL::soundSource> >::iterator sample = sndSamples.begin();
     while (sample != sndSamples.end())
     {
-        if ((*sample)->getState() == soundSource::stopped)
+        if ((*sample)->getState() == OpenAL::soundSource::stopped)
         {
-            std::list<boost::shared_ptr<soundSource> >::iterator tmp = sample;
+            std::list<boost::shared_ptr<OpenAL::soundSource> >::iterator tmp = sample;
             ++sample;
             sndSamples.erase(tmp);
         }
@@ -353,7 +352,7 @@ void sound_PlayTrack(sndTrackID track)
 {
     if (!Initialized/* || !validID(track, nextTrackID, sndTracks) */) return;
 
-    boost::shared_ptr<soundSource> source(new soundSource(sndContext, sndTracks[track].lock()));
+    boost::shared_ptr<OpenAL::soundSource> source(new OpenAL::soundSource(sndContext, sndTracks[track].lock()));
 
     source->play();
 

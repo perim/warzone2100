@@ -29,14 +29,14 @@
 #include <boost/smart_ptr.hpp>
 #include "decoding.hpp"
 
-class soundStream : public soundSource
+class soundStream : public OpenAL::soundSource
 {
     public:
 
         /** Creates and sets up all resources required for a sound stream
          *  \param PCM class to provide decoded sound data on request
          */
-        soundStream(boost::shared_ptr<soundContext> sndContext, boost::shared_ptr<soundDecoding> PCM);
+        soundStream(boost::shared_ptr<OpenAL::soundContext> sndContext, boost::shared_ptr<soundDecoding> PCM);
         ~soundStream();
 
         /** keep all required buffers filled
@@ -79,7 +79,7 @@ class soundStream : public soundSource
          *  \param buffer buffer to fill
          *  \return       true if the buffer is filled, false if there was no data left to fill a buffer with
          */
-        bool stream(boost::shared_ptr<soundBuffer> buffer);
+        bool stream(boost::shared_ptr<OpenAL::soundBuffer> buffer);
 
         boost::shared_ptr<soundDecoding> decoder;
 
