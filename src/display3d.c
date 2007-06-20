@@ -111,13 +111,12 @@
 
 #include "cmddroid.h"
 
-#ifndef WIN32
-#define max(a,b) (((a)>(b))?(a):(b))
-#define min(a,b) (((a)<(b))?(a):(b))
-#endif
 
+// Extremely magic!
 #define WATER_TILE 17			// ID of water tile.
-#define BED_TILE 5				// ID of river bed tile.
+#define RIVERBED_TILE 5				// ID of river bed tile.
+
+
 #define WATER_ALPHA_LEVEL 255 //was 164	// Amount to alpha blend water.
 #define WATER_ZOFFSET 32		// Sorting offset for main water tile.
 #define WATER_EDGE_ZOFFSET 64	// Sorting offset for water edge tiles.
@@ -127,7 +126,7 @@
 
 static UDWORD	getTargettingGfx(void);
 static void	drawDroidGroupNumber(DROID *psDroid);
-static void	trackHeight(SDWORD desiredHeight);
+static void	trackHeight(float desiredHeight);
 static void	getDefaultColours(void);
 static void	renderSurroundings(void);
 static void	locateMouse(void);
@@ -175,17 +174,10 @@ static BOOL	bDrawBlips=TRUE;
 static BOOL	bDrawProximitys=TRUE;
 BOOL	godMode;
 
-static UWORD WaterTileID = WATER_TILE;
-static UWORD RiverBedTileID = BED_TILE;
+static UWORD RiverBedTileID = RIVERBED_TILE;
 static float waterRealValue = 0.0f;
-#define WAVE_SPEED 4
-#define MAX_FIRE_STAGE	32
-static float	separation=(float)0;
-static SDWORD	acceleration=0;
-static SDWORD	heightSpeed=0;
-static float	aSep;
-static SDWORD	aAccel = 0;
-static SDWORD	aSpeed = 0;
+#define WAVE_SPEED 4.0f
+#define MAX_FIRE_STAGE 32
 
 UDWORD	barMode = BAR_FULL; // configured in configuration.c
 
@@ -193,7 +185,7 @@ UDWORD	barMode = BAR_FULL; // configured in configuration.c
 BOOL	spinScene = FALSE;
 
 /* Initial 3D world origins */
-UDWORD	mapX=45,mapY=80;
+UDWORD	mapX=45, mapY=80;
 
 /* Have we made a selection by clicking the mouse - used for dragging etc */
 BOOL	selectAttempt = FALSE;
@@ -559,7 +551,6 @@ static void drawTiles(iView *camera, iView *player)
 	BOOL PushedDown = FALSE;
 	UBYTE TileIllum;
 	UDWORD shiftVal = 0;
-	UDWORD altVal = 0;
 	int numTilesAveraged = 0;
 	BOOL bEdgeTile;
 	static float angle = 0.0f;
@@ -567,7 +558,7 @@ static void drawTiles(iView *camera, iView *player)
 	// Animate the water texture, just cycles the V coordinate through half the tiles height.
 	if(!gamePaused())
 	{
-		waterRealValue += WAVE_SPEED * frameTime2 / GAME_TICKS_PER_SEC;
+		waterRealValue += (WAVE_SPEED * frameTime2) / GAME_TICKS_PER_SEC;
 		if(waterRealValue >= 64/2)
 		{
 			waterRealValue = 0.0f;
@@ -748,13 +739,12 @@ static void drawTiles(iView *camera, iView *player)
 				}
 
 				// If it's the main water tile (has water texture) then..
-				if( (psTile->texture & TILE_NUMMASK) == WaterTileID && !bEdgeTile )
+				if ( (psTile->texture & TILE_NUMMASK) == WATER_TILE && !bEdgeTile )
 				{
 					// Push the terrain down for the river bed.
 					PushedDown = TRUE;
 					shiftVal = WATER_DEPTH + environGetData(playerXTile+j, playerZTile+i) * 1.5f;
-					altVal = 0; // environGetValue(playerXTile+j, playerZTile+i);
-					tileScreenInfo[i][j].y -= shiftVal + altVal;
+					tileScreenInfo[i][j].y -= shiftVal;
 					// And darken it.
 					TileIllum = (UBYTE)(TileIllum * 0.75f);
 				}
@@ -771,7 +761,7 @@ static void drawTiles(iView *camera, iView *player)
 
 					if (PushedDown)
 					{
-						tileScreenInfo[i][j].y += (shiftVal + 2*altVal);
+						tileScreenInfo[i][j].y += shiftVal;
 					}
 
 					// Transform it into the wx,wy mesh members.
@@ -851,7 +841,8 @@ static void drawTiles(iView *camera, iView *player)
 					bucketAddTypeToList(RENDER_WATERTILE, &tileIJ[i][j]);
 
 					// check if we need to draw a water edge
-					if((mapTile(playerXTile+j, playerZTile+i)->texture & TILE_NUMMASK) != WaterTileID) {
+					if ( (mapTile(playerXTile+j, playerZTile+i)->texture & TILE_NUMMASK) != WATER_TILE )
+					{
 						// the edge is in front of the water (which is drawn at z-index -1)
 						pie_SetDepthOffset(-2.0);
 						drawTerrainTile(i, j, TRUE);
@@ -2697,10 +2688,10 @@ static void	drawDragBox( void )
 		}
 
 		// SHURCOOL: Determine the 4 corners of the selection box, and use them for consistent selection box rendering
-		minX = min(dragBox3D.x1, mouseXPos);
-		maxX = max(dragBox3D.x1, mouseXPos);
-		minY = min(dragBox3D.y1, mouseYPos);
-		maxY = max(dragBox3D.y1, mouseYPos);
+		minX = MIN(dragBox3D.x1, mouseXPos);
+		maxX = MAX(dragBox3D.x1, mouseXPos);
+		minY = MIN(dragBox3D.y1, mouseYPos);
+		maxY = MAX(dragBox3D.y1, mouseYPos);
 
 		// SHURCOOL: Reduce the box in size to produce a (consistent) pulsing inward effect
 		minX += dragBox3D.boxColourIndex/2;
@@ -2826,7 +2817,7 @@ static void drawWeaponReloadBar(BASE_OBJECT *psObj, WEAPON *psWeap, int weapon_s
 		case OBJ_STRUCTURE:
 			psStruct = (STRUCTURE *)psObj;
 			damLevel = PERCENT(psStruct->body, structureBody(psStruct));
-			scale = max(psStruct->pStructureType->baseWidth,psStruct->pStructureType->baseBreadth);
+			scale = MAX(psStruct->pStructureType->baseWidth, psStruct->pStructureType->baseBreadth);
 			scrY += scale * 10 - 1;
 			scrR = scale * 20;
 			break;
@@ -2899,7 +2890,7 @@ float		mulH;
 										&& psStruct->sDisplay.frameNumber == currentGameFrame))
 			{
 			//----
-				scale = max(psStruct->pStructureType->baseWidth,psStruct->pStructureType->baseBreadth);
+				scale = MAX(psStruct->pStructureType->baseWidth, psStruct->pStructureType->baseBreadth);
 				width = scale*20;
 				scrX = psStruct->sDisplay.screenX;
 				scrY = psStruct->sDisplay.screenY + (scale*10);
@@ -2947,7 +2938,7 @@ float		mulH;
 			{
 				if(psStruct->status == SS_BEING_BUILT && psStruct->sDisplay.frameNumber == currentGameFrame)
 				{
-					scale = max(psStruct->pStructureType->baseWidth,psStruct->pStructureType->baseBreadth);
+					scale = MAX(psStruct->pStructureType->baseWidth, psStruct->pStructureType->baseBreadth);
 					width = scale*20;
 					scrX = psStruct->sDisplay.screenX;
 					scrY = psStruct->sDisplay.screenY + (scale*10);
@@ -3019,7 +3010,7 @@ float		mulH;
 			if(psStruct->status==SS_BUILT)
 			{
 			//----
-				scale = max(psStruct->pStructureType->baseWidth,psStruct->pStructureType->baseBreadth);
+				scale = MAX(psStruct->pStructureType->baseWidth, psStruct->pStructureType->baseBreadth);
 				width = scale*20;
 				scrX = psStruct->sDisplay.screenX;
 				scrY = psStruct->sDisplay.screenY + (scale*10);
@@ -3054,7 +3045,7 @@ float		mulH;
 			}
 			else if(psStruct->status == SS_BEING_BUILT)
 			{
-				scale = max(psStruct->pStructureType->baseWidth,psStruct->pStructureType->baseBreadth);
+				scale = MAX(psStruct->pStructureType->baseWidth, psStruct->pStructureType->baseBreadth);
 				width = scale*20;
 				scrX = psStruct->sDisplay.screenX;
 				scrY = psStruct->sDisplay.screenY + (scale*10);
@@ -3728,10 +3719,10 @@ static void preprocessTiles(void)
 		if( wallDrag.x1 == wallDrag.x2 || wallDrag.y1 == wallDrag.y2 )
 		{
 			/* First process the ones inside the wall dragging area */
-			left = min(wallDrag.x1, wallDrag.x2);
-			right = max(wallDrag.x1, wallDrag.x2) + 1;
-			up = min(wallDrag.y1, wallDrag.y2);
-			down = max(wallDrag.y1, wallDrag.y2) + 1;
+			left = MIN(wallDrag.x1, wallDrag.x2);
+			right = MAX(wallDrag.x1, wallDrag.x2) + 1;
+			up = MIN(wallDrag.y1, wallDrag.y2);
+			down = MAX(wallDrag.y1, wallDrag.y2) + 1;
 
 			for(i = left; i < right; i++)
 			{
@@ -3922,11 +3913,11 @@ static void locateMouse(void)
 // Render the sky and surroundings
 static void renderSurroundings(void)
 {
-	static float wind = 0;
-	const float height = 10*TILE_UNITS;
-	const float wider  = 2*(visibleXTiles*TILE_UNITS);
+	static float wind = 0.0f;
+	const float skybox_scale = 10000.0f;
+	const float height = 10.0f * TILE_UNITS;
+	const float wider  = 2.0f * (visibleXTiles * TILE_UNITS);
 	int left, right, front, back;
-	const float scale = 10000.0f;
 
 	// set up matrices and textures
 	pie_PerspectiveBegin();
@@ -3950,10 +3941,10 @@ static void renderSurroundings(void)
 	rz = (player.p.z) & (TILE_UNITS-1);
 	pie_TRANSLATE(-rx, -player.p.y, rz);
 
-	left  = TILE_UNITS * min(visibleXTiles/2, playerXTile+visibleXTiles/2+1);
-	right = TILE_UNITS * min(visibleXTiles/2, mapWidth-playerXTile-visibleXTiles/2);
-	front = TILE_UNITS * min(visibleYTiles/2, playerZTile+visibleYTiles/2+1);
-	back  = TILE_UNITS * min(visibleYTiles/2, mapHeight-playerZTile-visibleYTiles/2);
+	left  = TILE_UNITS * MIN(visibleXTiles/2, playerXTile+visibleXTiles/2+1);
+	right = TILE_UNITS * MIN(visibleXTiles/2, mapWidth-playerXTile-visibleXTiles/2);
+	front = TILE_UNITS * MIN(visibleYTiles/2, playerZTile+visibleYTiles/2+1);
+	back  = TILE_UNITS * MIN(visibleYTiles/2, mapHeight-playerZTile-visibleYTiles/2);
 
 	pie_DrawFogBox(left, right, front, back, height, wider);
 
@@ -3965,20 +3956,20 @@ static void renderSurroundings(void)
 	pie_MatRotY(DEG(1) * wind);
 
 	// move it somewhat below ground level for the blending effect
-	pie_TRANSLATE(0, -scale / 8, 0);
+	pie_TRANSLATE(0, -skybox_scale/8, 0);
 
 	// Set the texture page
 	pie_SetTexturePage( iV_GetTexture(SKY_TEXPAGE) );
 
 	if(!gamePaused())
 	{
-		wind += 0.5*frameTime2/GAME_TICKS_PER_SEC;
-		if(wind >= 360)
+		wind += 0.5f * frameTime2/GAME_TICKS_PER_SEC;
+		if(wind >= 360.0f)
 		{
-			wind = 0;
+			wind = 0.0f;
 		}
 	}
-	pie_DrawSkybox(scale, 0, 128, 256, 128);
+	pie_DrawSkybox(skybox_scale, 0, 128, 256, 128);
 
 	// Load Saved State
 	pie_MatEnd();
@@ -4094,7 +4085,6 @@ void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 	MAPTILE *psTile = NULL;
 	BOOL bOutlined = FALSE;
 	UDWORD tileNumber = 0;
-	Vector2i offset;
 	PIEVERTEX vertices[3];
 	UBYTE oldColours[4] = { 0, 0, 0, 0 };
 	UDWORD oldColoursWord[4] = { 0, 0, 0, 0 };
@@ -4128,18 +4118,18 @@ void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 #endif
 	}
 
-	if(!TILE_DRAW(psTile))
+	if (!TILE_DRAW(psTile))
 	{
 		/* This tile isn't being drawn */
 		return;
 	}
 
-	if (TERRAIN_TYPE(psTile) != TER_WATER)
+	if ( TERRAIN_TYPE(psTile) != TER_WATER || onWaterEdge )
 	{
 		// what tile texture number is it?
 		tileNumber = psTile->texture;
 	}
-	else if(!onWaterEdge)
+	else
 	{
 		// If it's a water tile then force it to be the river bed texture.
 		tileNumber = RiverBedTileID;
@@ -4158,7 +4148,6 @@ void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 #endif
 
 	/* Is the tile highlighted? Perhaps because there's a building foundation on it */
-	bOutlined = FALSE;
 	if(!onWaterEdge && TILE_HIGHLIGHT(psTile))
 	{
 		/* Clear it for next time round */
@@ -4208,24 +4197,20 @@ void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 	* the graphics card */
 	pie_SetTexturePage(tileTexInfo[tileNumber & TILE_NUMMASK].texPage);
 
-	/* set up the texture size info (0-255 used for texture coordinates) */
-	offset.x = (tileTexInfo[tileNumber & TILE_NUMMASK].xOffset * (256 / TILES_IN_PAGE_COLUMN));
-	offset.y = (tileTexInfo[tileNumber & TILE_NUMMASK].yOffset * (256 / TILES_IN_PAGE_ROW));
-
 	/* Check for rotations and flips - this sets up the coordinates for texturing */
 	flipsAndRots(tileNumber & ~TILE_NUMMASK);
 
-	tileScreenInfo[i+0][j+0].tu = (UWORD)(sP1.x + offset.x);
-	tileScreenInfo[i+0][j+0].tv = (UWORD)(sP1.y + offset.y);
+	tileScreenInfo[i+0][j+0].tu = tileTexInfo[tileNumber & TILE_NUMMASK].uOffset + sP1.x;
+	tileScreenInfo[i+0][j+0].tv = tileTexInfo[tileNumber & TILE_NUMMASK].vOffset + sP1.y;
 
-	tileScreenInfo[i+0][j+1].tu = (UWORD)(sP2.x + offset.x);
-	tileScreenInfo[i+0][j+1].tv = (UWORD)(sP2.y + offset.y);
+	tileScreenInfo[i+0][j+1].tu = tileTexInfo[tileNumber & TILE_NUMMASK].uOffset + sP2.x;
+	tileScreenInfo[i+0][j+1].tv = tileTexInfo[tileNumber & TILE_NUMMASK].vOffset + sP2.y;
 
-	tileScreenInfo[i+1][j+1].tu = (UWORD)(sP3.x + offset.x);
-	tileScreenInfo[i+1][j+1].tv = (UWORD)(sP3.y + offset.y);
+	tileScreenInfo[i+1][j+1].tu = tileTexInfo[tileNumber & TILE_NUMMASK].uOffset + sP3.x;
+	tileScreenInfo[i+1][j+1].tv = tileTexInfo[tileNumber & TILE_NUMMASK].vOffset + sP3.y;
 
-	tileScreenInfo[i+1][j+0].tu = (UWORD)(sP4.x + offset.x);
-	tileScreenInfo[i+1][j+0].tv = (UWORD)(sP4.y + offset.y);
+	tileScreenInfo[i+1][j+0].tu = tileTexInfo[tileNumber & TILE_NUMMASK].uOffset + sP4.x;
+	tileScreenInfo[i+1][j+0].tv = tileTexInfo[tileNumber & TILE_NUMMASK].vOffset + sP4.y;
 
 	/* The first triangle */
 	memcpy(&vertices[0], &tileScreenInfo[i+0][j+0], sizeof(PIEVERTEX));
@@ -4324,55 +4309,39 @@ void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 //
 void drawTerrainWaterTile(UDWORD i, UDWORD j)
 {
-	UDWORD	actualX,actualY;
-	MAPTILE	*psTile;
-	//BOOL	bOutlined;
-	UDWORD	tileNumber;
-	Vector2i offset;
-	PIEVERTEX vertices[3];
-
-	/* Get the correct tile index for the x coordinate */
-	actualX = playerXTile + j;
-	/* Get the correct tile index for the y coordinate */
-	actualY = playerZTile + i;
+	/* Get the correct tile index for the x/y coordinates */
+	const unsigned int actualX = playerXTile + j, actualY = playerZTile + i;
 
 	/* Let's just get out now if we're not supposed to draw it */
 	if ( actualX > mapWidth - 1 || actualY > mapHeight - 1 )
 	{
 		return;
-//		psTile = &edgeTile;
-//		CLEAR_TILE_HIGHLIGHT(psTile);
 	}
 
-	psTile = mapTile(actualX,actualY);
-
 	// If it's a water tile then draw the water
-	if (TERRAIN_TYPE(psTile) == TER_WATER)
+	if (TERRAIN_TYPE( mapTile(actualX, actualY) ) == TER_WATER)
 	{
 		/* Used to calculate texture coordinates, which are 0-255 in value */
-		const UDWORD xMult = (256 / TILES_IN_PAGE_COLUMN);
-		const UDWORD yMult = (256 / TILES_IN_PAGE_ROW);
+		const unsigned int
+				xMult = 256 / TILES_IN_PAGE_COLUMN,
+				yMult = 256 / (2 * TILES_IN_PAGE_ROW);
+		const unsigned int tileNumber = getWaterTileNum();
+		PIEVERTEX vertices[3];
 
-		tileNumber = getWaterTileNum();
 		// Draw the main water tile.
-
-		/* 3dfx is pre stored and indexed */
 		pie_SetTexturePage(tileTexInfo[tileNumber & TILE_NUMMASK].texPage);
 
-		offset.x = tileTexInfo[tileNumber & TILE_NUMMASK].xOffset * xMult;
-		offset.y = tileTexInfo[tileNumber & TILE_NUMMASK].yOffset * yMult;
+		tileScreenInfo[i+0][j+0].tu = tileTexInfo[tileNumber & TILE_NUMMASK].uOffset + 1;
+		tileScreenInfo[i+0][j+0].tv = tileTexInfo[tileNumber & TILE_NUMMASK].vOffset;
 
-		tileScreenInfo[i+0][j+0].tu = (UWORD)(offset.x + 1);
-		tileScreenInfo[i+0][j+0].tv = (UWORD)(offset.y);
+		tileScreenInfo[i+0][j+1].tu = tileTexInfo[tileNumber & TILE_NUMMASK].uOffset + (xMult - 1);
+		tileScreenInfo[i+0][j+1].tv = tileTexInfo[tileNumber & TILE_NUMMASK].vOffset;
 
-		tileScreenInfo[i+0][j+1].tu = (UWORD)(offset.x + (xMult - 1));
-		tileScreenInfo[i+0][j+1].tv = (UWORD)(offset.y);
+		tileScreenInfo[i+1][j+1].tu = tileTexInfo[tileNumber & TILE_NUMMASK].uOffset + (xMult - 1);
+		tileScreenInfo[i+1][j+1].tv = tileTexInfo[tileNumber & TILE_NUMMASK].vOffset + (yMult - 1);
 
-		tileScreenInfo[i+1][j+1].tu = (UWORD)(offset.x + (xMult - 1));
-		tileScreenInfo[i+1][j+1].tv = (UWORD)(offset.y + ((yMult / 2) - 1));
-
-		tileScreenInfo[i+1][j+0].tu = (UWORD)(offset.x + 1);
-		tileScreenInfo[i+1][j+0].tv = (UWORD)(offset.y + ((yMult / 2) - 1));
+		tileScreenInfo[i+1][j+0].tu = tileTexInfo[tileNumber & TILE_NUMMASK].uOffset + 1;
+		tileScreenInfo[i+1][j+0].tv = tileTexInfo[tileNumber & TILE_NUMMASK].vOffset + (yMult - 1);
 
 
 		memcpy(&vertices[0], &tileScreenInfo[i+0][j+0], sizeof(PIEVERTEX));
@@ -4408,9 +4377,6 @@ void drawTerrainWaterTile(UDWORD i, UDWORD j)
 }
 
 
-
-
-// -------------------------------------------------------------------------------------
 UDWORD	getSuggestedPitch( void )
 {
 	UDWORD	worldAngle;
@@ -4432,81 +4398,53 @@ UDWORD	getSuggestedPitch( void )
 
 	return(pitch);
 }
+
+
 // -------------------------------------------------------------------------------------
-static void	trackHeight( SDWORD desiredHeight )
+static void trackHeight( float desiredHeight )
 {
-float	fraction;
-UDWORD	pitch;
-SDWORD	angConcern;
-UDWORD	desPitch;
+	static float heightSpeed = 0.0f;
+	/* What fraction of a second did last game loop take */
+	float fraction = frameTime2 / (float)GAME_TICKS_PER_SEC;
+	/* How far are we from desired hieght? */
+	float separation = desiredHeight - player.p.y;
+	/* Work out accelertion... */
+	float acceleration = ACCEL_CONSTANT * separation - VELOCITY_CONSTANT * heightSpeed;
 
-		/* What fraction of a second did last game loop take */
-		fraction = (MAKEFRACT(frameTime2) / (float)GAME_TICKS_PER_SEC);
+	/* ...and now speed */
+	heightSpeed += acceleration * fraction;
 
-		/* How far are we from desired hieght? */
-		separation = (float)(desiredHeight - player.p.y);
+	/* Adjust the height accordingly */
+	player.p.y += heightSpeed * fraction;
 
-		/* Work out accelertion... */
-		acceleration = MAKEINT(((ACCEL_CONSTANT*2)*separation - (VELOCITY_CONSTANT)*(float)heightSpeed));
+	/* Now do auto pitch as well, but only if we're not using mouselook and not tracking */
+	if(!getWarCamStatus() && !getRotActive())
+	{
+		/* Get the suggested pitch */
+		UDWORD pitch = getSuggestedPitch();
 
-		/* ...and now speed */
-		heightSpeed += MAKEINT(((float)acceleration * fraction));
+		/* What's the desired pitch from the player */
+		UDWORD desPitch = 360 - getDesiredPitch();
 
-		/* Adjust the height accordingly */
-		player.p.y += MAKEINT(((float)heightSpeed * fraction));
+		/* Make sure this isn't negative or too much */
+		player.r.x %= DEG(360);
 
-		/* Now do auto pitch as well, but only if we're not using mouselook and not tracking */
-		if(!getWarCamStatus() && !getRotActive())
+		/* Only do something if we're not within 2 degrees of optimum */
+		if ( abs(pitch - desPitch) > 2 )
 		{
-			/* Get the suggested pitch */
-			pitch = getSuggestedPitch();
-
-			/* Make sure this isn't negative */
-			while(player.r.x<0)
-			{
-				player.r.x+=DEG(360);
-			}
-
-			/* Or too much */
-			while(player.r.x > DEG(360))
-			{
-				player.r.x -= DEG(360);
-			}
-
-			/* What's the desired pitch from the player */
-			desPitch = (360-getDesiredPitch());
-
-			/* Do nothing if we're within 2 degrees of optimum */
-			if(abs(pitch-desPitch) < 2) // near enough
-			{
-					/*NOP*/
-			}
-
+			static float aSpeed = 0.0f;
 			/* Force adjust if too low - stops near z clip */
-			else if(pitch>desPitch)
-			{
-				angConcern = DEG(360-pitch);
-				aSep = (float)(angConcern-player.r.x);
-				aAccel = MAKEINT((((ACCEL_CONSTANT))*aSep - (VELOCITY_CONSTANT)*(float)aSpeed));
-				aSpeed += MAKEINT(((float)aAccel * fraction));
-				player.r.x += MAKEINT(((float)aSpeed * fraction));
-			}
-			else
-			{
-				/* Else, move towards player's last selected pitch */
-				angConcern = DEG(360-desPitch);
-				aSep = (float)(angConcern-player.r.x);
-				aAccel = MAKEINT((((ACCEL_CONSTANT))*aSep - (VELOCITY_CONSTANT)*(float)aSpeed));
-				aSpeed += MAKEINT(((float)aAccel * fraction));
-				player.r.x += MAKEINT(((float)aSpeed * fraction));
-			}
+			/* Else, move towards player's last selected pitch */
+			const SDWORD aSep = DEG(360 - MAX(pitch, desPitch)) - player.r.x;
+			const float aAccel = ROT_ACCEL_CONSTANT * aSep - ROT_VELOCITY_CONSTANT * aSpeed;
 
-//			flushConsoleMessages();
-//			CONPRINTF(ConsoleString,(ConsoleString,"Player.r.x : %d",player.r.x/182));
-//			CONPRINTF(ConsoleString,(ConsoleString,"Pitch : %d",pitch));
+			aSpeed += aAccel * fraction;
+			player.r.x += aSpeed * fraction;
 		}
-
+	}
 }
+
+
 // -------------------------------------------------------------------------------------
 void	toggleEnergyBars( void )
 {
@@ -4796,10 +4734,8 @@ static void testEffect2( UDWORD player )
 						addEffect(&pos,EFFECT_EXPLOSION, EXPLOSION_TYPE_LASER,FALSE,NULL,0);
 					}
 				}
-
 			}
 		}
-
 	}
 }
 
