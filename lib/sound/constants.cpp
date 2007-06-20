@@ -23,5 +23,8 @@
 
 #include "constants.hpp"
 
-// Default buffer size used for OpenAL buffers
-const unsigned int OpenAL_BufferSize = 16384;
+namespace Sound
+{
+    // Default buffer size used for OpenAL buffers
+    const unsigned int OpenAL_BufferSize = 16384;
+}

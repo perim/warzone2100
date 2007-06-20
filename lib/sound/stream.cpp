@@ -27,89 +27,95 @@
 #include <string>
 #include "constants.hpp"
 
-soundStream::soundStream(boost::shared_ptr<OpenAL::soundContext> sndContext, boost::shared_ptr<soundDecoding> PCM) : soundSource(sndContext), decoder(PCM), bufferSize(OpenAL_BufferSize)
+namespace Sound
 {
-}
-
-soundStream::~soundStream()
-{
-}
-
-bool soundStream::update()
-{
-    if (!isPlaying()) return false;
-
-    bool buffersFull = true;
-
-    for (unsigned int update = numProcessedBuffers() ; update != 0 ; --update)
+    Stream::Stream(boost::shared_ptr<OpenAL::Context> sndContext, boost::shared_ptr<Decoding> PCM) :
+        Source(sndContext),
+        decoder(PCM),
+        bufferSize(OpenAL_BufferSize)
     {
-        boost::shared_ptr<OpenAL::soundBuffer> buffer(unqueueBuffer());
-
-        buffersFull = stream(buffer);
-
-        if (buffersFull)
-            queueBuffer(buffer);
     }
 
-    return buffersFull;
-}
+    Stream::~Stream()
+    {
+    }
 
-bool soundStream::stream(boost::shared_ptr<OpenAL::soundBuffer> buffer)
-{
-    // Fill the buffer with decoded PCM data
-    soundDataBuffer pcm = decoder->decode(bufferSize);
+    bool Stream::update()
+    {
+        if (!isPlaying()) return false;
 
-    if (pcm.empty())
-        return false;
+        bool buffersFull = true;
 
-    buffer->bufferData(pcm);
+        for (unsigned int update = numProcessedBuffers() ; update != 0 ; --update)
+        {
+            boost::shared_ptr<OpenAL::Buffer> buffer(unqueueBuffer());
 
-    return true;
-}
+            buffersFull = stream(buffer);
 
-bool soundStream::play()
-{
-    if (isPlaying())
+            if (buffersFull)
+                queueBuffer(buffer);
+        }
+
+        return buffersFull;
+    }
+
+    bool Stream::stream(boost::shared_ptr<OpenAL::Buffer> buffer)
+    {
+        // Fill the buffer with decoded PCM data
+        DataBuffer pcm = decoder->decode(bufferSize);
+
+        if (pcm.empty())
+            return false;
+
+        buffer->bufferData(pcm);
+
         return true;
+    }
 
-    // Create two streaming buffers
-    boost::shared_ptr<OpenAL::soundBuffer> buf1(new OpenAL::soundBuffer);
-    boost::shared_ptr<OpenAL::soundBuffer> buf2(new OpenAL::soundBuffer);
+    bool Stream::play()
+    {
+        if (isPlaying())
+            return true;
 
-    // Fill the buffers with sounddata
-    if (!stream(buf1))
-        return false;
-    bool buffer2Filled = stream(buf2);
+        // Create two streaming buffers
+        boost::shared_ptr<OpenAL::Buffer> buf1(new OpenAL::Buffer);
+        boost::shared_ptr<OpenAL::Buffer> buf2(new OpenAL::Buffer);
 
-    queueBuffer(buf1);
-    // Only queue the second buffer if it is filled (i.e. there was enough data to fill it with)
-    if (buffer2Filled)
-        queueBuffer(buf2);
+        // Fill the buffers with sounddata
+        if (!stream(buf1))
+            return false;
+        bool buffer2Filled = stream(buf2);
 
-    soundSource::play();
+        queueBuffer(buf1);
+        // Only queue the second buffer if it is filled (i.e. there was enough data to fill it with)
+        if (buffer2Filled)
+            queueBuffer(buf2);
 
-    return isPlaying();
-}
+        Source::play();
 
-void soundStream::stop()
-{
-    // First stop playback
-    soundSource::stop();
+        return isPlaying();
+    }
 
-    // Now destroy all buffers
-    for (unsigned int i = numProcessedBuffers(); i != 0; --i)
-        unqueueBuffer();
+    void Stream::stop()
+    {
+        // First stop playback
+        Source::stop();
 
-    // Reset decoder
-    decoder->reset();
-}
+        // Now destroy all buffers
+        for (unsigned int i = numProcessedBuffers(); i != 0; --i)
+            unqueueBuffer();
 
-void soundStream::setBufferSize(unsigned int size)
-{
-    bufferSize = size;
-}
+        // Reset decoder
+        decoder->reset();
+    }
 
-unsigned int soundStream::getBufferSize()
-{
-    return bufferSize;
+    void Stream::setBufferSize(unsigned int size)
+    {
+        bufferSize = size;
+    }
+
+    unsigned int Stream::getBufferSize()
+    {
+        return bufferSize;
+    }
 }

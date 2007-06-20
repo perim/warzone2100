@@ -27,36 +27,37 @@
 #include "stringarray.hpp"
 #include "../openal/devicelist.hpp"
 
-namespace interfaceUtil
+namespace Sound
 {
-
-    // Singleton class
-    class DeviceList : public OpenAL::soundDeviceList, public CArray
+    namespace Interface
     {
-        public:
-            /** Provides a reference to an instance of DeviceList
-             *  If there currently exists no instance of DeviceList it creates one
-             *  \return a reference to a singleton instance of DeviceList
-             */
-            static const DeviceList& Instance();
+        // Singleton class
+        class DeviceList : public StringArray
+        {
+            public:
+                /** Provides a reference to an instance of DeviceList
+                 *  If there currently exists no instance of DeviceList it creates one
+                 *  \return a reference to a singleton instance of DeviceList
+                 */
+                static const DeviceList& Instance();
 
-            /** Destroys the singleton instance of DeviceList if it exists
-             */
-            static void DestroyInstance();
+                /** Destroys the singleton instance of DeviceList if it exists
+                 */
+                static void DestroyInstance();
 
-        protected:
-            DeviceList();
+            protected:
+                DeviceList();
 
-        private:
-            // Private copy constructor and copy assignment operator ensures this class cannot be copied
-            DeviceList( const DeviceList& );
-            const DeviceList& operator=( const DeviceList& );
+            private:
+                // Private copy constructor and copy assignment operator ensures this class cannot be copied
+                DeviceList( const DeviceList& );
+                const DeviceList& operator=( const DeviceList& );
 
-        private:
-            // Singleton instance pointer
-            static DeviceList* _instance;
-    };
-
+            private:
+                // Singleton instance pointer
+                static DeviceList* _instance;
+        };
+    }
 }
 
 #endif // SOUND_INTERFACE_DEVICELIST_HPP

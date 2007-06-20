@@ -24,32 +24,39 @@
 #include "stringarray.hpp"
 #include "../templates.hpp"
 
-static inline void _Append(const std::string& source, char*& target)
+namespace Sound
 {
-    // Allocate memory
-    target = new char[source.length() + 1];
+    namespace Interface
+    {
+        static inline void _Append(const std::string& source, char*& target)
+        {
+            // Allocate memory
+            target = new char[source.length() + 1];
 
-    // Mark the end of the C-string
-    target[source.length()] = 0;
+            // Mark the end of the C-string
+            target[source.length()] = 0;
 
-    // Insert data
-    memcpy(target, source.c_str(), source.length());
-}
+            // Insert data
+            memcpy(target, source.c_str(), source.length());
+        }
 
-interfaceUtil::CArray::CArray(const std::vector<std::string>& _arr) : _cArray(new const char*[_arr.size() + 1])
-{
-    // Mark the end of the array
-    _cArray[_arr.size()] = NULL;
+        StringArray::StringArray(const std::vector<std::string>& _arr) :
+            _cArray(new const char*[_arr.size() + 1])
+        {
+            // Mark the end of the array
+            _cArray[_arr.size()] = NULL;
 
-    for_each2(_arr.begin(), _arr.end(), const_cast<char**>(_cArray), const_cast<char**>(&(_cArray[_arr.size()])), _Append);
-}
+            for_each2(_arr.begin(), _arr.end(), const_cast<char**>(_cArray), const_cast<char**>(&(_cArray[_arr.size()])), _Append);
+        }
 
-interfaceUtil::CArray::~CArray()
-{
-    // Run through list and delete its contents (i.e. free memory of its contents)
-    for (const char** iter = _cArray; *iter != NULL; ++iter)
-        delete [] *iter;
+        StringArray::~StringArray()
+        {
+            // Run through list and delete its contents (i.e. free memory of its contents)
+            for (const char** iter = _cArray; *iter != NULL; ++iter)
+                delete [] *iter;
 
-    delete [] _cArray;
-    _cArray = 0;
+            delete [] _cArray;
+            _cArray = 0;
+        }
+    }
 }

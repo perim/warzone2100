@@ -23,40 +23,52 @@
 
 #include "track.hpp"
 
-soundTrack::soundTrack(const soundDataBuffer& data) : soundBuffer(data), _loop(false), _volume(0), _lastFinished(0)
+namespace Sound
 {
-}
+    Track::Track(const DataBuffer& data) :
+        Buffer(data),
+        _loop(false),
+        _volume(0),
+        _lastFinished(0)
+    {
+    }
 
-soundTrack::soundTrack(const soundDataBuffer& data, const std::string& fName) : soundBuffer(data), _loop(false), _volume(0), _lastFinished(0), _fileName(fName)
-{
-}
+    Track::Track(const DataBuffer& data, const std::string& fName) :
+        Buffer(data),
+        _loop(false),
+        _volume(0),
+        _lastFinished(0),
+        _fileName(fName)
+    {
+    }
 
-void soundTrack::setLoop(const bool& bLoop)
-{
-    _loop = bLoop;
-}
+    void Track::setLoop(const bool& bLoop)
+    {
+        _loop = bLoop;
+    }
 
-bool soundTrack::loop() const
-{
-    return _loop;
-}
+    bool Track::loop() const
+    {
+        return _loop;
+    }
 
-void soundTrack::setVolume(const float& vol)
-{
-    _volume = vol;
-}
+    void Track::setVolume(const float& vol)
+    {
+        _volume = vol;
+    }
 
-float soundTrack::volume() const
-{
-    return _volume;
-}
+    float Track::volume() const
+    {
+        return _volume;
+    }
 
-void soundTrack::setFilename(const std::string& fName)
-{
-    _fileName = fName;
-}
+    void Track::setFilename(const std::string& fName)
+    {
+        _fileName = fName;
+    }
 
-std::string soundTrack::fileName() const
-{
-    return _fileName;
+    std::string Track::fileName() const
+    {
+        return _fileName;
+    }
 }

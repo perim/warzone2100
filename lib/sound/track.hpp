@@ -27,26 +27,29 @@
 #include <string>
 #include "openal/buffer.hpp"
 
-class soundTrack : public OpenAL::soundBuffer
+namespace Sound
 {
-    public:
-        soundTrack(const soundDataBuffer& data);
-        soundTrack(const soundDataBuffer& data, const std::string& fName);
+    class Track : public OpenAL::Buffer
+    {
+        public:
+            Track(const DataBuffer& data);
+            Track(const DataBuffer& data, const std::string& fName);
 
-        void setLoop(const bool& bLoop);
-        bool loop() const;
+            void setLoop(const bool& bLoop);
+            bool loop() const;
 
-        void setVolume(const float& vol);
-        float volume() const;
+            void setVolume(const float& vol);
+            float volume() const;
 
-        void setFilename(const std::string& fName);
-        std::string fileName() const;
+            void setFilename(const std::string& fName);
+            std::string fileName() const;
 
-    private:
-        bool         _loop;
-        float        _volume;
-        unsigned int _lastFinished; // timeframe this track last finished playing in miliseconds
-        std::string  _fileName;
-};
+        private:
+            bool         _loop;
+            float        _volume;
+            unsigned int _lastFinished; // timeframe this track last finished playing in miliseconds
+            std::string  _fileName;
+    };
+}
 
 #endif // SOUND_TRACK_HPP

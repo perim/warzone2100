@@ -509,68 +509,71 @@ static const boost::array<AUDIO_ID_MAP, ID_MAX_SOUND> asAudioID =
 sndTrackID audio_GetIDFromStr(const char* fileName)
 {
     // Lookup an ID number for the given fileName
-    return AudioIDmap::Instance().GetAvailableID(fileName);
+    return Sound::AudioIDmap::Instance().GetAvailableID(fileName);
 }
 
 /***************************************************************************/
 
-// Initialize (static) singleton pointer to zero
-AudioIDmap* AudioIDmap::_instance = 0;
-
-AudioIDmap::AudioIDmap() :
-    _map(
-        pair_iterator<boost::array<AUDIO_ID_MAP, ID_MAX_SOUND>::const_iterator>(asAudioID.begin()),
-        pair_iterator<boost::array<AUDIO_ID_MAP, ID_MAX_SOUND>::const_iterator>(asAudioID.end())),
-    _nextIDNumber(ID_SOUND_NEXT)
+namespace Sound
 {
-}
+    // Initialize (static) singleton pointer to zero
+    AudioIDmap* AudioIDmap::_instance = 0;
 
-sndTrackID AudioIDmap::GetAvailableID(const std::string& fileName)
-{
-    sndTrackID idNum = GetID(fileName);
-
-    if (idNum != 0)
-        return idNum;
-
-    return GetUniqueID(fileName);
-}
-
-sndTrackID AudioIDmap::GetID(const std::string& fileName)
-{
-    // Lookup an ID number for the given fileName
-    std::map<std::string, sndTrackID>::const_iterator IDpair = _map.find(fileName);
-
-    // If an ID number was found for the fileName, return it
-    if (IDpair != _map.end())
+    AudioIDmap::AudioIDmap() :
+        _map(
+            pair_iterator<boost::array<AUDIO_ID_MAP, ID_MAX_SOUND>::const_iterator>(asAudioID.begin()),
+            pair_iterator<boost::array<AUDIO_ID_MAP, ID_MAX_SOUND>::const_iterator>(asAudioID.end())),
+        _nextIDNumber(ID_SOUND_NEXT)
     {
-        return IDpair->second;
     }
 
-    return 0;
-}
-
-sndTrackID AudioIDmap::GetUniqueID(const std::string& fileName)
-{
-    _map.insert(std::pair<std::string, sndTrackID>(fileName, _nextIDNumber));
-    return _nextIDNumber++;
-}
-
-// Singleton functions for AudioIDmap
-AudioIDmap& AudioIDmap::Instance()
-{
-    if (_instance == 0)
+    sndTrackID AudioIDmap::GetAvailableID(const std::string& fileName)
     {
-        _instance = new AudioIDmap;
+        sndTrackID idNum = GetID(fileName);
+
+        if (idNum != 0)
+            return idNum;
+
+        return GetUniqueID(fileName);
     }
 
-    return *_instance;
-}
-
-void AudioIDmap::DestroyInstance()
-{
-    if (_instance)
+    sndTrackID AudioIDmap::GetID(const std::string& fileName)
     {
-        delete _instance;
-        _instance = 0;
+        // Lookup an ID number for the given fileName
+        std::map<std::string, sndTrackID>::const_iterator IDpair = _map.find(fileName);
+
+        // If an ID number was found for the fileName, return it
+        if (IDpair != _map.end())
+        {
+            return IDpair->second;
+        }
+
+        return 0;
+    }
+
+    sndTrackID AudioIDmap::GetUniqueID(const std::string& fileName)
+    {
+        _map.insert(std::pair<std::string, sndTrackID>(fileName, _nextIDNumber));
+        return _nextIDNumber++;
+    }
+
+    // Singleton functions for AudioIDmap
+    AudioIDmap& AudioIDmap::Instance()
+    {
+        if (_instance == 0)
+        {
+            _instance = new AudioIDmap;
+        }
+
+        return *_instance;
+    }
+
+    void AudioIDmap::DestroyInstance()
+    {
+        if (_instance)
+        {
+            delete _instance;
+            _instance = 0;
+        }
     }
 }

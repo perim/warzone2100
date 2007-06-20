@@ -26,42 +26,45 @@
 
 #include <vector>
 
-class soundDataBuffer : public std::vector<char>
+namespace Sound
 {
-    public:
-        /** Constructor
-         *  \param size the initial size of the buffer (can be changed using vector's member functions)
-         *  \param bits sample size in bits
-         *  \param channels the amount of channels contained
-         *  \param sampleRate the frequency of samples per second
-         */
-        soundDataBuffer(const std::size_t& size, const unsigned int& bits, const unsigned int& channels, const unsigned int& sampleRate);
+    class DataBuffer : public std::vector<char>
+    {
+        public:
+            /** Constructor
+             *  \param size the initial size of the buffer (can be changed using vector's member functions)
+             *  \param bits sample size in bits
+             *  \param channels the amount of channels contained
+             *  \param sampleRate the frequency of samples per second
+             */
+            DataBuffer(const std::size_t& size, const unsigned int& bits, const unsigned int& channels, const unsigned int& sampleRate);
 
-        /** Conversion operator
-         *  Enables this class to be used directly as if it where an array of chars: char*
-         */
-        operator const char* () const;
+            /** Conversion operator
+             *  Enables this class to be used directly as if it where an array of chars: char*
+             */
+            operator const char* () const;
 
-        /** \return the amount of bits per sample
-         */
-        unsigned int bitsPerSample() const;
+            /** \return the amount of bits per sample
+             */
+            unsigned int bitsPerSample() const;
 
-        /** \return the amount of bytes per sample
-         */
-        unsigned int bytesPerSample() const;
+            /** \return the amount of bytes per sample
+             */
+            unsigned int bytesPerSample() const;
 
-        /** \return the amount of channels contained
-         */
-        unsigned int channelCount() const;
+            /** \return the amount of channels contained
+             */
+            unsigned int channelCount() const;
 
-        /** \return the sample frequency
-         */
-        unsigned int frequency() const;
+            /** \return the sample frequency
+             */
+            unsigned int frequency() const;
 
-    private:
-        unsigned int _bitsPerSample;
-        unsigned int _channels;
-        unsigned int _frequency;
-};
+        private:
+            unsigned int _bitsPerSample;
+            unsigned int _channels;
+            unsigned int _frequency;
+    };
+}
 
 #endif // SOUND_GENERAL_SOUNDDATABUFFER_HPP

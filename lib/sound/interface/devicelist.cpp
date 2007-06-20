@@ -23,33 +23,37 @@
 
 #include "devicelist.hpp"
 
-namespace interfaceUtil
+namespace Sound
 {
-    // Initialize singleton pointer to zero
-    DeviceList* DeviceList::_instance = 0;
-
-    // Device enumeration stuff
-    DeviceList::DeviceList() : soundDeviceList(), CArray(std::vector<std::string>(*this))
+    namespace Interface
     {
-    }
+        // Initialize singleton pointer to zero
+        DeviceList* DeviceList::_instance = 0;
 
-    const DeviceList& DeviceList::Instance()
-    {
-        if (_instance == 0)
+        // Device enumeration stuff
+        DeviceList::DeviceList() :
+            StringArray(OpenAL::DeviceList::Instance())
         {
-            _instance = new DeviceList;
         }
 
-        return *_instance;
-    }
-
-    void DeviceList::DestroyInstance()
-    {
-        if (_instance)
+        const DeviceList& DeviceList::Instance()
         {
-            delete _instance;
-            _instance = 0;
-        }
-    }
+            if (_instance == 0)
+            {
+                _instance = new DeviceList;
+            }
 
+            return *_instance;
+        }
+
+        void DeviceList::DestroyInstance()
+        {
+            if (_instance)
+            {
+                delete _instance;
+                _instance = 0;
+            }
+        }
+
+    }
 }

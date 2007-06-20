@@ -30,9 +30,12 @@ typedef unsigned int sndTrackID;
 
 #if defined(__cplusplus)
 #include <boost/shared_ptr.hpp>
-class soundTrack;
+namespace Sound
+{
+    class Track;
+}
 
-typedef boost::shared_ptr<soundTrack>* TrackHandle;
+typedef boost::shared_ptr<Sound::Track>* TrackHandle;
 
 #else
 typedef void* TrackHandle;

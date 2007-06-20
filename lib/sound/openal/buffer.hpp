@@ -30,22 +30,22 @@
 namespace OpenAL
 {
     // Necessary to be able to declare this class a friend of soundBuffer
-    class soundSource;
+    class Source;
 
-    class soundBuffer
+    class Buffer
     {
         public:
 
             /** Creates an OpenAL buffer
              */
-            soundBuffer();
-            soundBuffer(const soundDataBuffer& data);
-            virtual ~soundBuffer();
+            Buffer();
+            Buffer(const Sound::DataBuffer& data);
+            virtual ~Buffer();
 
             /** Fills the buffer with the provided data
              *  \param data a buffer containing the sounddata
              */
-            void bufferData(const soundDataBuffer& data);
+            void bufferData(const Sound::DataBuffer& data);
 
             /** Retrieves the duration of this buffer
              *  \return the duration of the sounddata in this buffer, expressed in seconds
@@ -54,8 +54,8 @@ namespace OpenAL
 
         private:
             // Private copy constructor and copy assignment operator ensures this class cannot be copied
-            soundBuffer( const soundBuffer& );
-            const soundBuffer& operator=( const soundBuffer& );
+            Buffer( const Buffer& );
+            const Buffer& operator=( const Buffer& );
 
             /** Handles the creation of the buffer
              *  Makes sure an OpenAL buffer is created and related errors are dealt with
@@ -66,8 +66,8 @@ namespace OpenAL
             // Internal identifier towards OpenAL
             ALuint buffer;
 
-            // Needed so that soundSource can attach (or queue/unqueue) soundBuffer's OpenAL buffer to its OpenAL source
-            friend class soundSource;
+            // Needed so that Source can attach (or queue/unqueue) Buffer's OpenAL buffer to its OpenAL source
+            friend class Source;
 
         protected:
             float _duration; // duration of sounddata in this buffer in seconds

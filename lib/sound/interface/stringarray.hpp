@@ -27,24 +27,26 @@
 #include <vector>
 #include <string>
 
-namespace interfaceUtil
+namespace Sound
 {
-
-    class CArray
+    namespace Interface
     {
-        public:
-            CArray(const std::vector<std::string>& _arr);
-            ~CArray();
 
-            inline operator const char**() const
-            {
-                return _cArray;
-            }
+        class StringArray
+        {
+            public:
+                StringArray(const std::vector<std::string>& _arr);
+                ~StringArray();
 
-        private:
-            const char** _cArray;
-    };
+                inline operator const char**() const
+                {
+                    return _cArray;
+                }
 
+            private:
+                const char** _cArray;
+        };
+    }
 }
 
 #endif // SOUND_INTERFACE_STRINGARRAY_HPP

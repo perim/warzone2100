@@ -29,62 +29,65 @@
 #include <boost/smart_ptr.hpp>
 #include "decoding.hpp"
 
-class soundStream : public OpenAL::soundSource
+namespace Sound
 {
-    public:
+    class Stream : public OpenAL::Source
+    {
+        public:
 
-        /** Creates and sets up all resources required for a sound stream
-         *  \param PCM class to provide decoded sound data on request
-         */
-        soundStream(boost::shared_ptr<OpenAL::soundContext> sndContext, boost::shared_ptr<soundDecoding> PCM);
-        ~soundStream();
+            /** Creates and sets up all resources required for a sound stream
+             *  \param PCM class to provide decoded sound data on request
+             */
+            Stream(boost::shared_ptr<OpenAL::Context> sndContext, boost::shared_ptr<Decoding> PCM);
+            ~Stream();
 
-        /** keep all required buffers filled
-         *  needs to be called more often if buffer size is smaller, and less often if larger
-         *  \return true if there is still enough data left to fill all buffers, false otherwise
-         */
-        bool update();
+            /** keep all required buffers filled
+             *  needs to be called more often if buffer size is smaller, and less often if larger
+             *  \return true if there is still enough data left to fill all buffers, false otherwise
+             */
+            bool update();
 
-        /** determines wether the stream is currently playing
-         *  \return true if the stream is playing, false otherwise
-         */
-        inline bool isPlaying()
-        {
-            return (soundSource::getState() == soundSource::playing);
-        }
+            /** determines wether the stream is currently playing
+             *  \return true if the stream is playing, false otherwise
+             */
+            inline bool isPlaying()
+            {
+                return (Source::getState() == Source::playing);
+            }
 
-        /** initiates playing of the stream
-         *  starts playing the stream or continues it
-         *  \return true on succes, false otherwise
-         */
-        virtual bool play();
+            /** initiates playing of the stream
+             *  starts playing the stream or continues it
+             *  \return true on succes, false otherwise
+             */
+            virtual bool play();
 
-        /** stops playing of the stream and resets the stream back to the beginning
-         */
-        virtual void stop();
+            /** stops playing of the stream and resets the stream back to the beginning
+             */
+            virtual void stop();
 
-        /** sets the buffersize for the streaming buffers
-         *  \param size size of the buffers in bytes, minimum is 4096, which is still not recommended, 4096 is very likely to introduce clipping
-         */
-        void setBufferSize(unsigned int size);
+            /** sets the buffersize for the streaming buffers
+             *  \param size size of the buffers in bytes, minimum is 4096, which is still not recommended, 4096 is very likely to introduce clipping
+             */
+            void setBufferSize(unsigned int size);
 
-        /** returns the currently used buffer size
-         *  \return the currently used buffer size in bytes
-         */
-        unsigned int getBufferSize();
+            /** returns the currently used buffer size
+             *  \return the currently used buffer size in bytes
+             */
+            unsigned int getBufferSize();
 
-    private:
+        private:
 
-        /** fill buffer with the next data
-         *  \param buffer buffer to fill
-         *  \return       true if the buffer is filled, false if there was no data left to fill a buffer with
-         */
-        bool stream(boost::shared_ptr<OpenAL::soundBuffer> buffer);
+            /** fill buffer with the next data
+             *  \param buffer buffer to fill
+             *  \return       true if the buffer is filled, false if there was no data left to fill a buffer with
+             */
+            bool stream(boost::shared_ptr<OpenAL::Buffer> buffer);
 
-        boost::shared_ptr<soundDecoding> decoder;
+            boost::shared_ptr<Decoding> decoder;
 
-        // Internal state
-        unsigned int bufferSize;    // size of the buffers in bytes/octets, default is 16384 bytes or 16kB
-};
+            // Internal state
+            unsigned int bufferSize;    // size of the buffers in bytes/octets, default is 16384 bytes or 16kB
+    };
+}
 
 #endif // SOUND_STREAM_HPP

@@ -23,38 +23,41 @@
 
 #include "databuffer.hpp"
 
-soundDataBuffer::soundDataBuffer(const std::size_t& size,
-                                 const unsigned int& bits,
-                                 const unsigned int& channels,
-                                 const unsigned int& sampleRate)
-                               : std::vector<char>(size),
-                                 _bitsPerSample(bits),
-                                 _channels(channels),
-                                 _frequency(sampleRate)
+namespace Sound
 {
-}
+    DataBuffer::DataBuffer(const std::size_t& size,
+                           const unsigned int& bits,
+                           const unsigned int& channels,
+                           const unsigned int& sampleRate) :
+        std::vector<char>(size),
+        _bitsPerSample(bits),
+        _channels(channels),
+        _frequency(sampleRate)
+    {
+    }
 
-soundDataBuffer::operator const char* () const
-{
-    return &*begin();
-}
+    DataBuffer::operator const char* () const
+    {
+        return &*begin();
+    }
 
-unsigned int soundDataBuffer::bitsPerSample() const
-{
-    return _bitsPerSample;
-}
+    unsigned int DataBuffer::bitsPerSample() const
+    {
+        return _bitsPerSample;
+    }
 
-unsigned int soundDataBuffer::bytesPerSample() const
-{
-    return _bitsPerSample / 8 + ((_bitsPerSample % 8) ? 1 : 0);
-}
+    unsigned int DataBuffer::bytesPerSample() const
+    {
+        return _bitsPerSample / 8 + ((_bitsPerSample % 8) ? 1 : 0);
+    }
 
-unsigned int soundDataBuffer::channelCount() const
-{
-    return _channels;
-}
+    unsigned int DataBuffer::channelCount() const
+    {
+        return _channels;
+    }
 
-unsigned int soundDataBuffer::frequency() const
-{
-    return _frequency;
+    unsigned int DataBuffer::frequency() const
+    {
+        return _frequency;
+    }
 }

@@ -23,21 +23,24 @@
 
 #include "buffer.hpp"
 #include <string>
+#include <stdexcept>
 
 namespace OpenAL
 {
-    soundBuffer::soundBuffer() : _duration(0)
+    Buffer::Buffer() :
+        _duration(0)
     {
         createBuffer();
     }
 
-    soundBuffer::soundBuffer(const soundDataBuffer& data) : _duration(0)
+    Buffer::Buffer(const Sound::DataBuffer& data) :
+        _duration(0)
     {
         createBuffer();
         bufferData(data);
     }
 
-    inline void soundBuffer::createBuffer()
+    inline void Buffer::createBuffer()
     {
         // Clear error state
         alGetError();
@@ -45,15 +48,15 @@ namespace OpenAL
         alGenBuffers(1, &buffer);
 
         if (alGetError() != AL_NO_ERROR)
-            throw std::string("soundBuffer: alGenBuffers error, possibly out of memory");
+            throw std::runtime_error("OpenAL::Buffer.createBuffer: alGenBuffers error, possibly out of memory");
     }
 
-    soundBuffer::~soundBuffer()
+    Buffer::~Buffer()
     {
         alDeleteBuffers(1, &buffer);
     }
 
-    void soundBuffer::bufferData(const soundDataBuffer& data)
+    void Buffer::bufferData(const Sound::DataBuffer& data)
     {
         // Clear error state
         alGetError();
@@ -63,14 +66,14 @@ namespace OpenAL
         switch (alGetError())
         {
             case AL_INVALID_VALUE:
-                throw std::string("soundBuffer: alBufferData error: invalid size parameter, buffer is in use or NULL pointer passed as data");
+                throw std::runtime_error("OpenAL::Buffer.bufferData: alBufferData error: invalid size parameter, buffer is in use or NULL pointer passed as data");
         }
 
         unsigned int samplecount = data.size() / data.channelCount() / data.bytesPerSample();
         _duration = samplecount / data.frequency();
     }
 
-    inline float soundBuffer::duration() const
+    inline float Buffer::duration() const
     {
         return _duration;
     }

@@ -61,19 +61,19 @@ extern "C" {
 static bool Initialized = false;
 
 // OpenAL device specific stuff
-static boost::shared_ptr<OpenAL::soundDevice> sndDevice;
+static boost::shared_ptr<OpenAL::Device> sndDevice;
 
 // OpenAL rendering contexts (can be rendered in parallel)
-static boost::shared_ptr<OpenAL::soundContext> sndContext;
+static boost::shared_ptr<OpenAL::Context> sndContext;
 
 // Some containers of exported objects (through ID numbers)
-static std::map<sndStreamID, boost::shared_ptr<soundStream> > sndStreams;
-static std::map<sndTrackID, boost::weak_ptr<soundTrack> > sndTracks;
+static std::map<sndStreamID, boost::shared_ptr<Sound::Stream> > sndStreams;
+static std::map<sndTrackID, boost::weak_ptr<Sound::Track> > sndTracks;
 
-static std::list<boost::shared_ptr<soundTrack> > resourceTracks;
+static std::list<boost::shared_ptr<Sound::Track> > resourceTracks;
 
 // Makes sure sound sources are kept alive until they're not needed anymore
-static std::list<boost::shared_ptr<OpenAL::soundSource> > sndSamples;
+static std::list<boost::shared_ptr<OpenAL::Source> > sndSamples;
 
 // The ID numbers
 static sndStreamID nextStreamID = 0;
@@ -91,12 +91,12 @@ BOOL sound_InitLibraryWithDevice(unsigned int deviceNum)
     try
     {
         // Open device (default dev (0) usually is "Generic Hardware")
-        sndDevice = boost::shared_ptr<OpenAL::soundDevice>(new OpenAL::soundDevice(interfaceUtil::DeviceList::Instance().at(deviceNum)));
+        sndDevice = boost::shared_ptr<OpenAL::Device>(new OpenAL::Device(OpenAL::DeviceList::Instance().at(deviceNum)));
 
-        sndContext = boost::shared_ptr<OpenAL::soundContext>(new OpenAL::soundContext(sndDevice));
+        sndContext = boost::shared_ptr<OpenAL::Context>(new OpenAL::Context(sndDevice));
 
         // Always clear this list to make sure we're not using memory only necessary once
-        interfaceUtil::DeviceList::DestroyInstance();
+        OpenAL::DeviceList::DestroyInstance();
 
         Initialized = true;
     }
@@ -126,13 +126,14 @@ void sound_ShutdownLibrary()
     sndContext.reset();
     sndDevice.reset();
 
-    interfaceUtil::DeviceList::DestroyInstance();
-    AudioIDmap::DestroyInstance();
+    OpenAL::DeviceList::DestroyInstance();
+    Sound::Interface::DeviceList::DestroyInstance();
+    Sound::AudioIDmap::DestroyInstance();
 }
 
 const char** sound_DeviceList()
 {
-    return interfaceUtil::DeviceList::Instance();
+    return Sound::Interface::DeviceList::Instance();
 }
 
 template <class TypeID, class TypeObject>
@@ -173,13 +174,13 @@ sndStreamID sound_Create2DStream(const char* fileName)
         boost::shared_ptr<PhysFS::ifstream> file(new PhysFS::ifstream(fileName));
 
         // Construct decoder object
-        boost::shared_ptr<soundDecoding> decoder(new soundDecoding(file, false));
+        boost::shared_ptr<Sound::Decoding> decoder(new Sound::Decoding(file, false));
 
         // Construct streaming object
-        boost::shared_ptr<soundStream> stream(new soundStream(sndContext, decoder));
+        boost::shared_ptr<Sound::Stream> stream(new Sound::Stream(sndContext, decoder));
 
         // Insert the stream into the container for later reference/usage
-        sndStreams.insert(std::pair<sndStreamID, boost::shared_ptr<soundStream> >(nextStreamID, stream));
+        sndStreams.insert(std::pair<sndStreamID, boost::shared_ptr<Sound::Stream> >(nextStreamID, stream));
 
         // First return current stream ID plus 1 (because we reserve 0 for an invalid/non-existent stream)
         return nextStreamID++ + 1;
@@ -264,19 +265,19 @@ BOOL sound_2DStreamIsPlaying(sndStreamID stream)
 
 void sound_Update(void)
 {
-    for (std::map<sndStreamID, boost::shared_ptr<soundStream> >::iterator stream = sndStreams.begin(); stream != sndStreams.end(); ++stream)
+    for (std::map<sndStreamID, boost::shared_ptr<Sound::Stream> >::iterator stream = sndStreams.begin(); stream != sndStreams.end(); ++stream)
     {
         stream->second->update();
     }
 
     // We're not using a for loop here because we need to have control over the iterator's increment operation.
     // This is because as soon as we erase an iterator it becomes invalid that includes its increment operator
-    std::list<boost::shared_ptr<OpenAL::soundSource> >::iterator sample = sndSamples.begin();
+    std::list<boost::shared_ptr<OpenAL::Source> >::iterator sample = sndSamples.begin();
     while (sample != sndSamples.end())
     {
-        if ((*sample)->getState() == OpenAL::soundSource::stopped)
+        if ((*sample)->getState() == OpenAL::Source::stopped)
         {
-            std::list<boost::shared_ptr<OpenAL::soundSource> >::iterator tmp = sample;
+            std::list<boost::shared_ptr<OpenAL::Source> >::iterator tmp = sample;
             ++sample;
             sndSamples.erase(tmp);
         }
@@ -291,16 +292,16 @@ TrackHandle sound_LoadTrackFromFile(const char* fileName)
     boost::shared_ptr<PhysFS::ifstream> file(new PhysFS::ifstream(fileName));
 
     // Construct decoder object
-    soundDecoding decoder(file, true);
+    Sound::Decoding decoder(file, true);
 
     // Decode the track
-    soundDataBuffer buffer(decoder.decode());
+    Sound::DataBuffer buffer(decoder.decode());
 
     if (buffer.empty())
         return 0;
 
     // Construct track/OpenAL buffer object and insert the buffer into the OpenAL buffer
-    boost::shared_ptr<soundTrack> track(new soundTrack(buffer, GetLastResourceFilename()));
+    boost::shared_ptr<Sound::Track> track(new Sound::Track(buffer, GetLastResourceFilename()));
 
     // Insert the track into the container for later reference/usage
     resourceTracks.push_back(track);
@@ -324,7 +325,7 @@ sndTrackID sound_SetTrackVals(const char* fileName, BOOL loop, unsigned int volu
         return 0;
     }
 
-    sndTrackID trackID = AudioIDmap::Instance().GetAvailableID(fileName);
+    sndTrackID trackID = Sound::AudioIDmap::Instance().GetAvailableID(fileName);
     if (!trackID)
     {
         debug(LOG_NEVER, "audio_SetTrackVals: couldn't get spare track ID for %s\n", fileName);
@@ -338,12 +339,12 @@ sndTrackID sound_SetTrackVals(const char* fileName, BOOL loop, unsigned int volu
         return 0;
     }
 
-    boost::shared_ptr<soundTrack> track(*handle);
+    boost::shared_ptr<Sound::Track> track(*handle);
 
     track->setLoop(loop == TRUE);
     track->setVolume(float(volume) / 100);
 
-    sndTracks.insert(std::pair<sndTrackID, boost::weak_ptr<soundTrack> >(trackID, boost::weak_ptr<soundTrack>(track)));
+    sndTracks.insert(std::pair<sndTrackID, boost::weak_ptr<Sound::Track> >(trackID, boost::weak_ptr<Sound::Track>(track)));
 
     return trackID;
 }
@@ -352,7 +353,7 @@ void sound_PlayTrack(sndTrackID track)
 {
     if (!Initialized/* || !validID(track, nextTrackID, sndTracks) */) return;
 
-    boost::shared_ptr<OpenAL::soundSource> source(new OpenAL::soundSource(sndContext, sndTracks[track].lock()));
+    boost::shared_ptr<OpenAL::Source> source(new OpenAL::Source(sndContext, sndTracks[track].lock()));
 
     source->play();
 

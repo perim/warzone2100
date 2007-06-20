@@ -24,7 +24,10 @@
 #ifndef SOUND_CONSTANTS_HPP
 #define SOUND_CONSTANTS_HPP
 
-// Default buffer size used for OpenAL buffers
-extern const unsigned int OpenAL_BufferSize;
+namespace Sound
+{
+    // Default buffer size used for OpenAL buffers
+    extern const unsigned int OpenAL_BufferSize;
+}
 
 #endif // SOUND_CONSTANTS_HPP
