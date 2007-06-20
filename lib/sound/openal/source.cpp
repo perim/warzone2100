@@ -25,21 +25,28 @@
 #include "buffer.hpp"
 #include <string>
 #include "../templates.hpp"
+#include <stdexcept>
 
 namespace OpenAL
 {
-    soundSource::soundSource(boost::shared_ptr<soundContext> sndContext) : context(sndContext), bIs2D(false), bIsStream(true)
+    Source::Source(boost::shared_ptr<Context> sndContext) :
+        context(sndContext),
+        bIs2D(false),
+        bIsStream(true)
     {
         createSource();
     }
 
-    soundSource::soundSource(boost::shared_ptr<soundContext> sndContext, boost::shared_ptr<soundBuffer> sndBuffer) : context(sndContext), bIs2D(false), bIsStream(false)
+    Source::Source(boost::shared_ptr<Context> sndContext, boost::shared_ptr<Buffer> sndBuffer) :
+        context(sndContext),
+        bIs2D(false),
+        bIsStream(false)
     {
         createSource();
         setBuffer(sndBuffer);
     }
 
-    inline void soundSource::createSource()
+    inline void Source::createSource()
     {
         context->makeCurrent();
 
@@ -52,20 +59,20 @@ namespace OpenAL
         {
             switch (alErrNo)
             {
-            case AL_OUT_OF_MEMORY:
-                throw std::string("alGenSources(): Out of memory");
-            case AL_INVALID_VALUE:
-                throw std::string("alGenSources(): not enough non-memory resources, or invalid pointer");
-            case AL_INVALID_OPERATION:
-                throw std::string("alGenSources(): no context available to create sources in");
+                case AL_OUT_OF_MEMORY:
+                    throw std::runtime_error("OpenAL::Source: alGenSources(): Out of memory");
+                case AL_INVALID_VALUE:
+                    throw std::runtime_error("OpenAL::Source: alGenSources(): not enough non-memory resources, or invalid pointer");
+                case AL_INVALID_OPERATION:
+                    throw std::runtime_error("OpenAL::Source: alGenSources(): no context available to create sources in");
             }
         }
     }
 
-    void soundSource::setBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
+    void Source::setBuffer(boost::shared_ptr<Buffer> sndBuffer)
     {
         if (bIsStream)
-            throw std::string("soundSource: attempt to single-set buffer on stream source.");
+            throw std::runtime_error("OpenAL::Source: attempt to single-set buffer on stream source.");
 
         context->makeCurrent();
 
@@ -79,24 +86,24 @@ namespace OpenAL
         {
             switch (alErrNo)
             {
-            case AL_OUT_OF_MEMORY:
-                throw std::string("alSource(): Out of memory");
-            case AL_INVALID_VALUE:
-                throw std::string("alSource(): not enough non-memory resources, or invalid pointer");
+                case AL_OUT_OF_MEMORY:
+                    throw std::runtime_error("OpenAL::Source.setBuffer: alSource(): Out of memory");
+                case AL_INVALID_VALUE:
+                    throw std::runtime_error("OpenAL::Source.setBuffer: alSource(): not enough non-memory resources, or invalid pointer");
             }
         }
 
         buffer = sndBuffer;
     }
 
-    soundSource::~soundSource()
+    Source::~Source()
     {
         context->makeCurrent();
 
         alDeleteSources(1, &source);    // Should only fail if alGenSources() failed
     }
 
-    soundSource::sourceState soundSource::getState()
+    Source::sourceState Source::getState()
     {
         context->makeCurrent();
 
@@ -108,7 +115,7 @@ namespace OpenAL
 
         ALenum error = alGetError();
         if (error != AL_NO_ERROR)
-            throw std::string("alGetSourcei error: " + to_string(error));
+            throw std::runtime_error("OpenAL::Source.getState: alGetSourcei error: " + to_string(error));
 
         switch (state)
         {
@@ -125,10 +132,10 @@ namespace OpenAL
         return undefined;
     }
 
-    void soundSource::queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer)
+    void Source::queueBuffer(boost::shared_ptr<Buffer> sndBuffer)
     {
         if (!bIsStream)
-            throw std::string("soundSource: attempt to queue buffer on non-stream source");
+            throw std::runtime_error("OpenAL::Source.queueBuffer: attempt to queue buffer on non-stream source");
 
         context->makeCurrent();
 
@@ -143,19 +150,19 @@ namespace OpenAL
             switch (alErrNo)
             {
                 case AL_INVALID_VALUE:
-                    throw std::string("alSourceQueueBuffers(): OpenAL: specified buffer is invalid or does not exist.");
+                    throw std::runtime_error("OpenAL::Source.queueBuffer: alSourceQueueBuffers(): OpenAL: specified buffer is invalid or does not exist.");
                 case AL_INVALID_OPERATION:
-                    throw std::string("alSourceQueueBuffers(): buffer format mismatched with the rest of queue (i.e. mono8/mono16/stereo8/stereo16 or bad samplerate)");
+                    throw std::runtime_error("OpenAL::Source.queueBuffer: alSourceQueueBuffers(): buffer format mismatched with the rest of queue (i.e. mono8/mono16/stereo8/stereo16 or bad samplerate)");
             }
         }
 
         buffers.push_back(sndBuffer);
     }
 
-    boost::shared_ptr<soundBuffer> soundSource::unqueueBuffer()
+    boost::shared_ptr<Buffer> Source::unqueueBuffer()
     {
         if (!bIsStream)
-            throw std::string("soundSource: attempt to unqueue buffer from non-stream source");
+            throw std::runtime_error("OpenAL::Source.unqueueBuffer: attempt to unqueue buffer from non-stream source");
 
         context->makeCurrent();
 
@@ -169,14 +176,14 @@ namespace OpenAL
         {
             switch (alErrNo)
             {
-            case AL_INVALID_VALUE:
-                throw std::string("alSourceUnqueueBuffers(): not enough non-memory resources, or invalid pointer");
-            default:
-                throw std::string("alSourceUnqueueBuffers(): unknown OpenAL error");
+                case AL_INVALID_VALUE:
+                    throw std::runtime_error("OpenAL::Source.unqueueBuffer: alSourceUnqueueBuffers(): not enough non-memory resources, or invalid pointer");
+                default:
+                    throw std::runtime_error("OpenAL::Source.unqueueBuffer: alSourceUnqueueBuffers(): unknown OpenAL error");
             }
         }
 
-        for (std::vector< boost::shared_ptr<soundBuffer> >::iterator i = buffers.begin(); i != buffers.end(); ++i)
+        for (std::vector< boost::shared_ptr<Buffer> >::iterator i = buffers.begin(); i != buffers.end(); ++i)
         {
             if ((*i)->buffer == bufferID)
             {
@@ -184,6 +191,6 @@ namespace OpenAL
             }
         }
 
-        throw std::string("alSourceUnqueueBuffers(): no buffers to unqueue");
+        throw std::runtime_error("OpenAL::Source.unqueueBuffer: alSourceUnqueueBuffers(): no buffers to unqueue");
     }
 }

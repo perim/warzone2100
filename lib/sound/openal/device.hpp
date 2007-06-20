@@ -31,21 +31,21 @@
 
 namespace OpenAL
 {
-    class soundDevice
+    class Device
     {
         public:
             /** Default constructor
              *  This function constructs the soundDevice class,
              *  and intializes the default sound device.
              */
-            soundDevice();
+            Device();
 
             /** Constructs by opening specified device
              *  \param deviceName the name of the device to open with OpenAL
-             *  \throw std::string object with error messsage on failure
+             *  \throw std::runtime_error object with error messsage on failure
              */
-            soundDevice(const std::string deviceName);
-            ~soundDevice();
+            Device(const std::string& deviceName);
+            ~Device();
 
             inline ALCdevice* getALCDeviceID()
             {
@@ -54,8 +54,8 @@ namespace OpenAL
 
         private:
             // Private copy constructor and copy assignment operator ensures this class cannot be copied
-            soundDevice( const soundDevice& );
-            const soundDevice& operator=( const soundDevice& );
+            Device( const Device& );
+            const Device& operator=( const Device& );
 
         private:
             // Identifier towards OpenAL

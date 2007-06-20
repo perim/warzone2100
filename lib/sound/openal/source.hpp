@@ -32,10 +32,10 @@
 
 namespace OpenAL
 {
-    // Necessary to declare pointers for soundBuffer
-    class soundBuffer;
+    // Necessary to declare pointers for Buffer
+    class Buffer;
 
-    class soundSource : public Geometry
+    class Source : public Geometry
     {
         public:
 
@@ -56,22 +56,22 @@ namespace OpenAL
              *  \param sndContext the context in which sound from this source should be rendered
              *  \param b2D wether to play as a 2D sound (without distance attenuation, doppler effect, etc.)
              */
-            soundSource(boost::shared_ptr<soundContext> sndContext);
+            Source(boost::shared_ptr<Context> sndContext);
 
             /** For the creation of a single-buffer source (mostly SFX, or other non-streaming sounds)
              *  \param sndContext the context in which sound from this source should be rendered
              *  \param sndBuffer the buffer to play from
              *  \param b2D       wether to play as a 2D sound (without distance attenuation, doppler effect, etc.)
              */
-            soundSource(boost::shared_ptr<soundContext> sndContext, boost::shared_ptr<soundBuffer> sndBuffer);
+            Source(boost::shared_ptr<Context> sndContext, boost::shared_ptr<Buffer> sndBuffer);
 
-            ~soundSource();
+            ~Source();
 
             /** Sets the source's buffer.
              *  In case of a non streaming source this function sets the buffer for the source.
-             *  \throw std::string containing error message on failure
+             *  \throw std::runtime_error containing error message on failure
              */
-            void setBuffer(boost::shared_ptr<soundBuffer> sndBuffer);
+            void setBuffer(boost::shared_ptr<Buffer> sndBuffer);
 
             /** Wether all sound routed through this source will be rendered as 2D.
              *  \return true if all routed sound is displayed 2D, false otherwise
@@ -97,12 +97,12 @@ namespace OpenAL
             /** Append a buffer to the end of the queue
              *  \param sndBuffer buffer to append to the end of the queue
              */
-            void queueBuffer(boost::shared_ptr<soundBuffer> sndBuffer);
+            void queueBuffer(boost::shared_ptr<Buffer> sndBuffer);
 
             /** Remove a finished buffer from the top of the queue
              *  \return the buffer that was unqueued
              */
-            boost::shared_ptr<soundBuffer> unqueueBuffer();
+            boost::shared_ptr<Buffer> unqueueBuffer();
 
             /** Tells OpenAL to start playing
              */
@@ -229,17 +229,17 @@ namespace OpenAL
 
         private:
             // Private copy constructor and copy assignment operator ensures this class cannot be copied
-            soundSource( const soundSource& );
-            const soundSource& operator=( const soundSource& );
+            Source( const Source& );
+            const Source& operator=( const Source& );
 
         private:
             // Identifier towards OpenAL
             ALuint source;
 
             // Internal data
-            boost::shared_ptr<soundContext> context;
-            boost::shared_ptr<soundBuffer>  buffer;
-            std::vector< boost::shared_ptr<soundBuffer> > buffers;
+            boost::shared_ptr<Context> context;
+            boost::shared_ptr<Buffer>  buffer;
+            std::vector< boost::shared_ptr<Buffer> > buffers;
 
             // Internal state
             const bool bIs2D;

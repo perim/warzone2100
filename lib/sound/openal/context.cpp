@@ -23,10 +23,13 @@
 
 #include "context.hpp"
 #include <string>
+#include <stdexcept>
 
 namespace OpenAL
 {
-    soundContext::soundContext(boost::shared_ptr<soundDevice> sndDevice) : listener(this), device(sndDevice)
+    Context::Context(boost::shared_ptr<Device> sndDevice) :
+        listener(this),
+        device(sndDevice)
     {
         alcGetError(device->getALCDeviceID());
 
@@ -38,13 +41,13 @@ namespace OpenAL
             case ALC_NO_ERROR:
                 return;
             case ALC_INVALID_VALUE:
-                throw std::string("An additional context cannot be created for this device.");
+                throw std::runtime_error("OpenAL::Context: An additional context cannot be created for this device.");
             case ALC_INVALID_DEVICE:
-                throw std::string("The specified device is not a valid output device.");
+                throw std::runtime_error("OpenAL::Context: The specified device is not a valid output device.");
         }
     }
 
-    soundContext::~soundContext()
+    Context::~Context()
     {
         if ( sndContext != NULL )
         {
@@ -54,29 +57,29 @@ namespace OpenAL
         }
     }
 
-    soundContext::soundListener::soundListener(soundContext* sndContext) : context(sndContext)
+    Context::Listener::Listener(Context* sndContext) : context(sndContext)
     {
     }
 
-    void soundContext::soundListener::setRotation(float pitch, float yaw, float roll)
-    {
-        context->makeCurrent();
-        // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
-    }
-
-    void soundContext::soundListener::setRotation(int pitch, int yaw, int roll)
+    void Context::Listener::setRotation(float pitch, float yaw, float roll)
     {
         context->makeCurrent();
         // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
     }
 
-    void soundContext::soundListener::getRotation(float& pitch, float& yaw, float& roll)
+    void Context::Listener::setRotation(int pitch, int yaw, int roll)
     {
         context->makeCurrent();
         // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
     }
 
-    void soundContext::soundListener::getRotation(int& pitch, int& yaw, int& roll)
+    void Context::Listener::getRotation(float& pitch, float& yaw, float& roll)
+    {
+        context->makeCurrent();
+        // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
+    }
+
+    void Context::Listener::getRotation(int& pitch, int& yaw, int& roll)
     {
         context->makeCurrent();
         // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors

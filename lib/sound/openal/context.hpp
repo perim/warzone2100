@@ -35,16 +35,16 @@
 
 namespace OpenAL
 {
-    class soundContext
+    class Context
     {
         public:
             /** Default constructor
-             *  This function constructs the soundBase class,
+             *  This function constructs the Context class,
              *  and optionally intializes the sound device already.
              *  \param init whether the default (system/os default) sound device should be initialized at construction.
              */
-            soundContext(boost::shared_ptr<soundDevice> sndDevice);
-            ~soundContext();
+            Context(boost::shared_ptr<Device> sndDevice);
+            ~Context();
 
 
             /** makes this soundContext current
@@ -57,10 +57,10 @@ namespace OpenAL
             }
 
         public:
-            class soundListener : public Geometry
+            class Listener : public Geometry
             {
                 public:
-                    soundListener(soundContext* sndContext);
+                    Listener(Context* sndContext);
 
                     /** Sets the position of the listener
                      *  \param x X-coordinate of listener
@@ -131,22 +131,22 @@ namespace OpenAL
                     }
 
                 private:
-                    soundContext* context;
+                    Context* context;
             };
 
-            soundListener listener;
+            Listener listener;
 
         private:
             // Private copy constructor and copy assignment operator ensures this class cannot be copied
-            soundContext( const soundContext& );
-            const soundContext& operator=( const soundContext& );
+            Context( const Context& );
+            const Context& operator=( const Context& );
 
         private:
             // Identifier towards OpenAL
             ALCcontext* sndContext;
 
             // Parent. This smart pointer is here only to keep the device alive while the context is.
-            boost::shared_ptr<soundDevice> device;
+            boost::shared_ptr<Device> device;
     };
 }
 

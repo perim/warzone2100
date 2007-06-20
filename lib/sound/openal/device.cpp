@@ -23,29 +23,25 @@
 
 #include "device.hpp"
 #include <string>
+#include <stdexcept>
 
 namespace OpenAL
 {
-    soundDevice::soundDevice()
+    Device::Device() :
+        sndDevice(alcOpenDevice(NULL))
     {
-        sndDevice = alcOpenDevice(NULL);
-
         if (sndDevice == NULL)
-            throw std::string("Unable to open audio device.");
+            throw std::runtime_error("OpenAL::Device: Unable to open audio device.");
     }
 
-    soundDevice::soundDevice(const std::string deviceName)
+    Device::Device(const std::string& deviceName) :
+        sndDevice(deviceName.empty() ? alcOpenDevice(NULL) : alcOpenDevice(deviceName.c_str()))
     {
-        if (deviceName == std::string())
-            sndDevice = alcOpenDevice(NULL);
-        else
-            sndDevice = alcOpenDevice(deviceName.c_str());
-
         if (sndDevice == NULL)
-            throw std::string("Unable to open audio device.");
+            throw std::runtime_error("OpenAL::Device: Unable to open audio device.");
     }
 
-    soundDevice::~soundDevice()
+    Device::~Device()
     {
         alcCloseDevice(sndDevice);
     }

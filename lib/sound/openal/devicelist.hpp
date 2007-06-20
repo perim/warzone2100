@@ -33,30 +33,30 @@
 namespace OpenAL
 {
     // Singleton class
-    class soundDeviceList : public std::vector<std::string>
+    class DeviceList : public std::vector<std::string>
     {
         public:
-            /** Provides a reference to an instance of soundDeviceList
-             *  If there currently exists no instance of soundDeviceList it creates one
-             *  \return a reference to a singleton instance of soundDeviceList
+            /** Provides a reference to an instance of DeviceList
+             *  If there currently exists no instance of DeviceList it creates one
+             *  \return a reference to a singleton instance of DeviceList
              */
-            static const soundDeviceList& Instance();
+            static const DeviceList& Instance();
 
-            /** Destroys the singleton instance of soundDeviceList if it exists
+            /** Destroys the singleton instance of DeviceList if it exists
              */
             static void DestroyInstance();
 
         protected:
-            soundDeviceList();
+            DeviceList();
 
         private:
             // Private copy constructor and copy assignment operator ensures this class cannot be copied
-            soundDeviceList( const soundDeviceList& );
-            const soundDeviceList& operator=( const soundDeviceList& );
+            DeviceList( const DeviceList& );
+            const DeviceList& operator=( const DeviceList& );
 
         private:
             // Singleton instance pointer
-            static soundDeviceList* _instance;
+            static DeviceList* _instance;
     };
 }
 

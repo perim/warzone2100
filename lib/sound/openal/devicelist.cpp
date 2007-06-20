@@ -26,10 +26,10 @@
 namespace OpenAL
 {
     // Initialize singleton pointer to zero
-    soundDeviceList* soundDeviceList::_instance = 0;
+    DeviceList* DeviceList::_instance = 0;
 
     // Device enumeration stuff
-    soundDeviceList::soundDeviceList()
+    DeviceList::DeviceList()
     {
         // This function call should never fail according to the OpenAL specs (not with these params)
         // So as long as std::vector doesn't throw any exceptions there should occur no problems
@@ -58,17 +58,17 @@ namespace OpenAL
         }
     }
 
-    const soundDeviceList& soundDeviceList::Instance()
+    const DeviceList& DeviceList::Instance()
     {
         if (_instance == 0)
         {
-            _instance = new soundDeviceList;
+            _instance = new DeviceList;
         }
 
         return *_instance;
     }
 
-    void soundDeviceList::DestroyInstance()
+    void DeviceList::DestroyInstance()
     {
         if (_instance)
         {
