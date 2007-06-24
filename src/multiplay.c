@@ -720,48 +720,7 @@ BOOL recvMessage(void)
 				break;
 			}
 		}
-/*
-		// messages only during setup.
-		if(ingame.localJoiningInProgress)
-		{
-			switch(msg.type)
-			{
-			case NET_PLAYERCOMPLETE:			// don't care about this!
-				arenaPlayersReceived++;
 
-				if (arenaPlayersReceived == MAX_PLAYERS)
-				{
-					ProcessDroidOrders();						// set droid orders....
-					bMultiPlayer = TRUE;						// reinit mulitplay messaging
-
-					useTheForce(FALSE);							// use the force.
-					playerResponding();							// say hi.
-					addDMatchDroid(1);							// each player adds a newdroid point.
-				}
-				else
-				{
-					// request the next player
-					NetAdd(msg,0,NetPlay.dpidPlayer);				//our id
-					NetAdd(msg,4,arenaPlayersReceived);				//player we require.
-					msg.size = 8;
-					msg.type = NET_REQUESTPLAYER;
-					NETbcast(msg,TRUE);
-				}
-				break;
-
-			case NET_FEATURES:								// feature set
-				recvFeatures(&msg);							// **biggest message of them all!**
-				break;
-
-//			case NET_STRUCT:								// structure set.
-//				receiveWholeStructure(&msg);
-//				break;
-
-			default:
-				break;
-			}
-		}
-*/
 		// messages usable all the time
 		switch(msg.type)
 		{
@@ -1055,17 +1014,11 @@ BOOL sendTextMessage(const char *pStr,BOOL all)
 	BOOL	sendto[MAX_PLAYERS];
 	UDWORD	i;
 	char	display[MAX_CONSOLE_STRING_LENGTH];
-	BOOL	bEncrypting;
-
-
 
 	if(!ingame.localOptionsReceived)
 	{
 		return TRUE;
 	}
-
-	bEncrypting = NetPlay.bEncryptAllPackets;
-	NetPlay.bEncryptAllPackets = FALSE;
 
 	for(i=0;i<MAX_PLAYERS;i++)
 	{
@@ -1122,8 +1075,6 @@ BOOL sendTextMessage(const char *pStr,BOOL all)
 		}
 	}
 
-	NetPlay.bEncryptAllPackets = bEncrypting;
-
 	for(i = 0; NetPlay.players[i].dpid != NetPlay.dpidPlayer; i++);	//findplayer
 	strcpy(display,NetPlay.players[i].name);						// name
 	strcat(display," : ");											// seperator
@@ -1138,7 +1089,6 @@ BOOL sendAIMessage(char *pStr, SDWORD player, SDWORD to)
 {
 	NETMSG	m;
 	SDWORD	sendPlayer;
-	BOOL	bEncrypting;
 
 	//check if this is one of the local players, don't need net send then
 	if(to == selectedPlayer || myResponsibility(to))	//(the only) human on this machine or AI on this machine
@@ -1161,9 +1111,6 @@ BOOL sendAIMessage(char *pStr, SDWORD player, SDWORD to)
 		{
 			return TRUE;
 		}
-
-		bEncrypting = NetPlay.bEncryptAllPackets;
-		NetPlay.bEncryptAllPackets = FALSE;
 
 		NetAdd(m,0,player);			//save the actual sender
 
@@ -1191,8 +1138,6 @@ BOOL sendAIMessage(char *pStr, SDWORD player, SDWORD to)
 		}
 
 		NETsend(&m,player2dpid[sendPlayer],FALSE);		//send to the player who is hosting 'to' player (might be himself if human and not AI)
-
-		NetPlay.bEncryptAllPackets = bEncrypting;
 	}
 
 	return TRUE;
@@ -1202,12 +1147,8 @@ BOOL sendBeaconToPlayerNet(SDWORD locX, SDWORD locY, SDWORD forPlayer, SDWORD se
 {
 	NETMSG	m;
 	SDWORD	sendPlayer;
-	BOOL	bEncrypting;
 
 	//debug(LOG_WZ, "sendBeaconToPlayerNet: '%s'",pStr);
-
-	bEncrypting = NetPlay.bEncryptAllPackets;
-	NetPlay.bEncryptAllPackets = FALSE;
 
 	NetAdd(m,0,sender);			//save the actual sender
 
@@ -1233,8 +1174,6 @@ BOOL sendBeaconToPlayerNet(SDWORD locX, SDWORD locY, SDWORD forPlayer, SDWORD se
 	}
 
 	NETsend(&m,player2dpid[sendPlayer],FALSE);		//send to the player who is hosting 'to' player (might be himself if human and not AI)
-
-	NetPlay.bEncryptAllPackets = bEncrypting;
 
 	return TRUE;
 }
@@ -1342,21 +1281,34 @@ BOOL recvTextMessageAI(NETMSG *pMsg)
 BOOL sendTemplate(DROID_TEMPLATE *pTempl)
 {
 	NETMSG m;
+	UDWORD count = 0, i;
 
-	if(pTempl == NULL)
+	ASSERT(pTempl != NULL, "sendTemplate: Old Pumpkin bug");
+	if (!pTempl) return TRUE; /* hack */
+
+	// I hate adding more of this hideous code, but it is necessary for now - Per
+	NetAddUint8(m, count, selectedPlayer);			count += sizeof(Uint8);
+	NetAddUint32(m, count, pTempl->ref);			count += sizeof(Uint32);
+	NetAdd(m, count, pTempl->aName);			count += DROID_MAXNAME;
+	NetAddUint8(m, count, pTempl->NameVersion);		count += sizeof(Uint8);
+	for (i = 0; i < DROID_MAXCOMP; i++)
 	{
-#ifdef DEBUG
-		// FIXME sendTemplate: TELL ALEXL NOW!!!THIS IS THE BUG THAT ISNT FIXED!!!
-		debug( LOG_ERROR, "sendTemplate: TELL ALEXL NOW!!!THIS IS THE BUG THAT ISNT FIXED!!!" );
-		abort();
-#endif
-		return TRUE;
+		// signed, but sent as a bunch of bits...
+		NetAddUint32(m, count, pTempl->asParts[i]);	count += sizeof(Uint32);
 	}
+	NetAddUint32(m, count, pTempl->buildPoints);		count += sizeof(Uint32);
+	NetAddUint32(m, count, pTempl->powerPoints);		count += sizeof(Uint32);
+	NetAddUint32(m, count, pTempl->storeCount);		count += sizeof(Uint32);
+	NetAddUint32(m, count, pTempl->numWeaps);		count += sizeof(Uint32);
+	for (i = 0; i < DROID_MAXWEAPS; i++)
+	{
+		NetAddUint32(m, count, pTempl->asWeaps[i]);	count += sizeof(Uint32);
+	}
+	NetAddUint32(m, count, pTempl->droidType);		count += sizeof(Uint32);
+	NetAddUint32(m, count, pTempl->multiPlayerID);		count += sizeof(Uint32);
 
-	m.body[0] = (UBYTE)selectedPlayer;						//player to attach template to
-	memcpy(&(m.body[1]),pTempl,	sizeof(DROID_TEMPLATE));			//the template itself
-	m.size = (UWORD)(sizeof(DROID_TEMPLATE)+1);
 	m.type = NET_TEMPLATE;
+	m.size = count;
 	return(  NETbcast(&m,FALSE)	);
 }
 
@@ -1365,23 +1317,33 @@ BOOL recvTemplate(NETMSG * m)
 {
 	UBYTE			player;
 	DROID_TEMPLATE	*psTempl;
-	DROID_TEMPLATE	t;
+	DROID_TEMPLATE	t, *pT = &t;
+	unsigned int i;
+	unsigned int count = 0;
 
-	player = (UBYTE)(m->body[0]);
-
+	NetGetUint8(m, count, player);				count += sizeof(Uint8);
 	ASSERT( player < MAX_PLAYERS, "recvtemplate: invalid player size: %d", player );
 
-	if(m->size < sizeof(DROID_TEMPLATE))
+	NetGetUint32(m, count, pT->ref);			count += sizeof(Uint32);
+	NetGet(m, count, pT->aName);				count += DROID_MAXNAME;
+	NetGetUint8(m, count, pT->NameVersion);			count += sizeof(Uint8);
+	for (i = 0; i < DROID_MAXCOMP; i++)
 	{
-#ifdef DEBUG
-		// FIXME recvTemplate: invalid template recvd. THIS IS THE BUG THAT ISNT FIXED!!!
-		debug( LOG_ERROR, "recvTemplate: invalid template recvd. THIS IS THE BUG THAT ISNT FIXED!!!" );
-		abort();
-#endif
-		return TRUE;
+		// signed, but sent as a bunch of bits...
+		NetGetUint32(m, count, pT->asParts[i]);		count += sizeof(Uint32);
 	}
+	NetGetUint32(m, count, pT->buildPoints);		count += sizeof(Uint32);
+	NetGetUint32(m, count, pT->powerPoints);		count += sizeof(Uint32);
+	NetGetUint32(m, count, pT->storeCount);			count += sizeof(Uint32);
+	NetGetUint32(m, count, pT->numWeaps);			count += sizeof(Uint32);
+	for (i = 0; i < DROID_MAXWEAPS; i++)
+	{
+		NetGetUint32(m, count, pT->asWeaps[i]);		count += sizeof(Uint32);
+	}
+	NetGetUint32(m, count, pT->droidType);			count += sizeof(Uint32);
+	NetGetUint32(m, count, pT->multiPlayerID);		count += sizeof(Uint32);
 
-	memcpy(&t,&(m->body[1]),sizeof(DROID_TEMPLATE));
+	t.psNext = NULL;
 
 	psTempl = IdToTemplate(t.multiPlayerID,player);
 	if(psTempl)												// already exists.
@@ -1393,32 +1355,6 @@ BOOL recvTemplate(NETMSG * m)
 	{
 		addTemplate(player,&t);
 		apsDroidTemplates[player]->ref = REF_TEMPLATE_START;	// templates are the odd one out!
-
-#if 0
-		psTempl = malloc(sizeof(DROID_TEMPLATE));
-		if (psTempl == NULL)
-		{
-			debug(LOG_ERROR, "recvTemplate: Out of memory");
-			return FALSE;
-		}
-		memcpy(psTempl, &t, sizeof(DROID_TEMPLATE));
-		psTempl->ref = REF_TEMPLATE_START;					// templates are the odd one out!
-		if (apsDroidTemplates[player])						// Add it to the list
-		{
-			for(psCurr = apsDroidTemplates[player];
-				psCurr->psNext != NULL;
-				psCurr = psCurr->psNext
-				);
-
-			psCurr->psNext = psTempl;
-			psTempl->psNext = NULL;
-		}
-		else
-		{
-			apsDroidTemplates[player]=psTempl;
-			psTempl->psNext = NULL;
-		}
-#endif
 	}
 	return TRUE;
 }
@@ -1588,11 +1524,16 @@ BOOL recvDestroyExtra(NETMSG *pMsg)
 		if(psSrc && (psSrc->type == OBJ_DROID) )		// process extra bits.
 		{
 			psKiller = 	(DROID*)psSrc;
+#if 0
+			// FIXME: this code *and* the code that sends this message needs to be modified
+			//        in such a way that they update psKiller->numKills with the percentage
+			//        of damage dealt rather than just a kill count.
 			if(psKiller)
 			{
 				psKiller->numKills++;
 			}
 			cmdDroidUpdateKills(psKiller);
+#endif
 			return TRUE;
 		}
 	}

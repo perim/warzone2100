@@ -2019,9 +2019,9 @@ static inline void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 		if(godMode)
 		{
 			CONPRINTF(ConsoleString, (ConsoleString,
-			"%s - Damage %d%% - Serial ID %d - Kills %d order %d action %d, %s",
+			        _("%s - Damage %d%% - Serial ID %d - Kills %d order %d action %d, %s"),
 			droidGetName(psDroid), 100 - PERCENT(psDroid->body,
-			psDroid->originalBody),psDroid->id,psDroid->numKills,
+			psDroid->originalBody),psDroid->id, psDroid->numKills / 100,
 			psDroid->order, psDroid->action, getDroidLevelName(psDroid)));
 			FeedbackClickedOn();
 		}
@@ -2031,9 +2031,8 @@ static inline void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 			{
 				CONPRINTF(ConsoleString, (ConsoleString,
 					_("%s - Damage %d%% - Kills %d, %s"),
-				/*	"%s - Damage %d%% - Kills %d, %s",*/
 				droidGetName(psDroid), 100 - PERCENT(psDroid->body,
-				psDroid->originalBody),psDroid->numKills,
+				psDroid->originalBody), psDroid->numKills / 100,
 				getDroidLevelName(psDroid)));
 				FeedbackClickedOn();
 			}
@@ -3252,9 +3251,6 @@ SELECTION_TYPE	selectionClass;
 
 		case DROID_CONSTRUCT:
 		case DROID_CYBORG_CONSTRUCT:
-			/* Re-written to allow demolish order to be added to the queuing system
-			if ((psDominant->psTarget == NULL && psDominant->psTarStats ==
-				(BASE_STATS *) structGetDemolishStat())*/
 			if (intDemolishSelectMode())
 			{
 				selectionClass = SC_DROID_DEMOLISH;			// demolish mode.

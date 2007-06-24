@@ -138,13 +138,10 @@ static void	proj_InFlightDirectFunc( PROJ_OBJECT *psObj );
 static void	proj_InFlightIndirectFunc( PROJ_OBJECT *psObj );
 static void	proj_ImpactFunc( PROJ_OBJECT *psObj );
 static void	proj_PostImpactFunc( PROJ_OBJECT *psObj );
-
-//static void	proj_MachineGunInFlightFunc( PROJ_OBJECT *psObj );
-
 static void	proj_checkBurnDamage( BASE_OBJECT *apsList, PROJ_OBJECT *psProj,
 									FIRE_BOX *pFireBox );
 
-static BOOL objectDamage(BASE_OBJECT *psObj, UDWORD damage, UDWORD weaponClass,UDWORD weaponSubClass,int angle);
+static SDWORD objectDamage(BASE_OBJECT *psObj, UDWORD damage, UDWORD weaponClass,UDWORD weaponSubClass,int angle);
 
 /***************************************************************************/
 BOOL gfxVisible(PROJ_OBJECT *psObj)
@@ -239,6 +236,20 @@ proj_Shutdown( void )
 
 /***************************************************************************/
 
+static void proj_Destroy(PROJ_OBJECT *psObj)
+{
+	CHECK_PROJECTILE(psObj);
+
+	/* WARNING WARNING: The use of (int) cast pointer here is not safe for
+	 * most 64-bit architectures! FIXME!! - Per */
+	if (hashTable_RemoveElement(g_pProjObjTable, psObj, (int) psObj, UNUSED_KEY) == FALSE)
+	{
+		debug(LOG_ERROR, "proj_Destroy: couldn't remove projectile from hash table");
+	}
+}
+
+/***************************************************************************/
+
 PROJ_OBJECT *
 proj_GetFirst( void )
 {
@@ -255,8 +266,8 @@ proj_GetNext( void )
 
 /***************************************************************************/
 
-// update the kills after a target is destroyed
-static void proj_UpdateKills(PROJ_OBJECT *psObj)
+// update the kills after a target is damaged/destroyed
+static void proj_UpdateKills(PROJ_OBJECT *psObj, SDWORD percentDamage)
 {
 	DROID	        *psDroid;
 	BASE_OBJECT     *psSensor;
@@ -269,29 +280,26 @@ static void proj_UpdateKills(PROJ_OBJECT *psObj)
 		return;
 	}
 
-
-	if(bMultiPlayer)
+	// If percentDamage is negative then the target was killed
+	if(bMultiPlayer && percentDamage < 0)
 	{
 		sendDestroyExtra(psObj->psDest,psObj->psSource);
 		updateMultiStatsKills(psObj->psDest,psObj->psSource->player);
 	}
 
+	// Since we are no longer interested if it was killed or not, abs it
+	percentDamage = abs(percentDamage);
 
 	if(psObj->psSource->type == OBJ_DROID)			/* update droid kills */
 	{
 		psDroid = (DROID*)psObj->psSource;
-		psDroid->numKills++;
-		cmdDroidUpdateKills(psDroid);
-        //can't assume the sensor object is a droid - it might be a structure
-		/*if (orderStateObj(psDroid, DORDER_FIRESUPPORT, (BASE_OBJECT **)&psSensor))
-		{
-			psSensor->numKills ++;
-		}*/
+		psDroid->numKills += percentDamage;
+		cmdDroidUpdateKills(psDroid, percentDamage);
 		if (orderStateObj(psDroid, DORDER_FIRESUPPORT, &psSensor))
 		{
             if (psSensor->type == OBJ_DROID)
             {
-			    ((DROID *)psSensor)->numKills++;
+			    ((DROID *)psSensor)->numKills += percentDamage;
             }
 		}
 	}
@@ -304,7 +312,7 @@ static void proj_UpdateKills(PROJ_OBJECT *psObj)
 			if ((psDroid->action == DACTION_ATTACK) &&
 				(psDroid->psActionTarget[0] == psObj->psDest))
 			{
-				psDroid->numKills ++;
+				psDroid->numKills += percentDamage;
 			}
 		}
 	}
@@ -373,18 +381,26 @@ proj_SendProjectile( WEAPON *psWeap, BASE_OBJECT *psAttacker, SDWORD player,
 	psObj->born			= gameTime;
 	psObj->player		= (UBYTE)player;
 	psObj->bVisible		= FALSE;
-	psObj->airTarget	= (UBYTE)( ( psTarget != NULL &&
-				psTarget->type == OBJ_DROID &&
-				vtolDroid((DROID*)psTarget) ) ||
-			( psTarget == NULL &&
-				(SDWORD)tarZ > map_Height(tarX,tarY) ) );
+	psObj->airTarget	= FALSE;
+	psObj->psSource		= NULL;
+	psObj->psDamaged	= NULL;
+
+	/* If target is a VTOL or higher than ground, it is an air target. */
+	if ((psTarget != NULL && psTarget->type == OBJ_DROID && vtolDroid((DROID*)psTarget)) 
+	    || (psTarget == NULL && (SDWORD)tarZ > map_Height(tarX,tarY)))
+	{
+		psObj->airTarget = TRUE;
+	}
 
 	//Watermelon:use the source of the source of psObj :) (psAttacker is a projectile)
-	if (bPenetrate)
+	if (bPenetrate && psAttacker)
 	{
-		psObj->psSource = ((PROJ_OBJECT *)psAttacker)->psSource;
-		psObj->psDamaged = ((PROJ_OBJECT *)psAttacker)->psDest;
-		((PROJ_OBJECT *)psAttacker)->state = PROJ_IMPACT;
+		PROJ_OBJECT *psProj = (PROJ_OBJECT *)psAttacker;
+
+		ASSERT(psProj->type == OBJ_BULLET, "Penetrating but not projectile?");
+		psObj->psSource = psProj->psSource;
+		psObj->psDamaged = psProj->psDest;
+		psProj->state = PROJ_IMPACT;
 	}
 	else
 	{
@@ -917,7 +933,6 @@ proj_InFlightIndirectFunc( PROJ_OBJECT *psObj )
 	Vector3i pos;
 	float			fVVert;
 	BOOL			bOver = FALSE;
-	//Watermelon:psTempObj,psNewTarget,i,xdiff,ydiff,zdiff
 	BASE_OBJECT		*psTempObj;
 	BASE_OBJECT		*psNewTarget;
 	UDWORD			i;
@@ -1180,7 +1195,7 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 	UDWORD			dice;
 	SDWORD			tarX0,tarY0, tarX1,tarY1;
 	SDWORD			radSquared, xDiff,yDiff;
-	BOOL			bKilled;//,bMultiTemp;
+	SDWORD			percentDamage;
 	Vector3i position,scatter;
 	UDWORD			damage;	//optimisation - were all being calculated twice on PC
 	//Watermelon: tarZ0,tarZ1,zDiff for AA AOE weapons;
@@ -1252,8 +1267,6 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 			}
 		}
 	}
-	/* Nothings been killed */
-	bKilled = FALSE;
 
 	if ( psObj->psDest == NULL )
 	{
@@ -1314,11 +1327,8 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 		if (psObj->psDest->type == OBJ_FEATURE &&
 			((FEATURE *)psObj->psDest)->psStats->damageable == 0)
 		{
-			debug( LOG_NEVER, "proj_ImpactFunc: trying to damage non-damageable target,projectile removed\n");
-			if ( hashTable_RemoveElement( g_pProjObjTable, psObj, (int) psObj, UNUSED_KEY ) == FALSE )
-			{
-				debug( LOG_ERROR, "proj_ImpactFunc: couldn't remove projectile from table\n" );
-			}
+			debug(LOG_NEVER, "proj_ImpactFunc: trying to damage non-damageable target,projectile removed");
+			proj_Destroy(psObj);
 			return;
 		}
 		position.x = psObj->x;
@@ -1363,14 +1373,11 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 		/* Do damage to the target */
 		if (proj_Direct(psStats))
 		{
-			/*Check for Electronic Warfare damage where we know the subclass
-            of the weapon*/
-			if (psStats->weaponSubClass == WSC_ELECTRONIC)// && psObj->psDest->
-				//type == OBJ_STRUCTURE)
+			/* Check for Electronic Warfare damage where we know the subclass of the weapon */
+			if (psStats->weaponSubClass == WSC_ELECTRONIC)
 			{
 				if (psObj->psSource)
 				{
-					//if (electronicDamage((STRUCTURE *)psObj->psDest, calcDamage(
                     if (electronicDamage(psObj->psDest, calcDamage(weaponDamage(
                         psStats,psObj->player), psStats->weaponEffect,
                         psObj->psDest), psObj->player))
@@ -1430,13 +1437,11 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 				{
 					impact_angle = 0;
 				}
-	  			bKilled = objectDamage(psObj->psDest,damage , psStats->weaponClass,psStats->weaponSubClass, impact_angle);
+	  			percentDamage = objectDamage(psObj->psDest,damage , psStats->weaponClass,psStats->weaponSubClass, impact_angle);
 
-				if(bKilled)
-				{
-					proj_UpdateKills(psObj);
-				}
-				else
+				proj_UpdateKills(psObj, percentDamage);
+				
+				if (percentDamage >= 0)	// So long as the target wasn't killed
 				{
 					psObj->psDamaged = psObj->psDest;
 				}
@@ -1483,13 +1488,11 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 				{
 					impact_angle = HIT_SIDE_FRONT;
 				}
-				bKilled = objectDamage(psObj->psDest, damage, psStats->weaponClass,psStats->weaponSubClass, impact_angle);
+				percentDamage = objectDamage(psObj->psDest, damage, psStats->weaponClass,psStats->weaponSubClass, impact_angle);
 
-				if(bKilled)
-				{
-					proj_UpdateKills(psObj);
-				}
-				else
+				proj_UpdateKills(psObj, percentDamage);
+				
+				if (percentDamage >= 0)
 				{
 					psObj->psDamaged = psObj->psDest;
 				}
@@ -1531,10 +1534,7 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 		}
 
 		/* This was just a simple bullet - release it and return */
-		if ( hashTable_RemoveElement( g_pProjObjTable, psObj, (int) psObj, UNUSED_KEY ) == FALSE )
-		{
-			debug( LOG_NEVER, "proj_ImpactFunc: couldn't remove projectile from table\n" );
-		}
+		proj_Destroy(psObj);
 		return;
 	}
 
@@ -1546,7 +1546,7 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 		/* Note when it exploded for the explosion effect */
 		psObj->born = gameTime;
 
-	/* Work out the bounding box for the blast radius */
+		/* Work out the bounding box for the blast radius */
 		tarX0 = (SDWORD)psObj->x - (SDWORD)psStats->radius;
 		tarY0 = (SDWORD)psObj->y - (SDWORD)psStats->radius;
 		tarX1 = (SDWORD)psObj->x + (SDWORD)psStats->radius;
@@ -1629,14 +1629,11 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 										impact_angle -= 360;
 									}
 								}
-								bKilled = droidDamage(psCurrD, damage, psStats->weaponClass,psStats->weaponSubClass, impact_angle);
+								percentDamage = droidDamage(psCurrD, damage, psStats->weaponClass,psStats->weaponSubClass, impact_angle);
 
 								turnOffMultiMsg(FALSE);	// multiplay msgs back on.
 
-								if(bKilled)
-								{
-									proj_UpdateKills(psObj);
-								}
+								proj_UpdateKills(psObj, percentDamage);
 							}
 						}
 					}
@@ -1711,14 +1708,11 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 										impact_angle -= 360;
 									}
 								}
-								bKilled = droidDamage(psCurrD, damage, psStats->weaponClass,psStats->weaponSubClass, impact_angle);
+								percentDamage = droidDamage(psCurrD, damage, psStats->weaponClass,psStats->weaponSubClass, impact_angle);
 
 								turnOffMultiMsg(FALSE);	// multiplay msgs back on.
 
-								if(bKilled)
-								{
-									proj_UpdateKills(psObj);
-								}
+								proj_UpdateKills(psObj, percentDamage);
 							}
 						}
 					}
@@ -1755,13 +1749,10 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 									}
 								}
 
-								bKilled = structureDamage(psCurrS, damage,
+								percentDamage = structureDamage(psCurrS, damage,
 									psStats->weaponClass, psStats->weaponSubClass);
 
-								if(bKilled)
-								{
-									proj_UpdateKills(psObj);
-								}
+								proj_UpdateKills(psObj, percentDamage);
 							}
 						}
 					}
@@ -1778,13 +1769,10 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 							}
 						}
 
-				  		bKilled = structureDamage(psCurrS, damage,
+				  		percentDamage = structureDamage(psCurrS, damage,
 							psStats->weaponClass, psStats->weaponSubClass);
 
-				   		if(bKilled)
-						{
-				   			proj_UpdateKills(psObj);
-						}
+				   		proj_UpdateKills(psObj, percentDamage);
 					}
 				}
 			}
@@ -1818,13 +1806,11 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 						debug(LOG_NEVER, "Damage to object %d, player %d\n",
 								psCurrF->id, psCurrF->player);
 
-						bKilled = featureDamage(psCurrF, calcDamage(weaponRadDamage(
+						percentDamage = featureDamage(psCurrF, calcDamage(weaponRadDamage(
 							psStats, psObj->player), psStats->weaponEffect,
 							(BASE_OBJECT *)psCurrF), psStats->weaponSubClass);
-						if(bKilled)
-						{
-							proj_UpdateKills(psObj);
-						}
+						
+						proj_UpdateKills(psObj, percentDamage);
 					}
 				}
 			}
@@ -1862,11 +1848,7 @@ proj_PostImpactFunc( PROJ_OBJECT *psObj )
 	/* Time to finish postimpact effect? */
 	if (age > (SDWORD)psStats->radiusLife && age > (SDWORD)psStats->incenTime)
 	{
-		if ( hashTable_RemoveElement( g_pProjObjTable, psObj,
-									(int) psObj, UNUSED_KEY ) == FALSE )
-		{
-			debug( LOG_NEVER, "proj_PostImpactFunc: couldn't remove projectile from table\n" );
-		}
+		proj_Destroy(psObj);
 		return;
 	}
 
@@ -1960,8 +1942,7 @@ proj_checkBurnDamage( BASE_OBJECT *apsList, PROJ_OBJECT *psProj,
 	WEAPON_STATS	*psStats;
 	UDWORD			damageSoFar;
 	SDWORD			damageToDo;
-	BOOL			bKilled;
-//	BOOL			bMultiTemp;
+	SDWORD			percentDamage;
 
 	CHECK_PROJECTILE(psProj);
 
@@ -2019,14 +2000,11 @@ proj_checkBurnDamage( BASE_OBJECT *apsList, PROJ_OBJECT *psProj,
 								damageToDo, psCurr->id, psCurr->player);
 
 						//Watermelon:just assume the burn damage is from FRONT
-	  					bKilled = objectDamage(psCurr, damageToDo, psStats->weaponClass,psStats->weaponSubClass, 0);
+	  					percentDamage = objectDamage(psCurr, damageToDo, psStats->weaponClass,psStats->weaponSubClass, 0);
 
 						psCurr->burnDamage += damageToDo;
 
-						if(bKilled)
-						{
-							proj_UpdateKills(psProj);
-						}
+						proj_UpdateKills(psProj, percentDamage);
 					}
 					/* The damage could be negative if the object
 					   is being burn't by another fire
@@ -2203,8 +2181,21 @@ UDWORD	calcDamage(UDWORD baseDamage, WEAPON_EFFECT weaponEffect, BASE_OBJECT *ps
 	return damage;
 }
 
-
-BOOL objectDamage(BASE_OBJECT *psObj, UDWORD damage, UDWORD weaponClass,UDWORD weaponSubClass, int angle)
+/*
+ * A quick explanation about hown this function works:
+ *  - It returns an integer between 0 and 100 (see note for exceptions);
+ *  - this represents the amount of damage inflicted on the droid by the weapon
+ *    in relation to its original health.
+ *  - e.g. If 100 points of (*actual*) damage were done to a unit who started
+ *    off (when first produced) with 400 points then 25 would be returned.
+ *  - If the actual damage done to a unit is greater than its remaining points
+ *    then the actual damage is clipped: so if we did 200 actual points of
+ *    damage to a cyborg with 150 points left the actual damage would be taken
+ *    as 150.
+ *  - Should sufficient damage be done to destroy/kill a unit then the value is
+ *    multiplied by -1, resulting in a negative number. 
+ */
+SDWORD objectDamage(BASE_OBJECT *psObj, UDWORD damage, UDWORD weaponClass,UDWORD weaponSubClass, int angle)
 {
 	switch (psObj->type)
 	{
@@ -2220,7 +2211,8 @@ BOOL objectDamage(BASE_OBJECT *psObj, UDWORD damage, UDWORD weaponClass,UDWORD w
 		default:
 			ASSERT(!"unknown object type", "objectDamage - unknown object type");
 	}
-	return FALSE;
+
+	return 0;
 }
 
 
@@ -2328,11 +2320,7 @@ static void addProjNaybor(BASE_OBJECT *psObj, UDWORD distSqr)
 /* Find all the objects close to the projectile */
 void projGetNaybors(PROJ_OBJECT *psObj)
 {
-//	DROID		*psCurrD;
-//	STRUCTURE	*psCurrS;
-//	FEATURE		*psCurrF;
 	SDWORD		xdiff, ydiff;
-//	UDWORD		player;
 	UDWORD		dx,dy, distSqr;
 	//Watermelon:renamed to psTempObj from psObj
 	BASE_OBJECT	*psTempObj;
@@ -2345,8 +2333,6 @@ void projGetNaybors(PROJ_OBJECT *psObj)
 	}
 	CurrentProjNaybors = (BASE_OBJECT *)psObj;
 	projnayborTime = gameTime;
-
-
 
 	// reset the naybor array
 	numProjNaybors = 0;

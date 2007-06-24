@@ -152,10 +152,12 @@ BOOL droidInit(void)
  *
  * NOTE: This function will damage but _never_ destroy transports when in single player (campaign) mode
  */
-BOOL droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD weaponSubClass, int angle)
+SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD weaponSubClass, int angle)
 {
 	// Do at least one point of damage
 	unsigned int actualDamage = 1, armour;
+	float        originalBody = psDroid->originalBody;
+	float        body = psDroid->body;
 	SECONDARY_STATE		state;
 	DROID_HIT_SIDE	impactSide;
 
@@ -173,7 +175,7 @@ BOOL droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD weapo
 	// EMP cannons do no damage, if we are one return now
 	if (weaponSubClass == WSC_EMP)
 	{
-		return FALSE;
+		return 0;
 	}
 
 	if (psDroid->player != selectedPlayer)
@@ -255,7 +257,7 @@ BOOL droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD weapo
 		if (!bMultiPlayer && psDroid->droidType == DROID_TRANSPORTER)
 		{
 			psDroid->body = 1;
-			return FALSE;
+			return 0;
 		}
 
 		// Droid destroyed
@@ -286,7 +288,7 @@ BOOL droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD weapo
 			destroyDroid(psDroid);
 		}
 
-		return TRUE;
+		return (SDWORD) (body / originalBody * -100);
 	}
 
 	// Substract the dealt damage from the droid's remaining body points
@@ -300,7 +302,8 @@ BOOL droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD weapo
 
 	CHECK_DROID(psDroid);
 
-	return FALSE;
+	// Return the amount of damage done as an SDWORD between 0 and 99
+	return (SDWORD) ((float) actualDamage / originalBody * 100);
 }
 
 /* droidRelease: release all resources associated with a droid -
@@ -3263,7 +3266,6 @@ DROID* buildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD player,
 	psDroid->orderY = 0;
 	psDroid->orderX2 = 0;
 	psDroid->orderY2 = 0;
-	psDroid->psTarStats[0] = NULL;
 	psDroid->secondaryOrder = DSS_ARANGE_DEFAULT | DSS_REPLEV_NEVER | DSS_ALEV_ALWAYS | DSS_HALT_GUARD;
 	psDroid->action = DACTION_NONE;
 	psDroid->actionX = 0;
@@ -3271,6 +3273,7 @@ DROID* buildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD player,
 
 	for(i = 0;i < DROID_MAXWEAPS;i++)
 	{
+		psDroid->psTarStats[i] = NULL;
 		psDroid->psActionTarget[i] = NULL;
 		psDroid->psTarget[i] = NULL;
 		psDroid->asWeaps[i].lastFired = 0;
@@ -4157,7 +4160,10 @@ UDWORD	getDroidLevel(DROID *psDroid)
 	static const unsigned int lastRank = sizeof(arrRank) / sizeof(struct rankMap);
 	bool isCommander = (psDroid->droidType == DROID_COMMAND ||
 	                    psDroid->droidType == DROID_SENSOR) ? true : false;
-	unsigned int numKills = psDroid->numKills;
+	// We need to divide by 100 to get the actual number since we're using
+	// fixed point arithmatic here, and psDroid->numKills actually is the
+	// percentage of damage dealt to other objects
+	unsigned int numKills = psDroid->numKills / 100;
 	unsigned int i;
 
 	// Commanders don't need as much kills for ranks in multiplayer

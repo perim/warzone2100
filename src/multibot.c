@@ -490,7 +490,6 @@ BOOL SendDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UBYTE player,UDWOR
 {
 	NETMSG m;
 
-//	if( ingame.localJoiningInProgress &&  (game.type != DMATCH) )
 	if( ingame.localJoiningInProgress )
 	{
 		return TRUE;								// dont send other droids during campaign setup.
@@ -1023,7 +1022,6 @@ BOOL sendWholeDroid(DROID *pD, UDWORD dest)
 	ASSERT( pD->y < (mapHeight<< TILE_SHIFT),
 		"sendWholeDroid: y coordinate bigger than map height" );
 
-	//Watermelon:pfft
 	if (pD->numWeaps == 0)
 	{
 		if (pD->asWeaps[0].nStat > 0)									// build some bits for the template.
@@ -1113,11 +1111,7 @@ BOOL receiveWholeDroid(NETMSG *m)
 	UDWORD			sizecount=0;
 	DROID_TEMPLATE	dt;
 	DROID			*pD,*existingdroid;
-//	BOOL			temp= FALSE;
-
 	DROIDSTORE		*tempDroid;
-
-	//UDWORD x,y,z,id;
 	UWORD x,y,z;
 	UDWORD id;
 	UBYTE player;
@@ -1125,7 +1119,6 @@ BOOL receiveWholeDroid(NETMSG *m)
 
 	// get the stuff
 	NetGet(m,sizecount,dt.asParts);				sizecount+=sizeof(dt.asParts);		// build a template
-//	NetGet(m,sizecount,dt.powerPoints);			sizecount+=sizeof(dt.powerPoints);
 	NetGet(m,sizecount,dt.asWeaps);				sizecount+=sizeof(dt.asWeaps);
 	NetGet(m,sizecount,dt.numWeaps);			sizecount+=sizeof(dt.numWeaps);		// numWeaps
 	NetGet(m,sizecount,x);						sizecount+=sizeof(x);				// edit it.
@@ -1162,6 +1155,8 @@ BOOL receiveWholeDroid(NETMSG *m)
 		return FALSE;
 	}
 
+	STATIC_ASSERT(sizeof(id) == sizeof(pD->id));
+
 	// now the instance specific stuff.
 	pD->id = id;
 	pD->x = x;									//correct builddroid to use exact pos, not tile center
@@ -1185,6 +1180,8 @@ BOOL receiveWholeDroid(NETMSG *m)
 
 	if(ingame.localJoiningInProgress)
 	{
+		ASSERT(!"unused", "Tell Per he was wrong and that this code is actually in use!");
+
 		NetGet(m,sizecount,pD->order);				sizecount+=sizeof(pD->order);		// processed laater
 		NetGet(m,sizecount,pD->orderX);				sizecount+=sizeof(pD->orderX);		//later!
 		NetGet(m,sizecount,pD->orderY);				sizecount+=sizeof(pD->orderY);		//later!
@@ -1199,6 +1196,7 @@ BOOL receiveWholeDroid(NETMSG *m)
 		NetGet(m,sizecount,pD->psTarStats[0]);			sizecount+=sizeof(pD->psTarStats[0]);	//later!
 
 		//store the droid for later.
+		//except there is no 'later', this is NEVER USED except here! What happens to the poor droid? - Per
 		tempDroid = (DROIDSTORE*)malloc(sizeof(DROIDSTORE));
 		tempDroid->psDroid  = pD;
 		tempDroid->psNext	= tempDroidList;
@@ -1206,14 +1204,10 @@ BOOL receiveWholeDroid(NETMSG *m)
 	}
 	else							//don't bother setting the orders. they'll update sooner or later anywho.
 	{
-		pD->order     = 0;
-		pD->orderX    = 0;
-		pD->orderY    = 0;
-
-		//Watermelon:recieve packet changes to cope with psTarget[] array change
 		for (i = 0;i < dt.numWeaps;i++)
 		{
-			NetGet(m,sizecount,pD->psTarget[i]);			sizecount+=sizeof(pD->psTarget[i]);	//later!
+			NetGet(m, sizecount, id);			sizecount += sizeof(id);
+			pD->psTarget[i] = IdToPointer(id, ANYPLAYER);
 		}
 		pD->psTarStats[0] = 0;
 

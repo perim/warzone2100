@@ -1,6 +1,24 @@
-;NSIS Modern User Interface
-;Warzone 2100 Resurrection Installer script
-;Written by Dennis Schridde
+;  This file is part of Warzone 2100.
+;  Copyright (C) 2006-2007  Warzone Resurrection Project
+;  Copyright (C) 2006       Dennis Schridde
+;
+;  Warzone 2100 is free software; you can redistribute it and/or modify
+;  it under the terms of the GNU General Public License as published by
+;  the Free Software Foundation; either version 2 of the License, or
+;  (at your option) any later version.
+;
+;  Warzone 2100 is distributed in the hope that it will be useful,
+;  but WITHOUT ANY WARRANTY; without even the implied warranty of
+;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+;  GNU General Public License for more details.
+;
+;  You should have received a copy of the GNU General Public License
+;  along with Warzone 2100; if not, write to the Free Software
+;  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+;
+;  NSIS Modern User Interface
+;  Warzone 2100 Resurrection Installer script
+;
 
 ;--------------------------------
 ;Include Modern UI
@@ -61,7 +79,7 @@ VIAddVersionKey "ProductVersion"	"${VERSION}"
   !define MUI_FINISHPAGE_RUN_TEXT $(TEXT_RunWarzone)
   !define MUI_FINISHPAGE_RUN_FUNCTION "LaunchLink"
   !define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
-  !define MUI_FINISHPAGE_SHOWREADME $INSTDIR\Readme.txt
+  !define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\Readme.txt"
 
 ;--------------------------------
 ;Pages
@@ -83,12 +101,14 @@ VIAddVersionKey "ProductVersion"	"${VERSION}"
 ;Languages
 
   !insertmacro MUI_LANGUAGE "English" # first language is the default language
+  !insertmacro MUI_LANGUAGE "Dutch"
   !insertmacro MUI_LANGUAGE "German"
 
 ;--------------------------------
 ;License Language String
 
   LicenseLangString MUILicense ${LANG_ENGLISH} "..\COPYING"
+  LicenseLangString MUILicense ${LANG_DUTCH} "..\COPYING"
   LicenseLangString MUILicense ${LANG_GERMAN} "..\COPYING"
 
 ;--------------------------------
@@ -116,13 +136,9 @@ Section $(TEXT_SecBase) SecBase
   ; Main executable
   File "..\src\warzone2100.exe"
 
-  ; Required runtime libs
-  File "${LIBDIR}\OpenAL32.dll"
-  File "${LIBDIR}\wrap_oal.dll"
-
   ; Windows dbghelp library
-  File "${LIBDIR}\dbghelp.dll.license.txt"
-  File "${LIBDIR}\dbghelp.dll"
+  File "${EXTDIR}\dbghelp.dll.license.txt"
+  File "${EXTDIR}\dbghelp.dll"
 
   ; Data files
   File "..\data\mp.wz"
@@ -160,6 +176,16 @@ Section $(TEXT_SecBase) SecBase
     CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Warzone 2100.lnk" "$INSTDIR\warzone2100.exe"
 
   !insertmacro MUI_STARTMENU_WRITE_END
+
+SectionEnd
+
+
+; Installs OpenAL runtime libraries, using Creative's installer
+Section $(TEXT_SecOpenAL) SecOpenAL
+
+  File "${EXTDIR}\oalinst.exe"
+
+  ExecWait "$INSTDIR\oalinst.exe"
 
 SectionEnd
 
@@ -204,6 +230,9 @@ FunctionEnd
   LangString TEXT_SecBase ${LANG_ENGLISH} "Standard installation"
   LangString DESC_SecBase ${LANG_ENGLISH} "Standard installation."
 
+  LangString TEXT_SecOpenAL ${LANG_ENGLISH} "OpenAL libraries"
+  LangString DESC_SecOpenAL ${LANG_ENGLISH} "Runtime libraries for OpenAL, a free Audio interface. Implementation by Creative Labs."
+
   LangString TEXT_SecMods ${LANG_ENGLISH} "Mods"
   LangString DESC_SecMods ${LANG_ENGLISH} "Various mods."
 
@@ -212,8 +241,25 @@ FunctionEnd
 
 
 
+  LangString TEXT_SecBase ${LANG_DUTCH} "Standaard installatie"
+  LangString DESC_SecBase ${LANG_DUTCH} "Standaard installatie."
+
+  LangString TEXT_SecOpenAL ${LANG_DUTCH} "OpenAL bibliotheken"
+  LangString DESC_SecOpenAL ${LANG_DUTCH} "Vereiste bibliotheken voor OpenAL, een opensource/vrije Audio Bibliotheek."
+
+  LangString TEXT_SecMods ${LANG_DUTCH} "Mods"
+  LangString DESC_SecMods ${LANG_DUTCH} "Verschillende mods."
+
+  LangString TEXT_SecGrimMod ${LANG_DUTCH} "Grim's grafische-update"
+  LangString DESC_SecGrimMod ${LANG_DUTCH} "Grim's grafische-update. Bevat meer gedetaïleerde textures voor campaign 1 en extra texture- en model-updates. Copyright (C) 2005-2007 Grim Moroe, gebruik is alleen toegestaan voor Warzone 2100."
+
+
+
   LangString TEXT_SecBase ${LANG_GERMAN} "Standardinstallation"
   LangString DESC_SecBase ${LANG_GERMAN} "Standardinstallation."
+
+  LangString TEXT_SecOpenAL ${LANG_GERMAN} "OpenAL Bibliotheken"
+  LangString DESC_SecOpenAL ${LANG_GERMAN} "Bibliotheken für OpenAL, ein freies Audio Interface. Implementation von Creative Labs."
 
   LangString TEXT_SecMods ${LANG_GERMAN} "Mods"
   LangString DESC_SecMods ${LANG_GERMAN} "Verschiedene Mods."
@@ -224,6 +270,7 @@ FunctionEnd
 
 
   LangString TEXT_RunWarzone ${LANG_ENGLISH} "Run Warzone 2100"
+  LangString TEXT_RunWarzone ${LANG_DUTCH} "Start Warzone 2100"
   LangString TEXT_RunWarzone ${LANG_GERMAN} "Starte Warzone 2100"
 
 
@@ -231,6 +278,8 @@ FunctionEnd
   ;Assign language strings to sections
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${SecBase} $(DESC_SecBase)
+
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecOpenAL} $(DESC_SecOpenAL)
 
     !insertmacro MUI_DESCRIPTION_TEXT ${SecMods} $(DESC_SecMods)
     !insertmacro MUI_DESCRIPTION_TEXT ${SecGrimMod} $(DESC_SecGrimMod)
@@ -247,8 +296,7 @@ Section "Uninstall"
 
   Delete "$INSTDIR\warzone2100.exe"
 
-  Delete "$INSTDIR\OpenAL32.dll"
-  Delete "$INSTDIR\wrap_oal.dll"
+  Delete "$INSTDIR\oalinst.exe"
 
   Delete "$INSTDIR\dbghelp.dll.license.txt"
   Delete "$INSTDIR\dbghelp.dll"
@@ -269,13 +317,12 @@ Section "Uninstall"
   RMDir "$INSTDIR\mods"
   RMDir "$INSTDIR"
 
-  !insertmacro MUI_STARTMENU_GETFOLDER Application $MUI_TEMP
-
-  Delete "$SMPROGRAMS\$MUI_TEMP\Uninstall.lnk"
-  Delete "$SMPROGRAMS\$MUI_TEMP\Warzone 2100.lnk"
-  Delete "$SMPROGRAMS\$MUI_TEMP\Warzone 2100 - Grim's GFX.lnk"
+  Delete "$SMPROGRAMS\$STARTMENU_FOLDER\Uninstall.lnk"
+  Delete "$SMPROGRAMS\$STARTMENU_FOLDER\Warzone 2100.lnk"
+  Delete "$SMPROGRAMS\$STARTMENU_FOLDER\Warzone 2100 - Grim's GFX.lnk"
 
   ;Delete empty start menu parent diretories
+  !insertmacro MUI_STARTMENU_GETFOLDER Application $MUI_TEMP
   StrCpy $MUI_TEMP "$SMPROGRAMS\$MUI_TEMP"
 
   startMenuDeleteLoop:

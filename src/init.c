@@ -1384,7 +1384,7 @@ BOOL stageOneShutDown(void)
 
 	if ( audio_Disabled() == FALSE )
 	{
-		audio_CheckAllUnloaded();
+		sound_CheckAllUnloaded();
 	}
 
 
