@@ -98,6 +98,7 @@ static LONG WINAPI windowsExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 // POSIX headers:
 # include <unistd.h>
 # include <fcntl.h>
+# include <time.h>
 # include <sys/types.h>
 # include <sys/stat.h>
 # include <sys/wait.h>
@@ -111,6 +112,7 @@ static LONG WINAPI windowsExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 
 
 # define MAX_PID_STRING 16
+# define MAX_DATE_STRING 256
 
 
 typedef void(*SigActionHandler)(int, siginfo_t *, void *);
@@ -124,9 +126,13 @@ static struct sigaction oldAction[NSIG];
 
 
 static struct utsname sysInfo;
-static BOOL gdbIsAvailable = FALSE, sysInfoValid = FALSE;
-static char programPID[MAX_PID_STRING] = {'\0'}, gdbPath[MAX_PATH] = {'\0'};
-static const char * gdmpPath, * programCommand;
+static BOOL gdbIsAvailable = FALSE, programIsAvailable = FALSE, sysInfoValid = FALSE;
+static char
+	executionDate[MAX_DATE_STRING] = {'\0'},
+	programPID[MAX_PID_STRING] = {'\0'},
+	programPath[MAX_PATH] = {'\0'},
+	gdbPath[MAX_PATH] = {'\0'};
+static const char * gdmpPath = "/tmp/warzone2100.gdmp";
 
 
 /**
@@ -392,8 +398,8 @@ static void posixExceptionHandler(int signum, siginfo_t * siginfo, WZ_DECL_UNUSE
 	}
 
 
-	write(dumpFile, "Program command: ", strlen("Program command: "));
-	write(dumpFile, programCommand, strlen(programCommand));
+	write(dumpFile, "Program: ", strlen("Program: "));
+	write(dumpFile, programPath, strlen(programPath));
 	write(dumpFile, "\n", 1);
 
 	write(dumpFile, "Version: ", strlen("Version: "));
@@ -408,6 +414,10 @@ static void posixExceptionHandler(int signum, siginfo_t * siginfo, WZ_DECL_UNUSE
 
 	write(dumpFile, "Compiled on: ", strlen("Compiled on: "));
 	write(dumpFile, __DATE__, strlen(__DATE__));
+	write(dumpFile, "\n", 1);
+
+	write(dumpFile, "Executed on: ", strlen("Executed on: "));
+	write(dumpFile, executionDate, strlen(executionDate));
 	write(dumpFile, "\n\n", 2);
 
 
@@ -466,15 +476,16 @@ static void posixExceptionHandler(int signum, siginfo_t * siginfo, WZ_DECL_UNUSE
 	fsync(dumpFile);
 
 
-	if (gdbIsAvailable)
+	if (programIsAvailable && gdbIsAvailable)
 	{
 		if (pipe(gdbPipe) == 0)
 		{
 			pid = fork();
 			if (pid == (pid_t)0)
 			{
-				const char * gdbArgv[] = { gdbPath, programCommand, programPID, NULL },
-				           * gdbEnv[] = {NULL};
+				const char
+					* gdbArgv[] = { gdbPath, programPath, programPID, NULL },
+					* gdbEnv[] = {NULL};
 
 				close(gdbPipe[1]); // No output to pipe
 
@@ -512,8 +523,18 @@ static void posixExceptionHandler(int signum, siginfo_t * siginfo, WZ_DECL_UNUSE
 	}
 	else
 	{
-		write(dumpFile, "GDB not available, no extended backtrace dumped\n",
-			  strlen("GDB not available, no extended backtrace dumped\n"));
+		write(dumpFile, "No extended backtrace dumped:\n",
+			strlen("No extended backtrace dumped:\n"));
+		if (!programIsAvailable)
+		{
+			write(dumpFile, "- Program path not available\n",
+				strlen("- Program path not available\n"));
+		}
+		if (!gdbIsAvailable)
+		{
+			write(dumpFile, "- GDB not available\n",
+				strlen("- GDB not available\n"));
+		}
 	}
 
 
@@ -534,21 +555,43 @@ static void posixExceptionHandler(int signum, siginfo_t * siginfo, WZ_DECL_UNUSE
  *
  * \param programCommand_x Command used to launch this program. Only used for POSIX handler.
  */
-void setupExceptionHandler(const char * programCommand_x)
+void setupExceptionHandler(const char * programCommand)
 {
 #if defined(WZ_OS_WIN)
 	SetUnhandledExceptionFilter(windowsExceptionHandler);
 #elif defined(WZ_OS_UNIX) && !defined(WZ_OS_MAC)
+	// Prepare 'which' command for popen
+	char whichProgramCommand[MAX_PATH] = {'\0'};
+	snprintf( whichProgramCommand, MAX_PATH, "which %s", programCommand );
+
+	// Get full path to this program. Needed for gdb to find the binary.
+	FILE * whichProgramStream = popen(whichProgramCommand, "r");
+	fread( programPath, 1, MAX_PATH, whichProgramStream );
+	pclose(whichProgramStream);
+
+	// Were we able to find ourselves?
+	if (strlen(programPath) > 0)
+	{
+		programIsAvailable = TRUE;
+		*(strrchr(programPath, '\n')) = '\0'; // `which' adds a \n which confuses exec()
+		debug(LOG_WZ, "Found us at %s", programPath);
+	}
+	else
+	{
+		debug(LOG_WARNING, "Could not retrieve full path to %s, will not create extended backtrace\n", programCommand);
+	}
+
 	// Get full path to 'gdb'
-	FILE * whichStream = popen("which gdb", "r");
-	fread(gdbPath, 1, MAX_PATH, whichStream);
-	pclose(whichStream);
+	FILE * whichGDBStream = popen("which gdb", "r");
+	fread( gdbPath, 1, MAX_PATH, whichGDBStream );
+	pclose(whichGDBStream);
 
 	// Did we find GDB?
 	if (strlen(gdbPath) > 0)
 	{
 		gdbIsAvailable = TRUE;
 		*(strrchr(gdbPath, '\n')) = '\0'; // `which' adds a \n which confuses exec()
+		debug(LOG_WZ, "Found gdb at %s", gdbPath);
 	}
 	else
 	{
@@ -557,9 +600,10 @@ void setupExceptionHandler(const char * programCommand_x)
 
 	sysInfoValid = (uname(&sysInfo) == 0);
 
+	time_t currentTime = time(NULL);
+	strncpy( executionDate, ctime(&currentTime), MAX_DATE_STRING );
+
 	snprintf( programPID, MAX_PID_STRING, "%i", getpid() );
-	programCommand = programCommand_x;
-	gdmpPath = "/tmp/warzone2100.gdmp";
 
 	setFatalSignalHandler(posixExceptionHandler);
 #endif // WZ_OS_*

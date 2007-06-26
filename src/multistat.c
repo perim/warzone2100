@@ -588,17 +588,19 @@ BOOL setMultiStats(SDWORD dp, PLAYERSTATS plStats, BOOL bLocal)
 
 // ////////////////////////////////////////////////////////////////////////////
 // Load Player Stats
-BOOL loadMultiStats(char *sPlayerName,PLAYERSTATS *playerStats)
+BOOL loadMultiStats(char *sPlayerName, PLAYERSTATS *playerStats)
 {
-	char				fileName[255]="";
+	char				fileName[255];
 	UDWORD				size;
 	char				*pFileData;
 	PLAYERSTATS			blankstats = {0};
 	SAVEDPLAYERSTATS		st;
 
-	strcpy(fileName,MultiPlayersPath);
-	strcat(fileName,sPlayerName);
-	strcat(fileName,".sta");
+	// Prevent an empty player name (where the first byte is a 0x0 terminating char already)
+	if (!*sPlayerName)
+		strcpy(sPlayerName, _("Player"));
+
+	snprintf(fileName, sizeof(fileName), "%s%s.sta", MultiPlayersPath, sPlayerName);
 
 	debug(LOG_WZ, "loadMultiStats: %s", fileName);
 	// check player already exists
@@ -637,15 +639,14 @@ BOOL loadMultiStats(char *sPlayerName,PLAYERSTATS *playerStats)
 
 // ////////////////////////////////////////////////////////////////////////////
 // Save Player Stats
-BOOL saveMultiStats(char *sFileName, char *sPlayerName,PLAYERSTATS *playerStats)
+BOOL saveMultiStats(const char *sFileName, const char *sPlayerName, const PLAYERSTATS *playerStats)
 {
 	char				fileName[255]="";
 	SAVEDPLAYERSTATS		st;
 
 	// prepare file.
-	memcpy(&st.stats,playerStats,sizeof(PLAYERSTATS));
-	memset(st.name,0,255);
-	memset(st.padding,1,4);
+	memcpy(&st.stats, playerStats, sizeof(PLAYERSTATS));
+	memset(st.name, 0, 255);
 	strcpy(st.name, sPlayerName);
 
 	strcpy(fileName,MultiPlayersPath);
@@ -730,7 +731,7 @@ void updateMultiStatsLoses(void)
 {
 	PLAYERSTATS	st;
 	st  = getMultiStats(selectedPlayer,TRUE);
-	st.loses ++;
+	++st.losses;
 	setMultiStats(player2dpid[selectedPlayer], st, TRUE);
 }
 
@@ -758,6 +759,3 @@ void updateMultiStatsKills(BASE_OBJECT *psKilled,UDWORD player)
 		ingame.skScores[player][1]++;
 	}
 }
-
-
-

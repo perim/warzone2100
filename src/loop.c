@@ -132,7 +132,6 @@ static	UDWORD	numCommandDroids[MAX_PLAYERS];
 static	UDWORD	numConstructorDroids[MAX_PLAYERS];
 // flag to signal a quick exit from the game
 static SDWORD videoMode;
-static SDWORD	g_iGlobalVol;
 
 LOOP_MISSION_STATE		loopMissionState = LMS_NORMAL;
 
@@ -141,7 +140,6 @@ SDWORD	nextMissionType = LDS_NONE;//MISSION_NONE;
 
  /* Force 3D display */
 UDWORD	mcTime;
-BOOL	display3D = TRUE;
 extern BOOL		godMode;
 
 /* The main game loop */
@@ -527,22 +525,19 @@ GAMECODE gameLoop(void)
 	{
 		if (!gameUpdatePaused())
 		{
-			if (display3D)
+			if (dragBox3D.status != DRAG_DRAGGING
+			 && wallDrag.status != DRAG_DRAGGING)
 			{
-				if (dragBox3D.status != DRAG_DRAGGING
-					&& wallDrag.status != DRAG_DRAGGING)
-				{
-					ProcessRadarInput();
-				}
-				processInput();
-
-				//no key clicks or in Intelligence Screen
-				if (intRetVal == INT_NONE && !InGameOpUp)
-				{
-					processMouseClickInput();
-				}
-				displayWorld();
+				ProcessRadarInput();
 			}
+			processInput();
+
+			//no key clicks or in Intelligence Screen
+			if (intRetVal == INT_NONE && !InGameOpUp)
+			{
+				processMouseClickInput();
+			}
+			displayWorld();
 		}
 		/* Display the in game interface */
 		pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_ON);
@@ -654,7 +649,8 @@ GAMECODE gameLoop(void)
 /* The video playback loop */
 void videoLoop(void)
 {
-	BOOL bVolKilled = FALSE;
+	bool bVolKilled = false;
+	float originalVolume;
 
 	// There is something really odd here. - Per
 	static BOOL bActiveBackDrop = FALSE;
@@ -673,9 +669,9 @@ void videoLoop(void)
 	if ( (keyPressed(KEY_ESC) || bQuitVideo) && !seq_AnySeqLeft() )
 	{
 		/* zero volume before video quit - restore later */
-		g_iGlobalVol = mixer_GetWavVolume();
-		mixer_SetWavVolume( 0 );
-		bVolKilled = TRUE;
+		originalVolume = sound_GetUIVolume();
+		sound_SetUIVolume(0.0);
+		bVolKilled = true;
 	}
 
 	//toggling display mode disabled in video mode
@@ -774,9 +770,9 @@ void videoLoop(void)
 	pie_ScreenFlip(CLEAR_BLACK);// videoloopflip
 
 	/* restore volume after video quit */
-	if ( bVolKilled == TRUE )
+	if (bVolKilled)
 	{
-		mixer_SetWavVolume( g_iGlobalVol );
+		sound_SetUIVolume(originalVolume);
 	}
 }
 

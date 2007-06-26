@@ -1794,10 +1794,8 @@ static void processMultiopWidgets(UDWORD id)
 			widgDelete(psWScreen,MULTIOP_PLAYERS);
 			widgDelete(psWScreen,FRONTEND_SIDETEXT2);					// del text too,
 
-			strcpy(tmp,MultiCustomMapsPath);
-			strcat(tmp,"*.wrf");
-			debug(LOG_WZ, "processMultiopWidgets[MULTIOP_MAP_ICON]: %s", tmp);
-			addMultiRequest(tmp,MULTIOP_MAP,1, 2);
+			debug(LOG_WZ, "processMultiopWidgets[MULTIOP_MAP_ICON]: %s.wrf", MultiCustomMapsPath);
+			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, 1, 2);
 			break;
 
 //		case MULTIOP_ARENA:										// turn on arena game
@@ -2104,9 +2102,7 @@ static void processMultiopWidgets(UDWORD id)
 	case MULTIOP_FNAME_ICON:
 		widgDelete(psWScreen,MULTIOP_PLAYERS);
 		widgDelete(psWScreen,FRONTEND_SIDETEXT2);					// del text too,
-		strcpy(tmp,MultiForcesPath);
-		strcat(tmp,"*.for");
-		addMultiRequest(tmp,MULTIOP_FNAME,0,0);
+		addMultiRequest(MultiForcesPath, ".for", MULTIOP_FNAME, 0, 0);
 		break;
 
 	case MULTIOP_PNAME:
@@ -2137,9 +2133,7 @@ static void processMultiopWidgets(UDWORD id)
 		widgDelete(psWScreen,MULTIOP_PLAYERS);
 		widgDelete(psWScreen,FRONTEND_SIDETEXT2);					// del text too,
 
-		strcpy(tmp,MultiPlayersPath);
-		strcat(tmp,"*.sta");
-		addMultiRequest(tmp,MULTIOP_PNAME,0,0);
+		addMultiRequest(MultiPlayersPath, ".sta", MULTIOP_PNAME, 0, 0);
 		break;
 
 	case MULTIOP_HOST:
@@ -3777,11 +3771,11 @@ void displayPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pCo
 			}
 
 			// medals.
-			if((stat.loses>2)&&(stat.wins>2)&&(stat.wins>(2*stat.loses)) )// bronze requirement.
+			if((stat.losses > 2) && (stat.wins > 2) && (stat.wins > (2 * stat.losses)))// bronze requirement.
 			{
-				if(stat.wins>(4*stat.loses))								// silver requirement.
+				if( stat.wins > (4 * stat.losses))								// silver requirement.
 				{
-					if(stat.wins>(8*stat.loses))							// gold requirement
+					if(stat.wins > (8 * stat.losses))							// gold requirement
 					{
 						iV_DrawImage(FrontImages,IMAGE_MEDAL_GOLD,x+49,y+11);
 					}

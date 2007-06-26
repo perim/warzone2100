@@ -39,7 +39,6 @@
 
 /***************************************************************************/
 
-extern BOOL		display3D;
 extern UDWORD	mapX;
 extern UDWORD	mapY;
 extern iView	player;
@@ -107,16 +106,6 @@ audio_ObjectDead( void * psObj )
 /***************************************************************************/
 
 void
-audio_Get2DPlayerPos( SDWORD *piX, SDWORD *piY, SDWORD *piZ )
-{
-	*piX = mapX << TILE_SHIFT;
-	*piY = mapY << TILE_SHIFT;
-	*piZ = 0;
-}
-
-/***************************************************************************/
-
-void
 audio_Get3DPlayerPos( SDWORD *piX, SDWORD *piY, SDWORD *piZ )
 {
 	/* player's y and z interchanged */
@@ -130,18 +119,6 @@ audio_Get3DPlayerPos( SDWORD *piX, SDWORD *piY, SDWORD *piZ )
 
 /***************************************************************************/
 /*
- * get player direction vector - always 0 in 2D
- */
-/***************************************************************************/
-
-void
-audio_Get2DPlayerRotAboutVerticalAxis( SDWORD *piA )
-{
-	*piA = (SWORD) 0;
-}
-
-/***************************************************************************/
-/*
  * get player direction vector - angle about vertical (y) ivis axis
  */
 /***************************************************************************/
@@ -150,14 +127,6 @@ void
 audio_Get3DPlayerRotAboutVerticalAxis( SDWORD *piA )
 {
 	*piA = player.r.y / DEG_1;
-}
-
-/***************************************************************************/
-
-BOOL
-audio_Display3D( void )
-{
-	return display3D;
 }
 
 /***************************************************************************/

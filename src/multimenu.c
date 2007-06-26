@@ -340,53 +340,54 @@ static unsigned int check_tip_index(unsigned int i) {
 	}
 }
 
-// ////////////////////////////////////////////////////////////////////////////
-// ////////////////////////////////////////////////////////////////////////////
-// FIXME: what is this, and why is there some code that only works in win32
-// here? - Per
-void addMultiRequest(char *ToFindb,UDWORD mode, UBYTE mapCam, UBYTE numPlayers)
+/** Searches in the given search directory for files ending with the
+ *  given extension. Then will create a window with buttons for each
+ *  found file.
+ *  \param searchDir the directory to search in
+ *  \param fileExtension the extension files should end with, if the
+ *         extension has a dot (.) then this dot _must_ be present as
+ *         the first char in this parameter
+ *  \param mode <purpose unknown>
+ *  \param numPlayers <purpose unknown>
+ */
+void addMultiRequest(const char* searchDir, const char* fileExtension, UDWORD mode, UBYTE mapCam, UBYTE numPlayers)
 {
-	W_FORMINIT		sFormInit;
-	W_BUTINIT		sButInit;
-	UDWORD			players,numButtons,butPerForm,i;
-#ifdef WIN32
-	WIN32_FIND_DATAA	found;
-	HANDLE			dir;
-	UDWORD			count;
-	char			ToFind[255];
-#endif
-	char			sTemp[64];
+	W_FORMINIT         sFormInit;
+	W_BUTINIT          sButInit;
+	UDWORD             players;
+	char**             fileList;
+	char**             currFile;
+	const unsigned int extensionLength = strlen(fileExtension);
+	const unsigned int buttonsX = (mode == MULTIOP_MAP) ? 22 : 17;
+
+	unsigned int       numButtons, count, butPerForm, i;
+
 	static char		tips[NBTIPS][MAX_STR_SIZE];
 
-	numButtons = 0;
 
 	context = mode;
 	current_tech = mapCam;
 	current_numplayers = numPlayers;
 
-#ifdef WIN32
-	if(GetCurrentDirectoryA(255,(char*)&ToFind) == 0) // What is this doing actually?
+	fileList = PHYSFS_enumerateFiles(searchDir);
+	if (!fileList)
 	{
+		debug(LOG_ERROR, "addMultiRequest: Out of memory");
+		abort();
 		return;
 	}
-	strcat(ToFind,ToFindb);
 
-	// count buttons.
-	dir = FindFirstFileA(ToFind,&found);
-	if(dir != INVALID_HANDLE_VALUE)
+	// Count number of required buttons
+	numButtons = 0;
+	for (currFile = fileList; *currFile != NULL; ++currFile)
 	{
-		while( TRUE )
-		{
-			numButtons++;
-			if(! FindNextFileA(dir,&found ) )
-			{
-				break;
-			}
-		}
-	}
-	FindClose(dir);
-#endif
+		const unsigned int fileNameLength = strlen(*currFile);
 
+		// Check to see if this file matches the given extension
+		if (fileNameLength > extensionLength
+		 && strcmp(&(*currFile)[fileNameLength - extensionLength], fileExtension) == 0)
+			++numButtons;
+	}
 
 	if(mode == MULTIOP_MAP)									// if its a map, also look in the predone stuff.
 	{
@@ -446,7 +447,7 @@ void addMultiRequest(char *ToFindb,UDWORD mode, UBYTE mapCam, UBYTE numPlayers)
 	sFormInit.pFormDisplay = intDisplayObjectForm;
 	sFormInit.pUserData = (void*)&StandardTab;
 	sFormInit.pTabDisplay = intDisplayTab;
-	for (i=0; i< sFormInit.numMajor; i++)
+	for (i = 0; i < sFormInit.numMajor; ++i)
 	{
 		sFormInit.aNumMinors[i] = 2;
 	}
@@ -472,7 +473,7 @@ void addMultiRequest(char *ToFindb,UDWORD mode, UBYTE mapCam, UBYTE numPlayers)
 	sButInit.formID		= M_REQUEST_TAB;
 	sButInit.id		= M_REQUEST_BUT;
 	sButInit.style		= WBUT_PLAIN;
-	sButInit.x		= 22;
+	sButInit.x		= buttonsX;
 	sButInit.y		= 4;
 	sButInit.width		= R_BUT_W;
 	sButInit.height		= R_BUT_H;
@@ -480,81 +481,74 @@ void addMultiRequest(char *ToFindb,UDWORD mode, UBYTE mapCam, UBYTE numPlayers)
 	sButInit.pDisplay	= displayRequestOption;
 	sButInit.FontID		= WFont;
 
-#ifdef WIN32
-	dir = FindFirstFileA(ToFind,&found);
-	if(dir != INVALID_HANDLE_VALUE)
+	for (currFile = fileList, count = 0; *currFile != NULL && count < (butPerForm * 4); ++currFile)
 	{
-		count=0;
-		while( count < (butPerForm*4)  )
+		const unsigned int tip_index = check_tip_index(sButInit.id - M_REQUEST_BUT);
+		const unsigned int fileNameLength = strlen(*currFile);
+		const unsigned int tipStringLength = MIN(fileNameLength - extensionLength, MAX_STR_SIZE - 1);
+
+		// Check to see if this file matches the given extension
+		if (!(fileNameLength > extensionLength)
+		 || strcmp(&(*currFile)[fileNameLength - extensionLength], fileExtension) != 0)
+			continue;
+
+		// Set the tip and add the button
+
+		// Copy all of the filename except for the extension into the tiptext string
+		strncpy(tips[tip_index], *currFile, tipStringLength);
+		// Null terminate the string
+		fileList[count][tipStringLength] = '\0';
+
+		sButInit.pTip		= tips[tip_index];
+		sButInit.pText		= tips[tip_index];
+
+		if(mode == MULTIOP_MAP)											// if its a map, set player flag.
 		{
-			unsigned int tip_index = check_tip_index(sButInit.id-M_REQUEST_BUT);
+			const char* mapText;
+			unsigned int mapTextLength;
 
-			/* Set the tip and add the button */
-// use MALLOC, and do it dynamically
-			found.cFileName[strlen(found.cFileName) -4 ] = '\0';			// chop extension
-			strcpy(tips[tip_index],found.cFileName);		//need to store one!
+			sButInit.pUserData	= (void*)((*currFile)[0] - '0');
 
-			sButInit.pTip		= tips[tip_index];
-			sButInit.pText		= tips[tip_index];
-
-			if(mode == MULTIOP_MAP)											// if its a map, set player flag.
+			if( (*currFile)[1] != 'c')
 			{
-				sButInit.pUserData	= (void*)( found.cFileName[0]-'0'  );
-
-//				if(game.type == DMATCH)
-//				{
-//					if( found.cFileName[1] != 'd')
-//					{
-//						goto nextone;
-//					}
-//				}
-//				else
-//				{
-					if( found.cFileName[1] != 'c')
-					{
-						goto nextone;
-					}
-//				}
-
-				strcpy(sTemp,   strrchr(found.cFileName,'-')+1  );		//chop off description
-
-				// add number of players to string, choping of description
-			//	sprintf(tips[sButInit.id-M_REQUEST_BUT], "%d)%s",
-			//											sButInit.pUserData,
-			//											sTemp  );
-				sprintf(tips[tip_index], "%s", sTemp  );
+				continue;
 			}
 
-			count++;
-			widgAddButton(psRScreen, &sButInit);
+			// Chop off description
+			mapText = strrchr(*currFile, '-') + 1;
+			if (mapText - 1 == NULL)
+				continue;
 
-			/* Update the init struct for the next button */
-			sButInit.id += 1;
-			sButInit.x = (SWORD)(sButInit.x + (R_BUT_W+ 4));
-			if (sButInit.x + R_BUT_W+ 2 > M_REQUEST_W)
-			{
-				sButInit.x = 17;
-				sButInit.y = (SWORD)(sButInit.y +R_BUT_H + 4);
-			}
-			if (sButInit.y +R_BUT_H + 4 > M_REQUEST_H)
-			{
-				sButInit.y = 4;
-				sButInit.majorID += 1;
-			}
+			mapTextLength = tipStringLength - (mapText - *currFile);
+			strncpy(tips[tip_index], mapText, mapTextLength);
+			// Null terminate the string
+			tips[tip_index][mapTextLength] = '\0';
+		}
 
- nextone:
+		++count;
+		widgAddButton(psRScreen, &sButInit);
 
-			if(!FindNextFileA(dir,&found ) )	/* find next one*/
-			{
-				break;
-			}
+		/* Update the init struct for the next button */
+		sButInit.id += 1;
+		sButInit.x = (SWORD)(sButInit.x + (R_BUT_W+ 4));
+		if (sButInit.x + R_BUT_W+ 2 > M_REQUEST_W)
+		{
+			sButInit.x = buttonsX;
+			sButInit.y = (SWORD)(sButInit.y +R_BUT_H + 4);
+		}
+		if (sButInit.y +R_BUT_H + 4 > M_REQUEST_H)
+		{
+			sButInit.y = 4;
+			sButInit.majorID += 1;
 		}
 	}
-	FindClose(dir);
-#endif
+
+	// Make sure to return memory back to PhyscisFS
+	PHYSFS_freeList(fileList);
 
 	if(mode == MULTIOP_MAP)
 	{
+		char sTemp[64];
 		if(enumerateMultiMaps( sTemp,&players,TRUE,mapCam,numPlayers))
 		{
 			do{
@@ -573,7 +567,7 @@ void addMultiRequest(char *ToFindb,UDWORD mode, UBYTE mapCam, UBYTE numPlayers)
 				sButInit.x = (SWORD)(sButInit.x + (R_BUT_W+ 4));
 				if (sButInit.x + R_BUT_W+ 2 > M_REQUEST_W)
 				{
-					sButInit.x = 22;
+					sButInit.x = buttonsX;
 					sButInit.y = (SWORD)(sButInit.y +R_BUT_H + 4);
 				}
 				if (sButInit.y +R_BUT_H + 4 > M_REQUEST_H)
@@ -600,7 +594,7 @@ void addMultiRequest(char *ToFindb,UDWORD mode, UBYTE mapCam, UBYTE numPlayers)
 		sButInit.height		= 17;
 		sButInit.UserData	= 1;
 		sButInit.FontID		= WFont;
-		sButInit.pTip		= "Tech:1";
+		sButInit.pTip		= _("Technology level 1");
 		sButInit.pDisplay	= displayCamTypeBut;
 
 		widgAddButton(psRScreen, &sButInit);
@@ -608,38 +602,38 @@ void addMultiRequest(char *ToFindb,UDWORD mode, UBYTE mapCam, UBYTE numPlayers)
 		sButInit.id		= M_REQUEST_C2;
 		sButInit.y		+= 22;
 		sButInit.UserData	= 2;
-		sButInit.pTip		= "Tech:2";
+		sButInit.pTip		= _("Technology level 2");
 		widgAddButton(psRScreen, &sButInit);
 
 		sButInit.id		= M_REQUEST_C3;
 		sButInit.y		+= 22;
 		sButInit.UserData	= 3;
-		sButInit.pTip		= "Tech:3";
+		sButInit.pTip		= _("Technology level 3");
 		widgAddButton(psRScreen, &sButInit);
 
 		sButInit.id		= M_REQUEST_AP;
 		sButInit.y		= 17;
 		sButInit.UserData	= 0;
-		sButInit.pTip		= "Any number of players";
+		sButInit.pTip		= _("Any number of players");
 		sButInit.pDisplay	= displayNumPlayersBut;
 		widgAddButton(psRScreen, &sButInit);
 
 		sButInit.id		= M_REQUEST_2P;
 		sButInit.y		+= 22;
 		sButInit.UserData	= 2;
-		sButInit.pTip		= "2 players";
+		sButInit.pTip		= _("2 players");
 		widgAddButton(psRScreen, &sButInit);
 
 		sButInit.id		= M_REQUEST_4P;
 		sButInit.y		+= 22;
 		sButInit.UserData	= 4;
-		sButInit.pTip		= "4 players";
+		sButInit.pTip		= _("4 players");
 		widgAddButton(psRScreen, &sButInit);
 
 		sButInit.id		= M_REQUEST_8P;
 		sButInit.y		+= 22;
 		sButInit.UserData	= 8;
-		sButInit.pTip		= "8 players";
+		sButInit.pTip		= _("8 players");
 		widgAddButton(psRScreen, &sButInit);
 	}
 
@@ -656,8 +650,6 @@ static void closeMultiRequester(void)
 
 BOOL runMultiRequester(UDWORD id,UDWORD *mode, char *chosen,UDWORD *chosenValue)
 {
-	char tmp[255];
-
 	if( id==M_REQUEST_CLOSE)							// close
 	{
 		closeMultiRequester();
@@ -680,48 +672,43 @@ BOOL runMultiRequester(UDWORD id,UDWORD *mode, char *chosen,UDWORD *chosenValue)
 		return TRUE;
 	}
 
-	strcpy(tmp,MultiCustomMapsPath);
-	strcat(tmp,"*.wrf");
-	if( id == M_REQUEST_C1)
+	switch (id)
 	{
-		closeMultiRequester();
-		addMultiRequest(tmp,MULTIOP_MAP,1,current_numplayers);
+		case M_REQUEST_C1:
+			closeMultiRequester();
+			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, 1, current_numplayers);
+			break;
+		case M_REQUEST_C2:
+			closeMultiRequester();
+			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, 2, current_numplayers);
+			break;
+		case M_REQUEST_C3:
+			closeMultiRequester();
+			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, 3, current_numplayers);
+			break;
+		case M_REQUEST_AP:
+			closeMultiRequester();
+			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, current_tech, 0);
+			break;
+		case M_REQUEST_2P:
+			closeMultiRequester();
+			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, current_tech, 2);
+			break;
+		case M_REQUEST_4P:
+			closeMultiRequester();
+			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, current_tech, 4);
+			break;
+		case M_REQUEST_8P:
+			closeMultiRequester();
+			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, current_tech, 8);
+			break;
+#if 0
+		case M_REQUEST_CA:
+			closeMultiRequester();
+			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, 0);
+			break;
+#endif
 	}
-	if( id == M_REQUEST_C2)
-	{
-		closeMultiRequester();
-		addMultiRequest(tmp,MULTIOP_MAP,2,current_numplayers);
-	}
-	if( id == M_REQUEST_C3)
-	{
-		closeMultiRequester();
-		addMultiRequest(tmp,MULTIOP_MAP,3,current_numplayers);
-	}
-	if( id == M_REQUEST_AP)
-	{
-		closeMultiRequester();
-		addMultiRequest(tmp,MULTIOP_MAP,current_tech,0);
-	}
-	if( id == M_REQUEST_2P)
-	{
-		closeMultiRequester();
-		addMultiRequest(tmp,MULTIOP_MAP,current_tech,2);
-	}
-	if( id == M_REQUEST_4P)
-	{
-		closeMultiRequester();
-		addMultiRequest(tmp,MULTIOP_MAP,current_tech,4);
-	}
-	if( id == M_REQUEST_8P)
-	{
-		closeMultiRequester();
-		addMultiRequest(tmp,MULTIOP_MAP,current_tech,8);
-	}
-//	if( id == M_REQUEST_CA)
-//	{
-//		closeMultiRequester();
-//		addMultiRequest("/multiplay/custommaps/*.wrf",MULTIOP_MAP,0);
-//	}
 
 	return FALSE;
 }
