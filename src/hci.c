@@ -142,9 +142,6 @@ BOOL Refreshing = FALSE;
 
 CURSORSNAP InterfaceSnap;
 
-char	*DisplayBuffer;
-UDWORD	displayBufferSize;
-
 
 /***************************************************************************************/
 /*                  Widget ID numbers                                                  */
@@ -440,7 +437,6 @@ static BASE_OBJECT		*apsPreviousObj[IOBJ_MAX];
 static Vector2i asJumpPos[IOBJ_MAX];
 
 // whether to reopen the build menu
-//static BOOL				bReopenBuildMenu = FALSE;
 // chnaged back to pre Mark Donald setting at Jim's request - AlexM
 static BOOL				bReopenBuildMenu = FALSE;
 
@@ -4117,6 +4113,7 @@ BOOL intAddOptions(void)
 	{
 		return FALSE;
 	}
+#endif
 
 	/* Add the edit button */
 	sButInit.formID = IDOPT_FORM;
@@ -4125,6 +4122,7 @@ BOOL intAddOptions(void)
 	sButInit.y = OPT_EDITY;
 	sButInit.width = OPT_BUTWIDTH;
 	sButInit.height = OPT_BUTHEIGHT;
+#ifdef EDIT_OPTIONS
 	sButInit.pText = "Edit";
 	sButInit.pTip = "Start Edit Mode";
 	if (!widgAddButton(psWScreen, &sButInit))
@@ -6748,7 +6746,7 @@ void addIntelScreen(void)
 	// Just display the 3d, no interface
 		displayWorld();
 	// Upload the current display back buffer into system memory.
-		pie_UploadDisplayBuffer(DisplayBuffer);
+		pie_UploadDisplayBuffer();
 
 		radarOnScreen = radOnScreen;
 		bRender3DOnly = FALSE;

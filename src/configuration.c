@@ -327,8 +327,8 @@ BOOL loadConfig(void)
 	}
 	else
 	{
-		intReopenBuild(FALSE);
-		setWarzoneKeyNumeric("reopenBuild", FALSE);
+		intReopenBuild(TRUE);
+		setWarzoneKeyNumeric("reopenBuild", TRUE);
 	}
 
 	// the maximum route processing per frame

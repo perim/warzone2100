@@ -1260,7 +1260,6 @@ static BOOL IsScenario;
  *	Local ProtoTypes
  */
 /***************************************************************************/
-BOOL gameLoad(char *pFileData, UDWORD filesize);
 static BOOL gameLoadV7(char *pFileData, UDWORD filesize);
 static BOOL gameLoadV(char *pFileData, UDWORD filesize, UDWORD version);
 static BOOL writeGameFile(char *pFileName, SDWORD saveType);
@@ -1296,7 +1295,6 @@ static BOOL loadSaveFeatureV14(char *pFileData, UDWORD filesize, UDWORD numFeatu
 static BOOL loadSaveFeatureV(char *pFileData, UDWORD filesize, UDWORD numFeatures, UDWORD version);
 static BOOL writeFeatureFile(char *pFileName);
 
-BOOL loadTerrainTypeMap(char *pFileData, UDWORD filesize);		// now used in gamepsx.c aswell
 static BOOL writeTerrainTypeMapFile(char *pFileName);
 
 static BOOL loadSaveCompList(char *pFileData, UDWORD filesize);
@@ -1365,29 +1363,29 @@ static char *getSaveStructNameV(SAVE_STRUCTURE *psSaveStructure)
 so can be called in levLoadData when starting a game from a load save game*/
 
 // -----------------------------------------------------------------------------------------
-BOOL loadGameInit(char *pGameToLoad )
+BOOL loadGameInit(const char *pGameToLoad )
 {
 	char			*pFileData = NULL;
 	UDWORD			fileSize;
 
 	/* Load in the chosen file data */
-	pFileData = DisplayBuffer;
-	if (!loadFileToBuffer(pGameToLoad, pFileData, displayBufferSize, &fileSize))
+	pFileData = fileLoadBuffer;
+	if (!loadFileToBuffer(pGameToLoad, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 	{
-		debug( LOG_NEVER, "loadgame: Fail2\n" );
+		debug(LOG_ERROR, "loadGameInit: Fail1\n" );
 		goto error;
 	}
 
 	if (!gameLoad(pFileData, fileSize))
 	{
 		// FIXME Probably should never arrive here?
-		debug( LOG_NEVER, "loadgame: Fail4\n" );
+		debug(LOG_ERROR, "loadGameInit: Fail2\n" );
 		goto error;
 	}
+
 	return TRUE;
 
 error:
-		debug( LOG_NEVER, "loadgame: ERROR\n" );
 
 	/* Start the game clock */
 	gameTimeStart();
@@ -1407,7 +1405,7 @@ error:
 //
 // if it is a level loaded up from CD then UserSaveGame will by false
 // UserSaveGame ... Extra stuff to load after scripts
-BOOL loadMissionExtras(char *pGameToLoad, SWORD levelType)
+BOOL loadMissionExtras(const char *pGameToLoad, SWORD levelType)
 {
 	char			aFileName[256];
 
@@ -1433,8 +1431,8 @@ BOOL loadMissionExtras(char *pGameToLoad, SWORD levelType)
 			aFileName[fileExten] = '\0';
 			strcat(aFileName, "proxstate.bjo");
 			// Load in the chosen file data
-			pFileData = DisplayBuffer;
-			if (loadFileToBufferNoError(aFileName, pFileData, displayBufferSize, &fileSize))
+			pFileData = fileLoadBuffer;
+			if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 			{
 				//load the proximity status data
 				if (pFileData)
@@ -1462,8 +1460,8 @@ BOOL loadMissionExtras(char *pGameToLoad, SWORD levelType)
 			aFileName[fileExten] = '\0';
 			strcat(aFileName, "messtate.bjo");
 			// Load in the chosen file data
-			pFileData = DisplayBuffer;
-			if (loadFileToBufferNoError(aFileName, pFileData, displayBufferSize, &fileSize))
+			pFileData = fileLoadBuffer;
+			if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 			{
 				//load the message status data
 				if (pFileData)
@@ -1486,7 +1484,7 @@ BOOL loadMissionExtras(char *pGameToLoad, SWORD levelType)
 
 // -----------------------------------------------------------------------------------------
 // UserSaveGame ... this is true when you are loading a players save game
-BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGame)
+BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGame)
 {
 	char			aFileName[256];
 	//OPENFILENAME		sOFN;
@@ -1814,8 +1812,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 	powerCalculated = FALSE;
 	/* Load in the chosen file data */
 /*
-	pFileData = DisplayBuffer;
-	if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+	pFileData = fileLoadBuffer;
+	if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 	{
 		DBPRINTF(("loadgame: Fail2\n"));
 		goto error;
@@ -1843,8 +1841,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "ttypes.ttp");
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadgame: Fail23\n" );
 			goto error;
@@ -1907,8 +1905,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "templ.bjo");
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadgame: Fail20\n" );
 			goto error;
@@ -1942,8 +1940,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "mission.map");
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (loadFileToBufferNoError(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			if (!mapLoad(pFileData, fileSize))
 			{
@@ -1956,8 +1954,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "misvis.bjo");
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (loadFileToBufferNoError(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			//load the visibility data
 			if (pFileData)
@@ -1981,8 +1979,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "mfeat.bjo");
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadgame: Fail14\n" );
 			goto error;
@@ -1999,8 +1997,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "mstruct.bjo");
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadgame: Fail17\n" );
 			goto error;
@@ -2037,8 +2035,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 			strcat(aFileName, "munit.bjo");
 		}
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (loadFileToBufferNoError(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			//load the data into mission.apsDroidLists
 			//ppsCurrentDroidLists = mission.apsDroidLists;
@@ -2074,8 +2072,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "mflagstate.bjo");
 		// Load in the chosen file data
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadMissionExtras: Fail 3\n" );
 			return FALSE;
@@ -2115,8 +2113,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "game.map");
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadgame: Fail5\n" );
 			goto error;
@@ -2133,8 +2131,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 /*		aFileName[fileExten] = '\0';
 		strcat(aFileName, "gates.txt");
 		// Load in the chosen file data
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			DBPRINTF(("loadgame: Failed to load gates.txt\n"));
 			goto error;
@@ -2177,8 +2175,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "resstate.bjo");
 		// Load in the chosen file data
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadgame: Fail32\n" );
 			goto error;
@@ -2202,8 +2200,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "dinit.bjo");
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadgame: Fail8\n" );
 			goto error;
@@ -2230,8 +2228,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 			strcat(aFileName, "unit.bjo");
 		}
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadgame: Fail11\n" );
 			goto error;
@@ -2281,8 +2279,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 					strcat(aFileName, "munit.bjo");
 				}
 				/* Load in the chosen file data */
-				pFileData = DisplayBuffer;
-				if (loadFileToBufferNoError(aFileName, pFileData, displayBufferSize, &fileSize)) {
+				pFileData = fileLoadBuffer;
+				if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize)) {
 					//load the data into mission.apsDroidLists
 					//ppsCurrentDroidLists = mission.apsDroidLists;
 					if (!loadSaveDroid(pFileData, fileSize, mission.apsDroidLists))
@@ -2305,8 +2303,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "limbo.bjo");
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (loadFileToBufferNoError(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			//load the data into apsDroidLists
 			//ppsCurrentDroidLists = apsLimboDroids;
@@ -2324,8 +2322,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 	aFileName[fileExten] = '\0';
 	strcat(aFileName, "feat.bjo");
 	/* Load in the chosen file data */
-	pFileData = DisplayBuffer;
-	if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+	pFileData = fileLoadBuffer;
+	if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 	{
 		debug( LOG_NEVER, "loadgame: Fail14\n" );
 		goto error;
@@ -2346,8 +2344,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 	aFileName[fileExten] = '\0';
 	strcat(aFileName, "struct.bjo");
 	/* Load in the chosen file data */
-	pFileData = DisplayBuffer;
-	if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+	pFileData = fileLoadBuffer;
+	if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 	{
 		debug( LOG_NEVER, "loadgame: Fail17\n" );
 		goto error;
@@ -2379,8 +2377,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "compl.bjo");
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadgame: Fail26\n" );
 			goto error;
@@ -2401,8 +2399,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "strtype.bjo");
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadgame: Fail29\n" );
 			goto error;
@@ -2433,8 +2431,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 			aFileName[fileExten] = '\0';
 			strcat(aFileName, "visstate.bjo");
 			// Load in the chosen file data
-			pFileData = DisplayBuffer;
-			if (loadFileToBufferNoError(aFileName, pFileData, displayBufferSize, &fileSize))
+			pFileData = fileLoadBuffer;
+			if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 			{
 				//load the visibility data
 				if (pFileData)
@@ -2464,8 +2462,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 			aFileName[fileExten] = '\0';
 			strcat(aFileName, "prodstate.bjo");
 			// Load in the chosen file data
-    		pFileData = DisplayBuffer;
-			if (loadFileToBufferNoError(aFileName, pFileData, displayBufferSize, &fileSize))
+    		pFileData = fileLoadBuffer;
+			if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 			{
 				//load the visibility data
 				if (pFileData)
@@ -2493,8 +2491,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 			aFileName[fileExten] = '\0';
 			strcat(aFileName, "fxstate.bjo");
 			// Load in the chosen file data
-			pFileData = DisplayBuffer;
-			if (loadFileToBufferNoError(aFileName, pFileData, displayBufferSize, &fileSize))
+			pFileData = fileLoadBuffer;
+			if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 			{
 				//load the fx data
 				if (pFileData)
@@ -2523,8 +2521,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 			aFileName[fileExten] = '\0';
 			strcat(aFileName, "score.bjo");
 			// Load in the chosen file data
-			pFileData = DisplayBuffer;
-			if (loadFileToBufferNoError(aFileName, pFileData, displayBufferSize, &fileSize))
+			pFileData = fileLoadBuffer;
+			if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 			{
 				//load the fx data
 				if (pFileData)
@@ -2555,8 +2553,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 			aFileName[fileExten] = '\0';
 			strcat(aFileName, "flagstate.bjo");
 			// Load in the chosen file data
-			pFileData = DisplayBuffer;
-			if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+			pFileData = fileLoadBuffer;
+			if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 			{
 				debug( LOG_NEVER, "loadMissionExtras: Fail 3\n");
 				return FALSE;
@@ -2587,8 +2585,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 			aFileName[fileExten] = '\0';
 			strcat(aFileName, "command.bjo");
 			// Load in the chosen file data
-			pFileData = DisplayBuffer;
-			if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+			pFileData = fileLoadBuffer;
+			if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 			{
 				debug( LOG_NEVER, "loadMissionExtras: Fail 5\n" );
 				return FALSE;
@@ -2615,8 +2613,8 @@ BOOL loadGame(char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGa
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "limits.bjo");
 		/* Load in the chosen file data */
-		pFileData = DisplayBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+		pFileData = fileLoadBuffer;
+		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadgame: Fail17\n" );
 			goto error;
@@ -3112,7 +3110,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 			psDroid->x = INVALID_XY;
 			psDroid->y = INVALID_XY;
             //this is mainly for VTOLs
-            psDroid->psBaseStruct = NULL;
+			setSaveDroidBase(psDroid, NULL);
             psDroid->cluster = 0;
 			orderDroid(psDroid, DORDER_STOP);
         }
@@ -3517,8 +3515,8 @@ UDWORD getCampaign(char *pGameToLoad, BOOL *bSkipCDCheck)
 	debug(LOG_WZ, "getCampaign: %s", pGameToLoad);
 
 	/* Load in the chosen file data */
-	pFileData = DisplayBuffer;
-	if (!loadFileToBuffer(pGameToLoad, pFileData, displayBufferSize, &fileSize))
+	pFileData = fileLoadBuffer;
+	if (!loadFileToBuffer(pGameToLoad, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 	{
 		debug( LOG_NEVER, "loadgame: Fail2\n" );
 		return 0;
@@ -4911,8 +4909,6 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 		FIXME_CAST_ASSIGN(UDWORD, psDroid->psActionTarget[0], psSaveDroid->actionTargetID);
 		psDroid->actionStarted		= psSaveDroid->actionStarted;
 		psDroid->actionPoints		= psSaveDroid->actionPoints;
-        //actionHeight has been renamed to powerAccrued - AB 7/1/99
-        //psDroid->actionHeight		= psSaveDroid->actionHeight;
 		psDroid->powerAccrued		= psSaveDroid->actionHeight;
 		//added for V14
 
@@ -5174,8 +5170,6 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 	FIXME_CAST_ASSIGN(UDWORD, psDroid->psActionTarget[0], psSaveDroid->actionTargetID);
 	psDroid->actionStarted		= psSaveDroid->actionStarted;
 	psDroid->actionPoints		= psSaveDroid->actionPoints;
-    //actionHeight has been renamed to powerAccrued - AB 7/1/99
-    //psDroid->actionHeight		= psSaveDroid->actionHeight;
 	psDroid->powerAccrued		= psSaveDroid->actionHeight;
 	//added for V14
 
@@ -5268,7 +5262,7 @@ static BOOL loadDroidSetPointers(void)
 	UDWORD		player,list;
 	UDWORD		id;
 	DROID		*psDroid, *psCommander;
-	DROID		**ppsDroidLists[3];
+	DROID		**ppsDroidLists[3], *psNext;
 
 	ppsDroidLists[0] = apsDroidLists;
 	ppsDroidLists[1] = mission.apsDroidLists;
@@ -5284,10 +5278,9 @@ static BOOL loadDroidSetPointers(void)
 			{
 				//Target rebuild the object pointer from the ID
 				id = (UDWORD)(psDroid->psTarget[0]);
-				ASSERT( id != 0xdddddddd,"LoadUnit found freed target" );
 				if (id != UDWORD_MAX)
 				{
-					psDroid->psTarget[0]			= getBaseObjFromId(id);
+					setSaveDroidTarget(psDroid, getBaseObjFromId(id), 0);
 					ASSERT( psDroid->psTarget[0] != NULL,"Saved Droid psTarget getBaseObjFromId() failed" );
 					if (psDroid->psTarget[0] == NULL)
 					{
@@ -5296,14 +5289,13 @@ static BOOL loadDroidSetPointers(void)
 				}
 				else
 				{
-					psDroid->psTarget[0] = NULL;//psSaveDroid->targetID
+					setSaveDroidTarget(psDroid, NULL, 0);
 				}
 				//ActionTarget rebuild the object pointer from the ID
 				id = (UDWORD)(psDroid->psActionTarget[0]);
-				ASSERT( id != 0xdddddddd,"LoadUnit found freed action target" );
 				if (id != UDWORD_MAX)
 				{
-					psDroid->psActionTarget[0]			= getBaseObjFromId(id);
+					setSaveDroidActionTarget(psDroid, getBaseObjFromId(id), 0);
 					ASSERT( psDroid->psActionTarget[0] != NULL,"Saved Droid psActionTarget getBaseObjFromId() failed" );
 					if (psDroid->psActionTarget[0] == NULL)
 					{
@@ -5312,14 +5304,13 @@ static BOOL loadDroidSetPointers(void)
 				}
 				else
 				{
-					psDroid->psActionTarget[0]	= NULL;//psSaveDroid->targetID
+					setSaveDroidActionTarget(psDroid, NULL, 0);
 				}
 				//BaseStruct rebuild the object pointer from the ID
 				id = (UDWORD)(psDroid->psBaseStruct);
-				ASSERT( id != 0xdddddddd,"LoadUnit found freed baseStruct" );
 				if (id != UDWORD_MAX)
 				{
-					psDroid->psBaseStruct			= (STRUCTURE*)getBaseObjFromId(id);
+					setSaveDroidBase(psDroid, (STRUCTURE*)getBaseObjFromId(id));
 					ASSERT( psDroid->psBaseStruct != NULL,"Saved Droid psBaseStruct getBaseObjFromId() failed" );
 					if (psDroid->psBaseStruct == NULL)
 					{
@@ -5328,7 +5319,7 @@ static BOOL loadDroidSetPointers(void)
 				}
 				else
 				{
-					psDroid->psBaseStruct = NULL;//psSaveDroid->targetID
+					setSaveDroidBase(psDroid, NULL);//psSaveDroid->targetID
 				}
 				if (saveGameVersion > VERSION_20)
 				{
@@ -5338,7 +5329,6 @@ static BOOL loadDroidSetPointers(void)
 						id = (UDWORD)(psDroid->psGroup);
 						psDroid->psGroup = NULL;
 						psDroid->psGrpNext = NULL;
-						ASSERT( id != 0xdddddddd,"LoadUnit found freed commander" );
 						if (id != UDWORD_MAX)
 						{
 							psCommander	= (DROID*)getBaseObjFromId(id);
@@ -5354,6 +5344,36 @@ static BOOL loadDroidSetPointers(void)
 			}
 		}
 	}
+
+	/* HACK: Make sure all cargo units are properly initialized! I am not sure why we need
+	 * to do this, but the code in this file is too horrible to debug. - Per */
+	for(list = 0; list<3; list++)
+	{
+		for(player = 0; player<MAX_PLAYERS; player++)
+		{
+			for (psNext = (DROID *)ppsDroidLists[list][player]; psNext; psNext = psNext->psNext)
+			{
+				if (psNext->droidType == DROID_TRANSPORTER)
+				{
+					DROID *psCargo, *psTemp;
+
+					for (psCargo = psNext->psGroup->psList; psCargo; psCargo = psTemp)
+					{
+						UDWORD i;
+
+						psTemp = psCargo->psGrpNext;
+						for (i = 0; i < DROID_MAXWEAPS; i++)
+						{
+							setSaveDroidTarget(psCargo, NULL, i);
+							setSaveDroidActionTarget(psCargo, NULL, i);
+						}
+						setSaveDroidBase(psCargo, NULL);
+					}
+				}
+			}
+		}
+	}
+
 
 	return TRUE;
 }
@@ -5441,12 +5461,12 @@ BOOL loadSaveDroidV11(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
 		else if (psSaveDroid->saveType == DROID_ON_TRANSPORT)
 		{
    			//add the droid to the list
-			for(i = 0;i < psDroid->numWeaps;i++)
+			for (i = 0; i < DROID_MAXWEAPS; i++)
 			{
-				psDroid->psTarget[i] = NULL;
-				psDroid->psActionTarget[i] = NULL;
+				setSaveDroidTarget(psDroid, NULL, i);
+				setSaveDroidActionTarget(psDroid, NULL, i);
 			}
-			psDroid->psBaseStruct = NULL;
+			setSaveDroidBase(psDroid, NULL);
 			ASSERT( psCurrentTransGroup != NULL,"loadSaveUnitV9; Transporter unit without group " );
 			grpJoin(psCurrentTransGroup, psDroid);
 		}
@@ -5595,20 +5615,12 @@ BOOL loadSaveDroidV19(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
   			//add the droid to the list
 			psDroid->order = DORDER_NONE;
 			psDroid->action = DACTION_NONE;
-			if (psDroid->numWeaps > 0)
+			for (i = 0; i < DROID_MAXWEAPS; i++)
 			{
-				for(i = 0;i < psDroid->numWeaps;i++)
-				{
-					psDroid->psTarget[i] = NULL;
-					psDroid->psActionTarget[i] = NULL;
-				}
+				setSaveDroidTarget(psDroid, NULL, i);
+				setSaveDroidActionTarget(psDroid, NULL, i);
 			}
-			else
-			{
-				psDroid->psTarget[0] = NULL;
-				psDroid->psActionTarget[0] = NULL;
-			}
-			psDroid->psBaseStruct = NULL;
+			setSaveDroidBase(psDroid, NULL);
 			//add the droid to the list
 			ASSERT( psCurrentTransGroup != NULL,"loadSaveUnitV9; Transporter unit without group " );
 			grpJoin(psCurrentTransGroup, psDroid);
@@ -5798,12 +5810,12 @@ BOOL loadSaveDroidV(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD v
   			//add the droid to the list
 			psDroid->order = DORDER_NONE;
 			psDroid->action = DACTION_NONE;
-			for(i = 0;i < psDroid->numWeaps;i++)
+			for (i = 0; i < DROID_MAXWEAPS; i++)
 			{
-				psDroid->psTarget[i] = NULL;
-				psDroid->psActionTarget[i] = NULL;
+				setSaveDroidTarget(psDroid, NULL, i);
+				setSaveDroidActionTarget(psDroid, NULL, i);
 			}
-			psDroid->psBaseStruct = NULL;
+			setSaveDroidBase(psDroid, NULL);
 			//add the droid to the list
 			psDroid->psGroup = NULL;
 			psDroid->psGrpNext = NULL;
@@ -5858,7 +5870,7 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			still exist*/
 			strcpy(psSaveDroid->name, psCurr->aName);
 
-			//for (i=0; i < DROID_MAXCOMP; i++) not interested in first comp - COMP_UNKNOWN
+			// not interested in first comp - COMP_UNKNOWN
 			for (i=1; i < DROID_MAXCOMP; i++)
 			{
 
@@ -5870,21 +5882,8 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 				}
 			}
 			psSaveDroid->body = psCurr->body;
-			//psSaveDroid->numWeaps = psCurr->numWeaps;
-			/*for (i=0; i < psCurr->numWeaps; i++)
-			{
-				if (!getNameFromComp(COMP_WEAPON, psSaveDroid->asWeaps[i].name, psCurr->asWeaps[i].nStat))
-				{
-					//ignore this record
-					//continue;
-					break;
-				}
-				psSaveDroid->asWeaps[i].hitPoints = psCurr->asWeaps[i].hitPoints;
-				psSaveDroid->asWeaps[i].ammo = psCurr->asWeaps[i].ammo;
-				psSaveDroid->asWeaps[i].lastFired = psCurr->asWeaps[i].lastFired;
-			}*/
 			//Watermelon:loop thru all weapons
-            psSaveDroid->numWeaps = psCurr->numWeaps;
+			psSaveDroid->numWeaps = psCurr->numWeaps;
 			for(i = 0;i < psCurr->numWeaps;i++)
 			{
 				if (psCurr->asWeaps[i].nStat > 0)
@@ -5925,7 +5924,6 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			psSaveDroid->timeLastHit	= psCurr->timeLastHit;
 			if (psCurr->psTarget[0] != NULL)
 			{
-				ASSERT( psCurr->psTarget[0]->id != 0xdddddddd,"SaveUnit found freed target" );
 				if (psCurr->psTarget[0]->died <= 1)
 				{
 					psSaveDroid->targetID		= psCurr->psTarget[0]->id;
@@ -5949,7 +5947,6 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			psSaveDroid->actionY		= psCurr->actionY;
 			if (psCurr->psActionTarget[0] != NULL)
 			{
-				ASSERT( psCurr->psActionTarget[0]->id != 0xdddddddd,"SaveUnit found freed action target" );
 				if (psCurr->psActionTarget[0]->died <= 1)
 				{
 					psSaveDroid->actionTargetID		= psCurr->psActionTarget[0]->id;
@@ -5970,9 +5967,7 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			}
 			psSaveDroid->actionStarted	= psCurr->actionStarted;
 			psSaveDroid->actionPoints	= psCurr->actionPoints;
-            //actionHeight has been renamed to powerAccrued - AB 7/1/99
-			//psSaveDroid->actionHeight	= psCurr->actionHeight;
-            psSaveDroid->actionHeight	= psCurr->powerAccrued;
+			psSaveDroid->actionHeight	= psCurr->powerAccrued;
 
 			//version 14
 			if (psCurr->psTarStats[0] != NULL)
@@ -6105,7 +6100,6 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			psSaveDroid->id = psCurr->id;
 			psSaveDroid->x = psCurr->x;
 			psSaveDroid->y = psCurr->y;
-			ASSERT(worldOnMap(psSaveDroid->x,psSaveDroid->y), "the saved droid if off the map");
 			psSaveDroid->z = psCurr->z;
 			psSaveDroid->direction = psCurr->direction;
 			psSaveDroid->player = psCurr->player;
@@ -8960,7 +8954,7 @@ BOOL writeTemplateFile(char *pFileName)
 // -----------------------------------------------------------------------------------------
 
 // load up a terrain tile type map file
-BOOL loadTerrainTypeMap(char *pFileData, UDWORD filesize)
+BOOL loadTerrainTypeMap(const char *pFileData, UDWORD filesize)
 {
 	TILETYPE_SAVEHEADER	*psHeader;
 	UDWORD				i;
@@ -11302,8 +11296,8 @@ BOOL loadScriptState(char *pFileName)
 	pFileName[strlen(pFileName)-4] = (char)0;
 	strcat(pFileName, ".es");
 
-	pFileData = DisplayBuffer;
-	if (!loadFileToBuffer(pFileName, pFileData, displayBufferSize, &fileSize))
+	pFileData = fileLoadBuffer;
+	if (!loadFileToBuffer(pFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 	{
 		debug( LOG_ERROR, "loadScriptState: couldn't load %s", pFileName );
 		abort();
@@ -11463,8 +11457,8 @@ BOOL plotStructurePreview(iTexture *backDropSprite, UBYTE scale, UDWORD offX, UD
 	aFileName[strlen(aFileName)-4] = '\0';
 	strcat(aFileName, "/struct.bjo");
 
-	pFileData = DisplayBuffer;
-	if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+	pFileData = fileLoadBuffer;
+	if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 	{
 		debug( LOG_NEVER, "plotStructurePreview: Fail1\n" );
 	}
@@ -11598,8 +11592,8 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 	aFileName[strlen(aFileName)-4] = '\0';
 	strcat(aFileName, "/struct.bjo");
 
-	pFileData = DisplayBuffer;
-	if (!loadFileToBuffer(aFileName, pFileData, displayBufferSize, &fileSize))
+	pFileData = fileLoadBuffer;
+	if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 	{
 		debug( LOG_NEVER, "plotStructurePreview16: Fail1\n" );
 	}

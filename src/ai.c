@@ -167,7 +167,11 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 				}
 				else if(friendlyObj->type == OBJ_STRUCTURE)
 				{
-					targetInQuestion = ((STRUCTURE *)friendlyObj)->psTarget[0];
+					tempTarget = ((STRUCTURE*)friendlyObj)->psTarget[0];
+					if (tempTarget && !tempTarget->died)
+					{
+						targetInQuestion = tempTarget;
+					}
 				}
 			}
 		}
@@ -452,12 +456,9 @@ static BOOL aiObjIsWall(BASE_OBJECT *psObj)
 
 
 /* See if there is a target in range */
-// Watermelon:to accept another int value weapon_slot
-BOOL aiChooseTarget(BASE_OBJECT *psObj,
-					BASE_OBJECT **ppsTarget,int weapon_slot, BOOL bUpdateTarget)
+BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot, BOOL bUpdateTarget)
 {
 	UDWORD	radSquared;
-//	UDWORD	player;
 	BASE_OBJECT		*psCurr, *psTarget;
 	SDWORD			xdiff,ydiff, distSq, tarDist, minDist;//, longRange;
 	WEAPON_STATS	*psWStats;
@@ -468,7 +469,6 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj,
 	UDWORD			sensorRange;
 	SECONDARY_STATE	state;
 	SDWORD			curTargetWeight=-1,newTargetWeight;
-	//Watermelon:weapon_slot to store which turrent is InAttackRange
 
 	/* Get the sensor range */
 	switch (psObj->type)
@@ -650,7 +650,7 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj,
 			while (psCurr != NULL)
 			{
 				//don't target features
-				if (psCurr->type != OBJ_FEATURE)
+				if (psCurr->type != OBJ_FEATURE && !psCurr->died)
 				{
 					if (psObj->player != psCurr->player &&
 						!aiCheckAlliances(psCurr->player,psObj->player))
@@ -798,7 +798,7 @@ BOOL aiChooseSensorTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget)
 		while (psCurr != NULL)
 		{
 			    //don't target features
-			    if (psCurr->type != OBJ_FEATURE)
+			    if (psCurr->type != OBJ_FEATURE && !psCurr->died)
 			    {
 				    if (psObj->player != psCurr->player &&
 					    !aiCheckAlliances(psCurr->player,psObj->player) &&
@@ -1123,15 +1123,13 @@ BOOL validTarget(BASE_OBJECT *psObject, BASE_OBJECT *psTarget, int weapon_slot)
 BOOL updateAttackTarget(BASE_OBJECT * psAttacker, SDWORD weapon_slot)
 {
 	BASE_OBJECT		*psBetterTarget=NULL;
-	DROID			*psDroid;
-
-	psBetterTarget = NULL;
 
 	if(aiChooseTarget(psAttacker, &psBetterTarget, weapon_slot, TRUE))	//update target
 	{
 		if(psAttacker->type == OBJ_DROID)
 		{
-			psDroid = (DROID *)psAttacker;
+			DROID *psDroid = (DROID *)psAttacker;
+
 			if( (orderState(psDroid, DORDER_NONE) ||
 				orderState(psDroid, DORDER_GUARD) ||
 				orderState(psDroid, DORDER_ATTACKTARGET)) &&
@@ -1142,13 +1140,14 @@ BOOL updateAttackTarget(BASE_OBJECT * psAttacker, SDWORD weapon_slot)
 			}
 			else	//can't override current order
 			{
-				//psDroid->action = DACTION_MOVEFIRE;
-				psDroid->psActionTarget[weapon_slot] = psBetterTarget;
+				setDroidActionTarget(psDroid, psBetterTarget, weapon_slot);
 			}
 		}
 		else if (psAttacker->type == OBJ_STRUCTURE)
 		{
-			((STRUCTURE *)psAttacker)->psTarget[weapon_slot] = psBetterTarget;
+			STRUCTURE *psBuilding = (STRUCTURE *)psAttacker;
+
+			setStructureTarget(psBuilding, psBetterTarget, weapon_slot);
 		}
 
 		return TRUE;

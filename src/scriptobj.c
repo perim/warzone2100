@@ -53,7 +53,6 @@ static INTERP_VAL	scrFunctionResult;	//function return value to be pushed to sta
 // Get values from a base object
 BOOL scrBaseObjGet(UDWORD index)
 {
-//	INTERP_VAL		sVal;
 	INTERP_TYPE		type = 0;
 	BASE_OBJECT		*psObj;
 	DROID			*psDroid;
@@ -317,15 +316,6 @@ BOOL scrBaseObjGet(UDWORD index)
 		debug(LOG_ERROR, "scrBaseObjGet: stackPushResult() failed");
 		return FALSE;
 	}
-
-	return TRUE;
-}
-
-
-// Set values from a base object
-BOOL scrBaseObjSet(UDWORD index)
-{
-	index = index;
 
 	return TRUE;
 }
@@ -890,7 +880,8 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 		}
 		else
 		{
-			if (!scrvGetBaseObj(id, (BASE_OBJECT **)&(psVal->v.oval)))
+			psVal->v.oval = (void*)getBaseObjFromId(id);
+			if (!psVal->v.oval)
 			{
 				debug( LOG_ERROR, "scrValDefLoad: couldn't find object id %d", id );
 				abort();
@@ -1128,7 +1119,8 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 		{
 			endian_udword((UDWORD*)pPos);
 			id = *((UDWORD *) pPos);
-			if (!scrvGetBaseObj(id, (BASE_OBJECT **)&psCDroid))
+			psCDroid = (DROID *)getBaseObjFromId(id);
+			if (!psCDroid)
 			{
 				debug( LOG_ERROR, "scrValDefLoad: couldn't find object id %d", id );
 				abort();

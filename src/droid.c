@@ -152,17 +152,16 @@ BOOL droidInit(void)
  *
  * NOTE: This function will damage but _never_ destroy transports when in single player (campaign) mode
  */
-SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD weaponSubClass, int angle)
+SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD weaponSubClass, DROID_HIT_SIDE impactSide)
 {
 	// Do at least one point of damage
 	unsigned int actualDamage = 1, armour;
 	float        originalBody = psDroid->originalBody;
 	float        body = psDroid->body;
 	SECONDARY_STATE		state;
-	DROID_HIT_SIDE	impactSide;
 
 	CHECK_DROID(psDroid);
-	
+
 	// If the previous hit was by an EMP cannon and this one is not:
 	// don't reset the weapon class and hit time
 	// (Giel: I guess we need this to determine when the EMP-"shock" is over)
@@ -202,26 +201,6 @@ SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD wea
 	{
 		secondarySetState(psDroid, DSO_ATTACK_LEVEL, DSS_ALEV_ALWAYS);
 	}
-
-	//Watermelon:use 361 for TOP and 362 for BOTTOM
-	// Top
-	if (angle == HIT_ANGLE_TOP)
-		impactSide = HIT_SIDE_TOP;
-	// Bottom
-	else if (angle == HIT_ANGLE_BOTTOM)
-		impactSide = HIT_SIDE_BOTTOM;
-	// Right
-	else if (angle > 45 && angle < 135)
-		impactSide = HIT_SIDE_RIGHT;
-	// Rear
-	else if (angle >= 135 && angle <= 225)
-		impactSide = HIT_SIDE_REAR;
-	// Left
-	else if (angle > 225 && angle < 315)
-		impactSide = HIT_SIDE_LEFT;
-	// Front - default
-	else //if (angle <= 45 || angle >= 315)
-		impactSide = HIT_SIDE_FRONT;
 
 	armour = psDroid->armour[impactSide][weaponClass];
 
@@ -312,8 +291,6 @@ SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD wea
 void droidRelease(DROID *psDroid)
 {
 	DROID	*psCurr, *psNext;
-
-	CHECK_DROID(psDroid);
 
 	if (psDroid->droidType == DROID_TRANSPORTER)
 	{
@@ -513,7 +490,8 @@ void	removeDroidBase(DROID *psDel)
 //			}
 
 			// alexl's stab at a right answer.
-			if ( StructIsFactory(psStruct) && ((FACTORY *)psStruct->pFunctionality)->psCommander == psDel)
+			if (StructIsFactory(psStruct)
+			 && psStruct->pFunctionality->factory.psCommander == psDel)
 			{
 				assignFactoryCommandDroid(psStruct, NULL);
 			}
@@ -702,7 +680,7 @@ BOOL droidRemove(DROID *psDroid, DROID *pList[MAX_PLAYERS])
 	}
 
     //reset the baseStruct
-    psDroid->psBaseStruct = NULL;
+	setDroidBase(psDroid, NULL);
 
 	// remove the droid from the cluster systerm
 	clustRemoveObject((BASE_OBJECT *)psDroid);
@@ -947,7 +925,7 @@ void droidGetNaybors(DROID *psDroid)
 	gridStartIterate((SDWORD)dx, (SDWORD)dy);
 	for (psObj = gridIterate(); psObj != NULL; psObj = gridIterate())
 	{
-		if (psObj != (BASE_OBJECT *)psDroid)
+		if (psObj != (BASE_OBJECT *)psDroid && !psObj->died)
 		{
 			IN_NAYBOR_RANGE(psObj);
 
@@ -1119,7 +1097,7 @@ void droidUpdate(DROID *psDroid)
 					//psDroid->damage(psDroid, damageToDo, WC_HEAT);
 
 					//Watermelon:just assume the burn damage is from FRONT
-					(void)droidDamage(psDroid, damageToDo, WC_HEAT,WSC_FLAME, 0);
+					droidDamage(psDroid, damageToDo, WC_HEAT,WSC_FLAME, 0);
 
 				}
 			}
@@ -1303,10 +1281,9 @@ BOOL droidStartBuild(DROID *psDroid)
 	{
 		psDroid->actionStarted = gameTime;
 		psDroid->actionPoints = 0;
-		psDroid->psTarget[0] = (BASE_OBJECT *)psStruct;
-		psDroid->psActionTarget[0] = (BASE_OBJECT *)psStruct;
+		setDroidTarget(psDroid, (BASE_OBJECT *)psStruct, 0);
+		setDroidActionTarget(psDroid, (BASE_OBJECT *)psStruct, 0);
 	}
-
 
 	if ( psStruct->visible[selectedPlayer] )
 	{
@@ -1657,7 +1634,7 @@ BOOL droidUpdateDemolishing( DROID *psDroid )
             }*/
 
             //if had module attached - the base must have been completely built
-            if (((POWER_GEN *)psStruct->pFunctionality)->capacity)
+            if (psStruct->pFunctionality->powerGenerator.capacity)
             {
                 //so add the power required to build the base struct
                 addPower(psStruct->player, psStruct->pStructureType->powerToBuild);
@@ -1690,13 +1667,13 @@ BOOL droidUpdateDemolishing( DROID *psDroid )
             //if it had a module attached, need to add the power for the base struct as well
             if (StructIsFactory(psStruct))
             {
-                if (((FACTORY *)psStruct->pFunctionality)->capacity)
+                if (psStruct->pFunctionality->factory.capacity)
                 {
                     //add half power for base struct
                     addPower(psStruct->player, psStruct->pStructureType->
                         powerToBuild / 2);
                     //if large factory - add half power for one upgrade
-                    if (((FACTORY *)psStruct->pFunctionality)->capacity > SIZE_MEDIUM)
+                    if (psStruct->pFunctionality->factory.capacity > SIZE_MEDIUM)
                     {
                         addPower(psStruct->player, structPowerToBuild(psStruct) / 2);
                     }
@@ -1704,7 +1681,7 @@ BOOL droidUpdateDemolishing( DROID *psDroid )
             }
             else if (psStruct->pStructureType->type == REF_RESEARCH)
             {
-                if (((RESEARCH_FACILITY *)psStruct->pFunctionality)->capacity)
+                if (psStruct->pFunctionality->researchFacility.capacity)
                 {
                     //add half power for base struct
                     addPower(psStruct->player, psStruct->pStructureType->powerToBuild / 2);
@@ -1854,8 +1831,7 @@ void droidSelfRepair(DROID *psDroid)
 		    if (psDroid->asBits[COMP_REPAIRUNIT].nStat != 0)
 		    {
 			    psDroid->action = DACTION_DROIDREPAIR;
-//			    psDroid->psTarget = (BASE_OBJECT *)psDroid;
-                psDroid->psActionTarget[0] = (BASE_OBJECT *)psDroid;
+				setDroidActionTarget(psDroid, (BASE_OBJECT *)psDroid, 0);
 			    psDroid->actionStarted = gameTime;
 			    psDroid->actionPoints  = 0;
 		    }
@@ -3274,8 +3250,8 @@ DROID* buildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD player,
 	for(i = 0;i < DROID_MAXWEAPS;i++)
 	{
 		psDroid->psTarStats[i] = NULL;
-		psDroid->psActionTarget[i] = NULL;
 		psDroid->psTarget[i] = NULL;
+		psDroid->psActionTarget[i] = NULL;
 		psDroid->asWeaps[i].lastFired = 0;
 		psDroid->asWeaps[i].nStat = 0;
 		psDroid->asWeaps[i].ammo = 0;
@@ -3597,7 +3573,7 @@ UDWORD fillTemplateList(DROID_TEMPLATE **ppList, STRUCTURE *psFactory, UDWORD li
 {
 	DROID_TEMPLATE	*psCurr;
 	UDWORD			count = 0;
-	UDWORD			iCapacity = ((FACTORY*)psFactory->pFunctionality)->capacity;
+	UDWORD			iCapacity = psFactory->pFunctionality->factory.capacity;
 	//BOOL			bCyborg = FALSE, bVtol = FALSE;
 
 	/*if (psFactory->pStructureType->type == REF_CYBORG_FACTORY)
@@ -4779,7 +4755,7 @@ BOOL buildModule(DROID *psDroid, STRUCTURE *psStruct,BOOL bCheckPower)
 	{
 	case REF_POWER_GEN:
 		//check room for one more!
-		if (((POWER_GEN *)psStruct->pFunctionality)->capacity < NUM_POWER_MODULES)
+		if (psStruct->pFunctionality->powerGenerator.capacity < NUM_POWER_MODULES)
 		{
 			/*for (i = 0; (i < numStructureStats) && (asStructureStats[i].type !=
 				REF_POWER_MODULE);i++)
@@ -4794,7 +4770,7 @@ BOOL buildModule(DROID *psDroid, STRUCTURE *psStruct,BOOL bCheckPower)
 	case REF_FACTORY:
 	case REF_VTOL_FACTORY:
 		//check room for one more!
-		if (((FACTORY *)psStruct->pFunctionality)->capacity < NUM_FACTORY_MODULES)
+		if (psStruct->pFunctionality->factory.capacity < NUM_FACTORY_MODULES)
 		{
 			/*for (i = 0; (i < numStructureStats) && (asStructureStats[i].type !=
 				REF_FACTORY_MODULE);i++)
@@ -4808,8 +4784,7 @@ BOOL buildModule(DROID *psDroid, STRUCTURE *psStruct,BOOL bCheckPower)
 		break;
 	case REF_RESEARCH:
 		//check room for one more!
-		if (((RESEARCH_FACILITY *)psStruct->pFunctionality)->capacity <
-			NUM_RESEARCH_MODULES)
+		if (psStruct->pFunctionality->researchFacility.capacity < NUM_RESEARCH_MODULES)
 		{
 			/*for (i = 0; (i < numStructureStats) && (asStructureStats[i].type !=
 				REF_RESEARCH_MODULE);i++)
@@ -4867,7 +4842,7 @@ void setUpBuildModule(DROID *psDroid)
 		{
 			//set up the help build scenario
 			psDroid->order = DORDER_HELPBUILD;
-			psDroid->psTarget[0] = (BASE_OBJECT *)psStruct;
+			setDroidTarget(psDroid, (BASE_OBJECT *)psStruct, 0);
 			if (droidStartBuild(psDroid))
 			{
 				psDroid->action = DACTION_BUILD;
@@ -5354,7 +5329,7 @@ void assignVTOLPad(DROID *psNewDroid, STRUCTURE *psReArmPad)
 			psReArmPad->pStructureType->type == REF_REARM_PAD,
         "assignVTOLPad: not a ReArm Pad" );
 
-    psNewDroid->psBaseStruct = psReArmPad;
+	setDroidBase(psNewDroid, psReArmPad);
 }
 
 /*compares the droid sensor type with the droid weapon type to see if the
@@ -5553,6 +5528,7 @@ DROID * giftSingleDroid(DROID *psD, UDWORD to)
             {
                 if (psCurr->asOrderList[i].psOrderTarget == (BASE_OBJECT *)psD)
                 {
+					removeDroidOrderTarget(psCurr, i);
             		// move the rest of the list down
 		            memmove(&psCurr->asOrderList[i], &psCurr->asOrderList[i] + 1,
                         (psCurr->listSize - i) * sizeof(ORDER_LIST));
@@ -5747,7 +5723,7 @@ void deleteTemplateFromProduction(DROID_TEMPLATE *psTemplate, UBYTE player)
 		{
 			if (StructIsFactory(psStruct))
 			{
-				FACTORY             *psFactory = (FACTORY *)psStruct->pFunctionality;
+				FACTORY             *psFactory = &psStruct->pFunctionality->factory;
 				DROID_TEMPLATE      *psNextTemplate = NULL;
 
 				//if template belongs to the production player - check thru the production list (if struct is busy)

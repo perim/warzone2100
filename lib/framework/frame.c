@@ -321,7 +321,7 @@ static BOOL loadFile2(const char *pFileName, char **ppFileData, UDWORD *pFileSiz
 	{
 		if (filesize > *pFileSize)
 		{
-			debug(LOG_ERROR, "loadFile2: No room for file %s", pFileName);
+			debug(LOG_ERROR, "loadFile2: No room for file %s, buffer is too small! Got: %d Need: %ld", pFileName, *pFileSize, (long)filesize);
 			assert(FALSE);
 			return FALSE;
 		}
@@ -469,7 +469,6 @@ UDWORD HashString( const char *c )
 							~HIGH_BITS;
 		}
 	}
-	debug(LOG_NEVER, "HashString: string: %s, hash: %0x\n", c, iHashValue);
 	return iHashValue;
 }
 
@@ -506,6 +505,5 @@ UDWORD HashStringIgnoreCase( const char *c )
 							~HIGH_BITS;
 		}
 	}
-	debug(LOG_NEVER, "HashStringIgnoreCase: string: %s, hash: %0x\n", c, iHashValue);
 	return iHashValue;
 }

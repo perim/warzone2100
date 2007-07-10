@@ -1279,7 +1279,7 @@ void placeLimboDroids(void)
 		    //	psDroid->y >> TILE_SHIFT);
 		    psDroid->selected = FALSE;
             //this is mainly for VTOLs
-            psDroid->psBaseStruct = NULL;
+			setDroidBase(psDroid, NULL);
 		    psDroid->cluster = 0;
 		    //initialise the movement data
 		    initDroidMovement(psDroid);
@@ -1618,7 +1618,7 @@ void clearCampaignUnits(void)
         psDroid->psNext)
     {
         orderDroid(psDroid, DORDER_STOP);
-        psDroid->psBaseStruct = NULL;
+		setDroidBase(psDroid, NULL);
     }
 }
 
@@ -1677,7 +1677,7 @@ static void processMission(void)
     		swapMissionPointers();
     		psDroid->selected = FALSE;
             //this is mainly for VTOLs
-            psDroid->psBaseStruct = NULL;
+			setDroidBase(psDroid, NULL);
 	    	psDroid->cluster = 0;
 		    //initialise the movement data
     		initDroidMovement(psDroid);
@@ -1726,7 +1726,7 @@ void processMissionLimbo(void)
 				    psDroid->y = INVALID_XY;
 			        addDroid(psDroid, apsLimboDroids);
 	                //this is mainly for VTOLs
-	                psDroid->psBaseStruct = NULL;
+					setDroidBase(psDroid, NULL);
 	                psDroid->cluster = 0;
 				    orderDroid(psDroid, DORDER_STOP);
 
@@ -2232,7 +2232,7 @@ void aiUpdateMissionStructure(STRUCTURE *psStructure)
 					{
 						grpJoin(psFactory->psGroup, psNewDroid);
 					}*/
-                    psNewDroid->psBaseStruct = psStructure;
+					setDroidBase(psNewDroid, psStructure);
 
 					//reset the start time
 					psFactory->timeStarted = ACTION_START_TIME;
@@ -2677,7 +2677,7 @@ void unloadTransporter(DROID *psTransporter, UDWORD x, UDWORD y, BOOL goingHome)
 			gridAddObject((BASE_OBJECT *)psDroid);
 			psDroid->selected = FALSE;
             //this is mainly for VTOLs
-            psDroid->psBaseStruct = NULL;
+			setDroidBase(psDroid, NULL);
 			psDroid->cluster = 0;
 			if (goingHome)
 			{

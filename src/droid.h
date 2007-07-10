@@ -138,9 +138,7 @@ BOOL templateIsIDF(DROID_TEMPLATE *psTemplate);
 BOOL idfDroid(DROID *psDroid);
 
 /* Do damage to a droid */
-
-//Watermelon:added int angle,no need to use float since the difference between them is superficial.
-extern SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass,UDWORD weaponSubClass, int angle);
+extern SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass,UDWORD weaponSubClass, DROID_HIT_SIDE impactSide);
 
 
 /* The main update routine for all droids */
@@ -386,6 +384,38 @@ extern BOOL droidAudioTrackStopped( void *psObj );
 /*returns TRUE if droid type is one of the Cyborg types*/
 extern BOOL cyborgDroid(DROID *psDroid);
 
+/** helper functions for future refcount patch **/
+
+static inline void setDroidTarget(DROID *psDroid, BASE_OBJECT *psNewTarget, UWORD idx)
+{
+	psDroid->psTarget[idx] = psNewTarget;
+}
+
+static inline void setDroidActionTarget(DROID *psDroid, BASE_OBJECT *psNewTarget, UWORD idx)
+{
+	psDroid->psActionTarget[idx] = psNewTarget;
+}
+
+static inline void setDroidBase(DROID *psDroid, STRUCTURE *psNewBase)
+{
+	psDroid->psBaseStruct = psNewBase;
+}
+
+static inline void setSaveDroidTarget(DROID *psSaveDroid, BASE_OBJECT *psNewTarget, UWORD idx)
+{
+	psSaveDroid->psTarget[idx] = psNewTarget;
+}
+
+static inline void setSaveDroidActionTarget(DROID *psSaveDroid, BASE_OBJECT *psNewTarget, UWORD idx)
+{
+	psSaveDroid->psActionTarget[idx] = psNewTarget;
+}
+
+static inline void setSaveDroidBase(DROID *psSaveDroid, STRUCTURE *psNewBase)
+{
+	psSaveDroid->psBaseStruct = psNewBase;
+}
+
 /* assert if droid is bad */
 #define CHECK_DROID(droid) \
 do { \
@@ -397,7 +427,7 @@ do { \
 	assert(droid->type == OBJ_DROID); \
 \
 	assert(droid->direction <= 360.0f && droid->direction >= 0.0f); \
-	assert(droid->numWeaps < DROID_MAXWEAPS); \
+	assert(droid->numWeaps <= DROID_MAXWEAPS); \
 	assert(droid->listSize < ORDER_LIST_MAX); \
 	assert(droid->player < MAX_PLAYERS); \
 \

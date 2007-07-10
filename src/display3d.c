@@ -241,8 +241,10 @@ static QUAD dragQuad;
 static Vector3f alteredPoints[iV_IMD_MAX_POINTS];
 
 //number of tiles visible
-UDWORD	visibleXTiles;
-UDWORD	visibleYTiles;
+// FIXME This should become dynamic! (A function of resolution, angle and zoom maybe.)
+const UDWORD	visibleXTiles = VISIBLE_XTILES;
+const UDWORD	visibleYTiles = VISIBLE_YTILES;
+
 UDWORD	terrainMidX;
 UDWORD	terrainMidY;
 UDWORD	terrainMaxX;
@@ -579,13 +581,9 @@ static void drawTiles(iView *camera, iView *player)
 	playerXTile = player->p.x >> TILE_SHIFT;
 	playerZTile = player->p.z >> TILE_SHIFT;
 
-	// Check here, since it would crash our loops otherwise
-	ASSERT( visibleYTiles <= mapHeight && visibleXTiles <= mapWidth, "Tile coordinates out of range" );
-
 	/* Get the x,z translation components */
 	rx = (player->p.x) & (TILE_UNITS-1);
 	rz = (player->p.z) & (TILE_UNITS-1);
-
 
 	/* ---------------------------------------------------------------- */
 	/* Set up the geometry                                              */
@@ -812,9 +810,9 @@ static void drawTiles(iView *camera, iView *player)
 	/* ---------------------------------------------------------------- */
 	/* Draw all the tiles or add them to bucket sort                     */
 	/* ---------------------------------------------------------------- */
-	for (i = 0; i < visibleYTiles; i++)
+	for (i = 0; i < MIN(visibleYTiles, mapHeight); i++)
 	{
-		for (j = 0; j < visibleXTiles; j++)
+		for (j = 0; j < MIN(visibleXTiles, mapWidth); j++)
 		{
 			if (tileScreenInfo[i][j].drawInfo == TRUE)
 			{
@@ -909,11 +907,6 @@ BOOL init3DView(void)
 
 	/* Base Level */
 	geoOffset = 192;
-
-	//set up how many tiles to draw
-	// FIXME This should become dynamic! (A function of resolution, angle and zoom maybe.)
-	visibleXTiles = VISIBLE_XTILES;
-	visibleYTiles = VISIBLE_YTILES;
 
 	/* There are no drag boxes */
 	dragBox3D.status = DRAG_INACTIVE;
@@ -1386,8 +1379,7 @@ void displayStaticObjects( void )
 						//check that a power gen exists before animationg res extrac
 						//else if (getPowerGenExists(psStructure->player))
 						/*check the building is active*/
-						else if (((RES_EXTRACTOR *)psStructure->
-							pFunctionality)->active)
+						else if (psStructure->pFunctionality->resourceExtractor.active)
 						{
 							displayAnimation( psAnimObj, FALSE );
 							if(selectedPlayer == psStructure->player)
@@ -1864,7 +1856,6 @@ void	renderStructure(STRUCTURE *psStructure)
 	Vector3f *temp = NULL;
 	BOOL			bHitByElectronic = FALSE;
 	iIMDShape		*pRepImd;
-	REPAIR_FACILITY		*psRepairFac = NULL;
 	BOOL            defensive = FALSE;
 
 	if(psStructure->pStructureType->type == REF_WALL ||
@@ -2153,7 +2144,7 @@ void	renderStructure(STRUCTURE *psStructure)
 							pie_Draw3DShape(weaponImd[i], playerFrame, 0, buildingBrightness, specular, pie_SHADOW,0);
 							if(psStructure->pStructureType->type == REF_REPAIR_FACILITY)
 							{
-								psRepairFac = (REPAIR_FACILITY*)psStructure->pFunctionality;
+								REPAIR_FACILITY* psRepairFac = &psStructure->pFunctionality->repairFacility;
 								//draw repair flash if the Repair Facility has a target which it has started work on
 								if(weaponImd[i]->nconnectors && psRepairFac->psObj!=NULL
 									&& psRepairFac->psObj->type == OBJ_DROID &&
@@ -2228,7 +2219,7 @@ void	renderStructure(STRUCTURE *psStructure)
 						pie_Draw3DShape(weaponImd[0], playerFrame, 0, buildingBrightness, specular, pie_SHADOW,0);
 						if(psStructure->pStructureType->type == REF_REPAIR_FACILITY)
 						{
-							psRepairFac = (REPAIR_FACILITY*)psStructure->pFunctionality;
+							REPAIR_FACILITY* psRepairFac = &psStructure->pFunctionality->repairFacility;
 							//draw repair flash if the Repair Facility has a target which it has started work on
 							if(weaponImd[0]->nconnectors && psRepairFac->psObj!=NULL
 								&& psRepairFac->psObj->type == OBJ_DROID &&
@@ -2432,7 +2423,7 @@ static BOOL	renderWallSection(STRUCTURE *psStructure)
 	// We just store a separate IMD for each direction
 	static iIMDShape otherDirections[3];
 	static BOOL directionSet[3] = {FALSE, FALSE, FALSE};
-	iIMDShape *originalDirection;
+	iIMDShape *originalDirection = NULL;
 
 
 	if(psStructure->visible[selectedPlayer] || godMode || demoGetStatus())
@@ -3984,7 +3975,7 @@ static iIMDShape	*flattenImd(iIMDShape *imd, UDWORD structX, UDWORD structY, UDW
 	ASSERT( imd->npoints < iV_IMD_MAX_POINTS, "flattenImd: too many points in the PIE to flatten it" );
 
 	/* Get a copy of the points */
-	memcpy(alteredPoints, imd->points, imd->npoints * sizeof(Vector3i));
+	memcpy(alteredPoints, imd->points, imd->npoints * sizeof(Vector3f));
 
 	/* Get the height of the centre point for reference */
 	centreHeight = map_Height(structX,structY);
@@ -4616,11 +4607,9 @@ static void testEffect2( UDWORD player )
 	SDWORD	xDif,yDif;
 	Vector3i	pos;
 	UDWORD	numConnected;
-	POWER_GEN	*psPowerGen;
 	DROID	*psDroid;
 	UDWORD	gameDiv;
 	UDWORD	i;
-	REARM_PAD	*psReArmPad;
 	BASE_OBJECT			*psChosenObj = NULL;
 	UWORD	bFXSize;
 
@@ -4631,7 +4620,7 @@ static void testEffect2( UDWORD player )
 		{
 			if(psStructure->pStructureType->type == REF_POWER_GEN && psStructure->visible[selectedPlayer])
 			{
-				psPowerGen = (POWER_GEN *)psStructure->pFunctionality;
+				POWER_GEN* psPowerGen = &psStructure->pFunctionality->powerGenerator;
 				numConnected = 0;
 				for (i = 0; i < NUM_POWER_MODULES; i++)
 				{
@@ -4695,7 +4684,7 @@ static void testEffect2( UDWORD player )
 			else if(psStructure->pStructureType->type == REF_REARM_PAD
 				&& psStructure->visible[selectedPlayer] )
 			{
-				psReArmPad = (REARM_PAD *) psStructure->pFunctionality;
+				REARM_PAD* psReArmPad = &psStructure->pFunctionality->rearmPad;
 				psChosenObj = psReArmPad->psObj;
 				if(psChosenObj!=NULL)
 				{

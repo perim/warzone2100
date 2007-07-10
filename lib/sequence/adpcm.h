@@ -20,8 +20,12 @@
 #ifndef __ADPCM_H__
 #define __ADPCM_H__
 
-void adpcm_init(void);
-void adpcm_decode(unsigned char* input, unsigned int input_size, short** output);
+#include "lib/framework/frame.h"
 
-#endif
+struct adpcm_state;
 
+struct adpcm_state* adpcm_init(void);
+void adpcm_finish(struct adpcm_state* state);
+void adpcm_decode(struct adpcm_state* state, unsigned char* input, unsigned int input_size, int16_t* output);
+
+#endif // __ADPCM_H__
