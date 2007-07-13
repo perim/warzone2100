@@ -29,7 +29,7 @@
 #include <stdio.h>
 
 #include "lib/framework/frame.h"
-#include "src/base.h"
+#include "src/basedef.h"
 #include "src/droiddef.h"
 #include "src/structuredef.h"
 //#include "src/scriptfuncs.h"
@@ -195,4 +195,5 @@ int chat_wrap(void)
 {
 	return 1;
 }
+
 

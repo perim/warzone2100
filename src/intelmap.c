@@ -282,14 +282,11 @@ TEXT_DISPLAY	currentTextDisplay;
 
 
 /* Add the Intelligence Map widgets to the widget screen */
-//BOOL intAddIntelMap(BOOL playCurrent)
 BOOL intAddIntelMap(void)
 {
 	W_FORMINIT		sFormInit;
 	W_LABINIT		sLabInit;
 	BOOL			Animate = TRUE;
-
-
 
 	//check playCurrent with psCurrentMsg
 	if (psCurrentMsg == NULL)
@@ -312,9 +309,7 @@ BOOL intAddIntelMap(void)
 		audio_StopAll();
 	}
 
-
 	cdAudio_Pause();
-
 
 	//add message to indicate game is paused - single player mode
 	if(PAUSE_DISPLAY_CONDITION)
@@ -374,8 +369,6 @@ BOOL intAddIntelMap(void)
 	{
 		return FALSE;
 	}
-
-
 
 	return TRUE;
 }
@@ -487,14 +480,12 @@ static BOOL intAddMessageForm(BOOL playCurrent)
 		switch (psMessage->type)
 		{
 			case MSG_RESEARCH:
-
 				psResearch =  getResearchForMsg((VIEWDATA *)psMessage->pViewData);
 				if (psResearch)
 				{
 					sBFormInit.pTip = getStatName(psResearch);;
 				}
 				else
-
 				{
 					sBFormInit.pTip = _("Research Update");
 				}
@@ -1221,7 +1212,6 @@ static void intCleanUpIntelMap(void)
 	resetIntelligencePauseState();
 	immediateMessage = FALSE;
 
-
 	cdAudio_Resume();
 
 	// FIXME: NOT SURE IT'S CORRECT. this makes the transports come.
@@ -1247,17 +1237,9 @@ static void intCleanUpIntelMap(void)
 /* Remove the Intelligence Map widgets from the screen */
 void intRemoveIntelMap(void)
 {
-	//UDWORD buttonID;
 	WIDGET		*Widg;
 	W_TABFORM	*Form;
-	//MESSAGE		*psMessage, *psNext;
 
-
-	//remove each proximity button
-	/*for (buttonID = 0; buttonID < numProxMsg; buttonID++)
-	{
-		widgDelete(psWScreen, IDINTMAP_PROXSTART + buttonID);
-	}*/
 	//remove 3dView if still there
 	Widg = widgGetFromID(psWScreen,IDINTMAP_MSGVIEW);
 	if(Widg)
@@ -1278,21 +1260,6 @@ void intRemoveIntelMap(void)
 	widgDelete(psWScreen, IDINTMAP_PAUSELABEL);
 
 	intCleanUpIntelMap();
-
-
-//	//remove any research messages that have been read
-//	for (psMessage = apsMessages[selectedPlayer]; psMessage != NULL; psMessage =
-//		psNext)
-//	{
-//		psNext = psMessage->psNext;
-//		if (psMessage->type == MSG_RESEARCH && psMessage->read)
-//		{
-//			removeMessage(psMessage, selectedPlayer);
-//		}
-//	}
-//	resetIntelligencePauseState();
-//
-//	immediateMessage = FALSE;
 }
 
 /* Remove the Intelligence Map widgets from the screen */

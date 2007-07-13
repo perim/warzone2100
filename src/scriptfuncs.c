@@ -1373,10 +1373,6 @@ BOOL scrAddMessage(void)
 
 		if (playImmediate)
 		{
-	//		psCurrentMsg = psMessage;
-			//initTextDisplay(psCurrentMsg, WFont, 255);
-			//addIntelScreen(TRUE);
-	//		addIntelScreen();
 			displayImmediateMessage(psMessage);
 			stopReticuleButtonFlash(IDRET_INTEL_MAP);
 		}

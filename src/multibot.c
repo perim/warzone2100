@@ -27,7 +27,7 @@
 
 #include "droid.h"						// for droid sending and ordering.
 #include "droiddef.h"
-#include "base.h"						// for sending WHOLE droids.
+#include "basedef.h"						// for sending WHOLE droids.
 #include "stats.h"
 #include "move.h"						// for ordering droids
 #include "objmem.h"
@@ -884,7 +884,7 @@ static void ProcessDroidOrder(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWOR
 			}
 			break;
 
-		case OBJ_BULLET: // shouldn't be getting this!
+		case OBJ_PROJECTILE: // shouldn't be getting this!
 			debug( LOG_ERROR, "multibot: order specified destination as a bullet. what am i to do??" );
 			abort();
 			break;

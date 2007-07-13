@@ -31,7 +31,7 @@
 /***************************************************************************/
 
 #include "lib/framework/types.h"
-#include "base.h"
+#include "basedef.h"
 #include "statsdef.h"
 #include "movedef.h"
 #include "lib/gamelib/anim.h"
@@ -41,7 +41,6 @@
 // the last unit that did damage - used by script functions
 extern	BASE_OBJECT		*g_pProjLastAttacker;
 extern UDWORD	selectedPlayer;
-
 
 // whether an object is in a fire
 #define IN_FIRE		0x01
@@ -57,8 +56,8 @@ BOOL	proj_InitSystem( void );
 void	proj_UpdateAll( void );
 BOOL	proj_Shutdown( void );
 
-PROJ_OBJECT *	proj_GetFirst( void );
-PROJ_OBJECT *	proj_GetNext( void );
+PROJECTILE *	proj_GetFirst( void );
+PROJECTILE *	proj_GetNext( void );
 
 void	proj_FreeAllProjectiles( void );
 //Watermelon:added another BOOL value bPenetrate added weapon_slot
@@ -69,7 +68,7 @@ BOOL	proj_SendProjectile( WEAPON *psWeap, BASE_OBJECT *psAttacker, SDWORD player
 BOOL	proj_Direct(WEAPON_STATS *psStats);
 
 // return the maximum range for a weapon
-SDWORD	proj_GetLongRange(WEAPON_STATS *psStats, SDWORD dz);
+SDWORD	proj_GetLongRange(WEAPON_STATS *psStats);
 
 // Watermelon:neighbour info ripped from droiddef.h
 /* Info stored for each projectile neighbour */
@@ -80,43 +79,9 @@ typedef struct _proj_naybor_info
 	//UDWORD			dist;			// The distance to the object
 } PROJ_NAYBOR_INFO;
 
-/*
-// The fattest macro around - change this little bastard at your peril
-#define GFX_VISIBLE(psObj)	(							\
-	(													\
-		(psObj->player == selectedPlayer)				\
-	)													\
-	OR													\
-	(													\
-		(psObj->psSource != NULL)						\
-		AND												\
-		(												\
-			(psObj->psSource->type == OBJ_STRUCTURE && psObj->psSource->player == selectedPlayer) OR\
-			(psObj->psSource->type == OBJ_STRUCTURE && psObj->psSource->visible[selectedPlayer]) OR\
-			(psObj->psSource->type == OBJ_DROID     && psObj->psSource->visible[selectedPlayer]) OR\
-			(psObj->psSource->type == OBJ_DROID     && psObj->psSource->player == selectedPlayer) \
-		)												\
-	)													\
-	OR													\
-	(													\
-		(psObj->psDest != NULL)							\
-		AND												\
-		(												\
-			(psObj->psDest->type == OBJ_STRUCTURE && psObj->psDest->player == selectedPlayer) OR\
-			(psObj->psDest->type == OBJ_STRUCTURE && psObj->psSource->visible[selectedPlayer]) OR\
-			(psObj->psDest->type == OBJ_DROID     && psObj->psDest->visible[selectedPlayer]) OR\
-			(psObj->psDest->type == OBJ_DROID     && psObj->psSource->player == selectedPlayer) \
-		)												\
-	)													\
-	OR													\
-	(													\
-		godMode											\
-	)													\
-)
-*/
 extern UDWORD calcDamage(UDWORD baseDamage, WEAPON_EFFECT weaponEffect,
 						 BASE_OBJECT *psTarget);
-extern BOOL gfxVisible(PROJ_OBJECT *psObj);
+extern BOOL gfxVisible(PROJECTILE *psObj);
 
 /***************************************************************************/
 
@@ -124,19 +89,30 @@ extern BOOL	justBeenHitByEW		( BASE_OBJECT *psObj );
 extern void	objectShimmy	( BASE_OBJECT *psObj );
 
 // Watermelon:naybor related functions
-extern void projGetNaybors(PROJ_OBJECT *psObj);
+extern void projGetNaybors(PROJECTILE *psObj);
 
-static inline void setProjectileDestination(PROJ_OBJECT *psProj, BASE_OBJECT *psObj)
+//used for passing data to the checkBurnDamage function
+typedef struct _fire_box
+{
+	SWORD	x1, y1;
+	SWORD	x2, y2;
+	SWORD	rad;
+} FIRE_BOX;
+
+/*Apply the damage to an object due to fire range*/
+extern void checkBurnDamage(BASE_OBJECT* apsList, PROJECTILE* psBullet, FIRE_BOX* pFireBox);
+
+static inline void setProjectileDestination(PROJECTILE *psProj, BASE_OBJECT *psObj)
 {
 	psProj->psDest = psObj;
 }
 
-static inline void setProjectileSource(PROJ_OBJECT *psProj, BASE_OBJECT *psObj)
+static inline void setProjectileSource(PROJECTILE *psProj, BASE_OBJECT *psObj)
 {
 	psProj->psSource = psObj;
 }
 
-static inline void setProjectileDamaged(PROJ_OBJECT *psProj, BASE_OBJECT *psObj)
+static inline void setProjectileDamaged(PROJECTILE *psProj, BASE_OBJECT *psObj)
 {
 	psProj->psDamaged = psObj;
 }
@@ -145,7 +121,7 @@ static inline void setProjectileDamaged(PROJ_OBJECT *psProj, BASE_OBJECT *psObj)
 #define CHECK_PROJECTILE(object) \
 do { \
         assert(object != NULL); \
-        assert(object->type == OBJ_BULLET); \
+        assert(object->type == OBJ_PROJECTILE); \
         assert(object->player < MAX_PLAYERS); \
 	assert(object->state == PROJ_INFLIGHT || object->state == PROJ_IMPACT \
 	       || object->state == PROJ_POSTIMPACT); \

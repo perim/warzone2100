@@ -26,13 +26,12 @@
 #define _droiddef_h
 
 #include "lib/gamelib/animobj.h"
-//#include "lib/sound/sound.h" // is this one really needed in a header file????
 
-#include "base.h"
+#include "basedef.h"
 #include "deliverance.h"
 #include "movedef.h"
 #include "statsdef.h"
-#include "weapons.h"
+#include "weapondef.h"
 
 /* The number of components in the asParts / asBits arrays */
 #define DROID_MAXCOMP		(COMP_NUMCOMPONENTS - 1)//(COMP_NUMCOMPONENTS - 2)

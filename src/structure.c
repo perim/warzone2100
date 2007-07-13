@@ -3952,13 +3952,16 @@ void structureUpdate(STRUCTURE *psBuilding)
 /* Release all resources associated with a structure */
 void structureRelease(STRUCTURE *psBuilding)
 {
+	/* remove animation if present */
+	if ( psBuilding->psCurAnim != NULL )
+	{
+		animObj_Remove( &psBuilding->psCurAnim, psBuilding->psCurAnim->psAnim->uwID );
+		psBuilding->psCurAnim = NULL;
+	}
 
 	// free up the space used by the functionality array
 	free(psBuilding->pFunctionality);
 	psBuilding->pFunctionality = NULL;
-
-	// remove the object from the grid
-	gridRemoveObject((BASE_OBJECT *)psBuilding);
 }
 
 
@@ -5986,6 +5989,8 @@ void releasePowerGen(STRUCTURE *psRelease)
 /*this is called whenever a structure has finished building*/
 void buildingComplete(STRUCTURE *psBuilding)
 {
+	CHECK_STRUCTURE(psBuilding);
+
 	psBuilding->currentBuildPts = (SWORD)psBuilding->pStructureType->buildPoints;
 	psBuilding->status = SS_BUILT;
 

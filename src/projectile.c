@@ -21,8 +21,6 @@
 /*
  * Projectile functions
  *
- * Gareth Jones 11/7/97
- *
  */
 /***************************************************************************/
 #include <string.h>
@@ -39,7 +37,6 @@
 #include "map.h"
 #include "lib/sound/audio_id.h"
 #include "lib/sound/sound.h"
-#include "lib/gamelib/hashtabl.h"
 #include "anim_id.h"
 #include "projectile.h"
 #include "visibility.h"
@@ -60,20 +57,8 @@
 #include "display.h"
 #include "multiplay.h"
 #include "multistat.h"
-
-// Watermelon:I need this one for map grid iteration
 #include "mapgrid.h"
 
-/***************************************************************************/
-/* max number of slots in hash table - prime numbers are best because hash
- * function used here is modulous of object pointer with table size -
- * prime number nearest 100 is 97.
- * Table of nearest primes in Binstock+Rex, "Practical Algorithms" p 91.
- */
-
-#define	PROJ_HASH_TABLE_SIZE	97
-#define PROJ_INIT				200
-#define PROJ_EXT				10
 #define	PROJ_MAX_PITCH			30
 #define	ACC_GRAVITY				1000
 #define	DIRECT_PROJ_SPEED		500
@@ -85,35 +70,6 @@
 /* The range for neighbouring objects */
 #define PROJ_NAYBOR_RANGE		(TILE_UNITS*2)
 
-// macro to see if an object is in NAYBOR_RANGE
-// used by projGetNayb
-#define IN_PROJ_NAYBOR_RANGE(psTempObj) \
-	xdiff = dx - (SDWORD)psTempObj->x; \
-	if (xdiff < 0) \
-	{ \
-		xdiff = -xdiff; \
-	} \
-	if (xdiff > PROJ_NAYBOR_RANGE) \
-	{ \
-		continue; \
-	} \
-\
-	ydiff = dy - (SDWORD)psTempObj->y; \
-	if (ydiff < 0) \
-	{ \
-		ydiff = -ydiff; \
-	} \
-	if (ydiff > PROJ_NAYBOR_RANGE) \
-	{ \
-		continue; \
-	} \
-\
-	distSqr = xdiff*xdiff + ydiff*ydiff; \
-	if (distSqr > PROJ_NAYBOR_RANGE*PROJ_NAYBOR_RANGE) \
-	{ \
-		continue; \
-	} \
-
 // Watermelon:neighbour global info ripped from droid.c
 PROJ_NAYBOR_INFO	asProjNaybors[MAX_NAYBORS];
 UDWORD				numProjNaybors=0;
@@ -121,9 +77,13 @@ UDWORD				numProjNaybors=0;
 static BASE_OBJECT	*CurrentProjNaybors = NULL;
 static UDWORD	projnayborTime = 0;
 
-/***************************************************************************/
+/* The list of projectiles in play */
+static PROJECTILE *psProjectileList = NULL;
 
-static	HASHTABLE	*g_pProjObjTable;
+/* The next projectile to give out in the proj_First / proj_Next methods */
+static PROJECTILE *psProjectileNext = NULL;
+
+/***************************************************************************/
 
 // the last unit that did damage - used by script functions
 BASE_OBJECT		*g_pProjLastAttacker;
@@ -134,18 +94,19 @@ extern BOOL	godMode;
 
 static UDWORD	establishTargetRadius( BASE_OBJECT *psTarget );
 static UDWORD	establishTargetHeight( BASE_OBJECT *psTarget );
-static void	proj_InFlightDirectFunc( PROJ_OBJECT *psObj );
-static void	proj_InFlightIndirectFunc( PROJ_OBJECT *psObj );
-static void	proj_ImpactFunc( PROJ_OBJECT *psObj );
-static void	proj_PostImpactFunc( PROJ_OBJECT *psObj );
-static void	proj_checkBurnDamage( BASE_OBJECT *apsList, PROJ_OBJECT *psProj,
+static void	proj_InFlightDirectFunc( PROJECTILE *psObj );
+static void	proj_InFlightIndirectFunc( PROJECTILE *psObj );
+static void	proj_ImpactFunc( PROJECTILE *psObj );
+static void	proj_PostImpactFunc( PROJECTILE *psObj );
+static void	proj_checkBurnDamage( BASE_OBJECT *apsList, PROJECTILE *psProj,
 									FIRE_BOX *pFireBox );
+static void	proj_Free(PROJECTILE *psObj);
 
 static SDWORD objectDamage(BASE_OBJECT *psObj, UDWORD damage, UDWORD weaponClass,UDWORD weaponSubClass, DROID_HIT_SIDE impactSide);
-static DROID_HIT_SIDE getHitSide (PROJ_OBJECT *psObj, DROID *psTarget);
+static DROID_HIT_SIDE getHitSide (PROJECTILE *psObj, DROID *psTarget);
 
 /***************************************************************************/
-BOOL gfxVisible(PROJ_OBJECT *psObj)
+BOOL gfxVisible(PROJECTILE *psObj)
 {
 	BOOL bVisible = FALSE;
 
@@ -210,21 +171,30 @@ BOOL gfxVisible(PROJ_OBJECT *psObj)
 BOOL
 proj_InitSystem( void )
 {
-	/* allocate object hashtable */
-	hashTable_Create( &g_pProjObjTable, PROJ_HASH_TABLE_SIZE,
-						PROJ_INIT, PROJ_EXT, sizeof(PROJ_OBJECT) );
+	psProjectileList = NULL;
+	psProjectileNext = NULL;
+
 	return TRUE;
 }
 
 /***************************************************************************/
 
+// Clean out all projectiles from the system, and properly decrement
+// all reference counts.
 void
 proj_FreeAllProjectiles( void )
 {
-	if (g_pProjObjTable)
+	PROJECTILE *psCurr = psProjectileList, *psPrev = NULL;
+
+	while (psCurr)
 	{
-		hashTable_Clear( g_pProjObjTable );
+		psPrev = psCurr;
+		psCurr = psCurr->psNext;
+		proj_Free(psPrev);
 	}
+
+	psProjectileList = NULL;
+	psProjectileNext = NULL;
 }
 
 /***************************************************************************/
@@ -232,52 +202,50 @@ proj_FreeAllProjectiles( void )
 BOOL
 proj_Shutdown( void )
 {
-	/* destroy hash table */
-	hashTable_Destroy( g_pProjObjTable );
-	g_pProjObjTable = NULL;
+	proj_FreeAllProjectiles();
 
 	return TRUE;
 }
 
 /***************************************************************************/
 
-static void proj_Destroy(PROJ_OBJECT *psObj)
+// Free the memory held by a projectile, and decrement its reference counts,
+// if any. Do not call directly on a projectile in a list, because then the
+// list will be broken!
+static void proj_Free(PROJECTILE *psObj)
 {
-	CHECK_PROJECTILE(psObj);
-
 	/* Decrement any reference counts the projectile may have increased */
 	setProjectileDamaged(psObj, NULL);
 	setProjectileSource(psObj, NULL);
 	setProjectileDestination(psObj, NULL);
 
-	/* WARNING WARNING: The use of (int) cast pointer here is not safe for
-	 * most 64-bit architectures! FIXME!! - Per */
-	if (hashTable_RemoveElement(g_pProjObjTable, psObj, (int) psObj, UNUSED_KEY) == FALSE)
-	{
-		debug(LOG_ERROR, "proj_Destroy: couldn't remove projectile from hash table");
-	}
+	free(psObj);
 }
 
 /***************************************************************************/
 
-PROJ_OBJECT *
+// Reset the first/next methods, and give out the first projectile in the list.
+PROJECTILE *
 proj_GetFirst( void )
 {
-	return (PROJ_OBJECT*)hashTable_GetFirst( g_pProjObjTable );
+	psProjectileNext = psProjectileList;
+	return psProjectileList;
 }
 
 /***************************************************************************/
 
-PROJ_OBJECT *
+// Get the next projectile
+PROJECTILE *
 proj_GetNext( void )
 {
-	return (PROJ_OBJECT*)hashTable_GetNext( g_pProjObjTable );
+	psProjectileNext = psProjectileNext->psNext;
+	return psProjectileNext;
 }
 
 /***************************************************************************/
 
 // update the kills after a target is damaged/destroyed
-static void proj_UpdateKills(PROJ_OBJECT *psObj, SDWORD percentDamage)
+static void proj_UpdateKills(PROJECTILE *psObj, SDWORD percentDamage)
 {
 	DROID	        *psDroid;
 	BASE_OBJECT     *psSensor;
@@ -334,7 +302,7 @@ BOOL
 proj_SendProjectile( WEAPON *psWeap, BASE_OBJECT *psAttacker, SDWORD player,
 					 UDWORD tarX, UDWORD tarY, UDWORD tarZ, BASE_OBJECT *psTarget, BOOL bVisible, BOOL bPenetrate, int weapon_slot )
 {
-	PROJ_OBJECT		*psObj;
+	PROJECTILE		*psObj = malloc(sizeof(PROJECTILE));
 	SDWORD			tarHeight, srcHeight, iMinSq;
 	SDWORD			altChange, dx, dy, dz, iVelSq, iVel;
 	FRACT_D			fR, fA, fS, fT, fC;
@@ -345,9 +313,7 @@ proj_SendProjectile( WEAPON *psWeap, BASE_OBJECT *psAttacker, SDWORD player,
 
 	ASSERT( psWeapStats != NULL,
 			"proj_SendProjectile: invalid weapon stats" );
-
-	/* get unused projectile object from hashtable*/
-	psObj = (PROJ_OBJECT*)hashTable_GetElement( g_pProjObjTable );
+	ASSERT(!psAttacker->died, "Attacker is dead, cannot shoot!");
 
 	/* get muzzle offset */
 	if (psAttacker == NULL)
@@ -376,7 +342,7 @@ proj_SendProjectile( WEAPON *psWeap, BASE_OBJECT *psAttacker, SDWORD player,
 	}
 
 	/* Initialise the structure */
-	psObj->type		    = OBJ_BULLET;
+	psObj->type		    = OBJ_PROJECTILE;
 	psObj->state		= PROJ_INFLIGHT;
 	psObj->psWStats		= asWeaponStats + psWeap->nStat;
 	psObj->x			= (UWORD)muzzle.x;
@@ -394,7 +360,10 @@ proj_SendProjectile( WEAPON *psWeap, BASE_OBJECT *psAttacker, SDWORD player,
 	psObj->psDamaged	= NULL; // must initialize these to NULL first!
 	psObj->psSource		= NULL;
 	psObj->psDest		= NULL;
+	psObj->died		= 0;
 	setProjectileDestination(psObj, psTarget);
+
+	ASSERT(!psTarget || !psTarget->died, "Aiming at dead target!");
 
 	/* If target is a VTOL or higher than ground, it is an air target. */
 	if ((psTarget != NULL && psTarget->type == OBJ_DROID && vtolDroid((DROID*)psTarget))
@@ -407,9 +376,9 @@ proj_SendProjectile( WEAPON *psWeap, BASE_OBJECT *psAttacker, SDWORD player,
 	if (bPenetrate && psAttacker)
 	{
 		// psAttacker is a projectile if bPenetrate
-		PROJ_OBJECT *psProj = (PROJ_OBJECT*)psAttacker;
+		PROJECTILE *psProj = (PROJECTILE*)psAttacker;
 
-		ASSERT(psProj->type == OBJ_BULLET, "Penetrating but not projectile?");
+		ASSERT(psProj->type == OBJ_PROJECTILE, "Penetrating but not projectile?");
 
 		if (psProj->psSource && !psProj->psSource->died)
 		{
@@ -449,8 +418,8 @@ proj_SendProjectile( WEAPON *psWeap, BASE_OBJECT *psAttacker, SDWORD player,
 				heightVariance = rand()%8;
 				break;
 
-			case OBJ_BULLET:
-				ASSERT(!"invalid object type: bullet", "proj_SendProjectile: invalid object type: OBJ_BULLET");
+			case OBJ_PROJECTILE:
+				ASSERT(!"invalid object type: bullet", "proj_SendProjectile: invalid object type: OBJ_PROJECTILE");
 				break;
 
 			case OBJ_TARGET:
@@ -597,8 +566,9 @@ proj_SendProjectile( WEAPON *psWeap, BASE_OBJECT *psAttacker, SDWORD player,
 		psObj->pInFlightFunc = proj_InFlightIndirectFunc;
 	}
 
-	/* put object in hashtable */
-	hashTable_InsertElement( g_pProjObjTable, psObj, (int) psObj, UNUSED_KEY );
+	/* put the projectile object first in the global list */
+	psObj->psNext = psProjectileList;
+	psProjectileList = psObj;
 
 	/* play firing audio */
 	// only play if either object is visible, i know it's a bit of a hack, but it avoids the problem
@@ -645,7 +615,7 @@ proj_SendProjectile( WEAPON *psWeap, BASE_OBJECT *psAttacker, SDWORD player,
 /***************************************************************************/
 
 void
-proj_InFlightDirectFunc( PROJ_OBJECT *psObj )
+proj_InFlightDirectFunc( PROJECTILE *psObj )
 {
 	WEAPON_STATS	*psStats;
 	SDWORD			timeSoFar;
@@ -815,7 +785,7 @@ proj_InFlightDirectFunc( PROJ_OBJECT *psObj )
 		}
 
 		//Watermelon;so a projectile wont collide with another projectile unless it's a counter-missile weapon
-		if ( psTempObj->type == OBJ_BULLET && !( bMissile || ((PROJ_OBJECT *)psTempObj)->psWStats->weaponSubClass == WSC_COUNTER ) )
+		if ( psTempObj->type == OBJ_PROJECTILE && !( bMissile || ((PROJECTILE *)psTempObj)->psWStats->weaponSubClass == WSC_COUNTER ) )
 		{
 			continue;
 		}
@@ -827,10 +797,15 @@ proj_InFlightDirectFunc( PROJ_OBJECT *psObj )
 			continue;
 		}
 
+		if (psTempObj->died)
+		{
+			continue;
+		}
+
 		if ( psTempObj->player != psObj->player &&
 			( psTempObj->type == OBJ_DROID ||
 			psTempObj->type == OBJ_STRUCTURE ||
-			psTempObj->type == OBJ_BULLET ||
+			psTempObj->type == OBJ_PROJECTILE ||
 			psTempObj->type == OBJ_FEATURE ) &&
 			!aiCheckAlliances(psTempObj->player,psObj->player) )
 		{
@@ -961,7 +936,7 @@ proj_InFlightDirectFunc( PROJ_OBJECT *psObj )
 /***************************************************************************/
 
 void
-proj_InFlightIndirectFunc( PROJ_OBJECT *psObj )
+proj_InFlightIndirectFunc( PROJECTILE *psObj )
 {
 	WEAPON_STATS	*psStats;
 	SDWORD			iTime, iRad, iDist, dx, dy, dz, iX, iY;
@@ -1080,7 +1055,7 @@ proj_InFlightIndirectFunc( PROJ_OBJECT *psObj )
 		}
 
 		//Watermelon;dont collide with any other projectiles
-		if ( psTempObj->type == OBJ_BULLET )
+		if ( psTempObj->type == OBJ_PROJECTILE )
 		{
 			continue;
 		}
@@ -1092,10 +1067,15 @@ proj_InFlightIndirectFunc( PROJ_OBJECT *psObj )
 			continue;
 		}
 
+		if (psTempObj->died)
+		{
+			continue;
+		}
+
 		if (psTempObj->player != psObj->player &&
 			(psTempObj->type == OBJ_DROID ||
 			psTempObj->type == OBJ_STRUCTURE ||
-			psTempObj->type == OBJ_BULLET ||
+			psTempObj->type == OBJ_PROJECTILE ||
 			psTempObj->type == OBJ_FEATURE) &&
 			!aiCheckAlliances(psTempObj->player,psObj->player))
 		{
@@ -1225,7 +1205,7 @@ proj_InFlightIndirectFunc( PROJ_OBJECT *psObj )
 /***************************************************************************/
 
 void
-proj_ImpactFunc( PROJ_OBJECT *psObj )
+proj_ImpactFunc( PROJECTILE *psObj )
 {
 	WEAPON_STATS	*psStats;
 	SDWORD			i, iAudioImpactID;
@@ -1351,7 +1331,7 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 		 && ((FEATURE *)psObj->psDest)->psStats->damageable == 0)
 		{
 			debug(LOG_NEVER, "proj_ImpactFunc: trying to damage non-damageable target,projectile removed");
-			proj_Destroy(psObj);
+			psObj->died = gameTime;
 			return;
 		}
 
@@ -1440,7 +1420,7 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 	// If the projectile does no splash damage and does not set fire to things
 	if ((psStats->radius == 0) && (psStats->incenTime == 0) )
 	{
-		proj_Destroy(psObj);
+		psObj->died = gameTime;
 		return;
 	}
 
@@ -1708,7 +1688,7 @@ proj_ImpactFunc( PROJ_OBJECT *psObj )
 /***************************************************************************/
 
 void
-proj_PostImpactFunc( PROJ_OBJECT *psObj )
+proj_PostImpactFunc( PROJECTILE *psObj )
 {
 	WEAPON_STATS	*psStats;
 	SDWORD			i, age;
@@ -1725,7 +1705,7 @@ proj_PostImpactFunc( PROJ_OBJECT *psObj )
 	/* Time to finish postimpact effect? */
 	if (age > (SDWORD)psStats->radiusLife && age > (SDWORD)psStats->incenTime)
 	{
-		proj_Destroy(psObj);
+		psObj->died = gameTime;
 		return;
 	}
 
@@ -1756,7 +1736,7 @@ proj_PostImpactFunc( PROJ_OBJECT *psObj )
 /***************************************************************************/
 
 static void
-proj_Update( PROJ_OBJECT *psObj )
+proj_Update( PROJECTILE *psObj )
 {
 	CHECK_PROJECTILE(psObj);
 
@@ -1777,7 +1757,7 @@ proj_Update( PROJ_OBJECT *psObj )
 	}
 
 	//Watermelon:get naybors
-	projGetNaybors((PROJ_OBJECT *)psObj);
+	projGetNaybors((PROJECTILE *)psObj);
 
 	switch (psObj->state)
 	{
@@ -1797,25 +1777,50 @@ proj_Update( PROJ_OBJECT *psObj )
 
 /***************************************************************************/
 
+// iterate through all projectiles and update their status
 void
 proj_UpdateAll( void )
 {
-	PROJ_OBJECT	*psObj;
+	PROJECTILE	*psObj, *psPrev;
 
-	psObj = (PROJ_OBJECT *) hashTable_GetFirst( g_pProjObjTable );
-
-	while ( psObj != NULL )
+	for (psObj = psProjectileList; psObj != NULL; psObj = psObj->psNext)
 	{
 		proj_Update( psObj );
+	}
 
-		psObj = (PROJ_OBJECT *) hashTable_GetNext( g_pProjObjTable );
+	// Now delete any dead projectiles
+	psObj = psProjectileList;
+
+	// is the first node dead?
+	while (psObj && psObj == psProjectileList && psObj->died)
+	{
+		psProjectileList = psObj->psNext;
+		proj_Free(psObj);
+		psObj = psProjectileList;
+	}
+
+	// first object is now either NULL or not dead, so we have time to set this below
+	psPrev = NULL;
+
+	// are any in the list dead?
+	while (psObj)
+	{
+		if (psObj->died)
+		{
+			psPrev->psNext = psObj->psNext;
+			proj_Free(psObj);
+			psObj = psPrev->psNext;
+		} else {
+			psPrev = psObj;
+			psObj = psObj->psNext;
+		}
 	}
 }
 
 /***************************************************************************/
 
 void
-proj_checkBurnDamage( BASE_OBJECT *apsList, PROJ_OBJECT *psProj,
+proj_checkBurnDamage( BASE_OBJECT *apsList, PROJECTILE *psProj,
 						FIRE_BOX *pFireBox )
 {
 	BASE_OBJECT		*psCurr, *psNext;
@@ -1931,15 +1936,14 @@ BOOL proj_Direct(WEAPON_STATS *psStats)
 /***************************************************************************/
 
 // return the maximum range for a weapon
-SDWORD proj_GetLongRange(WEAPON_STATS *psStats, SDWORD dz)
+SDWORD proj_GetLongRange(WEAPON_STATS *psStats)
 {
-//	dz;
 	return (SDWORD)psStats->longRange;
 }
 
 
 /***************************************************************************/
-//Watemelon:added case for OBJ_BULLET
+//Watemelon:added case for OBJ_PROJECTILE
 UDWORD	establishTargetRadius( BASE_OBJECT *psTarget )
 {
 UDWORD		radius;
@@ -1984,7 +1988,7 @@ FEATURE		*psFeat;
 			psFeat = (FEATURE *)psTarget;
 			radius = (MAX(psFeat->psStats->baseBreadth,psFeat->psStats->baseWidth) * TILE_UNITS) / 2;
 			break;
-		case OBJ_BULLET:
+		case OBJ_PROJECTILE:
 			//Watermelon 1/2 radius of a droid?
 			radius = TILE_UNITS/8;
 		default:
@@ -2099,8 +2103,8 @@ SDWORD objectDamage(BASE_OBJECT *psObj, UDWORD damage, UDWORD weaponClass,UDWORD
 			return featureDamage((FEATURE *)psObj, damage, weaponSubClass);
 			break;
 
-		case OBJ_BULLET:
-			ASSERT(!"invalid object type: bullet", "objectDamage: invalid object type: OBJ_BULLET");
+		case OBJ_PROJECTILE:
+			ASSERT(!"invalid object type: bullet", "objectDamage: invalid object type: OBJ_PROJECTILE");
 			break;
 
 		case OBJ_TARGET:
@@ -2120,7 +2124,7 @@ SDWORD objectDamage(BASE_OBJECT *psObj, UDWORD damage, UDWORD weaponClass,UDWORD
  * only the `direct' target of the projectile. Since impact sides also apply for
  * any splash damage a projectile might do the exact target is needed.
  */
-static DROID_HIT_SIDE getHitSide (PROJ_OBJECT *psObj, DROID *psTarget)
+static DROID_HIT_SIDE getHitSide (PROJECTILE *psObj, DROID *psTarget)
 {
 	int deltaX, deltaY;
 	int impactAngle;
@@ -2203,8 +2207,8 @@ STRUCTURE	*psStructure;
 				return TRUE;
 			break;
 
-		case OBJ_BULLET:
-			ASSERT(!"invalid object type: bullet", "justBeenHitByEW: invalid object type: OBJ_BULLET");
+		case OBJ_PROJECTILE:
+			ASSERT(!"invalid object type: bullet", "justBeenHitByEW: invalid object type: OBJ_PROJECTILE");
 			abort();
 			break;
 
@@ -2282,7 +2286,7 @@ static void addProjNaybor(BASE_OBJECT *psObj, UDWORD distSqr)
 
 //Watermelon: projGetNaybors ripped from droid.c
 /* Find all the objects close to the projectile */
-void projGetNaybors(PROJ_OBJECT *psObj)
+void projGetNaybors(PROJECTILE *psObj)
 {
 	SDWORD		xdiff, ydiff;
 	UDWORD		dx,dy, distSqr;
@@ -2313,7 +2317,32 @@ void projGetNaybors(PROJ_OBJECT *psObj)
 	{
 		if (psTempObj != (BASE_OBJECT *)psObj && !psTempObj->died)
 		{
-			IN_PROJ_NAYBOR_RANGE(psTempObj);
+			// see if an object is in NAYBOR_RANGE
+			xdiff = dx - (SDWORD)psTempObj->x;
+			if (xdiff < 0)
+			{
+				xdiff = -xdiff;
+			}
+			if (xdiff > PROJ_NAYBOR_RANGE)
+			{
+				continue;
+			}
+
+			ydiff = dy - (SDWORD)psTempObj->y;
+			if (ydiff < 0)
+			{
+				ydiff = -ydiff;
+			}
+			if (ydiff > PROJ_NAYBOR_RANGE)
+			{
+				continue;
+			}
+
+			distSqr = xdiff*xdiff + ydiff*ydiff;
+			if (distSqr > PROJ_NAYBOR_RANGE*PROJ_NAYBOR_RANGE)
+			{
+				continue;
+			}
 
 			addProjNaybor(psTempObj, distSqr);
 		}
@@ -2408,7 +2437,7 @@ UDWORD	establishTargetHeight( BASE_OBJECT *psTarget )
 		case OBJ_FEATURE:
 			// Just use imd ymax+ymin
 			return (psTarget->sDisplay.imd->ymax + psTarget->sDisplay.imd->ymin) /2;
-		case OBJ_BULLET:
+		case OBJ_PROJECTILE:
 			// 16 for bullet
 			return 16;
 		default:

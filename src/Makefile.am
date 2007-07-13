@@ -11,8 +11,8 @@ CLEANFILES = scriptvals_parser.tab.h
 
 bin_PROGRAMS = warzone2100
 noinst_HEADERS = action.h advvis.h ai.h aiexperience.h anim_id.h \
-	arrow.h astar.h atmos.h base.h bridge.h bucket3d.h \
-	bullet.h bulletdef.h cdspan.h cheat.h clparse.h cluster.h cmddroid.h \
+	arrow.h astar.h atmos.h basedef.h bridge.h bucket3d.h \
+	projectiledef.h cdspan.h cheat.h clparse.h cluster.h cmddroid.h \
 	cmddroiddef.h combat.h component.h configuration.h console.h csnap.h data.h \
 	deliverance.h design.h difficulty.h display.h display3d.h display3ddef.h \
 	displaydef.h drive.h droid.h droiddef.h e3demo.h edit3d.h effects.h \
@@ -28,7 +28,7 @@ noinst_HEADERS = action.h advvis.h ai.h aiexperience.h anim_id.h \
 	researchdef.h resource.h scores.h scriptai.h scriptcb.h scriptextern.h scriptfuncs.h \
 	scriptobj.h scripttabs.h scriptvals.h selection.h seqdisp.h stats.h statsdef.h \
 	structure.h structuredef.h target.h text.h texture.h transporter.h visibility.h \
-	warcam.h warzoneconfig.h weapons.h winmain.h wrappers.h
+	warcam.h warzoneconfig.h weapondef.h winmain.h wrappers.h
 
 warzone2100_SOURCES = scriptvals_parser.tab.c scriptvals_lexer.lex.c \
 	level_lexer.lex.c ai.c aiexperience.c astar.c action.c advvis.c atmos.c bridge.c \
@@ -48,11 +48,16 @@ warzone2100_SOURCES = scriptvals_parser.tab.c scriptvals_lexer.lex.c \
 	multiplay.c multistruct.c oprint.c power.c projectile.c seqdisp.c structure.c \
 	target.c warzoneconfig.c
 
-warzone2100_LDADD = $(top_builddir)/lib/widget/libwidget.a \
-	$(top_builddir)/lib/sound/libsound.a $(top_builddir)/lib/sequence/libsequence.a \
-	$(top_builddir)/lib/script/libscript.a $(top_builddir)/lib/netplay/libnetplay.a \
-	$(top_builddir)/lib/ivis_opengl/libivis_opengl.a $(top_builddir)/lib/ivis_common/libivis_common.a \
-	$(top_builddir)/lib/gamelib/libgamelib.a $(top_builddir)/lib/framework/libframework.a
+warzone2100_LDADD = \
+	$(top_builddir)/lib/widget/libwidget.a \
+	$(top_builddir)/lib/sequence/libsequence.a \
+	$(top_builddir)/lib/sound/libsound.a \
+	$(top_builddir)/lib/script/libscript.a \
+	$(top_builddir)/lib/netplay/libnetplay.a \
+	$(top_builddir)/lib/ivis_opengl/libivis_opengl.a \
+	$(top_builddir)/lib/ivis_common/libivis_common.a \
+	$(top_builddir)/lib/gamelib/libgamelib.a \
+	$(top_builddir)/lib/framework/libframework.a
 
 if MINGW32
 warzone2100_LDADD += $(top_builddir)/win32/warzone2100.o
