@@ -25,8 +25,15 @@
 #define SOUND_OPENAL_CONTEXT_HPP
 
 // Include the OpenAL libraries
-#include <AL/al.h>
-#include <AL/alc.h>
+#ifndef WZ_NOSOUND
+# ifdef WZ_OS_MAC
+#  include <OpenAL/al.h>
+#  include <OpenAL/alc.h>
+# else
+#  include <AL/al.h>
+#  include <AL/alc.h>
+# endif
+#endif
 
 #include "device.hpp"
 
@@ -53,14 +60,14 @@ namespace OpenAL
              */
             inline void makeCurrent()
             {
-                alcMakeContextCurrent(sndContext);
+                alcMakeContextCurrent(_context);
             }
 
         public:
             class Listener : public Geometry
             {
                 public:
-                    Listener(Context* sndContext);
+                    Listener(Context& sndContext);
 
                     /** Sets the position of the listener
                      *  \param x X-coordinate of listener
@@ -69,12 +76,12 @@ namespace OpenAL
                      */
                     inline virtual void setPosition(float x, float y, float z)
                     {
-                        context->makeCurrent();
+                        _context.makeCurrent();
                         alListener3f(AL_POSITION, x, y, z);
                     }
                     inline virtual void setPosition(int x, int y, int z)
                     {
-                        context->makeCurrent();
+                        _context.makeCurrent();
                         alListener3i(AL_POSITION, x, y, z);
                     }
 
@@ -85,12 +92,12 @@ namespace OpenAL
                      */
                     inline virtual void getPosition(float& x, float& y, float& z)
                     {
-                        context->makeCurrent();
+                        _context.makeCurrent();
                         alGetListener3f(AL_POSITION, &x, &y, &z);
                     }
                     inline virtual void getPosition(int& x, int& y, int& z)
                     {
-                        context->makeCurrent();
+                        _context.makeCurrent();
                         alGetListener3i(AL_POSITION, &x, &y, &z);
                     }
 
@@ -110,28 +117,28 @@ namespace OpenAL
 
                     inline virtual void setVelocity(float x, float y, float z)
                     {
-                        context->makeCurrent();
+                        _context.makeCurrent();
                         alListener3f(AL_VELOCITY, x, y, z);
                     }
                     inline virtual void setVelocity(int x, int y, int z)
                     {
-                        context->makeCurrent();
+                        _context.makeCurrent();
                         alListener3i(AL_VELOCITY, x, y, z);
                     }
 
                     inline virtual void getVelocity(float& x, float& y, float& z)
                     {
-                        context->makeCurrent();
+                        _context.makeCurrent();
                         alGetListener3f(AL_VELOCITY, &x, &y, &z);
                     }
                     inline virtual void getVelocity(int& x, int& y, int& z)
                     {
-                        context->makeCurrent();
+                        _context.makeCurrent();
                         alGetListener3i(AL_VELOCITY, &x, &y, &z);
                     }
 
                 private:
-                    Context* context;
+                    Context& _context;
             };
 
             Listener listener;
@@ -143,10 +150,10 @@ namespace OpenAL
 
         private:
             // Identifier towards OpenAL
-            ALCcontext* sndContext;
+            ALCcontext* _context;
 
             // Parent. This smart pointer is here only to keep the device alive while the context is.
-            boost::shared_ptr<Device> device;
+            boost::shared_ptr<Device> _device;
     };
 }
 

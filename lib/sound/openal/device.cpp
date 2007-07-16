@@ -27,22 +27,15 @@
 
 namespace OpenAL
 {
-    Device::Device() :
-        sndDevice(alcOpenDevice(NULL))
+    Device::Device(const char* deviceName) :
+        _device(alcOpenDevice(deviceName))
     {
-        if (sndDevice == NULL)
-            throw std::runtime_error("OpenAL::Device: Unable to open audio device.");
-    }
-
-    Device::Device(const std::string& deviceName) :
-        sndDevice(deviceName.empty() ? alcOpenDevice(NULL) : alcOpenDevice(deviceName.c_str()))
-    {
-        if (sndDevice == NULL)
+        if (!_device)
             throw std::runtime_error("OpenAL::Device: Unable to open audio device.");
     }
 
     Device::~Device()
     {
-        alcCloseDevice(sndDevice);
+        alcCloseDevice(_device);
     }
 }

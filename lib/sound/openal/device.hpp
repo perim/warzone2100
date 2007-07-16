@@ -25,32 +25,33 @@
 #define SOUND_OPENAL_DEVICE_HPP
 
 // Include the OpenAL libraries
-#include <AL/alc.h>
+#ifndef WZ_NOSOUND
+# ifdef WZ_OS_MAC
+#  include <OpenAL/alc.h>
+# else
+#  include <AL/alc.h>
+# endif
+#endif
 
 #include <string>
 
 namespace OpenAL
 {
+    // Forward declaration so that we can declare this class a friend
+    class Context;
+
     class Device
     {
         public:
             /** Default constructor
-             *  This function constructs the soundDevice class,
-             *  and intializes the default sound device.
-             */
-            Device();
-
-            /** Constructs by opening specified device
-             *  \param deviceName the name of the device to open with OpenAL
+             *  Constructs by opening specified device
+             *  \param deviceName the name of the device to open with OpenAL,
+             *         use NULL to open the default device (or give no parameter
+             *         to select the default parameter which is NULL)
              *  \throw std::runtime_error object with error messsage on failure
              */
-            Device(const std::string& deviceName);
+            Device(const char* deviceName = 0);
             ~Device();
-
-            inline ALCdevice* getALCDeviceID()
-            {
-                return sndDevice;
-            }
 
         private:
             // Private copy constructor and copy assignment operator ensures this class cannot be copied
@@ -59,7 +60,9 @@ namespace OpenAL
 
         private:
             // Identifier towards OpenAL
-            ALCdevice* sndDevice;
+            ALCdevice* _device;
+
+            friend class Context;
     };
 }
 

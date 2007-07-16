@@ -91,7 +91,7 @@ BOOL sound_InitLibraryWithDevice(unsigned int deviceNum)
     try
     {
         // Open device (default dev (0) usually is "Generic Hardware")
-        sndDevice = boost::shared_ptr<OpenAL::Device>(new OpenAL::Device(OpenAL::DeviceList::Instance().at(deviceNum)));
+        sndDevice = boost::shared_ptr<OpenAL::Device>(new OpenAL::Device(OpenAL::DeviceList::Instance().at(deviceNum).c_str()));
 
         sndContext = boost::shared_ptr<OpenAL::Context>(new OpenAL::Context(sndDevice));
 

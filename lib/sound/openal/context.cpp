@@ -28,15 +28,16 @@
 namespace OpenAL
 {
     Context::Context(boost::shared_ptr<Device> sndDevice) :
-        listener(this),
-        device(sndDevice)
+        listener(*this),
+        _device(sndDevice)
     {
-        alcGetError(device->getALCDeviceID());
+        // Clear error condition
+        alcGetError(_device->_device);
 
         // Create a new rendering context
-        sndContext = alcCreateContext(device->getALCDeviceID(), NULL);
+        _context = alcCreateContext(_device->_device, NULL);
 
-        switch (alcGetError(device->getALCDeviceID()))
+        switch (alcGetError(_device->_device))
         {
             case ALC_NO_ERROR:
                 return;
@@ -49,39 +50,36 @@ namespace OpenAL
 
     Context::~Context()
     {
-        if ( sndContext != NULL )
-        {
-            alcMakeContextCurrent(NULL);
-            alcDestroyContext(sndContext);
-            sndContext = NULL;
-        }
+        alcMakeContextCurrent(NULL);
+        alcDestroyContext(_context);
     }
 
-    Context::Listener::Listener(Context* sndContext) : context(sndContext)
+    Context::Listener::Listener(Context& sndContext) :
+        _context(sndContext)
     {
     }
 
     void Context::Listener::setRotation(float pitch, float yaw, float roll)
     {
-        context->makeCurrent();
+        _context.makeCurrent();
         // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
     }
 
     void Context::Listener::setRotation(int pitch, int yaw, int roll)
     {
-        context->makeCurrent();
+        _context.makeCurrent();
         // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
     }
 
     void Context::Listener::getRotation(float& pitch, float& yaw, float& roll)
     {
-        context->makeCurrent();
+        _context.makeCurrent();
         // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
     }
 
     void Context::Listener::getRotation(int& pitch, int& yaw, int& roll)
     {
-        context->makeCurrent();
+        _context.makeCurrent();
         // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
     }
 }
