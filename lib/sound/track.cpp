@@ -22,14 +22,6 @@
 */
 
 #include "track.hpp"
-extern "C" {
-#include "lib/framework/frame.h"
-#include "lib/gamelib/gtime.h"
-#undef bool
-#undef true
-#undef false
-#undef __bool_true_false_are_defined
-}
 
 namespace Sound
 {
@@ -41,16 +33,7 @@ namespace Sound
     {
     }
 
-    Track::Track(const DataBuffer& data, const std::string& fName) :
-        Buffer(data),
-        _loop(false),
-        _volume(0),
-        _lastFinished(0),
-        _fileName(fName)
-    {
-    }
-
-    void Track::setLoop(const bool& bLoop)
+    void Track::loop(const bool bLoop)
     {
         _loop = bLoop;
     }
@@ -60,7 +43,7 @@ namespace Sound
         return _loop;
     }
 
-    void Track::setVolume(const float& vol)
+    void Track::volume(const float vol)
     {
         _volume = vol;
     }
@@ -70,7 +53,7 @@ namespace Sound
         return _volume;
     }
 
-    void Track::setFilename(const std::string& fName)
+    void Track::fileName(const std::string& fName)
     {
         _fileName = fName;
     }
@@ -85,8 +68,23 @@ namespace Sound
         return _lastFinished;
     }
 
-    void Track::finished()
+    void Track::lastFinished(unsigned int finishTime)
     {
-        _lastFinished = gameTime;
+        _lastFinished = finishTime;
+    }
+
+    unsigned int Track::audibleRadius() const
+    {
+        return _audibleRadius;
+    }
+
+    void Track::audibleRadius(unsigned int radius)
+    {
+        _audibleRadius = radius;
+    }
+
+    unsigned int Track::numPlaying() const
+    {
+        return _playingTracks;
     }
 }

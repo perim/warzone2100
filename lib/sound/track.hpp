@@ -33,24 +33,29 @@ namespace Sound
     {
         public:
             Track(const DataBuffer& data);
-            Track(const DataBuffer& data, const std::string& fName);
 
-            void setLoop(const bool& bLoop);
+            void loop(bool bLoop);
             bool loop() const;
 
-            void setVolume(const float& vol);
+            void volume(float vol);
             float volume() const;
 
-            void setFilename(const std::string& fName);
+            void fileName(const std::string& fName);
             std::string fileName() const;
 
             unsigned int lastFinished() const;
-            void finished();
+            void lastFinished(unsigned int finishTime);
+
+            unsigned int audibleRadius() const;
+            void audibleRadius(unsigned int radius);
+
+            unsigned int numPlaying() const;
 
         private:
             bool         _loop;
             float        _volume;
-            unsigned int _lastFinished; // timeframe this track last finished playing in miliseconds
+            unsigned int _lastFinished; // timeframe this track last finished playing in user defined units
+            unsigned int _audibleRadius;
             std::string  _fileName;
     };
 }

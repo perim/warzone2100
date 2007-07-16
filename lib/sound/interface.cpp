@@ -301,7 +301,9 @@ TrackHandle sound_LoadTrackFromFile(const char* fileName)
         return 0;
 
     // Construct track/OpenAL buffer object and insert the buffer into the OpenAL buffer
-    boost::shared_ptr<Sound::Track> track(new Sound::Track(buffer, GetLastResourceFilename()));
+    boost::shared_ptr<Sound::Track> track(new Sound::Track(buffer));
+
+    track->fileName(GetLastResourceFilename());
 
     // Insert the track into the container for later reference/usage
     resourceTracks.push_back(track);
@@ -341,8 +343,8 @@ sndTrackID sound_SetTrackVals(const char* fileName, BOOL loop, unsigned int volu
 
     boost::shared_ptr<Sound::Track> track(*handle);
 
-    track->setLoop(loop == TRUE);
-    track->setVolume(float(volume) / 100);
+    track->loop(loop == TRUE);
+    track->volume(float(volume) / 100);
 
     sndTracks.insert(std::pair<sndTrackID, boost::weak_ptr<Sound::Track> >(trackID, boost::weak_ptr<Sound::Track>(track)));
 
