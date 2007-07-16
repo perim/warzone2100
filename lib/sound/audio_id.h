@@ -39,7 +39,7 @@ typedef enum
 	NO_SOUND = 0,
 
 /* Beeps */
-	
+
 	ID_SOUND_WINDOWCLOSE,
 	ID_SOUND_WINDOWOPEN,
 	ID_SOUND_SELECT,
@@ -507,6 +507,14 @@ INGAME_AUDIO;
  *  \return a default ID number for the track contained in fileName if one exists, otherwise return 0
  */
 sndTrackID audio_GetIDFromStr(const char* fileName);
+
+/** Find an ID number for the specified filename.
+ *  If none exists, generate one and map it to the filename.
+ *  \param fileName the (audio) file for which to seek or produce an ID number
+ *  \return an ID number for the track indicated by fileName.
+ *          Return 0 when we've run out of useable ID numbers (we'll probably run out of memory for that happens).
+ */
+sndTrackID sound_GetAvailableID(const char* fileName);
 
 #if defined(__cplusplus)
 }  // extern "C"
