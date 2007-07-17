@@ -46,6 +46,13 @@ namespace OpenAL
         setBuffer(sndBuffer);
     }
 
+    Source::~Source()
+    {
+        context->makeCurrent();
+
+        alDeleteSources(1, &source);    // Should only fail if alGenSources() failed
+    }
+
     inline void Source::createSource()
     {
         context->makeCurrent();
@@ -96,14 +103,17 @@ namespace OpenAL
         buffer = sndBuffer;
     }
 
-    Source::~Source()
+    bool Source::is2D() const
     {
-        context->makeCurrent();
-
-        alDeleteSources(1, &source);    // Should only fail if alGenSources() failed
+        return bIs2D;
     }
 
-    Source::sourceState Source::getState()
+    bool Source::isStream() const
+    {
+        return bIsStream;
+    }
+
+    Source::sourceState Source::getState() const
     {
         context->makeCurrent();
 
@@ -192,5 +202,111 @@ namespace OpenAL
         }
 
         throw std::runtime_error("OpenAL::Source.unqueueBuffer: alSourceUnqueueBuffers(): no buffers to unqueue");
+    }
+
+    bool Source::play()
+    {
+        context->makeCurrent();
+
+        // Clear current error state
+        alGetError();
+
+        alSourcePlay(source);
+
+        if(alGetError() != AL_NO_ERROR)
+            return false;
+
+        return true;
+    }
+
+    void Source::stop()
+    {
+        context->makeCurrent();
+        alSourceStop(source);
+    }
+
+    unsigned int Source::numProcessedBuffers()
+    {
+        context->makeCurrent();
+
+        int count;
+        alGetSourcei(source, AL_BUFFERS_PROCESSED, &count);
+
+        return count;
+    }
+
+    void Source::setPosition(float x, float y, float z)
+    {
+        context->makeCurrent();
+        alSource3f(source, AL_POSITION, x, y, z);
+    }
+
+    void Source::setPosition(int x, int y, int z)
+    {
+        context->makeCurrent();
+        alSource3i(source, AL_POSITION, x, y, z);
+    }
+
+    void Source::getPosition(float& x, float& y, float& z)
+    {
+        context->makeCurrent();
+        alGetSource3f(source, AL_POSITION, &x, &y, &z);
+    }
+
+    void Source::getPosition(int& x, int& y, int& z)
+    {
+        context->makeCurrent();
+        alGetSource3i(source, AL_POSITION, &x, &y, &z);
+    }
+
+    // * Is this implementation of setting/getting AL_DIRECTION correct?
+    // * Honestly I can't tell, because the OpenAL specification neglects
+    // * to mention how the vector of 3 values is used for specifying direction
+    void Source::setRotation(float pitch, float yaw, float roll)
+    {
+        context->makeCurrent();
+        alSource3f(source, AL_DIRECTION, pitch, yaw, roll);
+    }
+
+    void Source::setRotation(int pitch, int yaw, int roll)
+    {
+        context->makeCurrent();
+        alSource3i(source, AL_DIRECTION, pitch, yaw, roll);
+    }
+
+    void Source::getRotation(float& pitch, float& yaw, float& roll)
+    {
+        context->makeCurrent();
+        alGetSource3f(source, AL_DIRECTION, &pitch, &yaw, &roll);
+    }
+
+    void Source::getRotation(int& pitch, int& yaw, int& roll)
+    {
+        context->makeCurrent();
+        alGetSource3i(source, AL_DIRECTION, &pitch, &yaw, &roll);
+    }
+
+    void Source::setVelocity(float x, float y, float z)
+    {
+        context->makeCurrent();
+        alSource3f(source, AL_VELOCITY, x, y, z);
+    }
+
+    void Source::setVelocity(int x, int y, int z)
+    {
+        context->makeCurrent();
+        alSource3i(source, AL_VELOCITY, x, y, z);
+    }
+
+    void Source::getVelocity(float& x, float& y, float& z)
+    {
+        context->makeCurrent();
+        alGetSource3f(source, AL_VELOCITY, &x, &y, &z);
+    }
+
+    void Source::getVelocity(int& x, int& y, int& z)
+    {
+        context->makeCurrent();
+        alGetSource3i(source, AL_VELOCITY, &x, &y, &z);
     }
 }

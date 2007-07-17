@@ -76,23 +76,17 @@ namespace OpenAL
             /** Wether all sound routed through this source will be rendered as 2D.
              *  \return true if all routed sound is displayed 2D, false otherwise
              */
-            inline bool is2D()
-            {
-                return bIs2D;
-            }
+            bool is2D() const;
 
             /** Wether this source is used for streaming sound
              *  \return true if this source uses buffer queues to stream from, false otherwise
              */
-            inline bool isStream()
-            {
-                return bIsStream;
-            }
+            bool isStream() const;
 
             /** Retrieve the currect state of the source
              *  \return an enum representing the current play-state of the source
              */
-            sourceState getState();
+            sourceState getState() const;
 
             /** Append a buffer to the end of the queue
              *  \param sndBuffer buffer to append to the end of the queue
@@ -106,120 +100,43 @@ namespace OpenAL
 
             /** Tells OpenAL to start playing
              */
-            inline virtual bool play()
-            {
-                context->makeCurrent();
-
-                // Clear current error state
-                alGetError();
-
-                alSourcePlay(source);
-
-                if(alGetError() != AL_NO_ERROR)
-                    return false;
-
-                return true;
-            }
+            inline virtual bool play();
 
             /** Tells OpenAL to stop playing
              */
-            inline virtual void stop()
-            {
-                context->makeCurrent();
-                alSourceStop(source);
-            }
+            inline virtual void stop();
 
-            inline unsigned int numProcessedBuffers()
-            {
-                context->makeCurrent();
-
-                int count;
-                alGetSourcei(source, AL_BUFFERS_PROCESSED, &count);
-
-                return count;
-            }
+            inline unsigned int numProcessedBuffers();
 
             /** Sets the position of the source
              *  \param x X-coordinate of source
              *  \param y Y-coordinate of source
              *  \param z Z-coordinate of source
              */
-            inline virtual void setPosition(float x, float y, float z)
-            {
-                context->makeCurrent();
-                alSource3f(source, AL_POSITION, x, y, z);
-            }
-
-            inline virtual void setPosition(int x, int y, int z)
-            {
-                context->makeCurrent();
-                alSource3i(source, AL_POSITION, x, y, z);
-            }
+            virtual void setPosition(float x, float y, float z);
+            virtual void setPosition(int x, int y, int z);
 
             /** Retrieves the position of the source
              *  \param x this will be used to return the X-coordinate in
              *  \param y this will be used to return the Y-coordinate in
              *  \param z this will be used to return the Z-coordinate in
              */
-            inline virtual void getPosition(float& x, float& y, float& z)
-            {
-                context->makeCurrent();
-                alGetSource3f(source, AL_POSITION, &x, &y, &z);
-            }
-            inline virtual void getPosition(int& x, int& y, int& z)
-            {
-                context->makeCurrent();
-                alGetSource3i(source, AL_POSITION, &x, &y, &z);
-            }
+            virtual void getPosition(float& x, float& y, float& z);
+            virtual void getPosition(int& x, int& y, int& z);
 
             // Functions for setting/getting rotation
-            // * Is this implementation of setting/getting AL_DIRECTION correct?
-            // * Honestly I can't tell, because the OpenAL specification neglects
-            // * to mention how the vector of 3 values is used for specifying direction
-            inline virtual void setRotation(float pitch, float yaw, float roll)
-            {
-                context->makeCurrent();
-                alSource3f(source, AL_DIRECTION, pitch, yaw, roll);
-            }
-            inline virtual void setRotation(int pitch, int yaw, int roll)
-            {
-                context->makeCurrent();
-                alSource3i(source, AL_DIRECTION, pitch, yaw, roll);
-            }
+            virtual void setRotation(float pitch, float yaw, float roll);
+            virtual void setRotation(int pitch, int yaw, int roll);
 
-            inline virtual void getRotation(float& pitch, float& yaw, float& roll)
-            {
-                context->makeCurrent();
-                alGetSource3f(source, AL_DIRECTION, &pitch, &yaw, &roll);
-            }
-            inline virtual void getRotation(int& pitch, int& yaw, int& roll)
-            {
-                context->makeCurrent();
-                alGetSource3i(source, AL_DIRECTION, &pitch, &yaw, &roll);
-            }
+            virtual void getRotation(float& pitch, float& yaw, float& roll);
+            virtual void getRotation(int& pitch, int& yaw, int& roll);
 
             // Functions for setting/getting velocity
-            inline virtual void setVelocity(float x, float y, float z)
-            {
-                context->makeCurrent();
-                alSource3f(source, AL_VELOCITY, x, y, z);
-            }
-            inline virtual void setVelocity(int x, int y, int z)
-            {
-                context->makeCurrent();
-                alSource3i(source, AL_VELOCITY, x, y, z);
-            }
+            virtual void setVelocity(float x, float y, float z);
+            virtual void setVelocity(int x, int y, int z);
 
-            inline virtual void getVelocity(float& x, float& y, float& z)
-            {
-                context->makeCurrent();
-                alGetSource3f(source, AL_VELOCITY, &x, &y, &z);
-            }
-            inline virtual void getVelocity(int& x, int& y, int& z)
-            {
-                context->makeCurrent();
-                alGetSource3i(source, AL_VELOCITY, &x, &y, &z);
-            }
+            virtual void getVelocity(float& x, float& y, float& z);
+            virtual void getVelocity(int& x, int& y, int& z);
 
         private:
             /** Handles the creation of the source
