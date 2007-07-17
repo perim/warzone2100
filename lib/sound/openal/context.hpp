@@ -74,32 +74,16 @@ namespace OpenAL
                      *  \param y Y-coordinate of listener
                      *  \param z Z-coordinate of listener
                      */
-                    inline virtual void setPosition(float x, float y, float z)
-                    {
-                        _context.makeCurrent();
-                        alListener3f(AL_POSITION, x, y, z);
-                    }
-                    inline virtual void setPosition(int x, int y, int z)
-                    {
-                        _context.makeCurrent();
-                        alListener3i(AL_POSITION, x, y, z);
-                    }
+                    virtual void setPosition(float x, float y, float z);
+                    virtual void setPosition(int x, int y, int z);
 
                     /** Retrieves the position of the listener
                      *  \param x this will be used to return the X-coordinate in
                      *  \param y this will be used to return the Y-coordinate in
                      *  \param z this will be used to return the Z-coordinate in
                      */
-                    inline virtual void getPosition(float& x, float& y, float& z)
-                    {
-                        _context.makeCurrent();
-                        alGetListener3f(AL_POSITION, &x, &y, &z);
-                    }
-                    inline virtual void getPosition(int& x, int& y, int& z)
-                    {
-                        _context.makeCurrent();
-                        alGetListener3i(AL_POSITION, &x, &y, &z);
-                    }
+                    virtual void getPosition(float& x, float& y, float& z) const;
+                    virtual void getPosition(int& x, int& y, int& z) const;
 
                     /** Sets the listener orientation.
                      *  Sets the orientation of the listener to "look" at a certain direction,
@@ -111,31 +95,16 @@ namespace OpenAL
                     virtual void setRotation(float pitch, float yaw, float roll);
                     virtual void setRotation(int pitch, int yaw, int roll);
 
-                    virtual void getRotation(float& pitch, float& yaw, float& roll);
-                    virtual void getRotation(int& pitch, int& yaw, int& roll);
+                    virtual void getRotation(float& pitch, float& yaw, float& roll) const;
+                    virtual void getRotation(int& pitch, int& yaw, int& roll) const;
 
+                    virtual void setOrientation(float x1, float y1, float z1, float x2, float y2, float z2);
 
-                    inline virtual void setVelocity(float x, float y, float z)
-                    {
-                        _context.makeCurrent();
-                        alListener3f(AL_VELOCITY, x, y, z);
-                    }
-                    inline virtual void setVelocity(int x, int y, int z)
-                    {
-                        _context.makeCurrent();
-                        alListener3i(AL_VELOCITY, x, y, z);
-                    }
+                    virtual void setVelocity(float x, float y, float z);
+                    virtual void setVelocity(int x, int y, int z);
 
-                    inline virtual void getVelocity(float& x, float& y, float& z)
-                    {
-                        _context.makeCurrent();
-                        alGetListener3f(AL_VELOCITY, &x, &y, &z);
-                    }
-                    inline virtual void getVelocity(int& x, int& y, int& z)
-                    {
-                        _context.makeCurrent();
-                        alGetListener3i(AL_VELOCITY, &x, &y, &z);
-                    }
+                    virtual void getVelocity(float& x, float& y, float& z) const;
+                    virtual void getVelocity(int& x, int& y, int& z) const;
 
                 private:
                     Context& _context;

@@ -39,13 +39,22 @@ namespace OpenAL
     {
         public:
 
-            enum sourceState {
+            enum sourceState
+            {
                 initial,
                 playing,
                 paused,
                 stopped,
 
-                undefined
+                undefined,
+            };
+
+            enum sourceType
+            {
+                Static,
+                Streaming,
+
+                Undetermined,
             };
 
         public:
@@ -73,15 +82,14 @@ namespace OpenAL
              */
             void setBuffer(boost::shared_ptr<Buffer> sndBuffer);
 
-            /** Wether all sound routed through this source will be rendered as 2D.
-             *  \return true if all routed sound is displayed 2D, false otherwise
-             */
-            bool is2D() const;
+            sourceType getType() const;
 
             /** Wether this source is used for streaming sound
              *  \return true if this source uses buffer queues to stream from, false otherwise
              */
             bool isStream() const;
+
+            bool isStatic() const;
 
             /** Retrieve the currect state of the source
              *  \return an enum representing the current play-state of the source
@@ -98,6 +106,10 @@ namespace OpenAL
              */
             boost::shared_ptr<Buffer> unqueueBuffer();
 
+            /** Remove all buffers from this source
+             */
+            void unbuffer();
+
             /** Tells OpenAL to start playing
              */
             inline virtual bool play();
@@ -106,7 +118,7 @@ namespace OpenAL
              */
             inline virtual void stop();
 
-            inline unsigned int numProcessedBuffers();
+            inline unsigned int numProcessedBuffers() const;
 
             /** Sets the position of the source
              *  \param x X-coordinate of source
@@ -121,22 +133,28 @@ namespace OpenAL
              *  \param y this will be used to return the Y-coordinate in
              *  \param z this will be used to return the Z-coordinate in
              */
-            virtual void getPosition(float& x, float& y, float& z);
-            virtual void getPosition(int& x, int& y, int& z);
+            virtual void getPosition(float& x, float& y, float& z) const;
+            virtual void getPosition(int& x, int& y, int& z) const;
 
             // Functions for setting/getting rotation
             virtual void setRotation(float pitch, float yaw, float roll);
             virtual void setRotation(int pitch, int yaw, int roll);
 
-            virtual void getRotation(float& pitch, float& yaw, float& roll);
-            virtual void getRotation(int& pitch, int& yaw, int& roll);
+            virtual void getRotation(float& pitch, float& yaw, float& roll) const;
+            virtual void getRotation(int& pitch, int& yaw, int& roll) const;
 
             // Functions for setting/getting velocity
             virtual void setVelocity(float x, float y, float z);
             virtual void setVelocity(int x, int y, int z);
 
-            virtual void getVelocity(float& x, float& y, float& z);
-            virtual void getVelocity(int& x, int& y, int& z);
+            virtual void getVelocity(float& x, float& y, float& z) const;
+            virtual void getVelocity(int& x, int& y, int& z) const;
+
+            void volume(float gain);
+            float volume() const;
+
+            void loop(bool looping);
+            bool loop() const;
 
         private:
             /** Handles the creation of the source
@@ -151,16 +169,12 @@ namespace OpenAL
 
         private:
             // Identifier towards OpenAL
-            ALuint source;
+            ALuint _source;
 
             // Internal data
-            boost::shared_ptr<Context> context;
-            boost::shared_ptr<Buffer>  buffer;
-            std::vector< boost::shared_ptr<Buffer> > buffers;
-
-            // Internal state
-            const bool bIs2D;
-            const bool bIsStream;
+            boost::shared_ptr<Context> _context;
+            boost::shared_ptr<Buffer>  _buffer;
+            std::vector< boost::shared_ptr<Buffer> > _buffers;
     };
 }
 

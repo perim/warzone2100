@@ -59,6 +59,30 @@ namespace OpenAL
     {
     }
 
+    void Context::Listener::setPosition(float x, float y, float z)
+    {
+        _context.makeCurrent();
+        alListener3f(AL_POSITION, x, y, z);
+    }
+
+    void Context::Listener::setPosition(int x, int y, int z)
+    {
+        _context.makeCurrent();
+        alListener3i(AL_POSITION, x, y, z);
+    }
+
+    void Context::Listener::getPosition(float& x, float& y, float& z) const
+    {
+        _context.makeCurrent();
+        alGetListener3f(AL_POSITION, &x, &y, &z);
+    }
+
+    void Context::Listener::getPosition(int& x, int& y, int& z) const
+    {
+        _context.makeCurrent();
+        alGetListener3i(AL_POSITION, &x, &y, &z);
+    }
+
     void Context::Listener::setRotation(float pitch, float yaw, float roll)
     {
         _context.makeCurrent();
@@ -71,15 +95,46 @@ namespace OpenAL
         // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
     }
 
-    void Context::Listener::getRotation(float& pitch, float& yaw, float& roll)
+    void Context::Listener::getRotation(float& pitch, float& yaw, float& roll) const
     {
         _context.makeCurrent();
         // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
     }
 
-    void Context::Listener::getRotation(int& pitch, int& yaw, int& roll)
+    void Context::Listener::getRotation(int& pitch, int& yaw, int& roll) const
     {
         _context.makeCurrent();
         // TODO: implement some kind of conversion from pitch, yaw and roll to two "at" and "up" vectors
+    }
+
+    void Context::Listener::setOrientation(float x1, float y1, float z1, float x2, float y2, float z2)
+    {
+        _context.makeCurrent();
+        ALfloat floatVector[6] = {x1, y1, z1, x2, y2, z2};
+        alListenerfv(AL_ORIENTATION, floatVector);
+    }
+
+    void Context::Listener::setVelocity(float x, float y, float z)
+    {
+        _context.makeCurrent();
+        alListener3f(AL_VELOCITY, x, y, z);
+    }
+
+    void Context::Listener::setVelocity(int x, int y, int z)
+    {
+        _context.makeCurrent();
+        alListener3i(AL_VELOCITY, x, y, z);
+    }
+
+    void Context::Listener::getVelocity(float& x, float& y, float& z) const
+    {
+        _context.makeCurrent();
+        alGetListener3f(AL_VELOCITY, &x, &y, &z);
+    }
+
+    void Context::Listener::getVelocity(int& x, int& y, int& z) const
+    {
+        _context.makeCurrent();
+        alGetListener3i(AL_VELOCITY, &x, &y, &z);
     }
 }

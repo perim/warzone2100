@@ -30,17 +30,13 @@
 namespace OpenAL
 {
     Source::Source(boost::shared_ptr<Context> sndContext) :
-        context(sndContext),
-        bIs2D(false),
-        bIsStream(true)
+        _context(sndContext)
     {
         createSource();
     }
 
     Source::Source(boost::shared_ptr<Context> sndContext, boost::shared_ptr<Buffer> sndBuffer) :
-        context(sndContext),
-        bIs2D(false),
-        bIsStream(false)
+        _context(sndContext)
     {
         createSource();
         setBuffer(sndBuffer);
@@ -48,18 +44,18 @@ namespace OpenAL
 
     Source::~Source()
     {
-        context->makeCurrent();
+        _context->makeCurrent();
 
-        alDeleteSources(1, &source);    // Should only fail if alGenSources() failed
+        alDeleteSources(1, &_source);    // Should only fail if alGenSources() failed
     }
 
     inline void Source::createSource()
     {
-        context->makeCurrent();
+        _context->makeCurrent();
 
         // Clear current error state
         alGetError();
-        alGenSources(1, &source);
+        alGenSources(1, &_source);
 
         ALenum alErrNo = alGetError();
         if (alErrNo != AL_NO_ERROR)
@@ -78,15 +74,12 @@ namespace OpenAL
 
     void Source::setBuffer(boost::shared_ptr<Buffer> sndBuffer)
     {
-        if (bIsStream)
-            throw std::runtime_error("OpenAL::Source: attempt to single-set buffer on stream source.");
-
-        context->makeCurrent();
+        _context->makeCurrent();
 
         // Clear current error state
         alGetError();
 
-        alSourcei(source, AL_BUFFER, sndBuffer->buffer);
+        alSourcei(_source, AL_BUFFER, sndBuffer->buffer);
 
         ALenum alErrNo = alGetError();
         if (alErrNo != AL_NO_ERROR)
@@ -100,28 +93,45 @@ namespace OpenAL
             }
         }
 
-        buffer = sndBuffer;
+        _buffer = sndBuffer;
+        _buffers.clear();
     }
 
-    bool Source::is2D() const
+    Source::sourceType Source::getType() const
     {
-        return bIs2D;
+        ALint source_type;
+        alGetSourcei(_source, AL_SOURCE_TYPE, &source_type);
+
+        switch (source_type)
+        {
+            case AL_STATIC:
+                return Static;
+            case AL_STREAMING:
+                return Streaming;
+            default:
+                return Undetermined;
+        }
     }
 
     bool Source::isStream() const
     {
-        return bIsStream;
+        return (getType() == Streaming);
+    }
+
+    bool Source::isStatic() const
+    {
+        return (getType() == Static);
     }
 
     Source::sourceState Source::getState() const
     {
-        context->makeCurrent();
+        _context->makeCurrent();
 
         // Clear error state
         alGetError();
 
         ALenum state = AL_SOURCE_STATE;
-        alGetSourcei(source, AL_SOURCE_STATE, &state);
+        alGetSourcei(_source, AL_SOURCE_STATE, &state);
 
         ALenum error = alGetError();
         if (error != AL_NO_ERROR)
@@ -144,15 +154,15 @@ namespace OpenAL
 
     void Source::queueBuffer(boost::shared_ptr<Buffer> sndBuffer)
     {
-        if (!bIsStream)
+        if (isStatic())
             throw std::runtime_error("OpenAL::Source.queueBuffer: attempt to queue buffer on non-stream source");
 
-        context->makeCurrent();
+        _context->makeCurrent();
 
         alGetError();   // clear current error state
 
         ALuint tmpBuffer = sndBuffer->buffer;
-        alSourceQueueBuffers(source, 1, &tmpBuffer);
+        alSourceQueueBuffers(_source, 1, &tmpBuffer);
 
         ALenum alErrNo = alGetError();
         if (alErrNo != AL_NO_ERROR)
@@ -166,20 +176,20 @@ namespace OpenAL
             }
         }
 
-        buffers.push_back(sndBuffer);
+        _buffers.push_back(sndBuffer);
     }
 
     boost::shared_ptr<Buffer> Source::unqueueBuffer()
     {
-        if (!bIsStream)
+        if (!isStream())
             throw std::runtime_error("OpenAL::Source.unqueueBuffer: attempt to unqueue buffer from non-stream source");
 
-        context->makeCurrent();
+        _context->makeCurrent();
 
         alGetError();   // clear current error state
 
         ALuint bufferID;
-        alSourceUnqueueBuffers(source, 1, &bufferID);
+        alSourceUnqueueBuffers(_source, 1, &bufferID);
 
         ALenum alErrNo = alGetError();
         if (alErrNo != AL_NO_ERROR)
@@ -193,7 +203,7 @@ namespace OpenAL
             }
         }
 
-        for (std::vector< boost::shared_ptr<Buffer> >::iterator i = buffers.begin(); i != buffers.end(); ++i)
+        for (std::vector< boost::shared_ptr<Buffer> >::iterator i = _buffers.begin(); i != _buffers.end(); ++i)
         {
             if ((*i)->buffer == bufferID)
             {
@@ -204,14 +214,29 @@ namespace OpenAL
         throw std::runtime_error("OpenAL::Source.unqueueBuffer: alSourceUnqueueBuffers(): no buffers to unqueue");
     }
 
+    void Source::unbuffer()
+    {
+        sourceState alSourceState = getState();
+        if (alSourceState != initial
+         && alSourceState != stopped)
+            throw std::runtime_error("OpenAL::Source::unbuffer: can't remove a buffer from a source that isn't stopped or \"initial\"");
+
+        // Detach all buffers
+        alSourcei(_source, AL_BUFFER, AL_NONE);
+
+        // Remove all our shared pointers to these buffers
+        _buffer.reset();
+        _buffers.clear();
+    }
+
     bool Source::play()
     {
-        context->makeCurrent();
+        _context->makeCurrent();
 
         // Clear current error state
         alGetError();
 
-        alSourcePlay(source);
+        alSourcePlay(_source);
 
         if(alGetError() != AL_NO_ERROR)
             return false;
@@ -221,42 +246,42 @@ namespace OpenAL
 
     void Source::stop()
     {
-        context->makeCurrent();
-        alSourceStop(source);
+        _context->makeCurrent();
+        alSourceStop(_source);
     }
 
-    unsigned int Source::numProcessedBuffers()
+    unsigned int Source::numProcessedBuffers() const
     {
-        context->makeCurrent();
+        _context->makeCurrent();
 
         int count;
-        alGetSourcei(source, AL_BUFFERS_PROCESSED, &count);
+        alGetSourcei(_source, AL_BUFFERS_PROCESSED, &count);
 
         return count;
     }
 
     void Source::setPosition(float x, float y, float z)
     {
-        context->makeCurrent();
-        alSource3f(source, AL_POSITION, x, y, z);
+        _context->makeCurrent();
+        alSource3f(_source, AL_POSITION, x, y, z);
     }
 
     void Source::setPosition(int x, int y, int z)
     {
-        context->makeCurrent();
-        alSource3i(source, AL_POSITION, x, y, z);
+        _context->makeCurrent();
+        alSource3i(_source, AL_POSITION, x, y, z);
     }
 
-    void Source::getPosition(float& x, float& y, float& z)
+    void Source::getPosition(float& x, float& y, float& z) const
     {
-        context->makeCurrent();
-        alGetSource3f(source, AL_POSITION, &x, &y, &z);
+        _context->makeCurrent();
+        alGetSource3f(_source, AL_POSITION, &x, &y, &z);
     }
 
-    void Source::getPosition(int& x, int& y, int& z)
+    void Source::getPosition(int& x, int& y, int& z) const
     {
-        context->makeCurrent();
-        alGetSource3i(source, AL_POSITION, &x, &y, &z);
+        _context->makeCurrent();
+        alGetSource3i(_source, AL_POSITION, &x, &y, &z);
     }
 
     // * Is this implementation of setting/getting AL_DIRECTION correct?
@@ -264,49 +289,78 @@ namespace OpenAL
     // * to mention how the vector of 3 values is used for specifying direction
     void Source::setRotation(float pitch, float yaw, float roll)
     {
-        context->makeCurrent();
-        alSource3f(source, AL_DIRECTION, pitch, yaw, roll);
+        _context->makeCurrent();
+        alSource3f(_source, AL_DIRECTION, pitch, yaw, roll);
     }
 
     void Source::setRotation(int pitch, int yaw, int roll)
     {
-        context->makeCurrent();
-        alSource3i(source, AL_DIRECTION, pitch, yaw, roll);
+        _context->makeCurrent();
+        alSource3i(_source, AL_DIRECTION, pitch, yaw, roll);
     }
 
-    void Source::getRotation(float& pitch, float& yaw, float& roll)
+    void Source::getRotation(float& pitch, float& yaw, float& roll) const
     {
-        context->makeCurrent();
-        alGetSource3f(source, AL_DIRECTION, &pitch, &yaw, &roll);
+        _context->makeCurrent();
+        alGetSource3f(_source, AL_DIRECTION, &pitch, &yaw, &roll);
     }
 
-    void Source::getRotation(int& pitch, int& yaw, int& roll)
+    void Source::getRotation(int& pitch, int& yaw, int& roll) const
     {
-        context->makeCurrent();
-        alGetSource3i(source, AL_DIRECTION, &pitch, &yaw, &roll);
+        _context->makeCurrent();
+        alGetSource3i(_source, AL_DIRECTION, &pitch, &yaw, &roll);
     }
 
     void Source::setVelocity(float x, float y, float z)
     {
-        context->makeCurrent();
-        alSource3f(source, AL_VELOCITY, x, y, z);
+        _context->makeCurrent();
+        alSource3f(_source, AL_VELOCITY, x, y, z);
     }
 
     void Source::setVelocity(int x, int y, int z)
     {
-        context->makeCurrent();
-        alSource3i(source, AL_VELOCITY, x, y, z);
+        _context->makeCurrent();
+        alSource3i(_source, AL_VELOCITY, x, y, z);
     }
 
-    void Source::getVelocity(float& x, float& y, float& z)
+    void Source::getVelocity(float& x, float& y, float& z) const
     {
-        context->makeCurrent();
-        alGetSource3f(source, AL_VELOCITY, &x, &y, &z);
+        _context->makeCurrent();
+        alGetSource3f(_source, AL_VELOCITY, &x, &y, &z);
     }
 
-    void Source::getVelocity(int& x, int& y, int& z)
+    void Source::getVelocity(int& x, int& y, int& z) const
     {
-        context->makeCurrent();
-        alGetSource3i(source, AL_VELOCITY, &x, &y, &z);
+        _context->makeCurrent();
+        alGetSource3i(_source, AL_VELOCITY, &x, &y, &z);
+    }
+
+    void Source::volume(float gain)
+    {
+        _context->makeCurrent();
+        alSourcef(_source, AL_GAIN, gain);
+    }
+
+    float Source::volume() const
+    {
+        _context->makeCurrent();
+        float gain;
+        alGetSourcef(_source, AL_GAIN, &gain);
+
+        return gain;
+    }
+
+    void Source::loop(bool looping)
+    {
+        _context->makeCurrent();
+        alSourcei(_source, AL_LOOPING, looping ? AL_TRUE : AL_FALSE);
+    }
+
+    bool Source::loop() const
+    {
+        _context->makeCurrent();
+        ALint looping;
+        alGetSourcei(_source, AL_LOOPING, &looping);
+        return (looping == AL_TRUE);
     }
 }
