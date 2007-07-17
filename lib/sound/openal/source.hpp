@@ -112,13 +112,13 @@ namespace OpenAL
 
             /** Tells OpenAL to start playing
              */
-            inline virtual bool play();
+            virtual bool play();
 
             /** Tells OpenAL to stop playing
              */
-            inline virtual void stop();
+            virtual void stop();
 
-            inline unsigned int numProcessedBuffers() const;
+            unsigned int numProcessedBuffers() const;
 
             /** Sets the position of the source
              *  \param x X-coordinate of source
