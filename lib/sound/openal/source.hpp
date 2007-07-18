@@ -118,6 +118,12 @@ namespace OpenAL
              */
             virtual void stop();
 
+            /** Tells OpenAL to pause playing
+             */
+            virtual void pause();
+
+            virtual void rewind();
+
             unsigned int numProcessedBuffers() const;
 
             /** Sets the position of the source

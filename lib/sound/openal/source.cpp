@@ -252,6 +252,18 @@ namespace OpenAL
         alSourceStop(_source);
     }
 
+    void Source::pause()
+    {
+        _context->makeCurrent();
+        alSourcePause(_source);
+    }
+
+    void Source::rewind()
+    {
+        _context->makeCurrent();
+        alSourceRewind(_source);
+    }
+
     unsigned int Source::numProcessedBuffers() const
     {
         _context->makeCurrent();
