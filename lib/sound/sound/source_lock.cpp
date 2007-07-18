@@ -194,6 +194,12 @@ namespace Sound
         return _paused;
     }
 
+    void Source::Lock::rewind()
+    {
+        if (!_source)
+            _source->_source.rewind();
+    }
+
     void Source::Lock::setPosition(float x, float y, float z)
     {
         _xPos = x;
@@ -342,6 +348,38 @@ namespace Sound
             y = int(_yVel);
             z = int(_zVel);
         }
+    }
+
+    void Source::Lock::volume(float gain)
+    {
+        _volume = gain;
+
+        if (_source)
+            _source->_source.volume(_volume);
+    }
+
+    float Source::Lock::volume() const
+    {
+        if (_source)
+            return _source->_source.volume();
+
+        return _volume;
+    }
+
+    void Source::Lock::loop(bool looping)
+    {
+        _looping = looping;
+
+        if (_source)
+            _source->_source.loop(_looping);
+    }
+
+    bool Source::Lock::loop() const
+    {
+        if (_source)
+            return _source->_source.loop();
+
+        return _looping;
     }
 
     void Source::Lock::checkLock() const

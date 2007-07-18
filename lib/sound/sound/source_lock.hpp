@@ -41,7 +41,7 @@ namespace Sound
 
             bool locked() const;
 
-            // These functions only work when a source is locked
+            // These functions only work when a source is locked (they throw otherwise)
             OpenAL::Source::sourceState getState() const;
 
             void queueBuffer(boost::shared_ptr<OpenAL::Buffer> sndBuffer);
@@ -59,6 +59,8 @@ namespace Sound
             void pause();
             void unpause();
             bool paused() const;
+
+            void rewind();
 
             void setPosition(float x, float y, float z);
             void setPosition(int x, int y, int z);
