@@ -21,11 +21,12 @@
 	$HeadURL$
 */
 
-#ifndef SOUND_TRACK_HPP
-#define SOUND_TRACK_HPP
+#ifndef _INCLUDE_SOUND_SOUND_TRACK_HPP_
+#define _INCLUDE_SOUND_SOUND_TRACK_HPP_
 
 #include <string>
-#include "openal/buffer.hpp"
+#include "../openal/buffer.hpp"
+#include "../general/raii_counter.hpp"
 
 namespace Sound
 {
@@ -51,13 +52,17 @@ namespace Sound
 
             unsigned int numPlaying() const;
 
+            class Sample;
+
         private:
             bool         _loop;
             float        _volume;
             unsigned int _lastFinished; // timeframe this track last finished playing in user defined units
             unsigned int _audibleRadius;
             std::string  _fileName;
+
+            RAIICounter _playingTracks;
     };
 }
 
-#endif // SOUND_TRACK_HPP
+#endif // _INCLUDE_SOUND_SOUND_TRACK_HPP_
