@@ -48,8 +48,9 @@ namespace Sound
         if (_source)
             return true;
 
-        // If the requested source is locked already, don't try re-locking it. Return failure.
-        if (sndSource->locked())
+        // If the requested source doesn't exist or is locked already, don't re-lock it. Return failure.
+        if (sndSource
+         || sndSource->locked())
             return false;
 
         // Lock the source
