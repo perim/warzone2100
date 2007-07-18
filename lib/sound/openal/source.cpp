@@ -25,7 +25,7 @@
 #include "buffer.hpp"
 #include <string>
 #include "../templates.hpp"
-#include <stdexcept>
+#include "exception.hpp"
 
 namespace OpenAL
 {
@@ -55,6 +55,8 @@ namespace OpenAL
 
         // Clear current error state
         alGetError();
+
+        // Produce the source
         alGenSources(1, &_source);
 
         ALenum alErrNo = alGetError();
@@ -62,12 +64,10 @@ namespace OpenAL
         {
             switch (alErrNo)
             {
-                case AL_OUT_OF_MEMORY:
-                    throw std::runtime_error("OpenAL::Source: alGenSources(): Out of memory");
                 case AL_INVALID_VALUE:
-                    throw std::runtime_error("OpenAL::Source: alGenSources(): not enough non-memory resources, or invalid pointer");
-                case AL_INVALID_OPERATION:
-                    throw std::runtime_error("OpenAL::Source: alGenSources(): no context available to create sources in");
+                    throw OpenAL::out_of_non_memory_resources("OpenAL::Source: alGenSources(): not enough non-memory resources", alErrNo);
+                default:
+                    throw OpenAL::exception::exception_DescPrefixed(alErrNo, "OpenAL::Source: alGenSources(): ");
             }
         }
     }
@@ -86,10 +86,10 @@ namespace OpenAL
         {
             switch (alErrNo)
             {
-                case AL_OUT_OF_MEMORY:
-                    throw std::runtime_error("OpenAL::Source.setBuffer: alSource(): Out of memory");
                 case AL_INVALID_VALUE:
-                    throw std::runtime_error("OpenAL::Source.setBuffer: alSource(): not enough non-memory resources, or invalid pointer");
+                    throw OpenAL::out_of_non_memory_resources("OpenAL::Source::setBuffer: alSourcei(): not enough non-memory resources, or invalid pointer", alErrNo);
+                default:
+                    throw OpenAL::exception::exception_DescPrefixed(alErrNo, "OpenAL::Source.setBuffer: alSource(): ");
             }
         }
 
@@ -135,7 +135,7 @@ namespace OpenAL
 
         ALenum error = alGetError();
         if (error != AL_NO_ERROR)
-            throw std::runtime_error("OpenAL::Source.getState: alGetSourcei error: " + to_string(error));
+            throw OpenAL::exception::exception_DescPrefixed(error, "OpenAL::Source.getState: alGetSourcei error: ");
 
         switch (state)
         {
@@ -170,9 +170,11 @@ namespace OpenAL
             switch (alErrNo)
             {
                 case AL_INVALID_VALUE:
-                    throw std::runtime_error("OpenAL::Source.queueBuffer: alSourceQueueBuffers(): OpenAL: specified buffer is invalid or does not exist.");
+                    throw OpenAL::exception("OpenAL::Source.queueBuffer: alSourceQueueBuffers(): OpenAL: specified buffer is invalid or does not exist.", alErrNo);
                 case AL_INVALID_OPERATION:
-                    throw std::runtime_error("OpenAL::Source.queueBuffer: alSourceQueueBuffers(): buffer format mismatched with the rest of queue (i.e. mono8/mono16/stereo8/stereo16 or bad samplerate)");
+                    throw OpenAL::exception("OpenAL::Source.queueBuffer: alSourceQueueBuffers(): buffer format mismatched with the rest of queue (i.e. mono8/mono16/stereo8/stereo16 or bad samplerate)", alErrNo);
+                default:
+                    throw OpenAL::exception::exception_DescPrefixed(alErrNo, "OpenAL::Source.queueBuffer: alSourceQueueBuffers(): ");
             }
         }
 
@@ -197,9 +199,9 @@ namespace OpenAL
             switch (alErrNo)
             {
                 case AL_INVALID_VALUE:
-                    throw std::runtime_error("OpenAL::Source.unqueueBuffer: alSourceUnqueueBuffers(): not enough non-memory resources, or invalid pointer");
+                    throw OpenAL::out_of_non_memory_resources("OpenAL::Source::unqueueBuffer: alSourceUnqueueBuffers(): not enough non-memory resources, or invalid pointer", alErrNo);
                 default:
-                    throw std::runtime_error("OpenAL::Source.unqueueBuffer: alSourceUnqueueBuffers(): unknown OpenAL error");
+                    throw OpenAL::exception::exception_DescPrefixed(alErrNo, "OpenAL::Source.unqueueBuffer: alSourceUnqueueBuffers(): ");
             }
         }
 
