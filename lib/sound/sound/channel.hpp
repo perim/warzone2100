@@ -40,7 +40,6 @@ namespace Sound
              */
             void addSound(boost::weak_ptr<Sample> snd);
 
-        protected:
             void pause();
             void unpause();
             bool paused() const;
