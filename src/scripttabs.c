@@ -357,6 +357,10 @@ FUNC_SYMBOL asFuncTable[] =
 		2, { (INTERP_TYPE)ST_STRUCTURESTAT, VAL_INT },
 		0, 0, NULL, 0, 0, NULL, NULL },
 
+	{ "getStructureVis",		scrGetStructureVis,		(INTERP_TYPE)ST_STRUCTURE,
+		3, { (INTERP_TYPE)ST_STRUCTURESTAT, VAL_INT, VAL_INT },
+		0, 0, NULL, 0, 0, NULL, NULL },
+
 	{ "getTemplate",		scrGetTemplate,			(INTERP_TYPE)ST_TEMPLATE,
 		2, { (INTERP_TYPE)ST_COMPONENT, VAL_INT },
 		0, 0, NULL, 0, 0, NULL, NULL },
@@ -690,11 +694,18 @@ FUNC_SYMBOL asFuncTable[] =
 	{ "initIterateCluster", scrInitIterateCluster,	VAL_VOID,
 		1, { VAL_INT },
 		0, 0, NULL, 0, 0, NULL, NULL },
+
 	{ "iterateCluster",		scrIterateCluster,		(INTERP_TYPE)ST_BASEOBJECT,
 		0, { VAL_VOID },
 		0, 0, NULL, 0, 0, NULL, NULL },
+
+	//Commander functions
 	{ "cmdDroidAddDroid",	scrCmdDroidAddDroid,	VAL_VOID,
 		2, { (INTERP_TYPE)ST_DROID, (INTERP_TYPE)ST_DROID },
+		0, 0, NULL, 0, 0, NULL, NULL },
+
+	{ "cmdDroidMaxGroup",	scrCmdDroidMaxGroup,	VAL_INT,
+		1, { (INTERP_TYPE)ST_DROID},
 		0, 0, NULL, 0, 0, NULL, NULL },
 
 	// a couple of example functions
@@ -1164,10 +1175,6 @@ FUNC_SYMBOL asFuncTable[] =
 		5, { VAL_INT , VAL_INT, VAL_INT, VAL_INT, VAL_INT },
 		0, 0, NULL, 0, 0, NULL, NULL },
 
-	{ "getStructureVis",		scrGetStructureVis,		(INTERP_TYPE)ST_STRUCTURE,
-		3, { (INTERP_TYPE)ST_STRUCTURESTAT, VAL_INT, VAL_INT },
-		0, 0, NULL, 0, 0, NULL, NULL },
-
 	{ "chooseValidLoc",			scrChooseValidLoc,		VAL_BOOL,
 		6, { VAL_REF|VAL_INT, VAL_REF|VAL_INT, VAL_INT, VAL_INT, VAL_INT, VAL_INT },
 		0, 0, NULL, 0, 0, NULL, NULL },
@@ -1375,8 +1382,16 @@ FUNC_SYMBOL asFuncTable[] =
 		0, { VAL_VOID },
 		0, 0, NULL, 0, 0, NULL, NULL },
 
-	{ "debugModeEnabled",		scrDebugModeEnabled,				VAL_BOOL,
+	{ "debugModeEnabled",		scrDebugModeEnabled,		VAL_BOOL,
 		0, { VAL_VOID },
+		0, 0, NULL, 0, 0, NULL, NULL },
+
+	{ "calcDroidPower",			scrCalcDroidPower,			VAL_INT,
+		1, { (INTERP_TYPE)ST_DROID },
+		0, 0, NULL, 0, 0, NULL, NULL },
+
+	{ "getDroidRank",			scrGetDroidLevel,			VAL_INT,
+		1, { (INTERP_TYPE)ST_DROID },
 		0, 0, NULL, 0, 0, NULL, NULL },
 
 	/* END new functions */
@@ -1498,6 +1513,8 @@ VAR_SYMBOL asObjTable[] =
 		(INTERP_TYPE)ST_DROID,		OBJID_ORDERX,	scrBaseObjGet,	NULL, 0, {0}, NULL },
 	{ "ordery",		VAL_INT,	ST_OBJECT,
 		(INTERP_TYPE)ST_DROID,		OBJID_ORDERY,	scrBaseObjGet,	NULL, 0, {0}, NULL },
+	{ "group",		(INTERP_TYPE)ST_GROUP,	ST_OBJECT,
+		(INTERP_TYPE)ST_DROID,		OBJID_GROUP,	scrBaseObjGet,	NULL, 0, {0}, NULL },
 
 	// structure variables
 	//{ "stat",			(INTERP_TYPE)ST_STRUCTURESTAT,	ST_OBJECT,	(INTERP_TYPE)ST_STRUCTURE,	OBJID_STRUCTSTAT,
@@ -1513,6 +1530,10 @@ VAR_SYMBOL asObjTable[] =
 		(INTERP_TYPE)ST_GROUP,		GROUPID_MEMBERS,scrGroupObjGet,	NULL, 0, {0}, NULL },
 	{ "health",		VAL_INT,	ST_OBJECT,
 		(INTERP_TYPE)ST_GROUP,		GROUPID_HEALTH,	scrGroupObjGet,	NULL, 0, {0}, NULL },
+	{ "type",		VAL_INT,	ST_OBJECT,
+		(INTERP_TYPE)ST_GROUP,		GROUPID_TYPE,	scrGroupObjGet,	NULL, 0, {0}, NULL },
+	{ "commander",	(INTERP_TYPE)ST_DROID,	ST_OBJECT,
+		(INTERP_TYPE)ST_GROUP,		GROUPID_CMD,	scrGroupObjGet,	NULL, 0, {0}, NULL },
 
 	/* new member variables */
 	//similiar to .order
@@ -1627,15 +1648,17 @@ CONST_SYMBOL asConstantTable[] =
 	{ "OFF_CLEAR",	VAL_INT,	FALSE,	LDS_MCLEAR,			NULL, NULL, 0.0f },
 	{ "BETWEEN",	VAL_INT,	FALSE,	LDS_BETWEEN,		NULL, NULL, 0.0f },
 	// droid types
-	{ "DROID_WEAPON",		VAL_INT,	FALSE,	DROID_WEAPON,		NULL, NULL, 0.0f },
-	{ "DROID_SENSOR",		VAL_INT,	FALSE,	DROID_SENSOR,		NULL, NULL, 0.0f },
-	{ "DROID_ECM",			VAL_INT,	FALSE,	DROID_ECM,			NULL, NULL, 0.0f },
-	{ "DROID_CONSTRUCT",	VAL_INT,	FALSE,	DROID_CONSTRUCT,	NULL, NULL, 0.0f },
-	{ "DROID_PERSON",		VAL_INT,	FALSE,	DROID_PERSON,		NULL, NULL, 0.0f },
-	{ "DROID_CYBORG",		VAL_INT,	FALSE,	DROID_CYBORG,		NULL, NULL, 0.0f },
-	{ "DROID_TRANSPORTER",	VAL_INT,	FALSE,	DROID_TRANSPORTER,	NULL, NULL, 0.0f },
-	{ "DROID_COMMAND",		VAL_INT,	FALSE,	DROID_COMMAND,		NULL, NULL, 0.0f },
-	{ "DROID_REPAIR",		VAL_INT,	FALSE,	DROID_REPAIR,		NULL, NULL, 0.0f },
+	{ "DROID_WEAPON",			VAL_INT,	FALSE,	DROID_WEAPON,			NULL, NULL, 0.0f },
+	{ "DROID_SENSOR",			VAL_INT,	FALSE,	DROID_SENSOR,			NULL, NULL, 0.0f },
+	{ "DROID_ECM",				VAL_INT,	FALSE,	DROID_ECM,				NULL, NULL, 0.0f },
+	{ "DROID_CONSTRUCT",		VAL_INT,	FALSE,	DROID_CONSTRUCT,		NULL, NULL, 0.0f },
+	{ "DROID_PERSON",			VAL_INT,	FALSE,	DROID_PERSON,			NULL, NULL, 0.0f },
+	{ "DROID_CYBORG",			VAL_INT,	FALSE,	DROID_CYBORG,			NULL, NULL, 0.0f },
+	{ "DROID_TRANSPORTER",		VAL_INT,	FALSE,	DROID_TRANSPORTER,		NULL, NULL, 0.0f },
+	{ "DROID_COMMAND",			VAL_INT,	FALSE,	DROID_COMMAND,			NULL, NULL, 0.0f },
+	{ "DROID_REPAIR",			VAL_INT,	FALSE,	DROID_REPAIR,			NULL, NULL, 0.0f },
+	{ "DROID_CYBORG_REPAIR",	VAL_INT,	FALSE,	DROID_CYBORG_REPAIR,	NULL, NULL, 0.0f },
+	{ "DROID_CYBORG_CONSTRUCT",	VAL_INT,	FALSE,	DROID_CYBORG_CONSTRUCT,	NULL, NULL, 0.0f },
 
 	// structure types
 	{ "REF_HQ",				VAL_INT,	FALSE,	REF_HQ,					NULL, NULL, 0.0f },
@@ -1678,6 +1701,7 @@ CONST_SYMBOL asConstantTable[] =
 	{ "DORDER_DISEMBARK",	VAL_INT,	FALSE,	DORDER_DISEMBARK,	NULL, NULL, 0.0f },
 	{ "DORDER_SCOUT",		VAL_INT,	FALSE,	DORDER_SCOUT,		NULL, NULL, 0.0f },
 	{ "DORDER_DROIDREPAIR",	VAL_INT,	FALSE,	DORDER_DROIDREPAIR,	NULL, NULL, 0.0f },
+	{ "DORDER_GUARD",		VAL_INT,	FALSE,	DORDER_GUARD,		NULL, NULL, 0.0f },
 
 
 	//new member varialbe - constants for .action
@@ -1874,9 +1898,7 @@ CONST_SYMBOL asConstantTable[] =
 
 	// multiplayer
 
-//	{ "DMATCH",			VAL_INT,	FALSE,	DMATCH,				NULL, NULL, 0.0f },
 	{ "CAMPAIGN",		VAL_INT,	FALSE,	CAMPAIGN,			NULL, NULL, 0.0f },
-	{ "TEAMPLAY",		VAL_INT,	FALSE,	TEAMPLAY,			NULL, NULL, 0.0f },
 	{ "SKIRMISH",		VAL_INT,	FALSE,	SKIRMISH,			NULL, NULL, 0.0f },
 
 	{ "CAMP_CLEAN",		VAL_INT,	FALSE,	CAMP_CLEAN,			NULL, NULL, 0.0f },
@@ -1886,6 +1908,11 @@ CONST_SYMBOL asConstantTable[] =
 	{ "NO_ALLIANCES",	VAL_INT,	FALSE,	NO_ALLIANCES,		NULL, NULL, 0.0f },
 	{ "ALLIANCES",		VAL_INT,	FALSE,	ALLIANCES,			NULL, NULL, 0.0f },
 	{ "ALLIANCES_TEAMS",VAL_INT,	FALSE,	ALLIANCES_TEAMS,	NULL, NULL, 0.0f },
+
+	//Group types
+	{ "GT_NORMAL",		VAL_INT,	FALSE,	GT_NORMAL,			NULL, NULL, 0.0f },
+	{ "GT_COMMAND",		VAL_INT,	FALSE,	GT_COMMAND,			NULL, NULL, 0.0f },
+	{ "GT_TRANSPORTER",	VAL_INT,	FALSE,	GT_TRANSPORTER,		NULL, NULL, 0.0f },
 
 	/* some key constants */
 	{ "KEY_LCTRL",		VAL_INT,	FALSE,		KEY_LCTRL,		NULL, NULL, 0.0f },
@@ -2104,6 +2131,7 @@ TYPE_EQUIV asEquivTable[] =
 	{ (INTERP_TYPE)ST_STRUCTURE,	1,	{ (INTERP_TYPE)ST_POINTER_O, } },
 	{ (INTERP_TYPE)ST_FEATURE,		1,	{ (INTERP_TYPE)ST_POINTER_O, } },
 	{ (INTERP_TYPE)ST_BASEOBJECT,	1,	{ (INTERP_TYPE)ST_POINTER_O, } },
+	{ (INTERP_TYPE)ST_GROUP,		1,	{ (INTERP_TYPE)ST_POINTER_O, } },
 	{ (INTERP_TYPE)ST_TEMPLATE,		1,	{ (INTERP_TYPE)ST_POINTER_T, } },
 	{ (INTERP_TYPE)ST_BODY,			1,  { (INTERP_TYPE)ST_POINTER_S, } },
 	{ (INTERP_TYPE)ST_PROPULSION,	1,	{ (INTERP_TYPE)ST_POINTER_S, } },

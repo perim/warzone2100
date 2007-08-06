@@ -3236,7 +3236,7 @@ BOOL scrGameOverMessage(void)
 	}
 
 	// stop the game time??
-	
+
 	//create the message
 	psMessage = addMessage(msgType, FALSE, player);
 
@@ -7103,6 +7103,12 @@ BOOL scrNumDroidsByComponent(void)
 					break;
 				}
 				break;
+			case ST_BRAIN:
+				if (psDroid->asBits[ST_BRAIN].nStat == comp)
+				{
+					numFound++;
+				}
+				break;
 			default:
 				debug(LOG_ERROR, "scrNumDroidsByComponent(): unknown component type");
 				ASSERT( FALSE, "scrNumDroidsByComponent: unknown component type" );
@@ -7725,13 +7731,13 @@ BOOL scrResearchCompleted(void)
 
 	if (!stackPopParams(2,ST_RESEARCH, &psResearch, VAL_INT, &player ))
 	{
-		debug(LOG_ERROR,   "scrResearchCompleted(): stack failed");
+		debug(LOG_ERROR,   "scrResearchCompleted: stack failed");
 		return FALSE;
 	}
 
 	if(psResearch == NULL)
 	{
-		ASSERT( FALSE, ": no such research topic" );
+		debug( LOG_ERROR, "scrResearchCompleted: no such research topic" );
 		return FALSE;
 	}
 
@@ -7740,7 +7746,7 @@ BOOL scrResearchCompleted(void)
 
 	if (index >= numResearch)
 	{
-		ASSERT( FALSE, "scrResearchCompleted: invalid research index" );
+		debug( LOG_ERROR, "scrResearchCompleted: invalid research index" );
 		return FALSE;
 	}
 
@@ -8268,28 +8274,28 @@ BOOL scrNumStructsByStatInRange(void)
 
 	if (player >= MAX_PLAYERS)
 	{
-		ASSERT( FALSE, "scrStructureBuiltInRange:player number is too high" );
+		ASSERT( FALSE, "scrNumStructsByStatInRange:player number is too high" );
 		return FALSE;
 	}
 
 	if (x < (SDWORD)0 || (x >> TILE_SHIFT) > (SDWORD)mapWidth)
 	{
-		ASSERT( FALSE, "scrStructureBuiltInRange : invalid X coord" );
+		ASSERT( FALSE, "scrNumStructsByStatInRange : invalid X coord" );
 		return FALSE;
 	}
 	if (y < (SDWORD)0 || (y >> TILE_SHIFT) > (SDWORD)mapHeight)
 	{
-		ASSERT( FALSE,"scrStructureBuiltInRange : invalid Y coord" );
+		ASSERT( FALSE,"scrNumStructsByStatInRange : invalid Y coord" );
 		return FALSE;
 	}
 	if (index < (SDWORD)0 || index > (SDWORD)numStructureStats)
 	{
-		ASSERT( FALSE, "scrStructureBuiltInRange : Invalid structure stat" );
+		ASSERT( FALSE, "scrNumStructsByStatInRange : Invalid structure stat" );
 		return FALSE;
 	}
 	if (range < (SDWORD)0)
 	{
-		ASSERT( FALSE, "scrStructureBuiltInRange : Rnage is less than zero" );
+		ASSERT( FALSE, "scrNumStructsByStatInRange : Rnage is less than zero" );
 		return FALSE;
 	}
 
@@ -10419,7 +10425,7 @@ BOOL objectInRangeVis(BASE_OBJECT *psList, SDWORD x, SDWORD y, SDWORD range, SDW
 BOOL scrPursueResearch(void)
 {
 	RESEARCH			*psResearch;
-	SDWORD				foundIndex,player,cur,tempIndex,Stack[400];
+	SDWORD				foundIndex = 0,player,cur,tempIndex,Stack[400];
 	UDWORD				index;
 	SWORD				top;
 
@@ -10481,7 +10487,8 @@ BOOL scrPursueResearch(void)
 		found = FALSE;
 		//DbgMsg("Research already in progress, %d", index);
 	}
-	else if(IsResearchPossible(&pPlayerRes[index]) || IsResearchCancelled(&pPlayerRes[index]))
+	else if(IsResearchPossible(&pPlayerRes[index])
+	     || IsResearchCancelled(&pPlayerRes[index]))
 	{
 		foundIndex = index;
 		found = TRUE;
@@ -10564,38 +10571,36 @@ BOOL scrPursueResearch(void)
 				break;
 			}
 
-		}//while((cur < asResearch[index].numPRRequired) && (top >= (-1)));
+		} // while(TRUE)
 	}
 
-	if(found)
+	if(found
+	 && foundIndex < numResearch)
 	{
-		if(foundIndex < numResearch)
+		pResearch = (asResearch + foundIndex);
+		pPlayerRes				= asPlayerResList[player]+ foundIndex;
+		psResFacilty->psSubject = (BASE_STATS*)pResearch;		  //set the subject up
+
+		if (IsResearchCancelled(pPlayerRes))
 		{
-			pResearch = (asResearch + foundIndex);
-			pPlayerRes				= asPlayerResList[player]+ foundIndex;
-			psResFacilty->psSubject = (BASE_STATS*)pResearch;		  //set the subject up
-
-			if (IsResearchCancelled(pPlayerRes))
-			{
-				psResFacilty->powerAccrued = pResearch->researchPower;//set up as if all power available for cancelled topics
-			}
-			else
-			{
-				psResFacilty->powerAccrued = 0;
-			}
-
-			MakeResearchStarted(pPlayerRes);
-			psResFacilty->timeStarted = ACTION_START_TIME;
-			psResFacilty->timeStartHold = 0;
-			psResFacilty->timeToResearch = pResearch->researchPoints / 	psResFacilty->researchPoints;
-			if (psResFacilty->timeToResearch == 0)
-			{
-				psResFacilty->timeToResearch = 1;
-			}
-
-			sprintf(sTemp,"player:%d starts topic: %s",player, asResearch[foundIndex].pName );
-			NETlogEntry(sTemp,0,0);
+			psResFacilty->powerAccrued = pResearch->researchPower;//set up as if all power available for cancelled topics
 		}
+		else
+		{
+			psResFacilty->powerAccrued = 0;
+		}
+
+		MakeResearchStarted(pPlayerRes);
+		psResFacilty->timeStarted = ACTION_START_TIME;
+		psResFacilty->timeStartHold = 0;
+		psResFacilty->timeToResearch = pResearch->researchPoints / 	psResFacilty->researchPoints;
+		if (psResFacilty->timeToResearch == 0)
+		{
+			psResFacilty->timeToResearch = 1;
+		}
+
+		sprintf(sTemp,"player:%d starts topic: %s",player, asResearch[foundIndex].pName );
+		NETlogEntry(sTemp,0,0);
 	}
 
 	scrFunctionResult.v.bval = found;
@@ -11158,6 +11163,56 @@ BOOL scrDebugModeEnabled(void)
 	if (!stackPushResult(VAL_BOOL, &scrFunctionResult))
 	{
 		debug(LOG_ERROR, "scrDebugModeEnabled(): failed to push result");
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/*
+ * Returns the cost of a droid
+ */
+BOOL scrCalcDroidPower(void)
+{
+	DROID	*psDroid;
+
+	if (!stackPopParams(1, ST_DROID, &psDroid))
+	{
+		return FALSE;
+	}
+
+	ASSERT(psDroid != NULL,
+		"scrCalcDroidPower: can't calculate cost of a null-droid");
+
+	scrFunctionResult.v.ival = (SDWORD)calcDroidPower(psDroid);
+	if (!stackPushResult(VAL_INT, &scrFunctionResult))
+	{
+		debug(LOG_ERROR, "scrCalcDroidPower(): failed to push result");
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/*
+ * Returns experience level of a droid
+ */
+BOOL scrGetDroidLevel(void)
+{
+	DROID	*psDroid;
+
+	if (!stackPopParams(1, ST_DROID, &psDroid))
+	{
+		return FALSE;
+	}
+
+	ASSERT(psDroid != NULL,
+		"scrGetDroidLevel: null-pointer passed");
+
+	scrFunctionResult.v.ival = (SDWORD)getDroidLevel(psDroid);
+	if (!stackPushResult(VAL_INT, &scrFunctionResult))
+	{
+		debug(LOG_ERROR, "scrGetDroidLevel(): failed to push result");
 		return FALSE;
 	}
 

@@ -41,6 +41,8 @@
 iTexPage _TEX_PAGE[iV_TEX_MAX];
 unsigned int _TEX_INDEX;
 
+static void pie_PrintLoadedTextures(void);
+
 //*************************************************************************
 
 
@@ -49,47 +51,42 @@ unsigned int _TEX_INDEX;
 	table.  We check first if the given image has already been loaded,
 	as a sanity check (should never happen).  The texture numbers are
 	stored in a special texture table, not in the resource system, for
-	some unknown reason.
+	some unknown reason. Start looking for an available slot in the
+	texture table at the given slot number.
 
 	Returns the texture number of the image.
 **************************************************************************/
-int pie_AddTexPage(iV_Image * s, const char* filename, int type, BOOL bResource)
+int pie_AddTexPage(iV_Image *s, const char* filename, int slot)
 {
 	unsigned int i = 0;
 
-	debug(LOG_TEXTURE, "pie_AddTexPage: %s type=%d resource=%s page=%d", filename, type, bResource ? "true" : "false", _TEX_INDEX);
-	assert(s != NULL);
-
-	/* Have we already loaded this one? (Should generally not happen here.) */
-	while (i < _TEX_INDEX) {
-		if (strncmp(filename, _TEX_PAGE[i].name, iV_TEXNAME_MAX) == 0) {
-			// this happens with terrain for some reason, which is necessary
-			debug(LOG_TEXTURE, "pie_AddTexPage: %s loaded again", filename);
+	/* Have we already loaded this one? Should not happen here. */
+	while (i < _TEX_INDEX)
+	{
+		if (strncmp(filename, _TEX_PAGE[i].name, iV_TEXNAME_MAX) == 0)
+		{
+			pie_PrintLoadedTextures();
 		}
+		ASSERT(strncmp(filename, _TEX_PAGE[i].name, iV_TEXNAME_MAX) != 0, 
+		       "pie_AddTexPage: %s loaded again! Already loaded as %s|%u", filename,
+		       _TEX_PAGE[i].name, i);
 		i++;
 	}
 
-	/* Get next available texture page */
-	i = _TEX_INDEX;
-
-	/* Have we used up too many? */
-	if (_TEX_INDEX >= iV_TEX_MAX) {
-		debug(LOG_ERROR, "pie_AddTexPage: too many texture pages");
-		assert(!"too many texture pages");
-		return -1;
+	/* Use first unused slot */
+	for (i = slot; i < iV_TEX_MAX && _TEX_PAGE[i].name[0] != '\0'; i++);
+	
+	if (i == _TEX_INDEX)
+	{
+		_TEX_INDEX++; // increase table
 	}
+	ASSERT(i != iV_TEX_MAX, "pie_AddTexPage: too many texture pages");
+
+	debug(LOG_TEXTURE, "pie_AddTexPage: %s page=%d", filename, _TEX_INDEX);
+	assert(s != NULL);
 
 	/* Stick the name into the tex page structures */
 	strncpy(_TEX_PAGE[i].name, filename, iV_TEXNAME_MAX);
-
-	/* Store away all the info */
-	/* DID come from a resource */
-	_TEX_PAGE[i].bResource = bResource;
-	_TEX_PAGE[i].tex.bmp = s->bmp;
-	_TEX_PAGE[i].tex.width = s->width;
-	_TEX_PAGE[i].tex.height = s->height;
-	_TEX_PAGE[i].tex.depth = s->depth;
-	_TEX_PAGE[i].type = type;
 
 	glGenTextures(1, (GLuint *) &_TEX_PAGE[i].id);
 	// FIXME: This function is used instead of glBindTexture, but we're juggling with difficult to trace global state here. Look into pie_SetTexturePage's definition for details.
@@ -101,10 +98,21 @@ int pie_AddTexPage(iV_Image * s, const char* filename, int type, BOOL bResource)
 	} else {
 		debug(LOG_ERROR, "pie_AddTexPage: non POT texture %s", filename);
 	}
+	free(s->bmp); // it is uploaded, we do not need it anymore
+	s->bmp = NULL;
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// Use anisotropic filtering, if available, but only max 4.0 to reduce processor burden
+	if (check_extension("GL_EXT_texture_filter_anisotropic"))
+	{
+		GLfloat max;
+
+		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, MIN(4.0f, max));
+	}
 
 	if( strncmp( filename, SKY_TEXPAGE, iV_TEXNAME_MAX ) == 0 )
 	{
@@ -133,36 +141,6 @@ void pie_MakeTexPageName(char * filename)
 	}
 }
 
-void pie_ChangeTexPage(int tex_index, iV_Image * s, int type, BOOL bResource)
-{
-	assert(s != NULL);
-
-	/* DID come from a resource */
-	_TEX_PAGE[tex_index].bResource = bResource;
-	// Default values
-	_TEX_PAGE[tex_index].tex.bmp = s->bmp;
-	_TEX_PAGE[tex_index].tex.width = s->width;
-	_TEX_PAGE[tex_index].tex.height = s->height;
-	_TEX_PAGE[tex_index].tex.depth = s->depth;
-	_TEX_PAGE[tex_index].type = type;
-
-	glBindTexture(GL_TEXTURE_2D, _TEX_PAGE[tex_index].id);
-
-	if ((s->width & (s->width-1)) == 0 && (s->height & (s->height-1)) == 0)
-	{
-		gluBuild2DMipmaps(GL_TEXTURE_2D, wz_texture_compression, s->width, s->height,
-			     iV_getPixelFormat(s), GL_UNSIGNED_BYTE, s->bmp);
-	} else {
-		debug(LOG_ERROR, "pie_ChangeTexPage: non POT texture %i", tex_index);
-	}
-
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-}
-
 /*!
  * Print the names of all loaded textures to LOG_ERROR
  */
@@ -172,7 +150,8 @@ static void pie_PrintLoadedTextures(void)
 
 	debug(LOG_ERROR, "Available texture pages in memory (%d out of %d max):", _TEX_INDEX, iV_TEX_MAX);
 
-	for ( i = 0; i < iV_TEX_MAX; i++ ) {
+	for ( i = 0; i < iV_TEX_MAX && _TEX_PAGE[i].name[0] != '\0'; i++ )
+	{
 		debug(LOG_ERROR, "%02d : %s", i, _TEX_PAGE[i].name);
 	}
 }
@@ -205,19 +184,27 @@ int iV_GetTexture(const char *filename)
 }
 
 
-int pie_ReloadTexPage(const char *texpageName, const char *fileName)
+/**************************************************************************
+	WRF files may specify overrides for the textures on a map. This
+	is done through an ugly hack involving cutting the texture name
+	down to just "page-NN", where NN is the page number, and 
+	replaceing the texture page with the same name if another file
+	with this prefix is loaded.
+**************************************************************************/
+int pie_ReplaceTexPage(iV_Image *s, const char *texPage)
 {
-	int i = iV_GetTexture(texpageName);
+	int i = iV_GetTexture(texPage);
 
+	ASSERT(i >= 0, "pie_ReplaceTexPage: Cannot find any %s to replace!", texPage);
 	if (i < 0)
 	{
 		return -1;
 	}
 
-	debug(LOG_TEXTURE, "Reloading texture %s from index %d, max is %d", texpageName, i, _TEX_INDEX);
-
-	iV_unloadImage(&_TEX_PAGE[i].tex);
-	iV_loadImage_PNG(fileName, &_TEX_PAGE[i].tex);
+	glDeleteTextures(1, (GLuint *) &_TEX_PAGE[i].id);
+	debug(LOG_TEXTURE, "Reloading texture %s from index %d", texPage, i);
+	_TEX_PAGE[i].name[0] = '\0';
+	pie_AddTexPage(s, texPage, i);
 
 	return i;
 }
@@ -229,22 +216,15 @@ int pie_ReloadTexPage(const char *texpageName, const char *fileName)
 */
 void pie_TexShutDown(void)
 {
-	unsigned int i = 0, j = 0;
+	unsigned int i = 0;
 
-	while (i < _TEX_INDEX) {
-		/*	Only free up the ones that were NOT allocated through resource handler cos they'll already be free */
-		if(_TEX_PAGE[i].bResource == FALSE)
-		{
-			if(_TEX_PAGE[i].tex.bmp) {
-				j++;
-				free(_TEX_PAGE[i].tex.bmp);
-				_TEX_PAGE[i].tex.bmp = NULL;
-			}
-		}
+	while (i < _TEX_INDEX) 
+	{
+		glDeleteTextures(1, (GLuint *) &_TEX_PAGE[i].id);
 		i++;
 	}
 
-	debug(LOG_TEXTURE, "pie_TexShutDown successful - did free %u texture pages\n", j);
+	debug(LOG_TEXTURE, "pie_TexShutDown successful - did free %u texture pages", i);
 }
 
 void pie_TexInit(void)
@@ -253,9 +233,6 @@ void pie_TexInit(void)
 
 	while (i < iV_TEX_MAX) {
 		_TEX_PAGE[i].name[0] = '\0';
-		_TEX_PAGE[i].tex.bmp = NULL;
-		_TEX_PAGE[i].tex.width = 0;
-		_TEX_PAGE[i].tex.height = 0;
 		i++;
 	}
 	debug(LOG_TEXTURE, "pie_TexInit successful - initialized %d texture pages\n", i);

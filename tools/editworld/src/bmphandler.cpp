@@ -16,233 +16,99 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 //#include "stdafx.h"
 #include "winstuff.h"
 #include "stdio.h"
 #include "assert.h"
-#include "debugprint.h"
+#include "debugprint.hpp"
 #include "bmphandler.h"
 
-
-BMPHandler::BMPHandler(void)
+BMPHandler::BMPHandler() :
+	_BitmapInfo(NULL),
+	_DIBBitmap(NULL),
+	_DIBBits(NULL)
 {
-	m_Palette = NULL;
-	m_DIBBitmap = NULL;
-	m_BitmapInfo = NULL;
 }
 
-
-BMPHandler::~BMPHandler(void)
+BMPHandler::~BMPHandler()
 {
 	DebugPrint("Deleted BMPHandler\n");
 
-	if(m_Palette!=NULL) {
-		delete m_Palette;
-	}
-	if(m_DIBBitmap!=NULL) {
-		DeleteObject(m_DIBBitmap);
-	}
-	if(m_BitmapInfo!=NULL) {
-		delete m_BitmapInfo;
-	}
+	if(_DIBBitmap != NULL)
+		DeleteObject(_DIBBitmap);
+
+	delete [] _BitmapInfo;
 }
 
-
-BOOL BMPHandler::ReadBMP(char *FilePath,BOOL Flip)
+bool BMPHandler::Create(unsigned int Width, unsigned int Height, unsigned int BPP)
 {
-	FILE	*fid;
+	const unsigned int Planes = 1;
+	const unsigned int PaletteSize = 3;
 
-	fid=fopen(FilePath,"rb");
-    if(fid==NULL) {
-		return (FALSE);
-	}
+	delete [] _BitmapInfo;
+	_BitmapInfo = NULL;
 
-	DWORD	i;
-	BITMAPFILEHEADER bmfh;
-	BITMAPINFOHEADER bmih;
+	_BitmapInfo= reinterpret_cast<BITMAPINFO*>(new char[sizeof(BITMAPINFO) + sizeof(RGBQUAD) * PaletteSize]);
+	_BitmapInfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	_BitmapInfo->bmiHeader.biWidth = Width;
+	_BitmapInfo->bmiHeader.biHeight = Height;
+	_BitmapInfo->bmiHeader.biPlanes = Planes;
+	_BitmapInfo->bmiHeader.biBitCount = BPP;
 
-	if(m_Palette!=NULL) {
-		delete m_Palette;
-		m_Palette = NULL;
-	}
-	if(m_DIBBitmap!=NULL) {
-		DeleteObject(m_DIBBitmap);
-		m_DIBBitmap = NULL;
-	}
-	if(m_BitmapInfo!=NULL) {
-		delete m_BitmapInfo;
-		m_BitmapInfo = NULL;
-	}
-
-// Get the BITMAPFILEHEADER structure.
-	fread(&bmfh,sizeof(BITMAPFILEHEADER),1,fid);
-	if( (((char*)&bmfh.bfType)[0] != 'B') ||
-		(((char*)&bmfh.bfType)[1] != 'M') ) {
-
-		fclose(fid);
-		MessageBox( NULL, FilePath, "File is not a valid BMP.", MB_OK );
-		return FALSE;
-	}
-
-// Get the BITMAPINFOHEADER structure.
-	fread(&bmih,sizeof(BITMAPINFOHEADER),1,fid);
-
-	WORD PaletteSize=0;
-
-	switch(bmih.biBitCount) {
-		case	1:
-			PaletteSize=2;
-			break;
+	switch(BPP)
+	{
 		case	4:
-			PaletteSize=16;
+			_BitmapInfo->bmiHeader.biCompression=BI_RGB;
+			_BitmapInfo->bmiHeader.biSizeImage=(Width/2)*Height;
 			break;
 		case	8:
-			PaletteSize=256;
-			break;
-		default:
-			PaletteSize=0;
-	}
-
-	m_BitmapInfo=(BITMAPINFO*)new BYTE[sizeof(BITMAPINFO)+sizeof(RGBQUAD)*PaletteSize];
-	m_BitmapInfo->bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
-	m_BitmapInfo->bmiHeader.biWidth=bmih.biWidth;
-	m_BitmapInfo->bmiHeader.biHeight=bmih.biHeight;
-	m_BitmapInfo->bmiHeader.biPlanes=bmih.biPlanes;
-	m_BitmapInfo->bmiHeader.biBitCount=bmih.biBitCount;
-	m_BitmapInfo->bmiHeader.biCompression=bmih.biCompression;
-	m_BitmapInfo->bmiHeader.biSizeImage=bmih.biSizeImage;
-	m_BitmapInfo->bmiHeader.biXPelsPerMeter=bmih.biXPelsPerMeter;
-	m_BitmapInfo->bmiHeader.biYPelsPerMeter=bmih.biYPelsPerMeter;
-	m_BitmapInfo->bmiHeader.biClrUsed=bmih.biClrUsed;
-	m_BitmapInfo->bmiHeader.biClrImportant=bmih.biClrImportant;
-
-// If there's a palette then get it.
-	if(PaletteSize) {
-		m_Palette=new PALETTEENTRY[PaletteSize];
-
-		for (i=0; i<PaletteSize; i++)
-		{
-			m_Palette[i].peBlue  = (BYTE)getc(fid);
-			m_Palette[i].peGreen = (BYTE)getc(fid);
-			m_Palette[i].peRed   = (BYTE)getc(fid);
-			getc(fid);
-			m_Palette[i].peFlags = 0;
-		}
-
-		memcpy(m_BitmapInfo->bmiColors,m_Palette,PaletteSize*sizeof(PALETTEENTRY));
-	}
-
-	m_DIBBitmap=CreateDIBSection(NULL,m_BitmapInfo,DIB_RGB_COLORS,&m_DIBBits,NULL,0);
-
-	if(m_DIBBitmap==NULL) {
-		MessageBox( NULL, FilePath, "Failed to create DIB.", MB_OK );
-		return(FALSE);
-	}
-
-// Get the bitmap data.
- 	fread(m_DIBBits, (bmfh.bfSize - bmfh.bfOffBits),1,fid);
-
-	fclose(fid);
-
-	if( Flip && (bmih.biHeight > 0) ) {
-		char *Top = (char*)m_DIBBits;
-		char *Bottom = Top + bmih.biWidth*(bmih.biHeight-1);
-		char Tmp;
-		int x;
-		while( ((DWORD)Top) < ((DWORD)Bottom) ) {
-			for(x=0; x<bmih.biWidth; x++) {
-				Tmp = Top[x];
-				Top[x] = Bottom[x];
-				Bottom[x] = Tmp;
-			}
-			Top+=bmih.biWidth;
-			Bottom-=bmih.biWidth;
-		}
-	}
-
-	return(TRUE);
-}
-
-
-BOOL BMPHandler::Create(int Width,int Height,void *Bits,PALETTEENTRY *Palette,int BPP,BOOL Is555)
-{
-	int Planes = 1;
-//	int BPP = 8;
-	int PaletteSize;
-	int i;
-
-	if(Palette) {
-		PaletteSize=1<<BPP;
-
-		m_Palette = new PALETTEENTRY[PaletteSize];
-
-		for (i=0; i<PaletteSize; i++) {
-			m_Palette[i] = Palette[i];
-		}
-	} else {
-		PaletteSize = 3;
-	}
-
-	m_BitmapInfo=(BITMAPINFO*)new BYTE[sizeof(BITMAPINFO)+sizeof(RGBQUAD)*PaletteSize];
-	m_BitmapInfo->bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
-	m_BitmapInfo->bmiHeader.biWidth=Width;
-	m_BitmapInfo->bmiHeader.biHeight=Height;
-	m_BitmapInfo->bmiHeader.biPlanes=Planes;
-	m_BitmapInfo->bmiHeader.biBitCount=BPP;
-	switch(BPP) {
-		case	4:
-			m_BitmapInfo->bmiHeader.biCompression=BI_RGB;
-			m_BitmapInfo->bmiHeader.biSizeImage=(Width/2)*Height;
-			break;
-		case	8:
-			m_BitmapInfo->bmiHeader.biCompression=BI_RGB;
-			m_BitmapInfo->bmiHeader.biSizeImage=Width*Height;
+			_BitmapInfo->bmiHeader.biCompression=BI_RGB;
+			_BitmapInfo->bmiHeader.biSizeImage=Width*Height;
 			break;
 		case	16:
-			m_BitmapInfo->bmiHeader.biCompression= BI_BITFIELDS;
-			m_BitmapInfo->bmiHeader.biSizeImage=Width*2*Height;
+			_BitmapInfo->bmiHeader.biCompression= BI_BITFIELDS;
+			_BitmapInfo->bmiHeader.biSizeImage=Width*2*Height;
 			break;
 	}
-	m_BitmapInfo->bmiHeader.biXPelsPerMeter=0;
-	m_BitmapInfo->bmiHeader.biYPelsPerMeter=0;
-	m_BitmapInfo->bmiHeader.biClrUsed=0;
-	m_BitmapInfo->bmiHeader.biClrImportant=0;
+	_BitmapInfo->bmiHeader.biXPelsPerMeter=0;
+	_BitmapInfo->bmiHeader.biYPelsPerMeter=0;
+	_BitmapInfo->bmiHeader.biClrUsed=0;
+	_BitmapInfo->bmiHeader.biClrImportant=0;
 
-	if(Palette) {
-		for(i=0; i<PaletteSize; i++) {
-			m_BitmapInfo->bmiColors[i].rgbRed   = m_Palette[i].peRed;
-			m_BitmapInfo->bmiColors[i].rgbGreen = m_Palette[i].peGreen;
-			m_BitmapInfo->bmiColors[i].rgbBlue  = m_Palette[i].peBlue;
-			m_BitmapInfo->bmiColors[i].rgbReserved = 0;
-		}
-	} else {
+	// Predefined palette
+	_BitmapInfo->bmiColors[0].rgbBlue     = 0;
+	_BitmapInfo->bmiColors[0].rgbGreen    = 0xf8;
+	_BitmapInfo->bmiColors[0].rgbRed      = 0;
+	_BitmapInfo->bmiColors[0].rgbReserved = 0;
 
-		DWORD *PFormat = (DWORD*)m_BitmapInfo->bmiColors;
+	_BitmapInfo->bmiColors[1].rgbBlue     = 0xe0;
+	_BitmapInfo->bmiColors[1].rgbGreen    = 0x07;
+	_BitmapInfo->bmiColors[1].rgbRed      = 0;
+	_BitmapInfo->bmiColors[1].rgbReserved = 0;
 
-		if(Is555) {
-			PFormat[0] = 0x7c00;
-			PFormat[1] = 0x03e0;
-			PFormat[2] = 0x001f;
-		} else {
-			PFormat[0] = 0xf800;
-			PFormat[1] = 0x07e0;
-			PFormat[2] = 0x001f;
-		}
+	_BitmapInfo->bmiColors[2].rgbBlue     = 0x1f;
+	_BitmapInfo->bmiColors[2].rgbGreen    = 0;
+	_BitmapInfo->bmiColors[2].rgbRed      = 0;
+	_BitmapInfo->bmiColors[2].rgbReserved = 0;
+
+	_DIBBitmap = CreateDIBSection(NULL, _BitmapInfo, DIB_RGB_COLORS, &_DIBBits, NULL, 0);
+
+	if(_DIBBitmap == NULL)
+	{
+		MessageBox(NULL, "Error", "Failed to create DIB.", MB_OK);
+		return false;
 	}
 
-	m_DIBBitmap=CreateDIBSection(NULL,m_BitmapInfo,DIB_RGB_COLORS,&m_DIBBits,NULL,0);
-
-	if(m_DIBBitmap==NULL) {
-		MessageBox( NULL, "Error", "Failed to create DIB.", MB_OK );
-		return FALSE;
-	}
-
-	BYTE	*Dst=(BYTE*)m_DIBBits;
+	BYTE	*Dst=(BYTE*)_DIBBits;
 	BYTE	*Src;
-	WORD	j,p;
 
-	switch(BPP) {
+	switch(BPP)
+	{
 		case	4:
 			Width /= 2;
 			break;
@@ -253,76 +119,33 @@ BOOL BMPHandler::Create(int Width,int Height,void *Bits,PALETTEENTRY *Palette,in
 			break;
 	}
 
-	if(Bits) {
-		for(j=0; j < Height; j++) {
-			Src=((BYTE*)Bits)+j*Width*Planes;
-			for(i=0; i < Width; i++) {
-				for(p=0; p < Planes; p++) {
-					*Dst=*(Src+Width*p);
-					Dst++;
-				}	
-				Src++;
-			}
-		}
-	} else {
-//		for(j=0; j < Height; j++) {
-//			for(i=0; i < Width; i++) {
-//				for(p=0; p < Planes; p++) {
-//					*Dst=0;
-//					Dst++;
-//				}	
+//	for(unsigned int j=0; j < Height; ++j)
+//	{
+//		for(unsigned int i = 0; i < Width; ++i)
+//		{
+//			for(unsigned int p= 0; p < Planes; ++p)
+//			{
+//				*Dst=0;
+//				++Dst;
 //			}
 //		}
-	}
+//	}
 
-	return TRUE;
+	return true;
 }
 
-
-void BMPHandler::Clear(void)
-{
-	int i,j,p;
-	int Width,Height,Planes;
-	BYTE *Dst=(BYTE*)m_DIBBits;
-
-	Height = m_BitmapInfo->bmiHeader.biHeight;
-	Planes = m_BitmapInfo->bmiHeader.biPlanes;
-
-	switch(m_BitmapInfo->bmiHeader.biBitCount) {
-		case	4:
-			Width = m_BitmapInfo->bmiHeader.biWidth / 2;
-			break;
-		case	8:
-			Width = m_BitmapInfo->bmiHeader.biWidth;
-			break;
-		case	16:
-			Width = m_BitmapInfo->bmiHeader.biWidth * 2;
-			break;
-	}
-
-	for(j=0; j < Height; j++) {
-		for(i=0; i < Width; i++) {
-			for(p=0; p < Planes; p++) {
-				*Dst=0;
-				Dst++;
-			}	
-		}
-	}
-}
-
-
-void *BMPHandler::CreateDC(void *hWnd)
+void *BMPHandler::CreateDC(void* hWnd)
 {
 	HDC BmpHdc;
 	HDC hdc=GetDC((HWND)hWnd);
-	assert(hdc!=NULL);
+	assert(hdc != NULL);
 
 	BmpHdc = CreateCompatibleDC(hdc);
-	HGDIOBJ Res = SelectObject(BmpHdc, m_DIBBitmap);
+	HGDIOBJ Res = SelectObject(BmpHdc, _DIBBitmap);
 
-	assert(Res!=NULL);
-	assert((DWORD)Res!=GDI_ERROR);
-	ReleaseDC((HWND)hWnd,hdc);
+	assert(Res != NULL);
+	assert((DWORD)Res != GDI_ERROR);
+	ReleaseDC((HWND)hWnd, hdc);
 
 	return BmpHdc;
 }
@@ -333,111 +156,49 @@ void BMPHandler::DeleteDC(void *hdc)
 	::DeleteDC((HDC)hdc);	
 }
 
-
-
-BOOL BMPHandler::WriteBMP(char *FilePath,BOOL Flip)
+bool BMPHandler::WriteBMP(char *FilePath)
 {
-	FILE	*fid;
-	BOOL Flipped=FALSE;
-	int j;
-
-	fid=fopen(FilePath,"wb");
-    if(fid==NULL) {
+	FILE* fid = fopen(FilePath,"wb");
+    if(fid == NULL)
+	{
 		MessageBox( NULL, FilePath, "Unable to create file\nFile may be write protected.", MB_OK );
-		return FALSE;
+		return false;
 	}
 
 	BITMAPFILEHEADER bmfh;
 	BITMAPINFOHEADER bmih;
 
-	bmih = m_BitmapInfo->bmiHeader;
+	bmih = _BitmapInfo->bmiHeader;
 
-	WORD PaletteSize;
+	reinterpret_cast<char*>(&bmfh.bfType)[0] = 'B';
+	reinterpret_cast<char*>(&bmfh.bfType)[1] = 'M';
 
-	switch(bmih.biBitCount) {
-		case	1:
-			PaletteSize=2;
-			break;
-		case	4:
-			PaletteSize=16;
-			break;
-		case	8:
-			PaletteSize=256;
-			break;
-		default:
-			PaletteSize=0;
-	}
+	bmfh.bfOffBits = sizeof(BITMAPFILEHEADER) + 
+	                 sizeof(BITMAPINFOHEADER);
 
-	((char*)&bmfh.bfType)[0] = 'B';
-	((char*)&bmfh.bfType)[1] = 'M';
-
-	bmfh.bfOffBits = PaletteSize * sizeof(RGBQUAD) + 
-					sizeof(BITMAPFILEHEADER) + 
-					sizeof(BITMAPINFOHEADER);
-
-	switch(m_BitmapInfo->bmiHeader.biBitCount) {
+	switch(_BitmapInfo->bmiHeader.biBitCount)
+	{
 		case 4:
-			bmfh.bfSize = bmfh.bfOffBits + bmih.biWidth/2 * abs(bmih.biHeight);
+			bmfh.bfSize = bmfh.bfOffBits + bmih.biWidth / 2 * abs(bmih.biHeight);
 			break;
 		case 8:
 			bmfh.bfSize = bmfh.bfOffBits + bmih.biWidth * abs(bmih.biHeight);
 			break;
 		case 16:
-			bmfh.bfSize = bmfh.bfOffBits + bmih.biWidth*2 * abs(bmih.biHeight);
+			bmfh.bfSize = bmfh.bfOffBits + bmih.biWidth * 2 * abs(bmih.biHeight);
 			break;
 	}
 
-//	if(m_BitmapInfo->bmiHeader.biBitCount == 4) {
-//		bmfh.bfSize = bmfh.bfOffBits + (bmih.biWidth/2) * abs(bmih.biHeight);
-//	} else {
-//		bmfh.bfSize = bmfh.bfOffBits + bmih.biWidth * abs(bmih.biHeight);
-//	}
-
+	// Write file header
 	fwrite(&bmfh,sizeof(BITMAPFILEHEADER),1,fid);
 
+	// Write bitmap-info header
 	fwrite(&bmih,sizeof(BITMAPINFOHEADER),1,fid);
 
-// If there's a palette then put it.
-	if(PaletteSize) {
-		for (int i=0; i<PaletteSize; i++)
-		{
-			putc(m_Palette[i].peBlue,fid);
-			putc(m_Palette[i].peGreen,fid);
-			putc(m_Palette[i].peRed,fid);
-			putc(0,fid);
-		}
-	}
-
-	if(Flip) {
-		switch(bmih.biBitCount) {
-			case	4:
-				for(j=abs(bmih.biHeight)-1; j >= 0; j--) {
-					BYTE *Src=((BYTE*)m_DIBBits)+j*bmih.biWidth/2*bmih.biPlanes;
-		 			fwrite(Src, bmih.biWidth/2*bmih.biPlanes,1,fid);
-				}
-				break;
-			case	8:
-				for(j=abs(bmih.biHeight)-1; j >= 0; j--) {
-					BYTE *Src=((BYTE*)m_DIBBits)+j*bmih.biWidth*bmih.biPlanes;
-		 			fwrite(Src, bmih.biWidth*bmih.biPlanes,1,fid);
-				}
-				break;
-			case	16:
-				for(j=abs(bmih.biHeight)-1; j >= 0; j--) {
-					BYTE *Src=((BYTE*)m_DIBBits)+j*bmih.biWidth*2*bmih.biPlanes;
-		 			fwrite(Src, bmih.biWidth*2*bmih.biPlanes,1,fid);
-				}
-			default:
-				PaletteSize=0;
-		}
-
-	} else {
-	 	fwrite(m_DIBBits, (bmfh.bfSize - bmfh.bfOffBits),1,fid);
-	}
+	// Write bitmap data
+ 	fwrite(_DIBBits, (bmfh.bfSize - bmfh.bfOffBits), 1, fid);
 
 	fclose(fid);
 
-	return TRUE;
+	return true;
 }
-
-

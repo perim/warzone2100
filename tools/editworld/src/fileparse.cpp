@@ -16,6 +16,10 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 
 #include	<windows.h>
@@ -26,7 +30,7 @@
 #include	<assert.h>
 
 #include	"fileparse.h"
-#include	"debugprint.h"
+#include	"debugprint.hpp"
 
 
 fileParser::fileParser(std::istream& file, short flags) :

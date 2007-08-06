@@ -3080,10 +3080,6 @@ void moveToRearm(DROID *psDroid)
 		orderDroid( psDroid, DORDER_RTB );
 		chosen =3;
 	}
-	if(bMultiPlayer)
-	{
-		sendVtolRearm(psDroid,psStruct,chosen);
-	}
 }
 
 

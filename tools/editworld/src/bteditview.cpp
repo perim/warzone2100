@@ -16,6 +16,10 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 // BTEditView.cpp : implementation of the CBTEditView class
 //
@@ -27,16 +31,11 @@
 #include "bteditdoc.h"
 #include "bteditview.h"
 //#include "editstats.h"
-#include "debugprint.h"
+#include "debugprint.hpp"
 //#include "statsview.h"
 #include "tiletypes.h"
 #include "objectproperties.h"
-
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#undef THIS_FILE
-static char THIS_FILE[] = __FILE__;
-#endif
+#include "keyhandler.hpp"
 
 #define KEY_SEAUP			'U'
 #define KEY_SEADOWN			'J'
@@ -117,7 +116,7 @@ CBTEditView::CBTEditView()
 	m_Selected = -1;
 	m_DragMode = DM3D_NODRAG;
 //	m_DirectMaths = NULL;
-	m_KeyHandler = new CKeyHandler();
+	m_KeyHandler = new KeyHandler();
 	m_HeightsChanged = FALSE;
 
 //	m_InfoDialog = new CInfoDialog(this);

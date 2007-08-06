@@ -296,7 +296,7 @@ BOOL scrIterateGroup(void)
 
 	if (psGroup != psScrIterateGroup)
 	{
-		ASSERT( FALSE, "scrIterateGroup: invalid group, InitGroupIterate not called?" );
+		debug(LOG_ERROR, "scrIterateGroup: invalid group, InitGroupIterate not called?" );
 		return FALSE;
 	}
 
@@ -712,6 +712,28 @@ BOOL scrCmdDroidAddDroid(void)
 	}
 
 	cmdDroidAddDroid(psCommander, psDroid);
+
+	return TRUE;
+}
+
+// returns max number of droids in a commander group
+BOOL scrCmdDroidMaxGroup(void)
+{
+	DROID		*psCommander;
+
+	if (!stackPopParams(1, ST_DROID, &psCommander))
+	{
+		return FALSE;
+	}
+
+	ASSERT(psCommander != NULL,
+		"scrCmdDroidMaxGroup: NULL pointer passed");
+
+	scrFunctionResult.v.ival = cmdDroidMaxGroup(psCommander);
+	if (!stackPushResult(VAL_INT, &scrFunctionResult))
+	{
+		return FALSE;
+	}
 
 	return TRUE;
 }
@@ -1429,12 +1451,32 @@ BOOL scrSkCanBuildTemplate(void)
 			goto failTempl;
 		}
 		break;
-
+	case DROID_CYBORG_REPAIR:
+		if( apCompLists[player][COMP_REPAIRUNIT][psTempl->asParts[COMP_REPAIRUNIT]] != AVAILABLE )
+		{
+			goto failTempl;
+		}
+		break;
 	case DROID_COMMAND:
-	case DROID_CONSTRUCT:	        // Constructor droid
+		if( apCompLists[player][COMP_BRAIN][psTempl->asParts[COMP_BRAIN]] != AVAILABLE )
+		{
+			goto failTempl;
+		}
+		break;
+	case DROID_CONSTRUCT:
+		if( apCompLists[player][COMP_CONSTRUCT][psTempl->asParts[COMP_CONSTRUCT]] != AVAILABLE )
+		{
+			goto failTempl;
+		}
+		break;
+	case DROID_CYBORG_CONSTRUCT:
+		if( apCompLists[player][COMP_CONSTRUCT][psTempl->asParts[COMP_CONSTRUCT]] != AVAILABLE )
+		{
+			goto failTempl;
+		}
+		break;
+
 	case DROID_PERSON:		        // person
-    case DROID_CYBORG_CONSTRUCT:	// cyborg-construct thang
-    case DROID_CYBORG_REPAIR:		// cyborg-repair thang
 	case DROID_TRANSPORTER:	        // guess what this is!
 	case DROID_DEFAULT:		        // Default droid
 	case DROID_ANY:

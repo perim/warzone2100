@@ -25,31 +25,25 @@
 //*************************************************************************
 
 #define iV_TEX_MAX 64
+#define iV_TEX_INVALID -1
 #define iV_TEXNAME_MAX 64
 
 #define SKY_TEXPAGE "page-25"
 
-
 //*************************************************************************
 
-#define iV_TEXWIDTH(i)	(_TEX_PAGE[(i)].tex.width)
-#define iV_TEXHEIGHT(i) (_TEX_PAGE[(i)].tex.height)
 #define iV_TEXNAME(i)	((char *) (&_TEX_PAGE[(i)].name))
-#define iV_TEXTYPE(i)	(_TEX_PAGE[(i)].type)
-
 
 //*************************************************************************
 
 typedef struct
 {
-	iTexture tex;
-	Uint8 type;
 	char name[iV_TEXNAME_MAX];
 	unsigned int id;
-	int bResource;	// Was page provided by resource handler?
 } iTexPage;
 
 //*************************************************************************
+
 extern unsigned int _TEX_INDEX;
 extern iTexPage _TEX_PAGE[iV_TEX_MAX];
 
@@ -59,9 +53,8 @@ extern int iV_GetTexture(const char *filename);
 extern void iV_unloadImage(iV_Image *image);
 extern unsigned int iV_getPixelFormat(const iV_Image *image);
 
-extern int pie_ReloadTexPage(const char *texpageName, const char *fileName);
-extern int pie_AddTexPage(iTexture* s, const char *filename, int type, BOOL bResource);
-extern void pie_ChangeTexPage(int tex_index, iTexture* s, int type, BOOL bResource);
+extern int pie_ReplaceTexPage(iV_Image *s, const char *texPage);
+extern int pie_AddTexPage(iV_Image *s, const char *filename, int slot);
 extern void pie_TexInit(void);
 
 /*!

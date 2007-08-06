@@ -16,15 +16,31 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 
 #ifndef __PSXHANDLER_INCLUDED__
 #define	__PSXHANDLER_INCLUDED__
 
-BOOL IsPower2(DWORD Value);
-DWORD Power2(DWORD Value);
+#include <windows.h>
+#include <istream>
+#include <ostream>
 
-struct PCXHeader {
+// Returns true if the given value is a power of two
+static inline bool IsPower2(int value)
+{
+	return value > 0
+	    && (value & (value - 1)) == 0;
+}
+
+// Round the given value up to the nearest power of 2.
+int Power2(int value);
+
+struct PCXHeader
+{
 	BYTE	Manufacturer;   // 1   Constant Flag  10 = ZSoft .PCX
 	BYTE	Version;        // 1   Version information:
 	                        // 0 = Version 2.5
@@ -52,27 +68,45 @@ struct PCXHeader {
 #define BMR_ROUNDUP	1
 
 class PCXHandler {
-public:
-	PCXHandler(void);
-	~PCXHandler(void);
-	BOOL Create(int Width,int Height,void *Bits,PALETTEENTRY *Palette);
-	BOOL ReadPCX(char *FilePath,DWORD Flags = 0);
-	BOOL WritePCX(char *FilePath);
-	LONG GetBitmapWidth(void) { return(m_BitmapInfo->bmiHeader.biWidth); }
-	LONG GetBitmapHeight(void) { return(abs(m_BitmapInfo->bmiHeader.biHeight)); }
-	WORD GetBitmapBitCount(void) { return(m_BitmapInfo->bmiHeader.biBitCount); }
-	void *GetBitmapBits(void) { return(m_DIBBits); }
-	HBITMAP GetBitmap(void) { return(m_DIBBitmap); }
-	PALETTEENTRY *GetBitmapPaletteEntries(void) { return(m_Palette); }
-protected:
-	PCXHeader	m_Header;
-	BITMAPINFO* m_BitmapInfo;
-	HBITMAP	m_DIBBitmap;
-	void *m_DIBBits;
- 	PALETTEENTRY *m_Palette;
-	WORD EncodedGet(WORD *pbyt, WORD *pcnt, FILE *fid);
-	WORD EncodeLine(UBYTE *inBuff, WORD inLen, FILE *fp);
-	WORD EncodedPut(UBYTE byt, UBYTE cnt, FILE *fid);
+	public:
+		PCXHandler();
+		~PCXHandler();
+
+		bool Create(int Width,int Height,void *Bits,PALETTEENTRY *Palette);
+		bool ReadPCX(std::istream& input, DWORD Flags = 0);
+		bool WritePCX(std::ostream& output);
+
+		inline unsigned int GetBitmapWidth()
+		{
+			return(_BitmapInfo->bmiHeader.biWidth);
+		}
+
+		inline unsigned int GetBitmapHeight()
+		{
+			return(abs(_BitmapInfo->bmiHeader.biHeight));
+		}
+
+		inline unsigned int GetBitmapBitCount()
+		{
+			return(_BitmapInfo->bmiHeader.biBitCount);
+		}
+
+		inline void* GetBitmapBits()
+		{
+			return(_DIBBits);
+		}
+
+		inline PALETTEENTRY* GetBitmapPaletteEntries()
+		{
+			return(_Palette);
+		}
+
+	private:
+		PCXHeader     _Header;
+		BITMAPINFO*   _BitmapInfo;
+		HBITMAP       _DIBBitmap;
+		void*         _DIBBits;
+ 		PALETTEENTRY* _Palette;
 };
 
 #endif

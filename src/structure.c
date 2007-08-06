@@ -315,7 +315,7 @@ void initFactoryNumFlag(void)
 void resetFactoryNumFlag(void)
 {
 	STRUCTURE*   psStruct;
-	uint8_t      mask;
+	uint8_t      mask = 0;
 	unsigned int i;
 
 	for(i = 0; i < MAX_PLAYERS; i++)
@@ -1725,13 +1725,15 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 		if(((x >> TILE_SHIFT) < TOO_NEAR_EDGE) || ((x >> TILE_SHIFT) > (
 			mapWidth - TOO_NEAR_EDGE)))
 		{
-			ASSERT(!"attempting to build too closely to map-edge", "buildStructure: x coord (%u) too near edge (req. distance is %u)", x, TOO_NEAR_EDGE);
+			debug(LOG_ERROR, "buildStructure: attempting to build too closely to map-edge, "
+			      "x coord (%u) too near edge (req. distance is %u)", x, TOO_NEAR_EDGE);
 			return NULL;
 		}
 		if(((y >> TILE_SHIFT) < TOO_NEAR_EDGE) || ((y >> TILE_SHIFT) > (
 			mapHeight - TOO_NEAR_EDGE)))
 		{
-			ASSERT(!"attempting to build too closely to map-edge", "buildStructure: y coord (%u) too near edge (req. distance is %u)", y, TOO_NEAR_EDGE);
+			debug(LOG_ERROR, "buildStructure: attempting to build too closely to map-edge, "
+			      "y coord (%u) too near edge (req. distance is %u)", y, TOO_NEAR_EDGE);
 			return NULL;
 		}
 
@@ -1812,13 +1814,15 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 					}
 				}
 				// end of dodgy stuff
-				else
+				else if (TILE_HAS_STRUCTURE(psTile))
 				{
-					ASSERT(!(TILE_HAS_STRUCTURE(psTile)),
+					debug(LOG_ERROR,
 					       "buildStructure: building %s at (%d, %d) but found %s already at (%d, %d)",
 					       pStructureType->pName, mapX, mapY,
 					       getTileStructure(mapX + width, mapY + breadth)->pStructureType->pName,
 					       mapX + width, mapY + breadth);
+					free(psBuilding);
+					return NULL;
 				}
 
 				psTile->psObject = (BASE_OBJECT*)psBuilding;
@@ -2909,14 +2913,14 @@ static BOOL maxDroidsByTypeReached(STRUCTURE *psStructure)
 	CHECK_STRUCTURE(psStructure);
 
 	if ( (droidTemplateType((DROID_TEMPLATE *)psFact->psSubject) == DROID_COMMAND) &&
-		(getNumCommandDroids(psStructure->player) >= 10) )
+		(getNumCommandDroids(psStructure->player) >= MAX_COMMAND_DROIDS) )
 	{
 		return TRUE;
 	}
 
 	if ( (droidTemplateType((DROID_TEMPLATE *)psFact->psSubject) == DROID_CONSTRUCT ||
 		droidTemplateType((DROID_TEMPLATE *)psFact->psSubject) == DROID_CYBORG_CONSTRUCT) &&
-		(getNumConstructorDroids(psStructure->player) >= 15) )
+		(getNumConstructorDroids(psStructure->player) >= MAX_CONSTRUCTOR_DROIDS) )
 	{
 		return TRUE;
 	}
@@ -2975,21 +2979,11 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 
 	CHECK_STRUCTURE(psStructure);
 
-	if (psStructure->numWeaps > 0)
+	for (i = 0; i < DROID_MAXWEAPS; i++)
 	{
-		for (i = 0;i < psStructure->numWeaps;i++)
+		if (psStructure->psTarget[i] && psStructure->psTarget[i]->died)
 		{
-			if (psStructure->psTarget[i] && psStructure->psTarget[i]->died)
-			{
-				setStructureTarget(psStructure, NULL, i);
-			}
-		}
-	}
-	else
-	{
-		if (psStructure->psTarget[0] && psStructure->psTarget[0]->died)
-		{
-			setStructureTarget(psStructure, NULL, 0);
+			setStructureTarget(psStructure, NULL, i);
 		}
 	}
 
@@ -6063,6 +6057,30 @@ STRUCTURE_STATS* getModuleStat(STRUCTURE *psStruct)
 	return psStat;
 }
 
+/* count the artillery droids assigned to a structure (only makes sence by sensor towers and headquarters) */
+SDWORD countAssignedDroids(STRUCTURE *psStructure)
+{
+	DROID *psCurr;
+	SDWORD num, weapontype, hasindirect;
+
+	if(psStructure == NULL)
+		return 0;
+
+	for (num = 0, psCurr = apsDroidLists[selectedPlayer]; psCurr; psCurr = psCurr->psNext)
+	{
+		if(psCurr->psTarget[0] && psCurr->player == psStructure->player)
+		{
+			hasindirect = 0;
+			weapontype = asWeaponStats[psCurr->asWeaps[0].nStat].movementModel;
+			if(weapontype == MM_INDIRECT || weapontype == MM_HOMINGINDIRECT)
+				hasindirect = 1;
+			
+			if(psCurr->psTarget[0]->id == psStructure->id && hasindirect)
+				num++;
+		}
+	}
+	return num;
+}
 
 //print some info at the top of the screen dependant on the structure
 void printStructureInfo(STRUCTURE *psStructure)
@@ -6074,13 +6092,52 @@ void printStructureInfo(STRUCTURE *psStructure)
 
 	switch (psStructure->pStructureType->type)
 	{
+	case REF_HQ:
+#ifdef DEBUG
+		if (getDebugMappingStatus())
+		{
+			CONPRINTF(ConsoleString, (ConsoleString, "%s - %d Units assigned - ID %d - sensor range %hu power %hu - ECM %u",
+			          getStatName(psStructure->pStructureType), countAssignedDroids(psStructure),
+			          psStructure->id, psStructure->sensorRange, psStructure->sensorPower, psStructure->ecmPower));
+		}
+		else
+#endif
+		{
+			CONPRINTF(ConsoleString, (ConsoleString, _("%s - %d Units assigned"),
+			          getStatName(psStructure->pStructureType), countAssignedDroids(psStructure)));
+		}
+		break;
+	case REF_DEFENSE:
+		if (psStructure->pStructureType->pSensor == NULL) 
+		{
+			break;
+		}
+#ifdef DEBUG
+		else if (getDebugMappingStatus())
+		{
+			CONPRINTF(ConsoleString, (ConsoleString, "%s - %d Units assigned - ID %d - sensor range %hu power %hu - ECM %u",
+				getStatName(psStructure->pStructureType), countAssignedDroids(psStructure),
+				psStructure->id, psStructure->sensorRange, psStructure->sensorPower, psStructure->ecmPower));
+		}
+#endif
+		else
+		{
+			CONPRINTF(ConsoleString, (ConsoleString, _("%s - %d Units assigned"),
+				getStatName(psStructure->pStructureType), countAssignedDroids(psStructure)));
+		}
+		break;
 	case REF_RESOURCE_EXTRACTOR:
 #ifdef DEBUG
-		CONPRINTF(ConsoleString,(ConsoleString,"%s - Unique ID %d",
-			getStatName(psStructure->pStructureType), psStructure->id));
-#else
-		CONPRINTF(ConsoleString,(ConsoleString,getStatName(psStructure->pStructureType)));
+		if (getDebugMappingStatus())
+		{
+			CONPRINTF(ConsoleString,(ConsoleString, "%s - Unique ID %d",
+			          getStatName(psStructure->pStructureType), psStructure->id));
+		}
+		else
 #endif
+		{
+			CONPRINTF(ConsoleString, (ConsoleString, getStatName(psStructure->pStructureType)));
+		}
 		break;
 	case REF_POWER_GEN:
 		psPowerGen = &psStructure->pFunctionality->powerGenerator;
@@ -6093,24 +6150,34 @@ void printStructureInfo(STRUCTURE *psStructure)
 			}
 		}
 #ifdef DEBUG
-		CONPRINTF(ConsoleString,(ConsoleString,"%s -  Connected %d of %d - Unique ID %d",
-			getStatName(psStructure->pStructureType), numConnected, NUM_POWER_MODULES,
-			psStructure->id));
-#else
-		CONPRINTF(ConsoleString,(ConsoleString,_("%s - Connected %d of %d"),
-			getStatName(psStructure->pStructureType), numConnected, NUM_POWER_MODULES));
+		if (getDebugMappingStatus())
+		{
+			CONPRINTF(ConsoleString, (ConsoleString, "%s -  Connected %d of %d - Unique ID %d",
+			          getStatName(psStructure->pStructureType), numConnected, NUM_POWER_MODULES,
+			          psStructure->id));
+		}
+		else
 #endif
+		{
+			CONPRINTF(ConsoleString, (ConsoleString, _("%s - Connected %d of %d"),
+			          getStatName(psStructure->pStructureType), numConnected, NUM_POWER_MODULES));
+		}
 		break;
 	default:
 #ifdef DEBUG
-		CONPRINTF(ConsoleString,(ConsoleString,"%s - Damage %d%% - Unique ID %d",
-			getStatName(psStructure->pStructureType), 100 - PERCENT(psStructure->body,
-			structureBody(psStructure)), psStructure->id));
-#else
-		CONPRINTF(ConsoleString,(ConsoleString,
-			getStatName(psStructure->pStructureType), 100 - PERCENT(psStructure->body,
-			structureBody(psStructure))));
+		if (getDebugMappingStatus())
+		{
+			CONPRINTF(ConsoleString, (ConsoleString, "%s - Damage %d%% - Unique ID %d",
+			          getStatName(psStructure->pStructureType), 100 - PERCENT(psStructure->body,
+			          structureBody(psStructure)), psStructure->id));
+		}
+		else
 #endif
+		{
+			CONPRINTF(ConsoleString, (ConsoleString,
+			          getStatName(psStructure->pStructureType), 100 - PERCENT(psStructure->body,
+			          structureBody(psStructure))));
+		}
 		break;
 	}
 }

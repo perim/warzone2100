@@ -16,6 +16,10 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 // WFView.h : header file
 //
@@ -30,7 +34,6 @@
 #include "ddimage.h"
 #include "heightmap.h"
 #include "pcxhandler.h"
-#include "keyhandler.h"
 //#include "brushprop.h"
 
 #define	SCREEN_XRES	640
@@ -41,6 +44,9 @@ enum {
 	DM_NODRAG,
 	DM_DRAGOBJECT,
 };
+
+// Forward declarations for pointers
+class KeyHandler;
 
 class CWFView : public CScrollView
 {
@@ -117,7 +123,7 @@ protected:
 	DWORD	m_DragMode;
 //	CBrushProp *m_BrushDialog;
 
-	CKeyHandler *m_KeyHandler;
+	KeyHandler *m_KeyHandler;
 
 	// Generated message map functions
 	//{{AFX_MSG(CWFView)

@@ -16,32 +16,32 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 
 #ifndef __BMPHANDLER_INCLUDED__
 #define	__BMPHANDLER_INCLUDED__
 
-class BMPHandler {
-public:
-	BMPHandler(void);
-	~BMPHandler(void);
-	BOOL ReadBMP(char *FilePath,BOOL Flip=FALSE);
-	BOOL Create(int Width,int Height,void *Bits,PALETTEENTRY *Palette,int BPP=8,BOOL Is555 = FALSE);
-	void Clear(void);
-	void DeleteDC(void *hdc);
-	void *CreateDC(void *hWnd);
-	BOOL WriteBMP(char *FilePath,BOOL Flip=FALSE);
-	LONG GetBitmapWidth(void) { return(m_BitmapInfo->bmiHeader.biWidth); }
-	LONG GetBitmapHeight(void) { return(abs(m_BitmapInfo->bmiHeader.biHeight)); }
-	WORD GetBitmapBitCount(void) { return(m_BitmapInfo->bmiHeader.biBitCount); }
-	void *GetBitmapBits(void) { return(m_DIBBits); }
-	HBITMAP GetBitmap(void) { return(m_DIBBitmap); }
-	PALETTEENTRY *GetBitmapPaletteEntries(void) { return(m_Palette); }
-protected:
-	BITMAPINFO* m_BitmapInfo;
-	HBITMAP	m_DIBBitmap;
-	void *m_DIBBits;
- 	PALETTEENTRY *m_Palette;
+class BMPHandler
+{
+	public:
+		BMPHandler();
+		~BMPHandler();
+
+		bool Create(unsigned int Width, unsigned int Height, unsigned int BPP = 8);
+
+		void DeleteDC(void* hdc);
+		void* CreateDC(void* hWnd);
+
+		bool WriteBMP(char* FilePath);
+		
+	private:
+		BITMAPINFO*   _BitmapInfo;
+		HBITMAP       _DIBBitmap;
+		void*         _DIBBits;
 };
 
-#endif
+#endif // __BMPHANDLER_INCLUDED__

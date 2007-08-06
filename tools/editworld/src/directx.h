@@ -16,6 +16,10 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 
 #ifndef _INCLUDED_DIRECTX_
@@ -291,7 +295,7 @@ struct TextureList {
 
 
 class CTexture {
-	protected:
+	private:
 		IDDSURFACE	*m_MemorySurface;  // system memory surface
 		IDDSURFACE	*m_DeviceSurface;  // video memory texture
 		IDDPALETTE	*m_Palette;
@@ -334,7 +338,7 @@ class CTexture {
 
 
 class CSurface {
-	protected:
+	private:
 		IDDSURFACE *m_Surface;
 		SURFACEDESC m_ddsd;
 		PALETTEENTRY *m_PaletteEntries;
@@ -367,7 +371,7 @@ class CSurface {
 
 
 class CMaterial {
-	protected:
+	private:
 		D3DMATERIALHANDLE	m_Handle;
 		ID3DMATERIAL *m_Material;
 
@@ -394,7 +398,7 @@ class CMaterial {
 // creation.
 //
 class CDirectDraw {
-	protected:
+	private:
 		HWND					m_hWnd;
 		DWORD					m_WindowsBPP;
 		DWORD				    m_WindowsXRes;
@@ -588,7 +592,7 @@ class CDirectDraw {
 		void GetRes(DWORD *XRes,DWORD *YRes) { *XRes = m_ScreenSize.cx; *YRes = m_ScreenSize.cy; }
 		void GetDisplayPixelFormat(PixFormatExt &PixFormat) { PixFormat = m_PixFormat; }
 
-	protected:
+	private:
 		BOOL GetWindowsMode(void);
 		BOOL GetDisplayFormat(void);
 		BOOL RestoreWindowsMode(void);
@@ -620,7 +624,7 @@ struct MaterialData {
 
 
 class CMatManager {
-	protected:
+	private:
 		CDirectDraw *m_DirectDraw;
 		DWORD m_NumMats;
 		MaterialData m_Materials[MAX_MATERIALS];

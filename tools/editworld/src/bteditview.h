@@ -16,10 +16,16 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 // BTEditView.h : interface of the CBTEditView class
 //
 /////////////////////////////////////////////////////////////////////////////
+
+#include "stdafx.h"
 
 #include "directx.h"
 #include "geometry.h"
@@ -28,7 +34,6 @@
 #include "ddimage.h"
 #include "heightmap.h"
 #include "pcxhandler.h"
-#include "keyhandler.h"
 
 //#include "InfoDialog.h"
 
@@ -40,6 +45,10 @@ enum {
 	DM3D_NODRAG,
 	DM3D_DRAGOBJECT,
 };
+
+// Forward declarations for pointers
+class CBTEditDoc;
+class KeyHandler;
 
 class CBTEditView : public CScrollView
 {
@@ -117,7 +126,7 @@ protected:
 	DWORD m_MouseX;
 	DWORD m_MouseY;
 	DWORD m_DragMode;
-	CKeyHandler *m_KeyHandler;
+	KeyHandler *m_KeyHandler;
 // Generated message map functions
 protected:
 	//{{AFX_MSG(CBTEditView)

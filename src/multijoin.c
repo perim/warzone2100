@@ -118,11 +118,11 @@ BOOL intDisplayMultiJoiningStatus(UBYTE joinCount)
 	RenderWindowFrame(&FrameNormal, x, y ,w, h);		// draw a wee blu box.
 
 	// display how far done..
-	pie_DrawText(_("Players Still Joining"),
+	iV_DrawText(_("Players Still Joining"),
 					x+(w/2)-(iV_GetTextWidth(_("Players Still Joining"))/2),
 					y+(h/2)-8 );
 	sprintf(sTmp,"%d%%", PERCENT((NetPlay.playercount-joinCount),NetPlay.playercount) );
-	pie_DrawText(sTmp ,x + (w / 2) - 10, y + (h / 2) + 10);
+	iV_DrawText(sTmp ,x + (w / 2) - 10, y + (h / 2) + 10);
 
 	return TRUE;
 }
@@ -339,12 +339,6 @@ void setupNewPlayer(UDWORD dpid, UDWORD player)
 	player2dpid[player] = dpid;							// assign them a player too.
 	ingame.PingTimes[player] =0;						// reset ping time
 	ingame.JoiningInProgress[player] = TRUE;			// note that player is now joining.
-
-//	if (game.type == DMATCH)
-//	{
-//		// set the power level for that player..
-//		setPower(player, game.power);
-//	}
 
 	for(i=0;i<MAX_PLAYERS;i++)							// set all alliances to broken.
 	{

@@ -44,59 +44,29 @@
 // accuracy for the height gradient
 #define GRAD_MUL	10000
 
-// decay constant for the power of sensors/ecms
-#define POWER_DECAY		10
-
-// maximum radius of an object
-#define MAX_OBJRADIUS	(TILE_UNITS*2)
-
-// maximum number of objects to test against a ray
-#define MAX_RAYTEST		100
-// List of objects that could intersect a ray
-static BASE_OBJECT		*apsTestObjects[MAX_RAYTEST];
-static SDWORD			numTestObjects = 0;
-
-// maximum number of objects intersecting a ray
-#define MAX_RAYOBJ		20
 // list of objects intersecting a ray and the distance to them
-static BASE_OBJECT		*apsRayObjects[MAX_RAYOBJ];
-static SDWORD			aRayObjDist[MAX_RAYOBJ];
 static SDWORD			numRayObjects = 0;
-//static BOOL				gotRayObjects = FALSE;
+
 // which object is being considered by the callback
 static SDWORD			currObj;
 
 // rate to change visibility level
-#define VIS_LEVEL_INC		(255*2)
-#define VIS_LEVEL_DEC		50
+const static float VIS_LEVEL_INC = 255 * 2;
+const static float VIS_LEVEL_DEC = 50;
+
 // fractional accumulator of how much to change visibility this frame
 static float			visLevelIncAcc, visLevelDecAcc;
+
 // integer amount to change visiblility this turn
 static SDWORD			visLevelInc, visLevelDec;
 
 // percentage of power over which objects start to be visible
+// UNUSED. What for? - Per
 #define VIS_LEVEL_START		100
 #define VIS_LEVEL_RANGE		60
 
-// maximum possible sensor power
-#define MAX_SENSOR_POWER	10000
-
-// the last sensor power to see an object - used by process visibility
-// to avoid having to recalculate it
-//static SDWORD			lastSensorPower;
-
-// whether a side has seen a unit on another side yet
-
-/* Get all the objects that might intersect a ray.
- * Do not include psSource in the list as the ray comes from it
- */
-void visGetTestObjects(SDWORD x1,SDWORD y1, SDWORD x2,SDWORD y2,
-							  BASE_OBJECT *psSource, BASE_OBJECT *psTarget);
-
-/* Get the objects in the apsTestObjects array that intersect a ray */
-void visGetRayObjects(SDWORD x1,SDWORD y1, SDWORD x2,SDWORD y2);
-
-void	setUnderTilesVis(BASE_OBJECT *psObj, UDWORD player);
+// alexl's sensor range.
+BOOL bDisplaySensorRange;
 
 /* Variables for the visibility callback */
 static SDWORD		rayPlayer;				// The player the ray is being cast for
@@ -113,8 +83,8 @@ static SDWORD		wallX,wallY;			// the position of a wall if it is on the LOS
 // initialise the visibility stuff
 BOOL visInitialise(void)
 {
-	visLevelIncAcc = MAKEFRACT(0);
-	visLevelDecAcc = MAKEFRACT(0);
+	visLevelIncAcc = 0;
+	visLevelDecAcc = 0;
 	visLevelInc = 0;
 	visLevelDec = 0;
 
@@ -124,39 +94,12 @@ BOOL visInitialise(void)
 // update the visibility change levels
 void visUpdateLevel(void)
 {
-	visLevelIncAcc += FRACTmul(MAKEFRACT(frameTime),
-							   FRACTCONST(VIS_LEVEL_INC,GAME_TICKS_PER_SEC));
-	visLevelInc = MAKEINT(visLevelIncAcc);
-	visLevelIncAcc -= MAKEFRACT(visLevelInc);
-	visLevelDecAcc += FRACTmul(MAKEFRACT(frameTime),
-							   FRACTCONST(VIS_LEVEL_DEC,GAME_TICKS_PER_SEC));
-	visLevelDec = MAKEINT(visLevelDecAcc);
-	visLevelDecAcc -= MAKEFRACT(visLevelDec);
-}
-
-/* Return the radius a base object covers on the map */
-static SDWORD visObjRadius(BASE_OBJECT *psObject)
-{
-	SDWORD	radius;
-
-	switch (psObject->type)
-	{
-	case OBJ_DROID:
-		radius = psObject->sDisplay.imd->radius;
-		break;
-	case OBJ_STRUCTURE:
-		radius = psObject->sDisplay.imd->radius;
-		break;
-	case OBJ_FEATURE:
-		radius = psObject->sDisplay.imd->radius;
-		break;
-	default:
-		ASSERT( FALSE,"visObjRadius: unknown object type" );
-		radius = 0;
-		break;
-	}
-
-	return radius;
+	visLevelIncAcc += (float)frameTime * (VIS_LEVEL_INC / GAME_TICKS_PER_SEC);
+	visLevelInc = visLevelIncAcc;
+	visLevelIncAcc -= visLevelInc;
+	visLevelDecAcc += (float)frameTime * (VIS_LEVEL_DEC / GAME_TICKS_PER_SEC);
+	visLevelDec = visLevelDecAcc;
+	visLevelDecAcc -= visLevelDec;
 }
 
 static SDWORD visObjHeight(BASE_OBJECT *psObject)
@@ -184,7 +127,6 @@ static SDWORD visObjHeight(BASE_OBJECT *psObject)
 	return height;
 }
 
-
 /* The terrain revealing ray callback */
 static BOOL rayTerrainCallback(SDWORD x, SDWORD y, SDWORD dist)
 {
@@ -195,16 +137,13 @@ static BOOL rayTerrainCallback(SDWORD x, SDWORD y, SDWORD dist)
 			y >= 0 && y < ((SDWORD)mapHeight << TILE_SHIFT),
 			"rayTerrainCallback: coords off map" );
 
-	psTile = mapTile(x >> TILE_SHIFT, y >> TILE_SHIFT);
-
-
+	psTile = mapTile(map_coord(x), map_coord(y));
 
 	/* Not true visibility - done on sensor range */
 
-	if(dist == 0) {	//Complete hack PD.. John what should happen if dist is 0 ???
-
-		debug( LOG_NEVER, "rayTerrainCallback: dist == 0, will divide by zero\n" );
-
+	if (dist == 0)
+	{
+		debug(LOG_ERROR, "rayTerrainCallback: dist is 0, which is not a valid distance");
 		dist = 1;
 	}
 
@@ -220,26 +159,21 @@ static BOOL rayTerrainCallback(SDWORD x, SDWORD y, SDWORD dist)
 			psTile->inRange = UBYTE_MAX;
 		}
 
-		// new - ask alex M
-		if( (selectedPlayer!=rayPlayer) &&
-			(bMultiPlayer && (game.type == TEAMPLAY || game.alliance == ALLIANCES_TEAMS)
-			&& aiCheckAlliances(selectedPlayer,rayPlayer)) )
+		if (selectedPlayer != rayPlayer && bMultiPlayer && game.alliance == ALLIANCES_TEAMS
+		    && aiCheckAlliances(selectedPlayer, rayPlayer))
 		{
 			SET_TILE_VISIBLE(selectedPlayer,psTile);		//reveal radar
 		}
 
-		// new - ask Alex M
-	/* Not true visibility - done on sensor range */
+		/* Not true visibility - done on sensor range */
 
 		if(getRevealStatus())
 		{
-			if( ((UDWORD)rayPlayer == selectedPlayer) ||
-				// new - ask AM
-				(bMultiPlayer && (game.type == TEAMPLAY || game.alliance == ALLIANCES_TEAMS)
-				&& aiCheckAlliances(selectedPlayer,rayPlayer)) // can see opponent moving
-				// new - ask AM
-				)
+			if ((UDWORD)rayPlayer == selectedPlayer
+			    || (bMultiPlayer && game.alliance == ALLIANCES_TEAMS
+				&& aiCheckAlliances(selectedPlayer, rayPlayer)))
 			{
+				// can see opponent moving
 				avInformOfChange(x>>TILE_SHIFT,y>>TILE_SHIFT);		//reveal map
 			}
 		}
@@ -249,12 +183,10 @@ static BOOL rayTerrainCallback(SDWORD x, SDWORD y, SDWORD dist)
 	return TRUE;
 }
 
-
 /* The los ray callback */
 static BOOL rayLOSCallback(SDWORD x, SDWORD y, SDWORD dist)
 {
 	SDWORD		newG;		// The new gradient
-//	MAPTILE		*psTile;
 	SDWORD		distSq;
 	SDWORD		tileX,tileY;
 	MAPTILE		*psTile;
@@ -262,11 +194,6 @@ static BOOL rayLOSCallback(SDWORD x, SDWORD y, SDWORD dist)
 	ASSERT( x >= 0 && x < ((SDWORD)mapWidth << TILE_SHIFT) &&
 			y >= 0 && y < ((SDWORD)mapHeight << TILE_SHIFT),
 			"rayLOSCallback: coords off map" );
-
-/*	if(dist == 0) {	//Complete hack PD.. John what should happen if dist is 0 ???
-		DBPRINTF(("rayTerrainCallback: dist == 0, will divide by zero\n"));
-		dist = 1;
-	}*/
 
 	distSq = dist*dist;
 
@@ -276,14 +203,6 @@ static BOOL rayLOSCallback(SDWORD x, SDWORD y, SDWORD dist)
 	}
 	else
 	{
-		// see if the ray hit an object on the last tile
-/*		if (currObj < numRayObjects &&
-			distSq > aRayObjDist[currObj])
-		{
-			lastH += visObjHeight(apsRayObjects[currObj]);
-			currObj += 1;
-		}*/
-
 		// Calculate the current LOS gradient
 		newG = (lastH - startH) * GRAD_MUL / lastD;
 		if (newG >= currG)
@@ -301,14 +220,12 @@ static BOOL rayLOSCallback(SDWORD x, SDWORD y, SDWORD dist)
 	else
 	{
 		// Store the height at this tile for next time round
-	//	psTile = mapTile(x >> TILE_SHIFT, y >> TILE_SHIFT);
-	//	lastH = psTile->height * ELEVATION_SCALE;
-		tileX = x>>TILE_SHIFT;
-		tileY = y>>TILE_SHIFT;
+		tileX = map_coord(x);
+		tileY = map_coord(y);
 
 		if (blockingWall && !((tileX == finalX) && (tileY == finalY)))
 		{
-			psTile = mapTile(x >> TILE_SHIFT, y >> TILE_SHIFT);
+			psTile = mapTile(tileX, tileY);
 			if (TILE_HAS_WALL(psTile) && !TILE_HAS_SMALLSTRUCTURE(psTile))
 			{
 				lastH = 2*UBYTE_MAX * ELEVATION_SCALE;
@@ -343,7 +260,6 @@ BOOL visTilesPending(BASE_OBJECT *psObj)
 	return (((DROID*)psObj)->updateFlags & DUPF_SCANTERRAIN);
 }
 
-
 /* Check which tiles can be seen by an object */
 void visTilesUpdate(BASE_OBJECT *psObj,BOOL SpreadLoad)
 {
@@ -366,8 +282,6 @@ void visTilesUpdate(BASE_OBJECT *psObj,BOOL SpreadLoad)
 			"units and structures" );
 		return;
 	}
-
-
 
 	rayPlayer = psObj->player;
 
@@ -411,8 +325,6 @@ void visTilesUpdate(BASE_OBJECT *psObj,BOOL SpreadLoad)
 		for(ray=0; ray < NUM_RAYS; ray += NUM_RAYS/80)
 		{
 			// initialise the callback variables
-	/*		startH = (mapTile(psObj->x >> TILE_SHIFT,psObj->y >> TILE_SHIFT)->height)
-						* ELEVATION_SCALE;*/
 			startH = psObj->z + visObjHeight(psObj);
 			currG = -UBYTE_MAX * GRAD_MUL;
 
@@ -421,10 +333,6 @@ void visTilesUpdate(BASE_OBJECT *psObj,BOOL SpreadLoad)
 		}
 	}
 }
-
-
-
-
 
 /* Check whether psViewer can see psTarget.
  * psViewer should be an object that has some form of sensor,
@@ -438,7 +346,6 @@ BOOL visibleObject(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget)
 	SDWORD		xdiff,ydiff, rangeSquared;
 	SDWORD		range;
 	UDWORD		senPower, ecmPower;
-//	SDWORD		x1,y1, x2,y2;
 	SDWORD		tarG, top;
 	STRUCTURE	*psStruct;
 
@@ -474,7 +381,6 @@ BOOL visibleObject(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget)
 		{
 			// if a unit is targetted by a counter battery sensor
 			// it is automatically seen
-//			lastSensorPower = senPower;
 			return TRUE;
 		}
 
@@ -515,21 +421,6 @@ BOOL visibleObject(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget)
 		ecmPower = 0;
 		break;
 	}
-
-	// fix to see units and structures of your ally in teamplay mode
-	/*
-	if(bMultiPlayer && game.type == TEAMPLAY && aiCheckAlliances(psViewer->player,psTarget->player))
-	{
-		if( (psViewer->type == OBJ_DROID) || (psViewer->type == OBJ_STRUCTURE) )
-			{
-				if( (psTarget->type == OBJ_DROID) || (psTarget->type == OBJ_STRUCTURE) )
-				{
-					return(TRUE);
-				}
-			}
-	}
-	*/
-
 
 	/* First see if the target is in sensor range */
 	x = (SDWORD)psViewer->x;
@@ -577,8 +468,8 @@ BOOL visibleObject(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget)
 	rayStart = TRUE;
 	currObj = 0;
 	ray = NUM_RAYS-1 - calcDirection(psViewer->x,psViewer->y, psTarget->x,psTarget->y);
-	finalX = psTarget->x >> TILE_SHIFT;
-	finalY = psTarget->y >> TILE_SHIFT;
+	finalX = map_coord(psTarget->x);
+	finalY = map_coord(psTarget->y);
 
 	// don't check for any objects intersecting the ray
 	numRayObjects = 0;
@@ -593,7 +484,6 @@ BOOL visibleObject(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget)
 	return tarG >= currG;
 }
 
-
 // Do visibility check, but with walls completely blocking LOS.
 BOOL visibleObjWallBlock(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget)
 {
@@ -605,7 +495,6 @@ BOOL visibleObjWallBlock(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget)
 
 	return result;
 }
-
 
 // Find the wall that is blocking LOS to a target (if any)
 BOOL visGetBlockingWall(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget, STRUCTURE **ppsWall)
@@ -668,14 +557,12 @@ void processVisibility(BASE_OBJECT *psObj)
 		psDroid = (DROID *)psObj;
 		psECMStats = asECMStats + psDroid->asBits[COMP_ECM].nStat;
 		ecmPoints = ecmPower(psECMStats, psDroid->player);
-		//if (psECMStats->power < maxPower)
 		if (ecmPoints < maxPower)
 		{
 			psDroid->ECMMod = maxPower;
 		}
 		else
 		{
-			//psDroid->ECMMod = psECMStats->power;
 			psDroid->ECMMod = ecmPoints;
 			maxPower = psDroid->ECMMod;
 		}
@@ -721,7 +608,7 @@ void processVisibility(BASE_OBJECT *psObj)
 	gridStartIterate((SDWORD)psObj->x, (SDWORD)psObj->y);
 
 	// Make sure allies can see us
-	if( bMultiPlayer && (game.type == TEAMPLAY || game.alliance == ALLIANCES_TEAMS) )
+	if (bMultiPlayer && game.alliance == ALLIANCES_TEAMS)
 	{
 		for(player=0; player<MAX_PLAYERS; player++)
 		{
@@ -735,18 +622,18 @@ void processVisibility(BASE_OBJECT *psObj)
 		}
 	}
 
-    //if a player has a SAT_UPLINK structure, they can see everything!
-    for (player=0; player<MAX_PLAYERS; player++)
-    {
-        if (getSatUplinkExists(player))
-        {
-            currVis[player] = TRUE;
+	// if a player has a SAT_UPLINK structure, they can see everything!
+	for (player=0; player<MAX_PLAYERS; player++)
+	{
+		if (getSatUplinkExists(player))
+		{
+			currVis[player] = TRUE;
 			if (psObj->visible[player] == 0)
 			{
 				psObj->visible[player] = 1;
 			}
-        }
-    }
+		}
+	}
 
 	psViewer = gridIterate();
 	while (psViewer != NULL)
@@ -778,7 +665,7 @@ void processVisibility(BASE_OBJECT *psObj)
 	}
 
 	//forward out vision to our allies
-	if (bMultiPlayer && (game.type == TEAMPLAY || game.alliance == ALLIANCES_TEAMS))
+	if (bMultiPlayer && game.alliance == ALLIANCES_TEAMS)
 	{
 		for(player = 0; player < MAX_PLAYERS; player++)
 		{
@@ -792,12 +679,12 @@ void processVisibility(BASE_OBJECT *psObj)
 		}
 	}
 
-
 	// update the visibility levels
 	for(i=0; i<MAX_PLAYERS; i++)
 	{
 		if (i == psObj->player)
 		{
+			// owner can always see it fully
 			psObj->visible[i] = UBYTE_MAX;
 			continue;
 		}
@@ -939,108 +826,6 @@ MAPTILE		*psTile;
 		}
 	}
 }
-
-
-/* Get all the objects that might intersect a ray.
- * Do not include psSource in the list as the ray comes from it
- */
-void visGetTestObjects(SDWORD x1,SDWORD y1, SDWORD x2,SDWORD y2,
-							  BASE_OBJECT *psSource, BASE_OBJECT *psTarget)
-{
-	SDWORD		player; //, bx1,by1, bx2,by2;
-	SDWORD		radius;
-	BASE_OBJECT	*psObj;
-
-	// find the structures
-	numTestObjects = 0;
-	for (player=0; player < MAX_PLAYERS; player++)
-	{
-		for(psObj = (BASE_OBJECT *)apsStructLists[player]; psObj; psObj = psObj->psNext)
-		{
-			radius = visObjRadius(psObj);
-			if ((((SDWORD)psObj->x + radius) >= x1) && (((SDWORD)psObj->x - radius) <= x2) &&
-				(((SDWORD)psObj->y + radius) >= y1) && (((SDWORD)psObj->y - radius) <= y2) &&
-				psObj != psSource && psObj != psTarget &&
-				numTestObjects < MAX_RAYTEST)
-			{
-				apsTestObjects[numTestObjects++] = psObj;
-			}
-		}
-	}
-
-	// find the features
-	for(psObj = (BASE_OBJECT *)apsFeatureLists[0]; psObj; psObj = psObj->psNext)
-	{
-		radius = visObjRadius(psObj);
-		if ((((SDWORD)psObj->x + radius) >= x1) && (((SDWORD)psObj->x - radius) <= x2) &&
-			(((SDWORD)psObj->y + radius) >= y1) && (((SDWORD)psObj->y - radius) <= y2) &&
-			psObj != psSource && psObj != psTarget &&
-			numTestObjects < MAX_RAYTEST)
-		{
-			apsTestObjects[numTestObjects++] = psObj;
-		}
-	}
-}
-
-
-/* Get the objects in the apsTestObjects array that intersect a ray */
-void visGetRayObjects(SDWORD x1,SDWORD y1, SDWORD x2,SDWORD y2)
-{
-	BASE_OBJECT		*apsObjs[MAX_RAYOBJ];
-	SDWORD			aObjDist[MAX_RAYOBJ];
-	BASE_OBJECT		*psObj;
-	SDWORD			i,j, x,y, dist, xdiff,ydiff, furthest = 0;
-
-	// find the objects that intersect the ray
-	numRayObjects = 0;
-	for(i=0; i<numTestObjects; i++)
-	{
-		psObj = apsTestObjects[i];
-		x = (SDWORD)psObj->x;
-		y = (SDWORD)psObj->y;
-		dist = rayPointDist(x1,y1,x2,y2, x,y);
-		if (dist < visObjRadius(psObj) &&
-			numRayObjects < MAX_RAYOBJ)
-		{
-			// object intersects ray, calc squared distance
-			xdiff = x - x1;
-			ydiff = y - y1;
-			aObjDist[numRayObjects] = xdiff*xdiff + ydiff*ydiff - dist*dist;
-			apsObjs[numRayObjects] = psObj;
-			numRayObjects += 1;
-		}
-	}
-
-	// reorder the objects on distance
-	for(i=0; i<numRayObjects; i++)
-	{
-		dist = SDWORD_MAX;
-#ifdef DEBUG
-		furthest = -1;
-#else
-		furthest = 0;
-#endif
-		for(j=0; j<numRayObjects; j++)
-		{
-			if (aObjDist[j] < dist)
-			{
-				furthest = j;
-				dist = aObjDist[j];
-			}
-		}
-		ASSERT( furthest != -1,
-			"visGetRayObjects: reordering failed" );
-
-		apsRayObjects[i] = apsObjs[furthest];
-		aRayObjDist[i] = aObjDist[furthest];
-		aObjDist[furthest] = SDWORD_MAX;
-	}
-}
-
-////////////////////////////////////////////////////////////////////
-// alexl's sensor range.
-
-BOOL bDisplaySensorRange;
 
 void startSensorDisplay(void)
 {

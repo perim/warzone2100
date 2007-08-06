@@ -82,8 +82,7 @@ audio_list:				audio_list audio_track |
 						audio_track
 						;
 	/*
-	 * BOOL sound_SetTrackVals( const char* fileName, BOOL bLoop, unsigned int volume,
-	 *					unsigned int AudibleRadius )
+	 * unsigned int sound_SetTrackVals(const char* fileName, BOOL loop, unsigned int volume, unsigned int AudibleRadius)
 	 */
 
 audio_track:			AUDIO QTEXT LOOP INTEGER INTEGER

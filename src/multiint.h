@@ -224,8 +224,8 @@ void loadMapPreview(void);
 #define	MROW1					4
 #define	MROW2					MROW1+MULTIOP_EDITBOXH+4
 #define	MROW3					MROW2+MULTIOP_EDITBOXH+4
-#define	MROW4					MROW3+MULTIOP_EDITBOXH+4
-#define MROW5					MROW4+38
+#define	MROW4					MROW3+38
+#define MROW5					MROW4+31
 #define	MROW6					MROW5+31
 #define	MROW7					MROW6+31
 #define	MROW8					MROW7+31
@@ -249,7 +249,7 @@ void loadMapPreview(void);
 
 //#define MULTIOP_ARENA			10260
 #define MULTIOP_CAMPAIGN		10261
-#define MULTIOP_TEAMPLAY		10262
+//#define MULTIOP_TEAMPLAY		10262
 #define MULTIOP_SKIRMISH		10263
 
 

@@ -16,6 +16,10 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 // BTEditDoc.h : interface of the CBTEditDoc class
 //
@@ -30,7 +34,7 @@
 //#include "Object3D.h"
 #include "pcxhandler.h"
 #include "textsel.h"
-#include "listtemp.h"
+#include <list>
 #include "brush.h"
 #include "chnkio.h"
 #include "tiletypes.h"
@@ -365,8 +369,6 @@ public:
 	BOOL GetAutoSync(void) { return m_AutoSync; }
 	BOOL GetViewFeatures(void) { return m_ViewFeatures; }
 
-//	ListNode<CObjectDB>* GetObjectDatabase(void) { return m_ObjectDatabase; }
-//	void SetObjectDatabase(ListNode<CObjectDB>* ObjectDatabase);
 //	CObjectDB* GetSelectedObject(void);
 //	BOOL ObjectAlreadyLoaded(char *Name);
 	CGeometry* GetDirectMaths(void) { return m_DirectMaths; }
@@ -443,7 +445,7 @@ public:
 	void StichTiles(int x0,int y0,int x1,int y1,BOOL AddUndo);
 	void XFlipTileRect(int Tile0,int Tile1);
 	void YFlipTileRect(int Tile0,int Tile1);
-protected:
+private:
 	void LoadTextures(char *FileName);
 	void DeleteProjectName(void);
 	void CreateDefaultTextureList(void);
@@ -497,9 +499,8 @@ protected:
 	UWORD *m_RadarMap;
 
 	int m_ObjectBufferSize;
-	ListNode<C3DObjectInstance> *m_ObjectBuffer;
+	std::list<C3DObjectInstance> m_ObjectBuffer;
 
-//	ListNode<CObjectDB> *m_ObjectDatabase;
 //	CDatabaseTypes *m_DatabaseTypes;
 
 	BOOL m_EnableGravity;

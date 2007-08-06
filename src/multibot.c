@@ -111,116 +111,6 @@ BOOL recvHappyVtol(NETMSG *pMsg)
 	return TRUE;
 }
 
-// vtol now needs to return to rearm.
-BOOL sendVtolRearm(DROID *psDroid,STRUCTURE *psStruct, UBYTE chosen)
-{
-	NETMSG msg;
-	UDWORD	blank=0;
-	UBYTE attackRuns[DROID_MAXWEAPS], ammo[DROID_MAXWEAPS];
-	UBYTE player;
-	int	i = 0;
-
-	if(!myResponsibility(psDroid->player))
-	{
-		return FALSE;
-	}
-
-	player = psDroid->player;
-	NetAdd(msg,0,player);
-	NetAdd(msg,1,psDroid->id);
-	NetAdd(msg,5,chosen);
-	if(psStruct)
-	{
-		NetAdd(msg,6,psStruct->id);
-	}
-	else
-	{
-		NetAdd(msg,6,blank);
-	}
-
-	for (i = 0;i < psDroid->numWeaps;i ++)
-	{
-		attackRuns[i] = (UBYTE)(psDroid->sMove.iAttackRuns[i]);
-		ammo[i] = (UBYTE)(psDroid->asWeaps[i].ammo);
-		NetAdd(msg,(10 + i),attackRuns[i]);
-		NetAdd(msg,(11 + i),ammo[i]);
-	}
-
-	msg.size = (12 + i);
-	msg.type = NET_VTOLREARM;
-
-	// FIXME: Err... How about actually sending the packet here? - Per
-	return TRUE;
-}
-
-// this is a complete rip from recvvtolrearm
-BOOL recvVtolRearm(NETMSG *pMsg)
-{
-	DROID	*psDroid;
-	UBYTE	player,chosen,aruns[DROID_MAXWEAPS],amm[DROID_MAXWEAPS];
-	UDWORD	id,ids;
-	STRUCTURE *psStruct = NULL;
-	UBYTE	i;
-	DROID_OACTION_INFO oaInfo = {{NULL}};
-
-	NetGet(pMsg,0,player);
-	NetGet(pMsg,1,id);
-	NetGet(pMsg,5,chosen);
-	NetGet(pMsg,6,ids);
-
-	if(!IdToDroid(id,player,&psDroid))// find droid.
-	{
-		return FALSE;
-	}
-
-	for (i = 0;i < psDroid->numWeaps;i++)
-	{
-		NetGet(pMsg,(10 + i),aruns[i]);
-		NetGet(pMsg,(11 + i),amm[i]);
-	}
-
-	if(ids)// find rearm pad.
-	{
-		psStruct = IdToStruct(id,psDroid->player);
-		if(!psStruct)
-		{
-			return FALSE;
-		}
-		else
-		{
-			setDroidBase(psDroid, psStruct);
-		}
-	}
-
-	for (i = 0;i < psDroid->numWeaps;i++)
-	{
-		psDroid->sMove.iAttackRuns[i] = aruns[i];
-		psDroid->asWeaps[i].ammo = amm[i];
-	}
-
-	turnOffMultiMsg(TRUE);
-	switch(chosen)
-	{
-		case 1:
-			psDroid->order = DORDER_NONE;
-			oaInfo.objects[0] = (BASE_OBJECT *)psStruct;
-			orderDroidObj(psDroid, DORDER_REARM, &oaInfo);
-			break;
-		case 2:
-			oaInfo.objects[0] = (BASE_OBJECT *)psStruct;
-			actionDroidObj(psDroid,DACTION_MOVETOREARM, &oaInfo);
-			break;
-		case 3:
-			orderDroid( psDroid, DORDER_RTB );
-			break;
-		default:
-			break;
-	}
-	turnOffMultiMsg(FALSE);
-
-	return TRUE;
-}
-
 
 // ////////////////////////////////////////////////////////////////////////////
 // Secondary Orders.
@@ -379,7 +269,11 @@ BOOL recvDroidDisEmbark(NETMSG *pMsg)
         //add it back into the world at the x/y
         psDroid->x = x;
         psDroid->y = y;
-        ASSERT(worldOnMap(x,y), "droid not disembarked on map");
+        if (!worldOnMap(x, y))
+	{
+		debug(LOG_ERROR, "recvDroidDisEmbark: droid not disembarked on map");
+		return FALSE;
+	}
 	    updateDroidOrientation(psDroid);
 		//initialise the movement data
     	initDroidMovement(psDroid);
@@ -543,8 +437,7 @@ BOOL recvDroid(NETMSG * m)
 
 	if(!pT)
 	{
-		NETlogEntry("Couldn't find template to build recvd droid. val = player",0,player );
-		debug( LOG_NEVER, "Couldn't find template to build recvd droid" );
+		debug(LOG_NET, "Couldn't find template to build recvd droid");
 		sendRequestDroid(id);						// request the droid instead.
 		return FALSE;
 	}
@@ -554,10 +447,8 @@ BOOL recvDroid(NETMSG * m)
 	{
 		if (!usePower(player,pT->powerPoints))// take the power.
 		{
-//			DBCONPRINTF(ConsoleString,(ConsoleString,"MULTIPLAYER: not enough power to build remote droid."));
-			NETlogEntry("not enough power to build recvd droid, val=player",0,player);
-// build anyway..
-//			return FALSE;
+			debug(LOG_NET, "not enough power to build recvd droid, player=%u", player);
+			// build anyway..
 		}
 	}
 
@@ -826,13 +717,6 @@ BOOL recvDroidInfo(NETMSG *pMsg)
 // process droid order
 static void ProcessDroidOrder(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWORD y, OBJECT_TYPE desttype, UDWORD destid)
 {
-	UDWORD		i;
-	DROID		*pD;
-	STRUCTURE	*pS;
-	FEATURE		*pF;
-	BASE_OBJECT *psObj = NULL;
-	DROID_OACTION_INFO oaInfo = {{NULL}};
-
 	if(destid==0 && desttype==0)							// target is a location
 	{
 		if( abs(psDroid->x - x) < (TILE_UNITS/2)
@@ -852,10 +736,16 @@ static void ProcessDroidOrder(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWOR
 	}
 	else													//  target is object
 	{
+		DROID_OACTION_INFO oaInfo = {{NULL}};
+		UDWORD		i;
+		BASE_OBJECT	*psObj = NULL;
+		DROID		*pD;
+		STRUCTURE	*pS;
+		FEATURE		*pF;
+
 		switch(desttype)
 		{
 		case OBJ_DROID:
-			psObj = NULL;
 			for (i=0; i<MAX_PLAYERS && !psObj; i++)
 			{
 				for(pD=apsDroidLists[i];(pD) && (pD->id != destid);pD=pD->psNext);
@@ -867,7 +757,6 @@ static void ProcessDroidOrder(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWOR
 			break;
 
 		case OBJ_STRUCTURE:
-			psObj = NULL;
 			pS = IdToStruct(destid,ANYPLAYER);
 			if(pS)
 			{
@@ -876,7 +765,6 @@ static void ProcessDroidOrder(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWOR
 			break;
 
 		case OBJ_FEATURE:
-			psObj = NULL;
 			pF = IdToFeature(destid,ANYPLAYER);
 			if(pF)
 			{
@@ -885,13 +773,12 @@ static void ProcessDroidOrder(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWOR
 			break;
 
 		case OBJ_PROJECTILE: // shouldn't be getting this!
-			debug( LOG_ERROR, "multibot: order specified destination as a bullet. what am i to do??" );
-			abort();
+			debug(LOG_ERROR, "ProcessDroidOrder: order specified destination as a bullet. what am i to do??");
 			break;
 
 		default:
-			debug( LOG_ERROR, "unknown object type" );
-			abort();
+			debug( LOG_ERROR, "ProcessDroidOrder: unknown object type");
+			break;
 		}
 
 		if(!psObj)													// failed to find it;
@@ -910,7 +797,6 @@ static void ProcessDroidOrder(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWOR
 		orderDroidObj(psDroid, order, &oaInfo);
 		turnOffMultiMsg(FALSE);
 	}
-
 }
 
 
@@ -963,12 +849,7 @@ BOOL sendWholeDroid(DROID *pD, UDWORD dest)
 	UDWORD	asWeaps[DROID_MAXWEAPS];
 	int		i;
 	BOOL	bNoTarget;
-
-	// these asserts are done on the receiving side too
-	ASSERT( pD->x < (mapWidth << TILE_SHIFT),
-		"sendWholeDroid: x coordinate bigger than map width" );
-	ASSERT( pD->y < (mapHeight<< TILE_SHIFT),
-		"sendWholeDroid: y coordinate bigger than map height" );
+	uint16_t direction = pD->direction * 32; // preserve precision
 
 	if (pD->numWeaps == 0)
 	{
@@ -1007,7 +888,7 @@ BOOL sendWholeDroid(DROID *pD, UDWORD dest)
 	NetAdd(m,sizecount,pD->NameVersion);			sizecount+=sizeof(pD->NameVersion);
 	NetAdd(m,sizecount,pD->droidType);				sizecount+=sizeof(pD->droidType);
 
-	NetAdd(m,sizecount,pD->direction);				sizecount+=sizeof(pD->direction);
+	NetAdd(m,sizecount,direction);				sizecount+=sizeof(direction);
 	NetAdd(m,sizecount,pD->pitch);					sizecount+=sizeof(pD->pitch);
 	NetAdd(m,sizecount,pD->roll);					sizecount+=sizeof(pD->roll);
 	NetAdd(m,sizecount,pD->visible);				sizecount+=sizeof(pD->visible);
@@ -1063,6 +944,7 @@ BOOL receiveWholeDroid(NETMSG *m)
 	UDWORD id;
 	UBYTE player;
 	UBYTE i;
+	uint16_t direction;
 
 	// get the stuff
 	NetGet(m,sizecount,dt.asParts);				sizecount+=sizeof(dt.asParts);		// build a template
@@ -1113,7 +995,8 @@ BOOL receiveWholeDroid(NETMSG *m)
 	NetGet(m,sizecount,pD->NameVersion);		sizecount+=sizeof(pD->NameVersion);
 	NetGet(m,sizecount,pD->droidType);			sizecount+=sizeof(pD->droidType);
 
-	NetGet(m,sizecount,pD->direction);			sizecount+=sizeof(pD->direction);
+	NetGet(m,sizecount, direction);			sizecount+=sizeof(direction);
+	pD->direction = (float)direction / 32;
 	NetGet(m,sizecount,pD->pitch);				sizecount+=sizeof(pD->pitch);
 	NetGet(m,sizecount,pD->roll);				sizecount+=sizeof(pD->roll);
 

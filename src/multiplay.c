@@ -124,7 +124,7 @@ BOOL turnOffMultiMsg(BOOL bDoit)
 	{
 		if(bTemp == TRUE)
 		{
-			debug( LOG_NEVER, "\nturnoffmultimsg: multiple calls to turn off msging.\n" );
+			debug(LOG_NET, "turnOffMultiMsg: multiple calls to turn off");
 		}
 		if(bMultiPlayer)
 		{
@@ -221,13 +221,6 @@ BOOL multiPlayerLoop(void)
 	sendCheck();						// send some checking info if possible
 	processMultiPlayerArtifacts();		// process artifacts
 
-//	if( (game.type == DMATCH) && !ingame.localJoiningInProgress)
-//	{
-//		deathmatchCheck();
-//	}
-
-//	if (game.type != DMATCH)
-//	{
 		joinCount =0;
 		for(i=0;i<MAX_PLAYERS;i++)
 		{
@@ -260,7 +253,6 @@ BOOL multiPlayerLoop(void)
 				setWidgetsStatus(TRUE);
 			}
 		}
-//	}
 
 	recvMessage();						// get queued messages
 
@@ -401,6 +393,7 @@ DROID_TEMPLATE *NameToTemplate(const char *sName,UDWORD player)
 
 	 return psTempl;
 }
+
 /////////////////////////////////////////////////////////////////////////////////
 //  Returns a pointer to base object, given an id and optionally a player.
 BASE_OBJECT *IdToPointer(UDWORD id,UDWORD player)
@@ -629,8 +622,7 @@ BOOL recvMessage(void)
 			{
 			case AUDIOMSG:
 				recvAudioMsg(&msg);
-			break;
-
+				break;
 			case NET_DROID:						// new droid of known type
 				recvDroid(&msg);
 				break;
@@ -661,14 +653,12 @@ BOOL recvMessage(void)
 			case NET_TEXTMSG:					// simple text message
 				recvTextMessage(&msg);
 				break;
-
 			case NET_AITEXTMSG:					//multiplayer AI text message
 				recvTextMessageAI(&msg);
 				break;
 			case NET_BEACONMSG:					//beacon (blip) message
 				recvBeacon(&msg);
 				break;
-
 			case NET_BUILD:						// a build order has been sent.
 				recvBuildStarted(&msg);
 				break;
@@ -678,19 +668,18 @@ BOOL recvMessage(void)
 			case NET_STRUCTDEST:				// structure destroy
 				recvDestroyStructure(&msg);
 				break;
-
 			case NET_SECONDARY:					// set a droids secondary order level.
 				recvDroidSecondary(&msg);
 				break;
-            case NET_SECONDARY_ALL:					// set a droids secondary order level.
+			case NET_SECONDARY_ALL:					// set a droids secondary order level.
 				recvDroidSecondaryAll(&msg);
 				break;
-            case NET_DROIDEMBARK:
-                recvDroidEmbark(&msg);              //droid has embarked on a Transporter
-                break;
-            case NET_DROIDDISEMBARK:
-                recvDroidDisEmbark(&msg);           //droid has disembarked from a Transporter
-                break;
+			case NET_DROIDEMBARK:
+				recvDroidEmbark(&msg);              //droid has embarked on a Transporter
+				break;
+			case NET_DROIDDISEMBARK:
+				recvDroidDisEmbark(&msg);           //droid has disembarked from a Transporter
+				break;
 			case NET_REQUESTDROID:				// player requires a droid that they dont have.
 				recvRequestDroid(&msg);
 				break;
@@ -703,19 +692,12 @@ BOOL recvMessage(void)
 			case NET_SCORESUBMIT:				//  a score update from another player
 				recvScoreSubmission(&msg);
 				break;
-//			case NET_DMATCHWIN:					// someone has won!.
-//				recvdMatchWinner(&msg);
-//				break;
 			case NET_VTOL:
 				recvHappyVtol(&msg);
-				break;
-			case NET_VTOLREARM:
-				recvVtolRearm(&msg);
 				break;
 			case NET_LASSAT:
 				recvLasSat(&msg);
 				break;
-
 			default:
 				break;
 			}
@@ -778,18 +760,12 @@ BOOL recvMessage(void)
 				setPlayerHasLost(TRUE);
 			}
 			break;
-
 		case NET_FIREUP:				// frontend only
 			break;
-
 		case NET_RESEARCHSTATUS:
 			recvResearchStatus(&msg);
 			break;
-
 		default:
-//			NetGet((&msg),4,a);
-//			DBPRINTF(("wierdy message arrived, type:%d size:%d msg:%d ",msg.type,msg.size,a));
-//			return FALSE;
 			break;
 		}
 	}
@@ -813,9 +789,7 @@ BOOL SendResearch(UBYTE player,UDWORD index)
 	m.size =5;
 	m.type = NET_RESEARCH;
 
-	// teamplay games share research....
-
-	if(game.type == TEAMPLAY || game.type == SKIRMISH)
+	if (game.type == SKIRMISH)
 	{
 		pPlayerRes = asPlayerResList[player];
 		pPlayerRes += index;
@@ -860,8 +834,7 @@ static BOOL recvResearch(NETMSG *m)
 		usePower(player, pResearch->researchPower);
 	}
 
-	// teamplay games share research....
-	if(game.type == TEAMPLAY || game.type == SKIRMISH)
+	if (game.type == SKIRMISH)
 	{
 		for(i=0;i<MAX_PLAYERS;i++)
 		{

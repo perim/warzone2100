@@ -65,7 +65,6 @@
 #include "console.h"
 #include "cmddroid.h"
 #include "group.h"
-#include "csnap.h"
 #include "text.h"
 #include "transporter.h"
 #include "mission.h"
@@ -3595,7 +3594,9 @@ void drawRadarBlips(void)
 
 				if(((VIEWDATA *)psCurr->pViewData)->type == VIEW_HELP)
 				{
-					if((((VIEW_PROXIMITY *)((VIEWDATA *)psCurr->pViewData)->pData)->timeAdded + 60000) <= gameTime)
+					assert(((VIEWDATA *)psCurr->pViewData)->pData != NULL); // FIXME This should never happen since type==VIEW_HELP should imply pData!=NULL. This is apparently not the case for everyone and always. The real problem is somewhere else and should be fixed there.
+					if( ((VIEWDATA *)psCurr->pViewData)->pData != NULL &&
+					   (((VIEW_PROXIMITY *)((VIEWDATA *)psCurr->pViewData)->pData)->timeAdded + 60000) <= gameTime)
 					{
 						debug(LOG_WZ, "blip timeout for %d, from %d", i, (((VIEW_PROXIMITY *)((VIEWDATA *)psCurr->pViewData)->pData)->sender));
 						removeMessage(psCurr, i);	//remove beacon
@@ -3704,25 +3705,6 @@ void drawRadarBlips(void)
 		}
 	}
 	*/
-
-// deathmatch code
-//	if(bMultiPlayer && (game.type == DMATCH))
-//	{
-//		for (psFeature = apsFeatureLists[0]; psFeature != NULL; psFeature =
-//			psFeature->psNext)
-//		{
-//			if( psFeature->psStats->subType == FEAT_GEN_ARTE)	// it's an artifact.
-//			{
-//				worldPosToRadarPos(psFeature->x >> TILE_SHIFT ,
-//								   psFeature->y >> TILE_SHIFT,  &radarX,&radarY);
-//				if (radarX > 0 && radarX < (SDWORD)VisWidth &&			// it's visable.
-//					radarY > 0 && radarY < (SDWORD)VisHeight)
-//				{
-//					iV_DrawImage(IntImages,(UWORD)(IMAGE_RAD_ENM3),radarX + RADTLX, radarY + RADTLY);
-//				}
-//			}
-//		}
-//	}
 }
 
 /*draws blips on world to represent Proximity Messages - no longer the Green Arrow!*/
@@ -3934,6 +3916,6 @@ void intDisplayAllyIcon(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD
 
 //	iV_SetTextColour(-1);
 //	sprintf(&str,"%d",i);
-//	pie_DrawText(&str, x+6, y-1 );
+//	iV_DrawText(&str, x+6, y-1 );
 
 }

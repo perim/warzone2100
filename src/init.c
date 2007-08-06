@@ -84,6 +84,7 @@
 #include "scripttabs.h"
 #include "scriptvals.h"
 #include "text.h"
+#include "texture.h"
 #include "transporter.h"
 #include "warzoneconfig.h"
 #include "winmain.h"
@@ -670,7 +671,6 @@ BOOL InitialiseGlobals(void)
 	radarInitVars();
 	Edit3DInitVars();
 
-	snapInitVars();
 	driveInitVars(TRUE);
 
 	return TRUE;
@@ -1166,10 +1166,6 @@ BOOL frontendInitialise(const char *ResourceFile)
 	keyClearMappings();
 	keyInitMappings(FALSE);
 
-#ifdef OLD_PALETTE
-	iV_PaletteSelect(iV_PaletteAdd(&gamePal[0]));
-#endif
-
 	frameSetCursorFromRes(IDC_DEFAULT);
 
 	SetFormAudioIDs(-1,ID_SOUND_WINDOWCLOSE);			// disable the open noise since distorted in 3dfx builds.
@@ -1189,7 +1185,7 @@ BOOL frontendInitialise(const char *ResourceFile)
 
 BOOL frontendShutdown(void)
 {
-	debug(LOG_MAIN, "Shuting down frontend");
+	debug(LOG_WZ, "== Shuting down frontend ==");
 
 	saveConfig();// save settings to registry.
 
@@ -1204,7 +1200,6 @@ BOOL frontendShutdown(void)
 	scrShutDown();
 
 	//do this before shutting down the iV library
-//	D3DFreeTexturePages();
 	resReleaseAllData();
 
 	if (!objShutdown())
@@ -1224,18 +1219,12 @@ BOOL frontendShutdown(void)
 		return FALSE;
 	}
 
-/*
-	if (!dispShutdown())
-	{
-		return FALSE;
-	}
-*/
+	debug(LOG_TEXTURE, "=== frontendShutdown ===");
 	pie_TexShutDown();
+	pie_TexInit(); // ready for restart
 
 	return TRUE;
 }
-
-
 
 
 /******************************************************************************/
@@ -1245,7 +1234,7 @@ BOOL frontendShutdown(void)
 
 BOOL stageOneInitialise(void)
 {
-	debug(LOG_MAIN, "stageOneInitalise");
+	debug(LOG_WZ, "== stageOneInitalise ==");
 
 	// Initialise all globals and statics everwhere.
 	if(!InitialiseGlobals())
@@ -1351,9 +1340,6 @@ BOOL stageOneInitialise(void)
     //need to reset the event timer too - AB 14/01/99
     eventTimeReset(gameTime/SCR_TICKRATE);
 
-	// Set the cursor snap max distances.
-	SetMaxDist(64,64);
-
 	return TRUE;
 }
 
@@ -1361,20 +1347,14 @@ BOOL stageOneInitialise(void)
 /******************************************************************************/
 /*                       Shutdown after data is released                      */
 
-
 BOOL stageOneShutDown(void)
 {
-	debug(LOG_MAIN, "stageOneShutDown");
-
-		// ffs
-	//do this before shutting down the iV library
-//	D3DFreeTexturePages();
+	debug(LOG_WZ, "== stageOneShutDown ==");
 
 	if ( audio_Disabled() == FALSE )
 	{
 		sound_CheckAllUnloaded();
 	}
-
 
 	proj_Shutdown();
 
@@ -1406,11 +1386,7 @@ BOOL stageOneShutDown(void)
 	}
 
 	scrShutDown();
-
-
-    environShutDown();
-
-
+	environShutDown();
 	gridShutDown();
 
 	if ( !anim_Shutdown() )
@@ -1423,7 +1399,9 @@ BOOL stageOneShutDown(void)
 		return FALSE;
 	}
 
+	debug(LOG_TEXTURE, "=== stageOneShutDown ===");
 	pie_TexShutDown();
+	pie_TexInit(); // restart it
 
 	viewDataHeapShutDown();
 
@@ -1438,7 +1416,7 @@ BOOL stageOneShutDown(void)
 
 BOOL stageTwoInitialise(void)
 {
-	debug(LOG_MAIN, "stageTwoInitalise");
+	debug(LOG_WZ, "== stageTwoInitalise ==");
 
 	if(bMultiPlayer)
 	{
@@ -1527,17 +1505,11 @@ BOOL stageTwoInitialise(void)
 //
 BOOL stageTwoShutDown(void)
 {
-	debug(LOG_MAIN, "stageTwoShutDown");
+	debug(LOG_WZ, "== stageTwoShutDown ==");
 
 	if (war_GetPlayAudioCDs()) {
 		cdAudio_Stop();
 	}
-
-	/* in stageThreeSgutDown now
-	if (!missionShutDown())
-	{
-		return FALSE;
-	}*/
 
 	freeAllStructs();
 	freeAllDroids();
@@ -1558,7 +1530,6 @@ BOOL stageTwoShutDown(void)
 	if(!ShutdownRadar()) {
 		return FALSE;
 	}
-
 
 	intShutDown();
 
@@ -1584,15 +1555,13 @@ BOOL stageThreeInitialise(void)
 	UDWORD i;
 	DROID		*psDroid;
 
-	debug(LOG_MAIN, "stageThreeInitalise");
+	debug(LOG_WZ, "== stageThreeInitalise ==");
 	bTrackingTransporter = FALSE;
 
 	loopMissionState = LMS_NORMAL;
 
-
 	// reset the clock to normal speed
 	gameTimeResetMod();
-
 
 	if (!init3DView())	// Initialise 3d view stuff. After resLoad cause it needs the game palette initialised.
 	{
@@ -1619,8 +1588,6 @@ BOOL stageThreeInitialise(void)
 	atmosInitSystem();
 	closeLoadingScreen();			// reset the loading screen.
 
-
-
 	if (!fpathInitialise())
 	{
 		return FALSE;
@@ -1636,11 +1603,6 @@ BOOL stageThreeInitialise(void)
 		intRemoveMissionResultNoAnim();
 	}
 
-//	if(bMultiPlayer)
-//	{
-//		multiGameInit();
-//	}
-
 	// determine if to use radar
 	for(psStr = apsStructLists[selectedPlayer];psStr;psStr=psStr->psNext){
 		if(psStr->pStructureType->type == REF_HQ)
@@ -1651,18 +1613,15 @@ BOOL stageThreeInitialise(void)
 		}
 	}
 
-
 	// Re-inititialise some static variables.
 
-
-	snapInitVars();
 	driveInitVars(FALSE);
 	displayInitVars();
 
 	setAllPauseStates(FALSE);
 
 	/* decide if we have to create teams */
-	if(game.alliance == ALLIANCES_TEAMS && (game.type == TEAMPLAY || game.type == SKIRMISH))
+	if(game.alliance == ALLIANCES_TEAMS && game.type == SKIRMISH)
 	{
 		createTeamAlliances();
 
@@ -1690,7 +1649,6 @@ BOOL stageThreeInitialise(void)
 
 	// ffs JS   (and its a global!)
 	if (getLevelLoadType() != GTYPE_SAVE_MIDMISSION)
-
 	{
 		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_GAMEINIT);
 	}
@@ -1707,7 +1665,7 @@ BOOL stageThreeInitialise(void)
 
 BOOL stageThreeShutDown(void)
 {
-	debug(LOG_MAIN, "stageThreeShutDown");
+	debug(LOG_WZ, "== stageThreeShutDown ==");
 
 	// make sure any button tips are gone.
 	widgReset();
@@ -1761,19 +1719,6 @@ BOOL stageThreeShutDown(void)
 	return TRUE;
 }
 
-
-// ////////////////////////////////////////////////////////////////////////////
-// ////////////////////////////////////////////////////////////////////////////
-// Reset the state between expand maps or sub maps
-//
-BOOL gameReset(void)
-{
-	debug(LOG_MAIN, "gameReset");
-
-	return TRUE;
-}
-
-
 // Reset the game between campaigns
 BOOL campaignReset(void)
 {
@@ -1786,27 +1731,19 @@ BOOL campaignReset(void)
 // Reset the game when loading a save game
 BOOL saveGameReset(void)
 {
-//#ifdef MISSION_S
 	debug(LOG_MAIN, "saveGameReset");
 
 	if (war_GetPlayAudioCDs()) {
 		cdAudio_Stop();
 	}
 
-	/* in stageThreeSgutDown now
-	if (!missionShutDown())
-	{
-		return FALSE;
-	}*/
-
 	freeAllStructs();
 	freeAllDroids();
 	freeAllFeatures();
 	freeAllFlagPositions();
-//#ifdef NEW_SAVE added for V12 SAVE safe for all versions
 	initMission();
 	initTransporters();
-//#endif
+
 	//free up the gateway stuff?
 	gwShutDown();
 	intResetScreen(TRUE);
@@ -1819,28 +1756,6 @@ BOOL saveGameReset(void)
 
     //clear out any messages
     freeMessages();
-
-	return TRUE;
-}
-
-
-BOOL newMapInitialise(void)
-{
-	debug(LOG_MAIN, "newMapInitialise");
-
-//NEW_SAVE removed for V11 Save removed for all versions
-//	initViewPosition();
-
-// initialise the gateway stuff
-	// this no longer necessary when RLE map zones are loaded
-//	gwProcessMap();	// now loaded with map.
-
-	// this is always necessary
-/*	if (!gwLinkGateways())
-	{
-		return FALSE;
-	}
-*/
 
 	return TRUE;
 }
@@ -1861,4 +1776,3 @@ void	initMiscVars( void )
 	setSelectedGroup(UBYTE_MAX);
 	processDebugMappings(FALSE);
 }
-

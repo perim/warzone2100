@@ -163,8 +163,8 @@ BOOL loadConfig(void)
 	}
 	else
 	{
-		setShakeStatus(TRUE);
-		setWarzoneKeyNumeric("shake", TRUE);
+		setShakeStatus(FALSE);
+		setWarzoneKeyNumeric("shake", FALSE);
 	}
 
 	// //////////////////////////
@@ -451,17 +451,6 @@ BOOL loadConfig(void)
 		setWarzoneKeyNumeric("maxPlay", game.maxPlayers);
 	}
 
-	//compplay
-	if(getWarzoneKeyNumeric("compPlay", &val))
-	{
-		game.bComputerPlayers= val;
-	}
-	else
-	{
-		game.bComputerPlayers = FALSE;
-		setWarzoneKeyNumeric("compPlay", game.bComputerPlayers);
-	}
-
 	//alliance
 	if(getWarzoneKeyNumeric("alliance", &val))
 	{
@@ -623,7 +612,6 @@ BOOL saveConfig(void)
 		setWarzoneKeyNumeric("fog", game.fog);				// fog 'o war
 		setWarzoneKeyNumeric("limit", game.limit);			// limits
 		setWarzoneKeyNumeric("maxPlay", game.maxPlayers);		// max no of players
-		setWarzoneKeyNumeric("compPlay", game.bComputerPlayers);	// allow pc players
 		setWarzoneKeyNumeric("alliance", game.alliance);			// allow alliances
 		setWarzoneKeyString("forceName", sForceName);			// force
 		setWarzoneKeyString("playerName",(char*)sPlayer);		// player name

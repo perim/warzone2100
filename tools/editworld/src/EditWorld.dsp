@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir ".\Release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /D "EDITORWORLD" /FR /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GR /GX /O2 /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x809 /d "NDEBUG"
@@ -67,7 +67,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir ".\Debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /D "EDITORWORLD" /FR /YX /FD /c
+# ADD CPP /nologo /MDd /W3 /Gm /GR /GX /ZI /Od /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "_DEBUG" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x809 /d "_DEBUG"
@@ -126,7 +126,7 @@ SOURCE=.\ddimage.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\debugprint.c
+SOURCE=.\debugprint.cpp
 # End Source File
 # Begin Source File
 
@@ -154,15 +154,11 @@ SOURCE=.\fileparse.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\gateinterface.cpp
+SOURCE=.\gateway.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\gateway.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\gatewaysup.c
+SOURCE=.\gatewaysup.cpp
 # End Source File
 # Begin Source File
 
@@ -254,7 +250,7 @@ SOURCE=.\wfview.cpp
 # PROP Default_Filter "h;hpp;hxx;hm;inl;fi;fd"
 # Begin Source File
 
-SOURCE=.\autoflagdialog.h
+SOURCE=.\autoflagdialog.hpp
 # End Source File
 # Begin Source File
 
@@ -294,11 +290,7 @@ SOURCE=.\ddimage.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\debug.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\debugprint.h
+SOURCE=.\debugprint.hpp
 # End Source File
 # Begin Source File
 
@@ -326,11 +318,11 @@ SOURCE=.\fileparse.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\gateinterface.h
+SOURCE=.\gateway.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\gateway.h
+SOURCE=.\gateway.hpp
 # End Source File
 # Begin Source File
 
@@ -354,11 +346,11 @@ SOURCE=.\infodialog.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\initiallimitsdlg.h
+SOURCE=.\initiallimitsdlg.hpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\keyhandler.h
+SOURCE=.\keyhandler.hpp
 # End Source File
 # Begin Source File
 
@@ -374,7 +366,7 @@ SOURCE=.\macros.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\nainfrm.h
+SOURCE=.\mainfrm.h
 # End Source File
 # Begin Source File
 
@@ -402,7 +394,7 @@ SOURCE=.\resource.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\savesegmentdialog.h
+SOURCE=.\savesegmentdialog.hpp
 # End Source File
 # Begin Source File
 

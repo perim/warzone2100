@@ -56,7 +56,6 @@
 // ////////////////////////////////////////////////////////////////////////////
 // External Variables
 
-extern char	MultiForcesPath[255];
 extern char	buildTime[8];
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -333,98 +332,6 @@ BOOL joinCampaign(UDWORD gameNumber, char *sPlayer)
 }
 
 // ////////////////////////////////////////////////////////////////////////////
-// HostArena
-/*
-BOOL hostArena(char *sGame, char *sPlayer)
-{
-	PLAYERSTATS playerStats;
-	UDWORD		numpl,i,j,pl;
-
-	game.type = DMATCH;
-
-	freeMessages();
-	if(!NetPlay.bLobbyLaunched)
-	{
-		NEThostGame(sGame,sPlayer,DMATCH,0,0,0,game.maxPlayers);			// temporary stuff
-	}
-	else
-	{
-		NETsetGameFlags(1,DMATCH);
-	// 2 is average ping
-		NETsetGameFlags(3,0);
-		NETsetGameFlags(4,0);
-	}
-
-	bMultiPlayer = TRUE;
-
-	for(i=0;i<MAX_PLAYERS;i++)
-	{
-		player2dpid[i] =0;
-	}
-
-	//pick a player
-#if 0
-	pl =0;
-#else
-	pl = rand()%game.maxPlayers;
-#endif
-
-	player2dpid[pl] = NetPlay.dpidPlayer;							// add ourselves to the array.
-	selectedPlayer = pl;
-
-	ingame.localJoiningInProgress = TRUE;
-	ingame.JoiningInProgress[selectedPlayer] = TRUE;
-
-	loadMultiStats(sPlayer,&playerStats);						// load player stats!
-	setMultiStats(NetPlay.dpidPlayer,playerStats,FALSE);
-	setMultiStats(NetPlay.dpidPlayer,playerStats,TRUE);
-
-	numpl = NETplayerInfo(NULL);
-
-	// may be more than one player already. check and resolve!
-	if(numpl >1)
-	{
-		for(j = 0;j<MAX_PLAYERS;j++)
-		{
-			if(NetPlay.players[j].dpid && (NetPlay.players[j].dpid != NetPlay.dpidPlayer))
-			{
-				for(i = 0;player2dpid[i] != 0;i++);
-				player2dpid[i] = NetPlay.players[j].dpid;
-				ingame.JoiningInProgress[i] = TRUE;
-			}
-		}
-	}
-
-	return TRUE;
-}
-
-// ////////////////////////////////////////////////////////////////////////////
-// JoinArena.
-BOOL joinArena(UDWORD gameNumber, char *playerName)
-{
-	PLAYERSTATS	playerStats;
-
-	if(!ingame.localJoiningInProgress)
-	{
-		game.type = DMATCH;
-		if(!NetPlay.bLobbyLaunched)
-		{
-			NETjoinGame(NetPlay.games[gameNumber].desc.guidInstance,playerName);	// join
-		}
-		ingame.localJoiningInProgress	= TRUE;
-
-		loadMultiStats(playerName,&playerStats);
-		setMultiStats(NetPlay.dpidPlayer,playerStats,FALSE);
-		setMultiStats(NetPlay.dpidPlayer,playerStats,TRUE);
-		return FALSE;
-	}
-
-	bMultiPlayer = TRUE;
-	return TRUE;
-}
-*/
-
-// ////////////////////////////////////////////////////////////////////////////
 // Lobby launched. fires the correct routine when the game was lobby launched.
 BOOL LobbyLaunched(void)
 {
@@ -499,8 +406,6 @@ BOOL sendLeavingMsg(void)
 // called in Init.c to shutdown the whole netgame gubbins.
 BOOL multiShutdown(void)
 {
-	FORCE_MEMBER *pF;
-
 	debug(LOG_MAIN, "shutting down audio capture");
 
 	debug(LOG_MAIN, "shutting down audio playback");
@@ -508,15 +413,6 @@ BOOL multiShutdown(void)
 	// shut down netplay lib.
 	debug(LOG_MAIN, "shutting down networking");
   	NETshutdown();
-
-	// clear any force we may have.
-	debug(LOG_MAIN, "free game data (forces)");
-	while(Force.pMembers)
-	{
-		pF = Force.pMembers;
-		Force.pMembers = pF->psNext;
-		free(pF);
-	}
 
 	debug(LOG_MAIN, "free game data (structure limits)");
 	if(ingame.numStructureLimits)
@@ -535,7 +431,7 @@ BOOL multiShutdown(void)
 
 BOOL addTemplate(UDWORD player, DROID_TEMPLATE *psNew)
 {
-	DROID_TEMPLATE	*psTempl = malloc(sizeof(DROID_TEMPLATE));
+	DROID_TEMPLATE  *psTempl = malloc(sizeof(DROID_TEMPLATE));
 
 	if (psTempl == NULL)
 	{
@@ -596,30 +492,9 @@ BOOL copyTemplateSet(UDWORD from,UDWORD to)
 BOOL multiTemplateSetup(void)
 {
 	UDWORD player, pcPlayer = 0;
-	char			sTemp[256];
-
-
-	if(game.type == CAMPAIGN && game.base == CAMP_WALLS)
-	{
-		strcpy(sTemp, MultiForcesPath);
-		strcat(sTemp, sForceName);
-		strcat(sTemp,".for");
-
-		loadForce(sTemp);
-//		useTheForce(TRUE);
-	}
-
 
 	switch (game.type)
 	{
-//	case DMATCH:
-//		for(player=0;player<MAX_PLAYERS;player++)
-//		{
-//			 copyTemplateSet(DEATHMATCHTEMPLATES,player);
-//		}
-//		break;
-
-	case TEAMPLAY:
 	case CAMPAIGN:
 		for(player=0;player<game.maxPlayers;player++)
 		{
@@ -837,75 +712,6 @@ static BOOL cleanMap(UDWORD player)
 }
 
 // ////////////////////////////////////////////////////////////////////////////
-// setup a deathmatch game.
-/*
-static BOOL dMatchInit()
-{
-	UDWORD	i;
-	NETMSG	msg;
-	UDWORD	player;
-	BOOL	resourceFound = FALSE;
-	char	sTemp[256];
-
-	turnOffMultiMsg(TRUE);
-
-	for(i =0 ; i<MAX_PLAYERS;i++)
-	{
-		setPower(i,LEV_HI);							// set deathmatch power to hi.
-	}
-
-	strcpy(sTemp, "multiplay/forces/");
-	strcat(sTemp, sForceName);
-	strcat(sTemp,".for");
-	loadForce( sTemp);
-
-
-	freeMessages();									// CLEAR MESSAGES
-
-	if(NetPlay.bHost)								// it's new.
-	{
-
-	}
-	else
-	{
-		for(player=0;player<MAX_PLAYERS;player++)			// remove droids.
-		{
-			while(apsDroidLists[player])
-			{
-				killDroid(apsDroidLists[player]);
-			}
-
-			while(apsFeatureLists[player])
-			{
-				removeFeature(apsFeatureLists[player]);
-			}
-
-			while(apsStructLists[player])
-			{
-				removeStruct(apsStructLists[player]);
-			}
-		}
-
-	}
-	turnOffMultiMsg(FALSE);
-
-	if(NetPlay.bHost)
-	{
-														// dont do anything.
-	}
-	else
-	{
-		NetAdd(msg,0,NetPlay.dpidPlayer);				// start to request info.
-		NetAdd(msg,4,arenaPlayersReceived);				// player we require.
-		msg.size = 8;
-		msg.type = NET_REQUESTPLAYER;
-		NETbcast(msg,TRUE);
-	}
-
-	return TRUE;
-}
-*/
-// ////////////////////////////////////////////////////////////////////////////
 // setup a campaign game
 static BOOL campInit(void)
 {
@@ -967,7 +773,6 @@ static BOOL campInit(void)
 		memcpy(playerTeam,newPlayerTeam,MAX_PLAYERS * sizeof(newPlayerTeam[0]));
 	}
 
-
 	for(player = 0;player<game.maxPlayers;player++)			// clean up only to the player limit for this map..
 	{
 		if( (!isHumanPlayer(player)) && game.type != SKIRMISH)	// strip away unused players
@@ -979,9 +784,9 @@ static BOOL campInit(void)
 	}
 
 	// optionally remove other computer players.
-	if(  ( (game.type == TEAMPLAY || game.type == CAMPAIGN) && !game.bComputerPlayers )
-	   ||  (game.type == SKIRMISH)
-	  )
+	// HACK: if actual number of players is 8, then drop baba player to avoid
+	// exceeding player number (babas need a player, too!) - Per
+	if ((game.type == CAMPAIGN && game.maxPlayers > 7) || game.type == SKIRMISH)
 	{
 		for(player=game.maxPlayers;player<MAX_PLAYERS;player++)
 		{
@@ -996,11 +801,6 @@ static BOOL campInit(void)
 	}
 
 	playerResponding();			// say howdy!
-
-	if(game.type == CAMPAIGN && game.base == CAMP_WALLS)
-	{
-		useTheForce(TRUE);
-	}
 
 	return TRUE;
 }
@@ -1034,19 +834,7 @@ BOOL multiGameInit(void)
 		openchannels[player] =TRUE;								//open comms to this player.
 	}
 
-//	if(game.type == DMATCH)
-//	{
-//		dMatchInit();
-//		if(NetPlay.bHost)
-//		{
-//			addDMatchDroid(1);							// each player adds a newdroid point.
-//			playerResponding();							// say hi, only if host, clients wait until all info recvd.
-//		}
-//	}
-//	else
-//	{
-		campInit();
-//	}
+	campInit();
 
 	InitializeAIExperience();
 	msgStackReset();	//for multiplayer msgs, reset message stack
@@ -1084,7 +872,6 @@ BOOL multiGameShutdown(void)
 	NetPlay.bHost					= FALSE;
 	bMultiPlayer					= FALSE;	//back to single player mode
 	selectedPlayer					= 0;		//back to use player 0 (single player friendly)
-	bForceEditorLoaded				= FALSE;
 
 	return TRUE;
 }

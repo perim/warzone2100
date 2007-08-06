@@ -471,6 +471,19 @@ void	kf_TriFlip( void )
 }
 
 // --------------------------------------------------------------------------
+
+/* Debug info about a map tile */
+void	kf_TileInfo(void)
+{
+	MAPTILE	*psTile = mapTile(mouseTileX, mouseTileY);
+
+	debug(LOG_ERROR, "Tile position=(%d, %d) Terrain=%hhu Texture=%u Height=%hhu Illumination=%hhu",
+	      mouseTileX, mouseTileY, TERRAIN_TYPE(psTile), psTile->texture & TILE_NUMMASK, psTile->height,
+	      psTile->illumination);
+	addConsoleMessage("Tile info dumped into log", DEFAULT_JUSTIFY);
+}
+
+// --------------------------------------------------------------------------
 void	kf_ToggleBackgroundFog( void )
 {
 
@@ -1257,16 +1270,34 @@ void	kf_TogglePauseMode( void )
 
 // --------------------------------------------------------------------------
 // finish all the research for the selected player
+void	kf_FinishAllResearch(void)
+{
+	UDWORD	j;
+
+	for (j = 0; j < numResearch; j++)
+	{
+		PLAYER_RESEARCH	*pPlayerRes = asPlayerResList[selectedPlayer];
+
+		pPlayerRes += j; // select right tech
+		if (IsResearchCompleted(pPlayerRes) == FALSE)
+		{
+			MakeResearchCompleted(pPlayerRes);
+			researchResult(j, selectedPlayer, FALSE);
+		}
+	}
+	CONPRINTF(ConsoleString, (ConsoleString, _("Researched EVERYTHING for you!")));
+}
+
+// --------------------------------------------------------------------------
+// finish all the research for the selected player
 void	kf_FinishResearch( void )
 {
 	STRUCTURE	*psCurr;
 
-	//for (psCurr=apsStructLists[selectedPlayer]; psCurr; psCurr = psCurr->psNext)
 	for (psCurr=interfaceStructList(); psCurr; psCurr = psCurr->psNext)
 	{
 		if (psCurr->pStructureType->type == REF_RESEARCH)
 		{
-			//((RESEARCH_FACILITY *)psCurr->pFunctionality)->timeStarted = 0;
 			((RESEARCH_FACILITY *)psCurr->pFunctionality)->timeStarted = gameTime + 100000;
 			//set power accrued to high value so that will trigger straight away
 			((RESEARCH_FACILITY *)psCurr->pFunctionality)->powerAccrued = 10000;
@@ -1284,19 +1315,17 @@ void	kf_FinishResearch( void )
 // --------------------------------------------------------------------------
 void	kf_ToggleEnergyBars( void )
 {
-
 	toggleEnergyBars();
 	CONPRINTF(ConsoleString,(ConsoleString, _("Energy bars display toggled") ));
-
 }
+
 // --------------------------------------------------------------------------
 void	kf_ToggleReloadBars( void )
 {
-
 	toggleReloadBarDisplay();
 	CONPRINTF(ConsoleString,(ConsoleString, _("Energy bars display toggled") ));
-
 }
+
 // --------------------------------------------------------------------------
 void	kf_ToggleDemoMode( void )
 {
@@ -1437,6 +1466,7 @@ void	kf_SensorDisplayOff( void )
 #define IDRET_DESIGN		7		// design droids button
 #define IDRET_CANCEL		8		// central cancel button
 */
+
 // --------------------------------------------------------------------------
 void	kf_ChooseCommand( void )
 {
@@ -1444,15 +1474,8 @@ void	kf_ChooseCommand( void )
 	{
 		setKeyButtonMapping(IDRET_COMMAND);
 	}
-/*
-WIDGET *psWidg;
-W_BUTTON *psButton;
-
-	psWidg = widgGetFromID(psWScreen,IDRET_COMMAND);
-	psButton = (W_BUTTON*)psWidg;
-	buttonClicked(psButton,WKEY_PRIMARY);
-	*/
 }
+
 // --------------------------------------------------------------------------
 void	kf_ChooseManufacture( void )
 {
@@ -1460,17 +1483,8 @@ void	kf_ChooseManufacture( void )
 	{
 		setKeyButtonMapping(IDRET_MANUFACTURE);
 	}
-
-	/*
-WIDGET *psWidg;
-W_BUTTON *psButton;
-
-	psWidg = widgGetFromID(psWScreen,IDRET_MANUFACTURE);
-	psButton = (W_BUTTON*)psWidg;
-	buttonClicked(psButton,WKEY_PRIMARY);
-	*/
-
 }
+
 // --------------------------------------------------------------------------
 void	kf_ChooseResearch( void )
 {
@@ -1478,15 +1492,8 @@ void	kf_ChooseResearch( void )
 	{
 		setKeyButtonMapping(IDRET_RESEARCH);
 	}
-
-	/*
-WIDGET *psWidg;
-W_BUTTON *psButton;
-	psWidg = widgGetFromID(psWScreen,IDRET_RESEARCH);
-	psButton = (W_BUTTON*)psWidg;
-	buttonClicked(psButton,WKEY_PRIMARY);
-	 */
 }
+
 // --------------------------------------------------------------------------
 void	kf_ChooseBuild( void )
 {
@@ -1494,14 +1501,6 @@ void	kf_ChooseBuild( void )
 	{
 		setKeyButtonMapping(IDRET_BUILD);
 	}
-
-	/*
-WIDGET *psWidg;
-W_BUTTON *psButton;
-	psWidg = widgGetFromID(psWScreen,IDRET_BUILD);
-	psButton = (W_BUTTON*)psWidg;
-	buttonClicked(psButton,WKEY_PRIMARY);
-	*/
 }
 
 // --------------------------------------------------------------------------
@@ -1511,15 +1510,8 @@ void	kf_ChooseDesign( void )
 	{
 		setKeyButtonMapping(IDRET_DESIGN);
 	}
-
-	/*
-WIDGET *psWidg;
-W_BUTTON *psButton;
-	psWidg = widgGetFromID(psWScreen,IDRET_DESIGN);
-	psButton = (W_BUTTON*)psWidg;
-	buttonClicked(psButton,WKEY_PRIMARY);
-	*/
 }
+
 // --------------------------------------------------------------------------
 void	kf_ChooseIntelligence( void )
 {
@@ -1527,31 +1519,15 @@ void	kf_ChooseIntelligence( void )
 	{
 		setKeyButtonMapping(IDRET_INTEL_MAP);
 	}
-
-	/*
-WIDGET *psWidg;
-W_BUTTON *psButton;
-	psWidg = widgGetFromID(psWScreen,IDRET_INTEL_MAP);
-	psButton = (W_BUTTON*)psWidg;
-	buttonClicked(psButton,WKEY_PRIMARY);
-	*/
-
 }
+
 // --------------------------------------------------------------------------
 
 void	kf_ChooseCancel( void )
 {
 	setKeyButtonMapping(IDRET_CANCEL);
-
-/*
-WIDGET *psWidg;
-W_BUTTON *psButton;
-	psWidg = widgGetFromID(psWScreen,IDRET_CANCEL);
-	psButton = (W_BUTTON*)psWidg;
-	buttonClicked(psButton,WKEY_PRIMARY);
-  */
-
 }
+
 // --------------------------------------------------------------------------
 void	kf_ToggleDrivingMode( void )
 {
@@ -1609,6 +1585,7 @@ void	kf_MovePause( void )
 		}
 	}
 }
+
 // --------------------------------------------------------------------------
 void	kf_MoveToLastMessagePos( void )
 {
@@ -1671,12 +1648,13 @@ void	kf_SelectNextCyborgFactory(void)
 
 void	kf_KillEnemy( void )
 {
-UDWORD	player;
-DROID	*psCDroid,*psNDroid;
-//STRUCTURE	*psCStruct, *psNStruct;
+	UDWORD		player;
+	DROID		*psCDroid,*psNDroid;
+	STRUCTURE	*psCStruct, *psNStruct;
 
+	CONPRINTF(ConsoleString, (ConsoleString, _("Enemy destroyed by cheating!")));
 
-	for(player = 0; player<MAX_PLAYERS && !bMultiPlayer; player++)
+	for (player = 0; player < MAX_PLAYERS; player++)
 	{
 		if(player!=selectedPlayer)
 		{
@@ -1687,11 +1665,11 @@ DROID	*psCDroid,*psNDroid;
 				destroyDroid(psCDroid);
 			}
 			// wipe out all their structures
-		  //	for(psCStruct=apsStructLists[player]; psCStruct; psCStruct=psNStruct)
-		  //	{
-		  //		psNStruct = psCStruct->psNext;
-		  //		destroyStruct(psCStruct);
-		  //	}
+		  	for(psCStruct=apsStructLists[player]; psCStruct; psCStruct=psNStruct)
+		  	{
+		  		psNStruct = psCStruct->psNext;
+		  		destroyStruct(psCStruct);
+		  	}
 		}
 	}
 }
@@ -1701,15 +1679,6 @@ void kf_KillSelected(void)
 {
 	DROID		*psCDroid, *psNDroid;
 	STRUCTURE	*psCStruct, *psNStruct;
-
-
-#ifndef DEBUG
-if(bMultiPlayer)
-{
-	return;
-}
-#endif
-
 
 	for(psCDroid=apsDroidLists[selectedPlayer]; psCDroid; psCDroid=psNDroid)
 	{
@@ -1760,12 +1729,10 @@ void kf_ShowGridInfo(void)
 // --------------------------------------------------------------------------
 void kf_GiveTemplateSet(void)
 {
-
 	addTemplateSet(4,0);
 	addTemplateSet(4,1);
 	addTemplateSet(4,2);
 	addTemplateSet(4,3);
-
 }
 
 // --------------------------------------------------------------------------
@@ -1773,168 +1740,184 @@ void kf_GiveTemplateSet(void)
 void kf_SendTextMessage(void)
 {
 	char	ch;
-	char tmp[100];
+	char tmp[MAX_CONSOLE_STRING_LENGTH + 100];
 	SDWORD	i;
 
+	if(bAllowOtherKeyPresses)									// just starting.
 	{
-		if(bAllowOtherKeyPresses)									// just starting.
+		bAllowOtherKeyPresses = FALSE;
+		strcpy(sTextToSend,"");
+		strcpy(sCurrentConsoleText,"");							//for beacons
+		inputClearBuffer();
+	}
+
+	ch = (char)inputGetKey();
+	while (ch != 0)												// in progress
+	{
+		// Kill if they hit return - it maxes out console or it's more than one line long
+	   	if ((ch == INPBUF_CR) || (strlen(sTextToSend)>=MAX_CONSOLE_STRING_LENGTH-16) // Prefixes with ERROR: and terminates with '?'
+		 || iV_GetTextWidth(sTextToSend) > (pie_GetVideoBufferWidth()-64))// sendit
+	   //	if((ch == INPBUF_CR) || (strlen(sTextToSend)==MAX_TYPING_LENGTH)
 		{
-			bAllowOtherKeyPresses = FALSE;
-			strcpy(sTextToSend,"");
-			strcpy(sCurrentConsoleText,"");							//for beacons
-			inputClearBuffer();
+			bAllowOtherKeyPresses = TRUE;
+		 //	flushConsoleMessages();
+
+			strcpy(sCurrentConsoleText,"");		//reset beacon msg, since console is empty now
+
+			// don't send empty lines to other players
+			if(!strcmp(sTextToSend, ""))
+				return;
+
+			/* process console commands (only if skirmish or multiplayer, not a campaign) */
+			if((game.type == SKIRMISH) || bMultiPlayer)
+			{
+				if(processConsoleCommands(sTextToSend))
+				{
+					return;	//it was a console command, so don't send
+				}
+			}
+
+			//console callback message
+			//--------------------------
+			ConsolePlayer = selectedPlayer;
+			strcpy(ConsoleMsg,sTextToSend);
+			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_CONSOLE);
+
+
+			if(bMultiPlayer && NetPlay.bComms)
+			{
+				sendTextMessage(sTextToSend,FALSE);
+			}
+			else
+			{
+				//show the message we sent on our local console as well (even in skirmish, to see console commands)
+				//sprintf(tmp,"%d",selectedPlayer);
+
+				sprintf(tmp,"%s",getPlayerName(selectedPlayer));
+				strcat(tmp," : ");											// seperator
+				strcat(tmp,sTextToSend);											// add message
+				addConsoleMessage(tmp,DEFAULT_JUSTIFY);
+
+				//in skirmish send directly to AIs, for command and chat procesing
+				for(i=0; i<game.maxPlayers; i++)		//don't use MAX_PLAYERS here, although possible
+				{
+					if(openchannels[i] && i != selectedPlayer)
+					{
+						sendAIMessage(sTextToSend, selectedPlayer, i);
+					}
+				}
+
+				if (getDebugMappingStatus())
+				{
+					attemptCheatCode(sTextToSend);
+				}
+			}
+			return;
+		}
+		else if(ch == INPBUF_BKSPACE )							// delete
+		{
+			if(sTextToSend[0] != '\0')							// cant delete nothing!
+			{
+				sTextToSend[strlen(sTextToSend)-1]= '\0';
+				strcpy(sCurrentConsoleText,sTextToSend);		//beacons
+			}
+		}
+		else if(ch == INPBUF_ESC)								//abort.
+		{
+			bAllowOtherKeyPresses = TRUE;
+			strcpy(sCurrentConsoleText,"");
+		 //	flushConsoleMessages();
+			return;
+		}
+		else							 						// display
+		{
+			sprintf(sTextToSend,"%s%c",sTextToSend,inputGetCharKey());
+			strcpy(sCurrentConsoleText,sTextToSend);
 		}
 
 		ch = (char)inputGetKey();
-		while(ch != 0)												// in progress
-		{
-			// Kill if they hit return - it maxes out console or it's more than one line long
-		   	if((ch == INPBUF_CR) || (strlen(sTextToSend)>=MAX_CONSOLE_STRING_LENGTH-16) // Prefixes with ERROR: and terminates with '?'
-				|| iV_GetTextWidth(sTextToSend) > (pie_GetVideoBufferWidth()-64))// sendit
-		   //	if((ch == INPBUF_CR) || (strlen(sTextToSend)==MAX_TYPING_LENGTH)
-			{
-				bAllowOtherKeyPresses = TRUE;
-			 //	flushConsoleMessages();
-
-				strcpy(sCurrentConsoleText,"");		//reset beacon msg, since console is empty now
-
-				// don't send empty lines to other players
-				if(!strcmp(sTextToSend, ""))
-					return;
-
-				/* process console commands (only if skirmish or multiplayer, not a campaign) */
-				if((game.type == SKIRMISH) || bMultiPlayer)
-				{
-					if(processConsoleCommands(sTextToSend))
-					{
-						return;	//it was a console command, so don't send
-					}
-				}
-
-				//console callback message
-				//--------------------------
-				ConsolePlayer = selectedPlayer;
-				strcpy(ConsoleMsg,sTextToSend);
-				eventFireCallbackTrigger((TRIGGER_TYPE)CALL_CONSOLE);
-
-
-				if(bMultiPlayer && NetPlay.bComms)
-				{
-					sendTextMessage(sTextToSend,FALSE);
-				}
-				else
-				{
-					//show the message we sent on our local console as well (even in skirmish, to see console commands)
-					//sprintf(tmp,"%d",selectedPlayer);
-
-					sprintf(tmp,"%s",getPlayerName(selectedPlayer));
-					strcat(tmp," : ");											// seperator
-					strcat(tmp,sTextToSend);											// add message
-					addConsoleMessage(tmp,DEFAULT_JUSTIFY);
-
-					//in skirmish send directly to AIs, for command and chat procesing
-					for(i=0; i<game.maxPlayers; i++)		//don't use MAX_PLAYERS here, although possible
-					{
-						if(openchannels[i] && i != selectedPlayer)
-						{
-							(void)sendAIMessage(sTextToSend, selectedPlayer, i);
-						}
-					}
-
-					if (getDebugMappingStatus())
-					{
-						(void) attemptCheatCode(sTextToSend);
-					}
-				}
-				return;
-			}
-			else if(ch == INPBUF_BKSPACE )							// delete
-			{
-				if(sTextToSend[0] != '\0')							// cant delete nothing!
-				{
-					sTextToSend[strlen(sTextToSend)-1]= '\0';
-					strcpy(sCurrentConsoleText,sTextToSend);		//beacons
-				}
-			}
-			else if(ch == INPBUF_ESC)								//abort.
-			{
-				bAllowOtherKeyPresses = TRUE;
-				strcpy(sCurrentConsoleText,"");
-			 //	flushConsoleMessages();
-				return;
-			}
-			else							 						// display
-			{
-				sprintf(sTextToSend,"%s%c",sTextToSend,inputGetCharKey());
-				strcpy(sCurrentConsoleText,sTextToSend);
-			}
-
-			ch = (char)inputGetKey();
-		}
-
-		// macro store stuff
-		if(keyPressed(KEY_F1)){
-			if(keyDown(KEY_LCTRL)){
-				strcpy(ingame.phrases[0],sTextToSend );
-			}else{
-				strcpy(sTextToSend,ingame.phrases[0]);
-				bAllowOtherKeyPresses = TRUE;
-			 //	flushConsoleMessages();
-				sendTextMessage(sTextToSend,FALSE);
-				return;
-			}
-		}
-		if(keyPressed(KEY_F2)){
-			if(keyDown(KEY_LCTRL)){
-				strcpy(ingame.phrases[1],sTextToSend );
-			}else{
-				strcpy(sTextToSend,ingame.phrases[1]);
-				bAllowOtherKeyPresses = TRUE;
-			//	flushConsoleMessages();
-				sendTextMessage(sTextToSend,FALSE);
-				return;
-			}
-		}
-		if(keyPressed(KEY_F3)){
-			if(keyDown(KEY_LCTRL)){
-				strcpy(ingame.phrases[2],sTextToSend );
-			}else{
-				strcpy(sTextToSend,ingame.phrases[2]);
-				bAllowOtherKeyPresses = TRUE;
-			//	flushConsoleMessages();
-				sendTextMessage(sTextToSend,FALSE);
-				return;
-			}
-		}
-		if(keyPressed(KEY_F4)){
-			if(keyDown(KEY_LCTRL)){
-				strcpy(ingame.phrases[3],sTextToSend );
-			}else{
-				strcpy(sTextToSend,ingame.phrases[3]);
-				bAllowOtherKeyPresses = TRUE;
-			//	flushConsoleMessages();
-				sendTextMessage(sTextToSend,FALSE);
-				return;
-			}
-		}
-		if(keyPressed(KEY_F5)){
-			if(keyDown(KEY_LCTRL)){
-				strcpy(ingame.phrases[4],sTextToSend );
-			}else{
-				strcpy(sTextToSend,ingame.phrases[4]);
-				bAllowOtherKeyPresses = TRUE;
-			 //	flushConsoleMessages();
-				sendTextMessage(sTextToSend,FALSE);
-				return;
-			}
-		}
-
-//		flushConsoleMessages();								//clear
-//		addConsoleMessage(sTextToSend,DEFAULT_JUSTIFY);		//display
-//		iV_DrawText(sTextToSend,16+D_W,RADTLY+D_H-16);
-		return;
 	}
 
+	// macro store stuff
+	if (keyPressed(KEY_F1))
+	{
+		if(keyDown(KEY_LCTRL))
+		{
+			strcpy(ingame.phrases[0],sTextToSend );
+		}
+		else
+		{
+			strcpy(sTextToSend,ingame.phrases[0]);
+			bAllowOtherKeyPresses = TRUE;
+		 //	flushConsoleMessages();
+			sendTextMessage(sTextToSend,FALSE);
+			return;
+		}
+	}
+	if (keyPressed(KEY_F2))
+	{
+		if(keyDown(KEY_LCTRL))
+		{
+			strcpy(ingame.phrases[1],sTextToSend );
+		}
+		else
+		{
+			strcpy(sTextToSend,ingame.phrases[1]);
+			bAllowOtherKeyPresses = TRUE;
+		//	flushConsoleMessages();
+			sendTextMessage(sTextToSend,FALSE);
+			return;
+		}
+	}
+	if (keyPressed(KEY_F3))
+	{
+		if(keyDown(KEY_LCTRL))
+		{
+			strcpy(ingame.phrases[2],sTextToSend );
+		}
+		else
+		{
+			strcpy(sTextToSend,ingame.phrases[2]);
+			bAllowOtherKeyPresses = TRUE;
+		//	flushConsoleMessages();
+			sendTextMessage(sTextToSend,FALSE);
+			return;
+		}
+	}
+	if (keyPressed(KEY_F4))
+	{
+		if(keyDown(KEY_LCTRL))
+		{
+			strcpy(ingame.phrases[3],sTextToSend );
+		}
+		else
+		{
+			strcpy(sTextToSend,ingame.phrases[3]);
+			bAllowOtherKeyPresses = TRUE;
+		//	flushConsoleMessages();
+			sendTextMessage(sTextToSend,FALSE);
+			return;
+		}
+	}
+	if (keyPressed(KEY_F5))
+	{
+		if(keyDown(KEY_LCTRL))
+		{
+			strcpy(ingame.phrases[4],sTextToSend );
+		}
+		else
+		{
+			strcpy(sTextToSend,ingame.phrases[4]);
+			bAllowOtherKeyPresses = TRUE;
+		 //	flushConsoleMessages();
+			sendTextMessage(sTextToSend,FALSE);
+			return;
+		}
+	}
+
+//	flushConsoleMessages();								//clear
+//	addConsoleMessage(sTextToSend,DEFAULT_JUSTIFY);		//display
+//	iV_DrawText(sTextToSend,16+D_W,RADTLY+D_H-16);
 }
 // --------------------------------------------------------------------------
 void	kf_ToggleConsole( void )

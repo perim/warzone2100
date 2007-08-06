@@ -54,7 +54,6 @@
 #include "intdisplay.h"
 #include "design.h"
 #include "hci.h"
-#include "csnap.h"
 #include "power.h"
 #include "loadsave.h"			// for blueboxes.
 // FIXME Direct iVis implementation include!
@@ -88,7 +87,6 @@
 
 // ////////////////////////////////////////////////////////////////////////////
 // vars
-extern char	MultiForcesPath[255];
 extern char	MultiCustomMapsPath[255];
 extern char	MultiPlayersPath[255];
 
@@ -126,8 +124,6 @@ static	UBYTE				curWhite = 0;
 
 static UDWORD hideTime=0;
 
-#define FORCEEDIT_POWER		1200
-
 #define DEFAULTCAMPAIGNMAP	"Rush"
 #define DEFAULTSKIRMISHMAP	"Sk-Rush"
 
@@ -149,7 +145,6 @@ void		displayRemoteGame			(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDW
 void		displayPlayer				(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
 void		displayTeamChooser				(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
 void		displayMultiEditBox			(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
-void		displayForceDroid			(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
 void		setLockedTeamsMode			(void);
 
 // find games
@@ -191,10 +186,6 @@ static BOOL		safeToUseColour		(UDWORD player,UDWORD col);
 BOOL			chooseColour		(UDWORD);
 BOOL			recvColourRequest	(NETMSG *pMsg);
 
-// Force selection functions
-static void		AvailableForces		(void);				// draw available templates
-static void		CurrentForce		(void);				// draw the current force
-
 // ////////////////////////////////////////////////////////////////////////////
 // map previews..
 
@@ -228,14 +219,14 @@ void loadMapPreview(void)
 	pFileData = fileLoadBuffer;
 	if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 	{
-		debug(LOG_NEVER, "loadMapPreview: Failed to load terrain types file");
+		debug(LOG_ERROR, "loadMapPreview: Failed to load terrain types file");
 		return;
 	}
 	if (pFileData)
 	{
 		if (!loadTerrainTypeMap(pFileData, fileSize))
 		{
-			debug(LOG_NEVER, "loadMapPreview: Failed to load terrain types");
+			debug(LOG_ERROR, "loadMapPreview: Failed to load terrain types");
 			return;
 		}
 	}
@@ -247,12 +238,12 @@ void loadMapPreview(void)
 	pFileData = fileLoadBuffer;
 	if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 	{
-		debug(LOG_NEVER, "loadMapPreview: Failed to load map file");
+		debug(LOG_ERROR, "loadMapPreview: Failed to load map file");
 		return;
 	}
 	if (!mapLoad(pFileData, fileSize))
 	{
-		debug(LOG_NEVER, "loadMapPreview: Failed to load map");
+		debug(LOG_ERROR, "loadMapPreview: Failed to load map");
 		return;
 	}
 	gwShutDown();
@@ -437,8 +428,6 @@ void runConnectionScreen(void )
 	static char addr[128];
 	void * finalconnection;
 
-	processFrontendSnap(TRUE);
-
 	if(SettingsUp ==1)
 	{
 		id = widgRunScreen(psConScreen);				// Run the current set of widgets
@@ -518,8 +507,6 @@ void runConnectionScreen(void )
 			changeTitleMode(GAMEFIND);
 		}
 	}
-
-	StartCursorSnap(&InterfaceSnap);
 
 	widgDisplayScreen(psWScreen);							// show the widgets currently running
 	if(SettingsUp == 1)
@@ -606,8 +593,6 @@ void runGameFind(void )
 		addGames();									//redraw list
 	}
 
-	processFrontendSnap(FALSE);
-
 	id = widgRunScreen(psWScreen);						// Run the current set of widgets
 
 	if(id == CON_CANCEL)								// ok
@@ -642,16 +627,7 @@ void runGameFind(void )
 			ingame.localOptionsReceived = FALSE;			// note we are awaiting options
 			strcpy(game.name, NetPlay.games[gameNumber].name);		// store name
 
-//			strcpy(sPlayer,"LastUsed");
-//			loadMultiStats(sPlayer,&nullStats);
-//			if(NETgetGameFlagsUnjoined(gameNumber,1) == DMATCH)
-//			{
-//				joinArena(gameNumber,(char*)sPlayer);
-//			}
-//			else
-//			{
-				joinCampaign(gameNumber,(char*)sPlayer);
-//			}
+			joinCampaign(gameNumber,(char*)sPlayer);
 
 			changeTitleMode(MULTIOPTION);
 		}
@@ -660,13 +636,11 @@ void runGameFind(void )
 
 FAIL:
 
-	StartCursorSnap(&InterfaceSnap);
-
 	widgDisplayScreen(psWScreen);								// show the widgets currently running
 	if(safeSearch)
 	{
 		iV_SetFont(FEFont);
-		pie_DrawText(_("Searching"), D_W+260, D_H+460);
+		iV_DrawText(_("Searching"), D_W+260, D_H+460);
 	}
 }
 
@@ -767,37 +741,22 @@ static void addGameOptions(BOOL bRedo)
 	addMultiEditBox(MULTIOP_OPTIONS,MULTIOP_GNAME,MCOL0,MROW2,_("Select Game Name"), game.name ,IMAGE_EDIT_GAME,MULTIOP_GNAME_ICON);
 	addMultiEditBox(MULTIOP_OPTIONS,MULTIOP_MAP  ,MCOL0,MROW3,_("Select Map"), game.map ,IMAGE_EDIT_MAP,MULTIOP_MAP_ICON);
 
-
 	// buttons.
 
 	// game type
-	addBlueForm(MULTIOP_OPTIONS,MULTIOP_GAMETYPE,_("Game"),MCOL0,MROW5,MULTIOP_BLUEFORMW,27);
-//	addMultiBut(psWScreen,MULTIOP_GAMETYPE,MULTIOP_ARENA,	MCOL1, 2 , MULTIOP_BUTW,MULTIOP_BUTH,
-//				_("Deathmatch Mode"),   IMAGE_ARENA,   IMAGE_ARENA_HI,TRUE);		//arena
+	addBlueForm(MULTIOP_OPTIONS,MULTIOP_GAMETYPE,_("Game"),MCOL0,MROW4,MULTIOP_BLUEFORMW,27);
 	addMultiBut(psWScreen,MULTIOP_GAMETYPE,MULTIOP_CAMPAIGN,MCOL1, 2 , MULTIOP_BUTW,MULTIOP_BUTH,
-				_("Campaign Mode"),IMAGE_CAMPAIGN,IMAGE_CAMPAIGN_HI,TRUE);	//camp
-
-	addMultiBut(psWScreen,MULTIOP_GAMETYPE,MULTIOP_TEAMPLAY,MCOL2, 2 , MULTIOP_BUTW,MULTIOP_BUTH,
-				_("Team Play"),IMAGE_TEAM,IMAGE_TEAM_HI,TRUE);			//teamplay
-
-	addMultiBut(psWScreen,MULTIOP_GAMETYPE,MULTIOP_SKIRMISH,MCOL3, 2 , MULTIOP_BUTW,MULTIOP_BUTH,
+				_("Mayhem"), IMAGE_ARENA, IMAGE_ARENA_HI, TRUE);	//camp
+	addMultiBut(psWScreen,MULTIOP_GAMETYPE,MULTIOP_SKIRMISH,MCOL2, 2 , MULTIOP_BUTW,MULTIOP_BUTH,
 				_("Skirmish"),IMAGE_SKIRMISH,IMAGE_SKIRMISH_HI,TRUE);	//skirmish
 
-//	widgSetButtonState(psWScreen, MULTIOP_ARENA,	0);
 	widgSetButtonState(psWScreen, MULTIOP_CAMPAIGN,	0);
-	widgSetButtonState(psWScreen, MULTIOP_TEAMPLAY,	0);
 	widgSetButtonState(psWScreen, MULTIOP_SKIRMISH,	0);
 
 	switch(game.type)
 	{
-//	case DMATCH:
-//		widgSetButtonState(psWScreen,MULTIOP_ARENA,WBUT_LOCK);
-//		break;
 	case CAMPAIGN:
 		widgSetButtonState(psWScreen,MULTIOP_CAMPAIGN,WBUT_LOCK);
-		break;
-	case TEAMPLAY:
-		widgSetButtonState(psWScreen,MULTIOP_TEAMPLAY,WBUT_LOCK);
 		break;
 	case SKIRMISH:
 		widgSetButtonState(psWScreen,MULTIOP_SKIRMISH,WBUT_LOCK);
@@ -807,17 +766,13 @@ static void addGameOptions(BOOL bRedo)
 	if(!NetPlay.bComms)
 	{
 		widgSetButtonState(psWScreen, MULTIOP_CAMPAIGN, WBUT_DISABLE);
-//		widgSetButtonState(psWScreen, MULTIOP_ARENA,	WBUT_DISABLE);
-		widgSetButtonState(psWScreen, MULTIOP_TEAMPLAY, WBUT_DISABLE);
 	}
 
 	//just display the game options.
 	addMultiEditBox(MULTIOP_OPTIONS,MULTIOP_PNAME,MCOL0,MROW1, _("Select Player Name"),(char*) sPlayer,IMAGE_EDIT_PLAYER,MULTIOP_PNAME_ICON);
-	addMultiEditBox(MULTIOP_OPTIONS,MULTIOP_FNAME,MCOL0,MROW4, _("Select Force"), sForceName,IMAGE_EDIT_FORCE,MULTIOP_FNAME_ICON);
-
 
 	// Fog type
-	addBlueForm(MULTIOP_OPTIONS,MULTIOP_FOG,_("Fog"),MCOL0,MROW6,MULTIOP_BLUEFORMW,27);
+	addBlueForm(MULTIOP_OPTIONS,MULTIOP_FOG,_("Fog"),MCOL0,MROW5,MULTIOP_BLUEFORMW,27);
 
 	addMultiBut(psWScreen,MULTIOP_FOG,MULTIOP_FOG_ON ,MCOL1,2,MULTIOP_BUTW,MULTIOP_BUTH, _("Fog Of War"), IMAGE_FOG_OFF, IMAGE_FOG_OFF_HI,TRUE);//black stuff
 	addMultiBut(psWScreen,MULTIOP_FOG,MULTIOP_FOG_OFF,MCOL2,2,MULTIOP_BUTW,MULTIOP_BUTH, _("Distance Fog"),IMAGE_FOG_ON,IMAGE_FOG_ON_HI,TRUE);
@@ -830,18 +785,10 @@ static void addGameOptions(BOOL bRedo)
 		widgSetButtonState(psWScreen, MULTIOP_FOG_OFF,WBUT_LOCK);
 	}
 
-
-	if(game.type != TEAMPLAY)
+	if (game.type != CAMPAIGN)
 	{
 		// alliances
-//		if(game.type == DMATCH)
-//		{
-//			addBlueForm(MULTIOP_OPTIONS,MULTIOP_ALLIANCES,_("Alliances"),MCOL0,MROW7,MULTIOP_BLUEFORMW,27);
-//		}
-//		else
-//		{
-			addBlueForm(MULTIOP_OPTIONS,MULTIOP_ALLIANCES,_("Alliances"),MCOL0,MROW8,MULTIOP_BLUEFORMW,27);
-//		}
+		addBlueForm(MULTIOP_OPTIONS, MULTIOP_ALLIANCES, _("Alliances"), MCOL0, MROW6, MULTIOP_BLUEFORMW, 27);
 
 		addMultiBut(psWScreen,MULTIOP_ALLIANCES,MULTIOP_ALLIANCE_N,MCOL1,2,MULTIOP_BUTW,MULTIOP_BUTH,
 				_("No Alliances"),IMAGE_NOALLI,IMAGE_NOALLI_HI,TRUE);
@@ -855,15 +802,6 @@ static void addGameOptions(BOOL bRedo)
 		widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_N,0);				//hilight correct entry
 		widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_Y,0);
 		widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_TEAMS,0);
-
-		//can't have ALLIANCES_TEAMS in campaign mode
-		if(game.type == CAMPAIGN)
-		{
-			if(game.alliance == ALLIANCES_TEAMS)
-				game.alliance = NO_ALLIANCES;
-
-			widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_TEAMS, WBUT_DISABLE);		//disable
-		}
 
 		switch(game.alliance)
 		{
@@ -879,46 +817,17 @@ static void addGameOptions(BOOL bRedo)
 		}
 	}
 
-/*	if(game.type == DMATCH)
+	if(game.type == CAMPAIGN || game.type == SKIRMISH)
 	{
-
-		// limit options
-		addBlueForm(MULTIOP_OPTIONS,MULTIOP_LIMIT,_("Limits") ,MCOL0,MROW8,MULTIOP_BLUEFORMW,27);
-		addMultiBut(psWScreen,MULTIOP_LIMIT,MULTIOP_NOLIMIT,MCOL1,2,MULTIOP_BUTW,MULTIOP_BUTH,
-			_("No Limits"),IMAGE_NOLIMIT,IMAGE_NOLIMIT_HI,TRUE);
-		addMultiBut(psWScreen,MULTIOP_LIMIT,MULTIOP_FRAGLIMIT,MCOL2,2,MULTIOP_BUTW,MULTIOP_BUTH,
-			_("Kill Limit"),IMAGE_FRAGLIMIT,IMAGE_FRAGLIMIT_HI,TRUE);
-		addMultiBut(psWScreen,MULTIOP_LIMIT,MULTIOP_TIMELIMIT, MCOL3, 2,MULTIOP_BUTW,MULTIOP_BUTH,
-			_("Time Limit"),IMAGE_TIMELIMIT,IMAGE_TIMELIMIT_HI,TRUE);
-		widgSetButtonState(psWScreen, MULTIOP_NOLIMIT,0);		//hilight correct entry
-		widgSetButtonState(psWScreen, MULTIOP_FRAGLIMIT,0);
-		widgSetButtonState(psWScreen, MULTIOP_TIMELIMIT ,0);
-		switch(game.limit)
-		{
-		case NOLIMIT:
-			widgSetButtonState(psWScreen, MULTIOP_NOLIMIT,WBUT_LOCK);
-			break;
-		case FRAGLIMIT:
-			widgSetButtonState(psWScreen, MULTIOP_FRAGLIMIT,WBUT_LOCK);
-			break;
-		case TIMELIMIT:
-			widgSetButtonState(psWScreen, MULTIOP_TIMELIMIT,WBUT_LOCK);
-			break;
-		}
-	}
-*/
-	if  (game.type == SKIRMISH || game.base != CAMP_WALLS )
-//	  ||(game.type != DMATCH && game.base != CAMP_WALLS))
-	{
-		widgSetButtonState(psWScreen, MULTIOP_FNAME,WEDBS_DISABLE);		// disable force buts
-		widgSetButtonState(psWScreen, MULTIOP_FNAME_ICON,WBUT_DISABLE);
-	}
-
-	if(game.type == CAMPAIGN || game.type == SKIRMISH || game.type == TEAMPLAY)
-	{
-
 		// pow levels
-		addBlueForm(MULTIOP_OPTIONS,MULTIOP_POWER,_("Power"),MCOL0,MROW9,MULTIOP_BLUEFORMW,27);
+		if (game.type == CAMPAIGN)
+		{
+			addBlueForm(MULTIOP_OPTIONS,MULTIOP_POWER,_("Power"),MCOL0,MROW6,MULTIOP_BLUEFORMW,27);
+		}
+		else
+		{
+			addBlueForm(MULTIOP_OPTIONS,MULTIOP_POWER,_("Power"),MCOL0,MROW7,MULTIOP_BLUEFORMW,27);
+		}
 		addMultiBut(psWScreen,MULTIOP_POWER,MULTIOP_POWLEV_LOW,MCOL1,2,MULTIOP_BUTW,MULTIOP_BUTH,
 			_("Low Power Levels"),IMAGE_POWLO,IMAGE_POWLO_HI,TRUE);
 		addMultiBut(psWScreen,MULTIOP_POWER,MULTIOP_POWLEV_MED,MCOL2,2,MULTIOP_BUTW,MULTIOP_BUTH,
@@ -942,7 +851,14 @@ static void addGameOptions(BOOL bRedo)
 		}
 
 		//type clean/base/defence
-		addBlueForm(MULTIOP_OPTIONS,MULTIOP_BASETYPE,_("Base"),MCOL0,MROW7,MULTIOP_BLUEFORMW,27);
+		if (game.type == CAMPAIGN)
+		{
+			addBlueForm(MULTIOP_OPTIONS, MULTIOP_BASETYPE, _("Base"), MCOL0, MROW7, MULTIOP_BLUEFORMW, 27);
+		}
+		else
+		{
+			addBlueForm(MULTIOP_OPTIONS, MULTIOP_BASETYPE, _("Base"), MCOL0, MROW8, MULTIOP_BLUEFORMW, 27);
+		}
 		addMultiBut(psWScreen,MULTIOP_BASETYPE,MULTIOP_CLEAN,MCOL1,2,MULTIOP_BUTW,MULTIOP_BUTH,
 				_("Start with No Bases"), IMAGE_NOBASE,IMAGE_NOBASE_HI,TRUE);
 		addMultiBut(psWScreen,MULTIOP_BASETYPE,MULTIOP_BASE,MCOL2,2,MULTIOP_BUTW,MULTIOP_BUTH,
@@ -966,44 +882,6 @@ static void addGameOptions(BOOL bRedo)
 		}
 	}
 
-	if(game.type == CAMPAIGN  || game.type == TEAMPLAY)
-	{
-
-		//type opposition/no computer opposition
-		if(game.type == CAMPAIGN)
-		{
-			addBlueForm(MULTIOP_OPTIONS,MULTIOP_COMPUTER,_("Computer"),MCOL0,MROW10,MULTIOP_BLUEFORMW,27);
-		}
-		else
-		{
-			addBlueForm(MULTIOP_OPTIONS,MULTIOP_COMPUTER,_("Computer"),MCOL0,MROW8,MULTIOP_BLUEFORMW,27);
-		}
-
-		addMultiBut(psWScreen,MULTIOP_COMPUTER,MULTIOP_COMPUTER_Y,MCOL1,2,MULTIOP_BUTW,MULTIOP_BUTH,
-				_("Computer Opponents"),IMAGE_COMPUTER_Y,IMAGE_COMPUTER_Y_HI,TRUE);
-		addMultiBut(psWScreen,MULTIOP_COMPUTER,MULTIOP_COMPUTER_N,MCOL2,2,MULTIOP_BUTW,MULTIOP_BUTH,
-				_("No Computer Opponents"),IMAGE_COMPUTER_N,IMAGE_COMPUTER_N_HI,TRUE);
-		widgSetButtonState(psWScreen, MULTIOP_COMPUTER_Y,0);						//hilight correct entry
-		widgSetButtonState(psWScreen, MULTIOP_COMPUTER_N,0);
-		switch(game.bComputerPlayers)
-		{
-		case FALSE:
-			widgSetButtonState(psWScreen, MULTIOP_COMPUTER_N,WBUT_LOCK);
-			break;
-		case TRUE:
-			widgSetButtonState(psWScreen, MULTIOP_COMPUTER_Y,WBUT_LOCK);
-			break;
-		}
-
-		//remove PC players for 7/8 player maps.
-		if(game.maxPlayers >6)
-		{
-			widgSetButtonState(psWScreen, MULTIOP_COMPUTER_N,WBUT_DISABLE);
-			widgSetButtonState(psWScreen, MULTIOP_COMPUTER_Y,WBUT_DISABLE);
-		}
-
-	}
-
 	// cancel
 	addMultiBut(psWScreen,MULTIOP_OPTIONS,CON_CANCEL,
 		MULTIOP_CANCELX,MULTIOP_CANCELY,
@@ -1021,7 +899,7 @@ static void addGameOptions(BOOL bRedo)
 
 	// hosted or hosting.
 	// limits button.
-	if(ingame.bHostSetup )//&& (game.type != DMATCH))
+	if(ingame.bHostSetup )
 	{
 		addMultiBut(psWScreen,MULTIOP_OPTIONS,MULTIOP_STRUCTLIMITS,MULTIOP_STRUCTLIMITSX,MULTIOP_STRUCTLIMITSY,
 					35,28, _("Set Structure Limits"),IMAGE_SLIM,IMAGE_SLIM_HI,FALSE);
@@ -1045,7 +923,6 @@ static void addGameOptions(BOOL bRedo)
 //	widgSetButtonState(psWScreen, MULTIOP_MAP_ICON,WBUT_DISABLE);
 
 	widgSetButtonState(psWScreen, MULTIOP_DEFENCE,WBUT_DISABLE);
-//	widgSetButtonState(psWScreen, MULTIOP_ARENA,WBUT_DISABLE);
 	widgSetButtonState(psWScreen, MULTIOP_SKIRMISH,WBUT_DISABLE);
 #endif
 
@@ -1075,22 +952,6 @@ static BOOL safeToUseColour(UDWORD player,UDWORD col)
 		}
 	}
 
-	// no computer player is using it
-/*	if(game.type == SKIRMISH)
-	{
-		if( (col<game.maxPlayers) )
-		{
-			for(i=0;i<game.maxPlayers;i++)
-			{
-				// check no player is using it...
-				if( (i!=player) && !isHumanPlayer(i) && (getPlayerColour(i) == col) )
-				{
-					return FALSE;
-				}
-			}
-		}
-	}
-	*/
 	return TRUE;
 }
 
@@ -1604,38 +1465,15 @@ static void disableMultiButs(void)
 	widgSetButtonState(psWScreen,MULTIOP_GNAME,WEDBS_DISABLE);
 	widgSetButtonState(psWScreen,MULTIOP_MAP,WEDBS_DISABLE);
 
-	// force choice.
-	if  (game.type == SKIRMISH || game.base != CAMP_WALLS )
-//	if  (game.type == SKIRMISH ||(game.type != DMATCH && game.base != CAMP_WALLS ))
-	{
-		widgSetButtonState(psWScreen,MULTIOP_FNAME_ICON,WBUT_DISABLE);
-		widgSetButtonState(psWScreen,MULTIOP_FNAME,WEDBS_DISABLE);
-	}
-
 	if(game.type != CAMPAIGN)	widgSetButtonState(psWScreen, MULTIOP_CAMPAIGN, WBUT_DISABLE);
-//	if(game.type != DMATCH)		widgSetButtonState(psWScreen, MULTIOP_ARENA,	WBUT_DISABLE);
 	if(game.type != SKIRMISH)	widgSetButtonState(psWScreen, MULTIOP_SKIRMISH, WBUT_DISABLE);
-	if(game.type != TEAMPLAY)	widgSetButtonState(psWScreen, MULTIOP_TEAMPLAY, WBUT_DISABLE);
 
 	if(! NetPlay.bHost)
 	{
 		if( game.fog) widgSetButtonState(psWScreen,MULTIOP_FOG_OFF ,WBUT_DISABLE);		//fog
 		if(!game.fog) widgSetButtonState(psWScreen,MULTIOP_FOG_ON ,WBUT_DISABLE);
 
-//		if(  game.type == DMATCH )
-//		{
-//			if(game.limit != NOLIMIT)	widgSetButtonState(psWScreen, MULTIOP_NOLIMIT,WBUT_DISABLE);	// limit levels
-//			if(game.limit != FRAGLIMIT)	widgSetButtonState(psWScreen, MULTIOP_FRAGLIMIT,WBUT_DISABLE);
-//			if(game.limit != TIMELIMIT)	widgSetButtonState(psWScreen, MULTIOP_TIMELIMIT,WBUT_DISABLE);
-//		}
-
-		if( game.type == CAMPAIGN)
-		{
-			if(game.bComputerPlayers)	widgSetButtonState(psWScreen, MULTIOP_COMPUTER_N,WBUT_DISABLE);		// pow levels
-			if(!game.bComputerPlayers)	widgSetButtonState(psWScreen, MULTIOP_COMPUTER_Y,WBUT_DISABLE);
-		}
-
-		if(	game.type == CAMPAIGN || game.type == TEAMPLAY || game.type == SKIRMISH)
+		if(	game.type == CAMPAIGN || game.type == SKIRMISH)
 		{
 			if(game.base != CAMP_CLEAN)	widgSetButtonState(psWScreen,MULTIOP_CLEAN ,WBUT_DISABLE);	// camapign subtype.
 			if(game.base != CAMP_BASE)	widgSetButtonState(psWScreen,MULTIOP_BASE ,WBUT_DISABLE);
@@ -1646,14 +1484,12 @@ static void disableMultiButs(void)
 			if(game.power != LEV_HI )	widgSetButtonState(psWScreen, MULTIOP_POWLEV_HI,WBUT_DISABLE);
 		}
 
-
-		if( /*game.type == DMATCH||*/ game.type == CAMPAIGN  || game.type == SKIRMISH)
+		if (game.type == SKIRMISH)
 		{
 			if(game.alliance != NO_ALLIANCES)	widgSetButtonState(psWScreen,MULTIOP_ALLIANCE_N ,WBUT_DISABLE);	//alliance settings.
 			if(game.alliance != ALLIANCES)	widgSetButtonState(psWScreen,MULTIOP_ALLIANCE_Y ,WBUT_DISABLE);
 			if(game.alliance != ALLIANCES_TEAMS)	widgSetButtonState(psWScreen,MULTIOP_ALLIANCE_TEAMS ,WBUT_DISABLE);
 		}
-
 	}
 }
 
@@ -1798,40 +1634,21 @@ static void processMultiopWidgets(UDWORD id)
 			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, 1, 2);
 			break;
 
-//		case MULTIOP_ARENA:										// turn on arena game
-//			widgSetButtonState(psWScreen, MULTIOP_ARENA, WBUT_LOCK);
-//			widgSetButtonState(psWScreen, MULTIOP_CAMPAIGN, 0);
-//			widgSetButtonState(psWScreen, MULTIOP_SKIRMISH,0);
-//			widgSetButtonState(psWScreen, MULTIOP_TEAMPLAY,0);
-//			game.type = DMATCH;
-//
-//			widgSetString(psWScreen, MULTIOP_MAP, "DeadValley");
-//			strcpy(game.map,widgGetString(psWScreen, MULTIOP_MAP));
-//			game.maxPlayers =8;
-//
-//			addGameOptions();
-//			widgSetButtonState(psWScreen, MULTIOP_FNAME,WEDBS_FIXED);
-//			widgSetButtonState(psWScreen, MULTIOP_FNAME_ICON,0);
-//			break;
-
 		case MULTIOP_CAMPAIGN:									// turn on campaign game
-//			widgSetButtonState(psWScreen, MULTIOP_ARENA, 0);
 			widgSetButtonState(psWScreen, MULTIOP_CAMPAIGN, WBUT_LOCK);
 			widgSetButtonState(psWScreen, MULTIOP_SKIRMISH,0);
-			widgSetButtonState(psWScreen, MULTIOP_TEAMPLAY,0);
 			game.type = CAMPAIGN;
 			widgSetString(psWScreen, MULTIOP_MAP, DEFAULTCAMPAIGNMAP);
 			strcpy(game.map,widgGetString(psWScreen, MULTIOP_MAP));
 			game.maxPlayers = 4;
+			game.alliance = NO_ALLIANCES;
 
 			addGameOptions(FALSE);
 			break;
 
 		case MULTIOP_SKIRMISH:
-//			widgSetButtonState(psWScreen, MULTIOP_ARENA, 0);
 			widgSetButtonState(psWScreen, MULTIOP_CAMPAIGN,0 );
 			widgSetButtonState(psWScreen, MULTIOP_SKIRMISH,WBUT_LOCK);
-			widgSetButtonState(psWScreen, MULTIOP_TEAMPLAY,0);
 			game.type = SKIRMISH;
 
 			widgSetString(psWScreen, MULTIOP_MAP, DEFAULTSKIRMISHMAP);
@@ -1840,23 +1657,6 @@ static void processMultiopWidgets(UDWORD id)
 
 			addGameOptions(FALSE);
 			break;
-
-		case MULTIOP_TEAMPLAY:
-//			widgSetButtonState(psWScreen, MULTIOP_ARENA, 0);
-			widgSetButtonState(psWScreen, MULTIOP_CAMPAIGN,0 );
-			widgSetButtonState(psWScreen, MULTIOP_SKIRMISH,0);
-			widgSetButtonState(psWScreen, MULTIOP_TEAMPLAY,WBUT_LOCK);
-
-			widgSetString(psWScreen, MULTIOP_MAP, DEFAULTCAMPAIGNMAP);
-			strcpy(game.map,widgGetString(psWScreen, MULTIOP_MAP));
-
-			game.type		= TEAMPLAY;
-			game.maxPlayers = 4;
-			game.alliance	= ALLIANCES;
-
-			addGameOptions(FALSE);
-			break;
-
 		}
 	}
 
@@ -1865,26 +1665,6 @@ static void processMultiopWidgets(UDWORD id)
 	{
 		switch(id)
 		{
-		case MULTIOP_COMPUTER_Y:
-			widgSetButtonState(psWScreen, MULTIOP_COMPUTER_Y,WBUT_LOCK);
-			widgSetButtonState(psWScreen, MULTIOP_COMPUTER_N,0);
-			game.bComputerPlayers = TRUE;
-			if(bHosted)
-			{
-				sendOptions(0,0);
-			}
-			break;
-
-		case MULTIOP_COMPUTER_N:
-			widgSetButtonState(psWScreen, MULTIOP_COMPUTER_Y,0);
-			widgSetButtonState(psWScreen, MULTIOP_COMPUTER_N,WBUT_LOCK);
-			game.bComputerPlayers = FALSE;
-			if(bHosted)
-			{
-				sendOptions(0,0);
-			}
-			break;
-
 		case MULTIOP_FOG_ON:
 			widgSetButtonState(psWScreen, MULTIOP_FOG_ON,WBUT_LOCK);
 			widgSetButtonState(psWScreen, MULTIOP_FOG_OFF,0);
@@ -1905,39 +1685,6 @@ static void processMultiopWidgets(UDWORD id)
 			}
 			break;
 
-/*		case MULTIOP_TECH_LOW:
-			widgSetButtonState(psWScreen, MULTIOP_TECH_LOW,WBUT_LOCK);
-			widgSetButtonState(psWScreen, MULTIOP_TECH_MED,0);
-			widgSetButtonState(psWScreen, MULTIOP_TECH_HI ,0);
-			game.techLevel = 1;
-			if(bHosted)
-			{
-				sendOptions(0,0);
-			}
-			break;
-
-		case MULTIOP_TECH_MED:
-			widgSetButtonState(psWScreen, MULTIOP_TECH_LOW,0);
-			widgSetButtonState(psWScreen, MULTIOP_TECH_MED,WBUT_LOCK);
-			widgSetButtonState(psWScreen, MULTIOP_TECH_HI ,0);
-			game.techLevel = 2;
-			if(bHosted)
-			{
-				sendOptions(0,0);
-			}
-			break;
-
-		case MULTIOP_TECH_HI:
-			widgSetButtonState(psWScreen, MULTIOP_TECH_LOW,0);
-			widgSetButtonState(psWScreen, MULTIOP_TECH_MED,0);
-			widgSetButtonState(psWScreen, MULTIOP_TECH_HI ,WBUT_LOCK);
-			game.techLevel = 3;
-			if(bHosted)
-			{
-				sendOptions(0,0);
-			}
-			break;
-*/
 		case MULTIOP_CLEAN:
 			game.base = CAMP_CLEAN;
 			addGameOptions(FALSE);
@@ -1975,10 +1722,7 @@ static void processMultiopWidgets(UDWORD id)
 			widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_N,WBUT_LOCK);
 			widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_Y,0);
 
-			if(game.type != CAMPAIGN)
-				widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_TEAMS,0);
-			else
-				widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_TEAMS,WBUT_DISABLE);
+			widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_TEAMS,0);
 
 			game.alliance = NO_ALLIANCES;	//0;
 			if(bHosted)
@@ -1991,10 +1735,7 @@ static void processMultiopWidgets(UDWORD id)
 			widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_N,0);
 			widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_TEAMS,0);
 
-			if(game.type != CAMPAIGN)
-				widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_Y,WBUT_LOCK);
-			else
-				widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_TEAMS,WBUT_DISABLE);
+			widgSetButtonState(psWScreen, MULTIOP_ALLIANCE_Y,WBUT_LOCK);
 
 			game.alliance = ALLIANCES;	//1;
 			if(bHosted)
@@ -2094,17 +1835,6 @@ static void processMultiopWidgets(UDWORD id)
 		changeTitleMode(MULTILIMIT);
 		break;
 
-	case MULTIOP_FNAME:
-		strcpy(sForceName,widgGetString(psWScreen, MULTIOP_FNAME));
-		removeWildcards(sForceName);
-		break;
-
-	case MULTIOP_FNAME_ICON:
-		widgDelete(psWScreen,MULTIOP_PLAYERS);
-		widgDelete(psWScreen,FRONTEND_SIDETEXT2);					// del text too,
-		addMultiRequest(MultiForcesPath, ".for", MULTIOP_FNAME, 0, 0);
-		break;
-
 	case MULTIOP_PNAME:
 		strcpy(sPlayer,widgGetString(psWScreen, MULTIOP_PNAME));
 
@@ -2137,29 +1867,16 @@ static void processMultiopWidgets(UDWORD id)
 		break;
 
 	case MULTIOP_HOST:
-		if(game.type != SKIRMISH)
-		{
-			strcpy(sForceName,widgGetString(psWScreen, MULTIOP_FNAME));
-		}
 		strcpy((char*)game.name,widgGetString(psWScreen, MULTIOP_GNAME));	// game name
 		strcpy((char*)sPlayer,widgGetString(psWScreen, MULTIOP_PNAME));	// pname
 		strcpy((char*)game.map,widgGetString(psWScreen, MULTIOP_MAP));		// add the name
 
 		removeWildcards((char*)sPlayer);
-		removeWildcards(sForceName);
 
-//		if (game.type == DMATCH)
-//		{
-//			hostArena((char*)game.name,(char*)sPlayer);
-//			bHosted = TRUE;
-//		}
-//		else
-//		{
-			hostCampaign((char*)game.name,(char*)sPlayer);
-			bHosted = TRUE;
-//		}
+		hostCampaign((char*)game.name,(char*)sPlayer);
+		bHosted = TRUE;
 
-	// wait for players, when happy, send options.
+		// wait for players, when happy, send options.
 		if(NetPlay.bLobbyLaunched)
 		{
 			for(i=0;i<MAX_PLAYERS;i++)	// send options to everyone.
@@ -2215,8 +1932,6 @@ static void processMultiopWidgets(UDWORD id)
 
 	case CON_OK:
 		decideWRF();										// set up swrf & game.map
-		strcpy(sForceName,widgGetString(psWScreen, MULTIOP_FNAME));
-		removeWildcards(sForceName);
 		bMultiPlayer = TRUE;
 
 		if(NetPlay.bHost)
@@ -2339,12 +2054,14 @@ static void processMultiopWidgets(UDWORD id)
 		UDWORD newValue, oldValue;
 
 		if(		(id-MULTIOP_SKSLIDE == game.maxPlayers-1)
-			//&& 	(game.skDiff[id-MULTIOP_SKSLIDE] == 0)
 			&& (widgGetSliderPos(psWScreen,id) == 0)
 			)
 		{
-			game.skDiff[id-MULTIOP_SKSLIDE] = 1;
-			widgSetSliderPos(psWScreen,id,1);
+			if((NetPlay.bComms == 0) || (NetPlay.playercount == 1))	//allow to disable all AIs in an mp game
+			{
+				game.skDiff[id-MULTIOP_SKSLIDE] = 1;
+				widgSetSliderPos(psWScreen,id,1);
+			}
 		}
 
 		newValue = widgGetSliderPos(psWScreen,id);
@@ -2463,13 +2180,6 @@ void frontendMultiMessages(void)
 			{
 				decideWRF();
 
-				if(game.type != SKIRMISH)	// force stuff.
-				{
-					strcpy(sForceName,widgGetString(psWScreen, MULTIOP_FNAME));
-					removeWildcards(sForceName);
-				}
-
-
 				// set the fog correctly..
 				setRevealStatus(game.fog);
 				war_SetFog(!game.fog);
@@ -2512,8 +2222,6 @@ void runMultiOptions(void)
 
 	KEY_CODE		k;
 	char			str[3];
-
-	processFrontendSnap(FALSE);
 
 	frontendMultiMessages();
 
@@ -2578,22 +2286,6 @@ void runMultiOptions(void)
 		sendPing();
 	}
 
-	// check for being able to go!
-//	if(ingame.localJoiningInProgress
-//		&& (widgGetFromID(psWScreen,CON_OK) == NULL)	// oks not yet there.
-//		&& ingame.localOptionsReceived					// weve got the options
-//		&& (game.type == DMATCH))						// it's a dmatch game
-//	{
-//		for(i=0;i<MAX_PLAYERS;i++)
-//		{
-//			if( isHumanPlayer(i) && !ingame.JoiningInProgress[i])			// only go when someones ready..
-//			{
-//				addOkBut();
-//				break;
-//			}
-//		}
-//	}
-
 	// if typing and not in an edit box then jump to chat box.
 	k = getQwertyKey();
 	if(	k && psWScreen->psFocus == NULL)
@@ -2644,10 +2336,6 @@ void runMultiOptions(void)
 				setMultiStats(NetPlay.dpidPlayer,playerStats,FALSE);
 				setMultiStats(NetPlay.dpidPlayer,playerStats,TRUE);
 				break;
-			case MULTIOP_FNAME:
-				strcpy(sForceName,sTemp);
-				widgSetString(psWScreen,MULTIOP_FNAME,sTemp);
-				break;
 			case MULTIOP_MAP:
 				strcpy(game.map,sTemp);
 				game.maxPlayers =(UBYTE) value;
@@ -2677,8 +2365,6 @@ void runMultiOptions(void)
 		id = widgRunScreen(psWScreen);								// run the widgets.
 		processMultiopWidgets(id);
 	}
-
-	StartCursorSnap(&InterfaceSnap);
 
 	widgDisplayScreen(psWScreen);									// show the widgets currently running
 
@@ -2714,34 +2400,6 @@ BOOL startMultiOptions(BOOL bReenter)
 //			game.skirmishPlayers[i] = 1; // clear out skirmish setting
 //			game.skDiff[i] = (rand()%19)+1;	//1-20
 			game.skDiff[i] = (DIFF_SLIDER_STOPS / 2);
-		}
-
-/*		//set defaults for game.
-		game.power					= LEV_MED;
-		if(NetPlay.bComms)
-		{
-			game.type				= CAMPAIGN;
-			strcpy(game.map, DEFAULTCAMPAIGNMAP);
-		}
-		else
-		{
-			game.type				= SKIRMISH;
-			strcpy(game.map, DEFAULTSKIRMISHMAP);
-		}
-		game.techLevel				= 1;
-		game.base					= CAMP_BASE;
-//		game.bHaveServer			= FALSE;
-		game.limit					= NOLIMIT;
-//		game.packetsPerSec			= 6;
-		game.maxPlayers				= 4;
-		game.bComputerPlayers		= FALSE;
-		strcpy(sForceName,	"Default");
-*/
-
-		// set the encrypt key.
-		if(NetPlay.bHost)
-		{
-			game.encryptKey = 0;
 		}
 
 		if(!NetPlay.bComms)			// firce skirmish if no comms.
@@ -2801,463 +2459,6 @@ BOOL startMultiOptions(BOOL bReenter)
 
 	return TRUE;
 }
-
-
-// ////////////////////////////////////////////////////////////////////////////
-// ////////////////////////////////////////////////////////////////////////////
-// Force Select Screen.
-
-// ////////////////////////////////////////////////////////////////////////////
-
-
-static void CurrentForce(void)
-{
-	W_FORMINIT		sFormInit;
-	UDWORD			numButtons, butPerForm;
-	UDWORD i;
-	FORCE_MEMBER	*pF;
-
-	W_FORMINIT		sButInit;
-	char			aButText[6]; //???
-	SDWORD			BufferID;
-
-	widgDelete(psWScreen,FORCE_CURRENT);
-	widgDelete(psWScreen,FRONTEND_SIDETEXT3);
-
-	ClearObjectBuffers();
-
-	/* Count the number of minor tabs needed for the template form
-	 * Also need one for the new template button */
-
-	numButtons = 0;
-	for(pF = Force.pMembers; pF; pF= pF->psNext)
-	{
-		numButtons++;
-	}
-
-	/* Calculate how many buttons will go on a single form */
-	butPerForm = ((FORCE_CURRENTWIDTH - 0 - 2) /
-						(OBJ_BUTWIDTH +2)) *
-				 ((FORCE_CURRENTHEIGHT - 0- 2) /
-						(OBJ_BUTHEIGHT+ 2));
-
-	/* add a form to place the tabbed form on */
-	memset(&sFormInit, 0, sizeof(W_FORMINIT));
-	sFormInit.formID = FRONTEND_BACKDROP;
-	sFormInit.id = FORCE_CURRENT;
-	sFormInit.style = WFORM_PLAIN;
-	sFormInit.x = FORCE_CURRENTX;
-	sFormInit.y = FORCE_CURRENTY;
-	sFormInit.width = FORCE_CURRENTWIDTH;
-	sFormInit.height = FORCE_CURRENTHEIGHT+4;
-	sFormInit.pDisplay = intDisplayPlainForm;
-	widgAddForm(psWScreen, &sFormInit);
-
-	addSideText(FRONTEND_SIDETEXT3,FORCE_CURRENTX-1,FORCE_CURRENTY,_("FORCE"));
-
-	/* Add the design templates form */
-	memset(&sFormInit, 0, sizeof(W_FORMINIT));
-	sFormInit.formID = FORCE_CURRENT;
-	sFormInit.id = FORCE_CURRENTFORM;
-	sFormInit.style = WFORM_TABBED;
-	sFormInit.x = 2;
-	sFormInit.y = 2;
-	sFormInit.width = FORCE_CURRENTWIDTH;
-	sFormInit.height = FORCE_CURRENTHEIGHT;
-	sFormInit.numMajor = numForms(numButtons, butPerForm);
-	sFormInit.majorPos = WFORM_TABTOP;
-	sFormInit.minorPos = WFORM_TABNONE;
-	sFormInit.majorSize = OBJ_TABWIDTH;
-	sFormInit.majorOffset = OBJ_TABOFFSET;
-	sFormInit.tabVertOffset = (OBJ_TABHEIGHT/2);			//(DES_TAB_HEIGHT/2)+2;
-	sFormInit.tabMajorThickness = OBJ_TABHEIGHT;
-	sFormInit.pFormDisplay = intDisplayObjectForm;
-	sFormInit.pUserData = (void*)&StandardTab;
-	sFormInit.pTabDisplay = intDisplayTab;
-	for (i=0; i< sFormInit.numMajor; i++)
-	{
-		sFormInit.aNumMinors[i] = 1;
-	}
-	widgAddForm(psWScreen, &sFormInit);
-
-	/* Put the buttons on it */
-
-
-	memset(aButText, 0, 6);  //??
-	memset(&sButInit, 0, sizeof(W_BUTINIT));
-
-	/* Set up the button struct */
-	sButInit.formID = FORCE_CURRENTFORM;
-	sButInit.id		= FORCE_FORCE;
-	sButInit.style	= WFORM_CLICKABLE;
-	sButInit.x		= 2;
-	sButInit.y		= 2;
-	sButInit.width	= OBJ_BUTWIDTH;
-	sButInit.height = OBJ_BUTHEIGHT;
-
-	for(pF = Force.pMembers;pF; pF=pF->psNext)
-	{
-		/* Set the tip and add the button */
-		strncpy(aButText, getTemplateName(pF->pTempl), 5);
-		sButInit.pTip = getTemplateName(pF->pTempl);
-
-		BufferID = GetObjectBuffer();
-		ASSERT( BufferID >= 0,"Unable to aquire Obj Buffer." );
-		RENDERBUTTON_INUSE(&ObjectBuffers[BufferID]);
-		ObjectBuffers[BufferID].Data = (void*)pF->pTempl;
-		sButInit.pUserData = (void*)&ObjectBuffers[BufferID];
-		sButInit.pDisplay = intDisplayTemplateButton;
-
-		widgAddForm(psWScreen, &sButInit);
-
-		/* Update the init struct for the next button */
-		sButInit.id += 1;
-		sButInit.x = (SWORD)(sButInit.x + OBJ_BUTWIDTH + 2);
-		if (sButInit.x + OBJ_BUTWIDTH + 2 > FORCE_CURRENTWIDTH)
-		{
-			sButInit.x = 2;
-			sButInit.y = (SWORD)(sButInit.y + OBJ_BUTHEIGHT + 2);
-		}
-		if (sButInit.y + OBJ_BUTHEIGHT + 2 > FORCE_CURRENTHEIGHT)
-		{
-			sButInit.y = 2;
-			sButInit.majorID += 1;
-		}
-	}
-}
-
-
-//////////////////////////////////
-static void AvailableForces(void)
-{
-	W_FORMINIT		sFormInit;
-	DROID_TEMPLATE	*psTempl;
-	UDWORD			numButtons, butPerForm;
-	UDWORD i;
-
-	/* init template list */
-	memset( apsTemplateList, 0, sizeof(DROID_TEMPLATE*) * MAXTEMPLATES );
-	numButtons = 0;
-	psTempl = apsDroidTemplates[FORCEEDITPLAYER];
-
-	while ((psTempl != NULL) && (numButtons < MAXTEMPLATES))
-	{
-		apsTemplateList[numButtons] = psTempl;
-
-		/* Count the number of minor tabs needed for the template form */
-		numButtons++;
-
-		/* next template */
-		psTempl = psTempl->psNext;
-	}
-
-	widgDelete(psWScreen,IDDES_TEMPLBASE);
-	widgDelete(psWScreen,FRONTEND_SIDETEXT1);
-	ClearStatBuffers();
-
-
-	/* Calculate how many buttons will go on a single form */
-	butPerForm = ((FORCE_AVAILABLEWIDTH - 0 - 2) /
-						(OBJ_BUTWIDTH +2)) *
-				 ((FORCE_AVAILABLEHEIGHT - 0- 2) /
-						(OBJ_BUTHEIGHT+ 2));
-
-	/* add a form to place the tabbed form on */
-	memset(&sFormInit, 0, sizeof(W_FORMINIT));
-	sFormInit.formID = FRONTEND_BACKDROP;
-	sFormInit.id = IDDES_TEMPLBASE;
-	sFormInit.style = WFORM_PLAIN;
-	sFormInit.x = FORCE_AVAILABLEX;
-	sFormInit.y = FORCE_AVAILABLEY;
-	sFormInit.width = FORCE_AVAILABLEWIDTH;
-	sFormInit.height = FORCE_AVAILABLEHEIGHT+4;
-
-	sFormInit.pDisplay = intDisplayPlainForm;
-
-	widgAddForm(psWScreen, &sFormInit);
-
-	addSideText(FRONTEND_SIDETEXT1,FORCE_AVAILABLEX-1,FORCE_AVAILABLEY,_("TEMPLATES"));
-
-	/* Add the design templates form */
-	memset(&sFormInit, 0, sizeof(W_FORMINIT));
-	sFormInit.formID = IDDES_TEMPLBASE;
-	sFormInit.id = IDDES_TEMPLFORM;
-	sFormInit.style = WFORM_TABBED;
-	sFormInit.x = 2;
-	sFormInit.y = 2;
-	sFormInit.width = FORCE_AVAILABLEWIDTH;
-	sFormInit.height = FORCE_AVAILABLEHEIGHT;
-	sFormInit.numMajor = numForms(numButtons, butPerForm);
-	sFormInit.majorPos = WFORM_TABTOP;
-	sFormInit.minorPos = WFORM_TABNONE;
-	sFormInit.majorSize = OBJ_TABWIDTH;
-	sFormInit.majorOffset = OBJ_TABOFFSET;
-	sFormInit.tabVertOffset = (OBJ_TABHEIGHT/2);
-	sFormInit.tabMajorThickness = OBJ_TABHEIGHT;
-	sFormInit.pFormDisplay = intDisplayObjectForm;
-	sFormInit.pUserData = (void*)&StandardTab;
-	sFormInit.pTabDisplay = intDisplayTab;
-	for (i=0; i< sFormInit.numMajor; i++)
-	{
-		sFormInit.aNumMinors[i] = 1;
-	}
-	widgAddForm(psWScreen, &sFormInit);
-
-	/* Put the buttons on it */
-	intAddTemplateButtons(IDDES_TEMPLFORM, FORCE_AVAILABLEWIDTH ,
-							   FORCE_AVAILABLEHEIGHT,
-							   OBJ_BUTWIDTH,OBJ_BUTHEIGHT,2,
-							   NULL);
-
-
-}
-
-
-// ////////////////////////////////////////////////////////////////////////////
-void runForceSelect(void)
-{
-	UDWORD			currID,id,i;
-	DROID_TEMPLATE	*psTempl;
-	UDWORD			posx,posy;
-	FORCE_MEMBER	*pF;
-	char  dir[256];
-
-	posx = 5;
-	posy = 5;
-
-	processFrontendSnap(FALSE);
-
-	if(bLoadSaveUp)
-	{
-		if(runLoadSave(FALSE))// check for file name.
-		{
-			if(strlen(sRequestResult))
-			{
-				debug( LOG_NEVER, "Returned %s", sRequestResult );
-				if(bRequestLoad)
-				{
-					loadForce(sRequestResult);
-					AvailableForces();									// update force screen..
-					CurrentForce();
-				}
-				else
-				{
-					saveForce(sRequestResult,&Force);
-					AvailableForces();									// update force screen..
-					CurrentForce();
-				}
-			}
-		}
-	}
-	else
-	{
-		// MouseOver stuff.
-		id = widgGetMouseOver(psWScreen);
-		if (id >=IDDES_TEMPLSTART  && id <= IDDES_TEMPLEND)
-		{
-			currID = IDDES_TEMPLSTART;
-			for(psTempl = apsDroidTemplates[selectedPlayer]; psTempl;psTempl = psTempl->psNext)
-			{
-				if (currID == id)
-				{
-					break;
-				}
-				currID ++;
-			}
-			intSetShadowPower(calcTemplatePower(psTempl));	//update the power bars
-		}
-		else
-		{
-			intSetShadowPower(0);
-		}
-
-
-		id = widgRunScreen(psWScreen);								// run the widgets.
-
-		if (id >= IDDES_TEMPLSTART && id <= IDDES_TEMPLEND)
-		{
-			currID = IDDES_TEMPLSTART;
-			for(psTempl = apsDroidTemplates[selectedPlayer]; psTempl;psTempl = psTempl->psNext)
-			{
-				if (currID == id)
-				{
-					break;
-				}
-				currID ++;
-			}
-
-			if(!addToForce(psTempl))								// store this droid in force list.
-			{
-				widgDisplayScreen(psWScreen);
-				return;
-			}
-
-			CurrentForce();
-		}
-
-		if((id >= FORCE_FORCE)&&(id <= FORCE_FORCEEND))				// FORCE droid selected
-		{
-			pF = Force.pMembers;									// dont delete if it's frozen
-			for(i=0;i<(id-FORCE_FORCE);i++)pF=pF->psNext;			// goto that force element;
-			removeFromForce(id-FORCE_FORCE);						//delete it from force.
-			CurrentForce();
-
-		}
-
-		switch(id)
-		{
-
-		case CON_CANCEL:										// dont continue, return to options
-			while(Force.pMembers)
-			{
-				removeFromForce(0);								// delete each force member.
-			}
-			selectedPlayer = 0;									// just in case.
-			changeTitleMode(MULTI);
-
- 	  		eventReset();
-//			resReleaseBlockData(500);
-			resReleaseBlockData(501);
-			resReleaseBlockData(502);
-			bForceEditorLoaded = FALSE;
-
-			break;
-
-		case FORCE_PRESETCLEAR:									// clear force
-			while(Force.pMembers)
-			{
-				removeFromForce(0);								// delete each force member.
-			}
-			AvailableForces();									// update force screen
-			CurrentForce();
-			break;
-
-		case FORCE_PRESETDEFAULT:
-			strcpy(dir,"multiplay/forces/default.for");
-			loadForce(dir);
-			AvailableForces();										// update force screen
-			CurrentForce();
-			break;
-
-		case FORCE_LOAD:
-			addLoadSave(LOAD_FORCE,MultiForcesPath,"for",_("Load Force") );
-			break;
-
-		case FORCE_SAVE:
-			addLoadSave(SAVE_FORCE,MultiForcesPath,"for",_("Save Force") );
-			break;
-
-		default:
-			break;
-		}
-	}
-
-	StartCursorSnap(&InterfaceSnap);
-
-	widgDisplayScreen(psWScreen);							// show the widgets currently running
-	if(bLoadSaveUp)
-	{
-		displayLoadSave();
-	}
-
-	return;
-}
-
-
-// ////////////////////////////////////////////////////////////////////////////
-BOOL startForceSelect(void)
-{
-	W_FORMINIT		sFormInit;
-	W_BARINIT		sBarInit;
-	char			dir[256];
-	DROID_TEMPLATE	*psTempl;
-
-	copyTemplateSet(DEATHMATCHTEMPLATES,FORCEEDITPLAYER);
-
-	initTemplatePoints();
-
-	selectedPlayer = FORCEEDITPLAYER;
-	setPower(selectedPlayer,FORCEEDIT_POWER);
-
-	strcpy(dir,"multiplay/forces/default.for");		// start with default force.
-	if(!loadForce(dir))
-	{
-		debug( LOG_NEVER, "Error Loading Force" );
-	}
-
-	addBackdrop();
-	addTopForm();
-
-	// init power profiles.
-	for(psTempl = apsDroidTemplates[FORCEEDITPLAYER]; psTempl; psTempl = psTempl->psNext)
-	{
-		psTempl->powerPoints = calcTemplatePower(psTempl);
-	}
-
-
-	AvailableForces();										// available forces
-	CurrentForce();											// current force
-
-	memset(&sFormInit, 0, sizeof(W_FORMINIT));
-	sFormInit.formID = FRONTEND_BACKDROP;							// stats box
-	sFormInit.id = FORCE_STATS;
-	sFormInit.style = WFORM_PLAIN;
-	sFormInit.x = FORCE_STATSX;
-	sFormInit.y = FORCE_STATSY;
-	sFormInit.width = FORCE_STATSWIDTH;
-	sFormInit.height = FORCE_STATSHEIGHT;
-	sFormInit.pDisplay = intDisplayPlainForm;
-	widgAddForm(psWScreen, &sFormInit);
-
-	addSideText(FRONTEND_SIDETEXT2,FORCE_STATSX-1,FORCE_STATSY,_("CONTROL"));
-
-	sFormInit.formID		= FORCE_STATS;							// stats box
-	sFormInit.id			= FORCE_DROID;
-	sFormInit.style			= WFORM_PLAIN;
-	sFormInit.x				= FORCE_DROIDX;
-	sFormInit.y				= FORCE_DROIDY;
-	sFormInit.width			= 100;
-	sFormInit.height		= 100;
-	sFormInit.pDisplay		= displayForceDroid;
-//	sFormInit.pUserData		= (void*)Force->pTempl;
-	widgAddForm(psWScreen, &sFormInit);
-
-// name/techlevel/powerrequired/powerleft
-
-	memset(&sBarInit, 0, sizeof(W_BARINIT));		//power bar
-	sBarInit.formID = FRONTEND_BACKDROP;	//IDPOW_FORM;
-	sBarInit.id = IDPOW_POWERBAR_T;
-	sBarInit.style = WBAR_TROUGH;
-	sBarInit.orientation = WBAR_LEFT;
-	sBarInit.x = (SWORD)FORCE_POWERX;
-	sBarInit.y = (SWORD)FORCE_POWERY;
-	sBarInit.width = POW_BARWIDTH;
-	sBarInit.height = iV_GetImageHeight(IntImages,IMAGE_PBAR_EMPTY);
-	sBarInit.sCol.red = POW_CLICKBARMAJORRED;
-	sBarInit.sCol.green = POW_CLICKBARMAJORGREEN;
-	sBarInit.sCol.blue = POW_CLICKBARMAJORBLUE;
-	sBarInit.pDisplay = intDisplayPowerBar;
-	sBarInit.iRange = POWERBAR_SCALE;
- 	widgAddBarGraph(psWScreen, &sBarInit);
-
-	addMultiBut(psWScreen,FORCE_STATS,CON_CANCEL,FORCE_OKX,FORCE_OKY,MULTIOP_OKW,MULTIOP_OKH,
-				_("Return To Previous Screen"),IMAGE_RETURN,IMAGE_RETURN_HI,FALSE);			// cancel
-
-	addMultiBut(psWScreen,FORCE_STATS,FORCE_PRESETCLEAR,FORCE_PRESETCLEARX,FORCE_PRESETCLEARY,FORCE_BUTW,FORCE_BUTH,
-		_("Clear Current Force"),IMAGE_CLEARFORCE,IMAGE_CLEARFORCE,TRUE);			// clear.
-
-	addMultiBut(psWScreen,FORCE_STATS,FORCE_PRESETDEFAULT,FORCE_PRESETDEFAULTX,FORCE_PRESETDEFAULTY,FORCE_BUTW,FORCE_BUTH,
-		_("Select Default"),IMAGE_DEFAULTFORCE,IMAGE_DEFAULTFORCE,TRUE);	// default.
-
-	addMultiBut(psWScreen,FORCE_STATS,FORCE_LOAD,FORCE_LOADX,FORCE_LOADY,FORCE_BUTW,FORCE_BUTH,
-		_("Load Force"),IMAGE_LOADFORCE,IMAGE_LOADFORCE,TRUE);				// load
-
-	addMultiBut(psWScreen,FORCE_STATS,FORCE_SAVE,FORCE_SAVEX,FORCE_SAVEY,FORCE_BUTW,FORCE_BUTH,
-		_("Save Force"),IMAGE_SAVEFORCE,IMAGE_SAVEFORCE,TRUE);				// save
-
-	return TRUE;
-}
-
 
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -3449,10 +2650,6 @@ void displayChatEdit(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *p
 	UDWORD y = yOffset+psWidget->y -4;			// 4 is the magic number.
 	iV_Line(x, y, x+psWidget->width , y, iV_PaletteNearestColour(100,100,160) );
 
-	AddCursorSnap(&InterfaceSnap,
-				(SWORD)(x+(psWidget->width/2)) ,
-				(SWORD)(y+(psWidget->height/2)) ,psWidget->formID,psWidget->id,NULL);
-
 	return;
 }
 
@@ -3491,18 +2688,9 @@ void displayRemoteGame(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD 
 	iV_SetTextColour(-1);												//colour
 
 	//draw type overlay.
-//	if(NETgetGameFlagsUnjoined(i,1) == DMATCH)
-//	{
-//		iV_DrawImage(FrontImages,IMAGE_ARENA_OVER,x+59,y+3);
-//	}
-//	else
 	if( NETgetGameFlagsUnjoined(i,1) == CAMPAIGN)
 	{
-		iV_DrawImage(FrontImages,IMAGE_CAMPAIGN_OVER,x+59,y+3);
-	}
-	else if( NETgetGameFlagsUnjoined(i,1) == TEAMPLAY)
-	{
-		iV_DrawImage(FrontImages,IMAGE_TEAM_OVER,x+62,y+3);
+		iV_DrawImage(FrontImages, IMAGE_ARENA_OVER, x + 59, y + 3);
 	}
 	else
 	{
@@ -3550,9 +2738,6 @@ void displayRemoteGame(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD 
 		iV_DrawText(tmp, x + 17, y + 33);
 	}
 
-	AddCursorSnap(&InterfaceSnap,
-				(SWORD)(x+(psWidget->width/2)),
-				(SWORD)(y+(psWidget->height/2)),psWidget->formID,psWidget->id,NULL);
 }
 
 
@@ -3835,9 +3020,6 @@ void displayPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pCo
 		//	iV_DrawImage(FrontImages,IMAGE_PLAYER_PC,x+2,y+9);
 		//}
 	}
-	AddCursorSnap(&InterfaceSnap,
-				(SWORD)(x+(psWidget->width/2)),
-				(SWORD)(y+(psWidget->height/2)),psWidget->formID,psWidget->id,NULL);
 
 }
 
@@ -3874,9 +3056,6 @@ void displayMultiEditBox(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWOR
 		pie_UniTransBoxFill(x,y, x+psWidget->width+psWidget->height ,y+psWidget->height,(FILLRED<<16) | (FILLGREEN<<8) | FILLBLUE, FILLTRANS);
 	}
 
-	AddCursorSnap(&InterfaceSnap,
-					(SWORD)(x+(psWidget->width/2)),
-					(SWORD)(y+(psWidget->height/2)),psWidget->formID,psWidget->id,NULL);
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -3977,11 +3156,6 @@ void displayMultiBut(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *p
 	if (Grey) {
 		// disabled, render something over it!
 		iV_TransBoxFill(x,y,x+psWidget->width,y+psWidget->height);
-	} else {
-		// add a snap.
-		AddCursorSnap(&InterfaceSnap,
-						(SWORD)(x+(psWidget->width/2)),
-						(SWORD)(y+(psWidget->height/2)),psWidget->formID,psWidget->id,NULL);
 	}
 }
 
@@ -4040,40 +3214,6 @@ BOOL addMultiBut(W_SCREEN *screen, UDWORD formid, UDWORD id, UDWORD x, UDWORD y,
 	sButInit.pUserData = (void*)PACKDWORD_TRI(hiIt,norm , hi);
 
 	return widgAddButton(screen, &sButInit);
-}
-
-void displayForceDroid(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
-{
-	Vector3i		Rotation,Position;
-	UDWORD			x			= psWidget->x+xOffset;
-	UDWORD			y			= psWidget->y+yOffset;
-	UDWORD tlx,tly,brx,bry;
-
-	tlx = x-58;
-	tly = y-80;
-	brx = x+58;
-	bry = y+23;
-
-	pie_BoxFill(tlx,	tly,	brx,	bry, 0x006067a0);
-	pie_BoxFill(tlx+1,	tly+1,	brx-1,	bry-1,	0x002f3050);
-
-	pie_Set2DClip((UWORD)(tlx+1),(UWORD)(tly+1),(UWORD)(brx-1),(UWORD)(bry-1));
-
-	pie_SetGeometricOffset( x,y);
-	Rotation.x = -20;
-	Rotation.y = ((gameTime2/45)%360); //45
-	Rotation.z = 0;
-	Position.x = 0;
-	Position.y = 0;			//above droid.
-	Position.z = BUTTON_DEPTH;//2500;		//scale them to 200% in button render
-
-	if(Force.pMembers)
-	{
-		displayComponentButtonTemplate(Force.pMembers->pTempl, &Rotation,&Position,TRUE, 2 * DROID_BUT_SCALE);
-	}
-
-	pie_Set2DClip(CLIP_BORDER,CLIP_BORDER,psRendSurface->width-CLIP_BORDER,psRendSurface->height-CLIP_BORDER);
-	return;
 }
 
 /*

@@ -20,12 +20,7 @@
 #ifndef _texture_h
 #define _texture_h
 
-extern iTexture tilesPCX;
-
-extern void makeTileTexturePages(iV_Image * src, UDWORD tileWidth, UDWORD tileHeight);
-extern void remakeTileTexturePages(iV_Image * src, UDWORD tileWidth, UDWORD tileHeight);
-extern BOOL getTileRadarColours(void);
-extern void freeTileTextures( void );
+void texLoad(const char *fileName);
 
 typedef struct _tileTexInfo
 {

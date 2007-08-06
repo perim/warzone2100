@@ -43,7 +43,6 @@
 #include "init.h"
 #include "loadsave.h"
 #include "keymap.h"
-#include "csnap.h"
 #include "intimage.h"
 #include "lib/ivis_common/bitimage.h"
 #include "intdisplay.h"
@@ -277,7 +276,6 @@ BOOL runKeyMapEditor(void)
 		}
 	}
 
-	StartCursorSnap(&InterfaceSnap);
 	widgDisplayScreen(psWScreen);				// show the widgets currently running
 
 	return TRUE;
@@ -336,11 +334,11 @@ void displayKeyMap(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pCo
 	iV_SetFont(WFont);											// font
 	iV_SetTextColour(-1);										//colour
 
-	pie_DrawText(psMapping->pName, x + 2, y + (psWidget->height / 2) + 3);
+	iV_DrawText(psMapping->pName, x + 2, y + (psWidget->height / 2) + 3);
 
 	// draw binding
 	keyMapToString(sKey,psMapping);
-	pie_DrawText(sKey, x + 370, y + (psWidget->height / 2) + 3);
+	iV_DrawText(sKey, x + 370, y + (psWidget->height / 2) + 3);
 
 	return;
 }

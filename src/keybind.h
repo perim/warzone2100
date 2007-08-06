@@ -103,6 +103,7 @@ extern void	kf_ToggleRadarAllign( void );
 
 extern void	kf_ToggleEnergyBars( void );
 extern void	kf_ToggleReloadBars( void );
+extern void	kf_FinishAllResearch( void );
 extern void	kf_FinishResearch( void );
 extern void	kf_ToggleOverlays( void );
 extern void	kf_ChooseOptions( void );
@@ -225,6 +226,8 @@ extern void kf_NormalSpeed( void );
 
 void kf_ToggleRadarTerrain( void );          //radar terrain
 void kf_ToggleRadarAllyEnemy( void );        //enemy/ally color toggle
+
+void kf_TileInfo(void);
 
 extern void	kf_ToggleWatchWindow( void );
 

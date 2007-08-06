@@ -16,6 +16,10 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 /*
  * Gateway.h
@@ -31,17 +35,17 @@
 // the list of gateways on the current map
 extern GATEWAY		*psGateways;
 // the RLE map zones for each tile
-extern UBYTE		**apRLEZones;
+extern char** apRLEZones;
 
 // the number of map zones
 extern SDWORD		gwNumZones;
 
 // The zone equivalence tables
-extern UBYTE		*aNumEquiv;
-extern UBYTE		**apEquivZones;
+extern char*  aNumEquiv;
+extern char** apEquivZones;
 
 // Initialise the gateway system
-BOOL gwInitialise(void);
+bool gwInitialise(void);
 
 // Shutdown the gateway system
 void gwShutDown(void);
@@ -59,7 +63,7 @@ BOOL gwGenerateLinkGates(void);
 void gwFreeGateway(GATEWAY *psDel);
 
 // load a gateway list
-BOOL gwLoadGateways(UBYTE *pFileBuffer, UDWORD fileSize);
+BOOL gwLoadGateways(const char* pFileBuffer, UDWORD fileSize);
 
 // Process the map to create all the map zones
 BOOL gwProcessMap(void);
@@ -84,7 +88,7 @@ SDWORD gwGetZone(SDWORD x, SDWORD y);
 BOOL gwNewZoneMap(void);
 
 // Create a new empty zone map line in the zone map.
-UBYTE * gwNewZoneLine(UDWORD Line,UDWORD Size);
+char* gwNewZoneLine(UDWORD Line,UDWORD Size);
 
 // Create a NULL zone map for when there is no zone info loaded
 BOOL gwCreateNULLZoneMap(void);

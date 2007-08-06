@@ -109,71 +109,6 @@ BOOL CancelPressed(void)
 
 	return FALSE;
 }
-// ////////////////////////////////////////////////////////////////////////////
-// for cursorsnap stuff on pc
-
-void processFrontendSnap(BOOL bHideCursor)
-{
-	static Vector2i point = {0, 0}, old_point = {0, 0};
-
-	point.x = mouseX();
-	point.y = mouseY();
-
-	if(point.x != old_point.x || point.y != old_point.y)
-	{
-		bUsingKeyboard = FALSE;
-	}
-
-	if(!bUsingSlider)
-	{
-		if(keyPressed(KEY_RIGHTARROW))
-		{
-			bUsingKeyboard = TRUE;
-			GotoDirectionalSnap(&InterfaceSnap, SNAP_RIGHT, 0, 0);
-		}
-		else if(keyPressed(KEY_LEFTARROW))
-		{
-			bUsingKeyboard = TRUE;
-			GotoDirectionalSnap(&InterfaceSnap, SNAP_LEFT, 0, 0);
-		}
-	}
-	if(keyPressed(KEY_UPARROW))
-	{
-		bUsingKeyboard = TRUE;
-		bUsingSlider = FALSE;
-		GotoDirectionalSnap(&InterfaceSnap, SNAP_UP, 0, 0);
-	}
-	else if(keyPressed(KEY_DOWNARROW))
-	{
-		bUsingKeyboard = TRUE;
-		bUsingSlider = FALSE;
-		GotoDirectionalSnap(&InterfaceSnap, SNAP_DOWN, 0, 0);
-	}
-
-	if (!keyDown(KEY_LALT) && !keyDown(KEY_RALT)/* Check for toggling display mode */
-		&& (psWScreen->psFocus == NULL))
-	{
-		if(keyPressed(KEY_RETURN) )
-		{
-			bUsingKeyboard = TRUE;
-			setMouseDown(MOUSE_LMB);
-		}
-
-		if(keyReleased(KEY_RETURN) )
-		{
-			bUsingKeyboard = TRUE;
-			setMouseUp(MOUSE_LMB);
-		}
-	}
-
-	if(!bHideCursor)
-	{
-		bUsingKeyboard = FALSE;
-	}
-
-	old_point.x = mouseX();
-	old_point.y = mouseY();
-}
 
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -233,10 +168,6 @@ void changeTitleMode(tMode mode)
 		break;
 	case PROTOCOL:
 		startConnectionScreen();
-		break;
-	case FORCESELECT:
-		bUsingKeyboard = FALSE;
-		startForceSelect();
 		break;
 	case MULTIOPTION:
 		bUsingKeyboard = FALSE;
@@ -307,9 +238,6 @@ BOOL startTitleMenu(void)
 
 	addSideText(FRONTEND_SIDETEXT, FRONTEND_SIDEX, FRONTEND_SIDEY, _("MAIN MENU"));
 
-	SetMousePos(320, FRONTEND_BOTFORMY + FRONTEND_POS2Y);
-	SnapToID(&InterfaceSnap, 4);
-
 	return TRUE;
 }
 
@@ -317,8 +245,6 @@ BOOL startTitleMenu(void)
 BOOL runTitleMenu(void)
 {
 	UDWORD id;
-
-	processFrontendSnap(TRUE);
 
 	id = widgRunScreen(psWScreen); // Run the current set of widgets
 
@@ -343,7 +269,6 @@ BOOL runTitleMenu(void)
 			break;
 	}
 
-	StartCursorSnap(&InterfaceSnap);
 	widgDisplayScreen(psWScreen); // show the widgets currently running
 
 	return TRUE;
@@ -366,10 +291,6 @@ BOOL startTutorialMenu(void)
 	// TRANSLATORS: "Return", in this context, means "return to previous screen/menu"
 	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, P_("menu", "Return"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 
-	SetCurrentSnapID(&InterfaceSnap,FRONTEND_FASTPLAY);
-
-
-
 	return TRUE;
 }
 
@@ -377,7 +298,6 @@ BOOL runTutorialMenu(void)
 {
 	UDWORD id;
 
-	processFrontendSnap(TRUE);
 	id = widgRunScreen(psWScreen);						// Run the current set of widgets
 	switch(id)
 	{
@@ -406,7 +326,6 @@ BOOL runTutorialMenu(void)
 		changeTitleMode(TITLE);
 	}
 
-	StartCursorSnap(&InterfaceSnap);
 	widgDisplayScreen(psWScreen);						// show the widgets currently running
 
 	return TRUE;
@@ -426,7 +345,6 @@ void startSinglePlayerMenu(void)
 	addTextButton(FRONTEND_NEWGAME,  FRONTEND_POS3X,FRONTEND_POS3Y,_("New Campaign") ,FALSE,FALSE);
 
 	addSideText	 (FRONTEND_SIDETEXT ,FRONTEND_SIDEX,FRONTEND_SIDEY,_("SINGLE PLAYER"));
-	SetCurrentSnapID(&InterfaceSnap,FRONTEND_LOADGAME);
 	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, P_("menu", "Return"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 }
 
@@ -456,38 +374,28 @@ static void frontEndNewGame( void )
 
 void loadOK( void )
 {
-
 	if(strlen(sRequestResult))
 	{
 		strcpy(saveGameName,sRequestResult);
 		changeTitleMode(LOADSAVEGAME);
 	}
-	SetCurrentSnapID(&InterfaceSnap,FRONTEND_LOADGAME);
-
 }
 
 BOOL runSinglePlayerMenu(void)
 {
 	UDWORD id;
 
-	processFrontendSnap(TRUE);
-
-
 	if(bLoadSaveUp)
 	{
 		if(runLoadSave(FALSE))// check for file name.
 		{
 			loadOK();
-			SetCurrentSnapID(&InterfaceSnap,FRONTEND_LOADGAME);
 		}
 	}
 	else
-
 	{
 
 	id = widgRunScreen(psWScreen);						// Run the current set of widgets
-
-
 
 		switch(id)
 		{
@@ -529,14 +437,11 @@ BOOL runSinglePlayerMenu(void)
 
 	if(CancelPressed())
 	{
-
 		changeTitleMode(TITLE);
-
 	}
 
 	}
 
-	StartCursorSnap(&InterfaceSnap);
 
 	if(!bLoadSaveUp)										// if save/load screen is up
 	{
@@ -564,21 +469,16 @@ BOOL startMultiPlayerMenu(void)
 	addTextButton(FRONTEND_HOST,     FRONTEND_POS2X,FRONTEND_POS2Y, _("Host Game"),FALSE,FALSE);
 	addTextButton(FRONTEND_JOIN,     FRONTEND_POS3X,FRONTEND_POS3Y, _("Join Game"),FALSE,FALSE);
 
-	addTextButton(FRONTEND_FORCEEDIT,FRONTEND_POS4X,FRONTEND_POS4Y, _("Force Editor"),FALSE,FALSE);
-	addTextButton(FRONTEND_SKIRMISH, FRONTEND_POS5X,FRONTEND_POS5Y, _("One Player Skirmish"),FALSE,FALSE);
+	addTextButton(FRONTEND_SKIRMISH, FRONTEND_POS4X,FRONTEND_POS4Y, _("One Player Skirmish"),FALSE,FALSE);
 
 	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, P_("menu", "Return"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 
-	SetMousePos(320, FRONTEND_BOTFORMY + FRONTEND_POS3Y);
-	SnapToID(&InterfaceSnap,3);
 	return TRUE;
 }
 
 BOOL runMultiPlayerMenu(void)
 {
 	UDWORD id;
-
-	processFrontendSnap(TRUE);
 
 	id = widgRunScreen(psWScreen);						// Run the current set of widgets
 	switch(id)
@@ -591,40 +491,6 @@ BOOL runMultiPlayerMenu(void)
 		ingame.bHostSetup = FALSE;
 		changeTitleMode(PROTOCOL);
 		break;
-	case FRONTEND_FORCEEDIT:
-
-		if(!bForceEditorLoaded)
-		{
-			initLoadingScreen( TRUE );
-/*			if (!resLoad("wrf/forcedit.wrf", 500,
-						 fileLoadBuffer, FILE_LOAD_BUFFER_SIZE))
-				//need the object heaps to have been set up before loading
-			{
-				return FALSE;
-			}
-*/
-			if (!resLoad("wrf/piestats.wrf", 501,
-						 fileLoadBuffer, FILE_LOAD_BUFFER_SIZE))
-				//need the object heaps to have been set up before loading
-			{
-				return FALSE;
-			}
-
-			if (!resLoad("wrf/forcedit2.wrf", 502,
-						 fileLoadBuffer, FILE_LOAD_BUFFER_SIZE))
-				//need the object heaps to have been set up before loading
-			{
-				return FALSE;
-			}
-
-			bForceEditorLoaded = TRUE;
-			closeLoadingScreen();
-		}
-
-		changeTitleMode(FORCESELECT);
-		return TRUE;//skip draw.
-		break;
-
 	case FRONTEND_SKIRMISH:
 		ingame.bHostSetup = TRUE;
 
@@ -645,7 +511,6 @@ BOOL runMultiPlayerMenu(void)
 		break;
 	}
 
-	StartCursorSnap(&InterfaceSnap);
 	widgDisplayScreen(psWScreen);					// show the widgets currently running
 
 	return TRUE;
@@ -667,9 +532,6 @@ BOOL startOptionsMenu(void)
 	addTextButton(FRONTEND_KEYMAP,		FRONTEND_POS5X,FRONTEND_POS5Y, _("Key Mappings"),FALSE,FALSE);
 	addMultiBut(psWScreen,FRONTEND_BOTFORM,FRONTEND_QUIT,10,10,30,29, P_("menu", "Return"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 
-	SetMousePos(320, FRONTEND_BOTFORMY + FRONTEND_POS3Y);
-	SnapToID(&InterfaceSnap,3);
-
 	return TRUE;
 }
 
@@ -677,8 +539,6 @@ BOOL startOptionsMenu(void)
 BOOL runOptionsMenu(void)
 {
 	UDWORD id;
-
-	processFrontendSnap(TRUE);
 
 	id = widgRunScreen(psWScreen);						// Run the current set of widgets
 	switch(id)
@@ -722,7 +582,6 @@ BOOL runOptionsMenu(void)
 
 	}
 
-	StartCursorSnap(&InterfaceSnap);
 	widgDisplayScreen(psWScreen);						// show the widgets currently running
 
 	return TRUE;
@@ -812,7 +671,19 @@ BOOL startGameOptions2Menu(void)
 	}
 	else
 	{
-		addTextButton(FRONTEND_SUBTITLES_R,	FRONTEND_POS6M-55,FRONTEND_POS5Y, _("Off"),TRUE,TRUE);
+		addTextButton(FRONTEND_SUBTITLES_R, FRONTEND_POS5M - 55, FRONTEND_POS5Y, _("Off"), TRUE, TRUE);
+	}
+
+	////////////
+	//shadows
+	addTextButton(FRONTEND_SHADOWS, FRONTEND_POS7X - 35, FRONTEND_POS7Y, _("Shadows"), TRUE, FALSE);
+	if (getDrawShadows())
+	{
+		addTextButton(FRONTEND_SHADOWS_R, FRONTEND_POS7M - 55,  FRONTEND_POS7Y, _("On"), TRUE, FALSE);
+	}
+	else
+	{	// not flipped
+		addTextButton(FRONTEND_SHADOWS_R, FRONTEND_POS7M - 55,  FRONTEND_POS7Y, _("Off"), TRUE, FALSE);
 	}
 
 	////////////
@@ -826,8 +697,6 @@ BOOL startGameOptions2Menu(void)
 BOOL runGameOptions2Menu(void)
 {
 	UDWORD id;
-
-	processFrontendSnap(FALSE);
 
 	id = widgRunScreen(psWScreen);						// Run the current set of widgets
 	switch(id)
@@ -896,6 +765,19 @@ BOOL runGameOptions2Menu(void)
 		}
 		break;
 
+	case FRONTEND_SHADOWS:
+	case FRONTEND_SHADOWS_R:
+		setDrawShadows(!getDrawShadows());
+		if (getDrawShadows())
+		{
+			widgSetString(psWScreen, FRONTEND_SHADOWS_R, _("On"));
+		}
+		else
+		{
+			widgSetString(psWScreen, FRONTEND_SHADOWS_R, _("Off"));
+		}
+		break;
+
 	case FRONTEND_SEQUENCE:
 	case FRONTEND_SEQUENCE_R:
 		if( war_GetSeqMode() == SEQ_FULL )
@@ -925,7 +807,6 @@ BOOL runGameOptions2Menu(void)
 		changeTitleMode(OPTIONS);
 	}
 
-	StartCursorSnap(&InterfaceSnap);
 	widgDisplayScreen(psWScreen);						// show the widgets currently running
 
 	return TRUE;
@@ -966,8 +847,6 @@ BOOL runGameOptions3Menu(void)
 {
 	UDWORD id;
 
-	processFrontendSnap(FALSE);
-
 	id = widgRunScreen(psWScreen);						// Run the current set of widgets
 	switch(id)
 	{
@@ -975,7 +854,6 @@ BOOL runGameOptions3Menu(void)
 	case FRONTEND_FX:
 	case FRONTEND_3D_FX:
 	case FRONTEND_MUSIC:
-		SetMousePos(FRONTEND_BOTFORMX + FRONTEND_POS1M + 5, mouseY() - 3);	// move mouse
 		break;
 
 	case FRONTEND_FX_SL:
@@ -1004,7 +882,6 @@ BOOL runGameOptions3Menu(void)
 		changeTitleMode(TITLE);
 	}
 
-	StartCursorSnap(&InterfaceSnap);
 	widgDisplayScreen(psWScreen);						// show the widgets currently running
 
 	return TRUE;
@@ -1074,15 +951,12 @@ BOOL runGameOptionsMenu(void)
 {
 	UDWORD id;
 
-	processFrontendSnap(FALSE);
-
 	id = widgRunScreen(psWScreen);						// Run the current set of widgets
 	switch(id)
 	{
 
 //	case FRONTEND_GAMMA:
 	case FRONTEND_SCROLLSPEED:
-		SetMousePos(FRONTEND_BOTFORMX + FRONTEND_POS1M + 5, mouseY() - 3);	// move mouse
 		break;
 
 /*	case FRONTEND_FOGTYPE:
@@ -1200,7 +1074,6 @@ BOOL runGameOptionsMenu(void)
 		changeTitleMode(TITLE);
 	}
 
-	StartCursorSnap(&InterfaceSnap);
 	widgDisplayScreen(psWScreen);						// show the widgets currently running
 
 	return TRUE;
@@ -1426,20 +1299,16 @@ void addText(int FontID,UDWORD FormID,UDWORD id,  UDWORD PosX, UDWORD PosY, char
 // show a background piccy
 static void displayTitleBitmap(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
 {
-    const size_t sTmpSize = 200;
-
-	char	sTmp[200];			//Couldn't have sTmp[sTmpSize], .net did NOT like that, so for now...
+#ifdef DEBUG
+	static const char versionString[] = "Version " VERSION " - Built " __DATE__ " - DEBUG";
+#else
+	static const char versionString[] = "Version " VERSION " - Built " __DATE__;
+#endif
 
 	iV_SetFont(WFont);
 	iV_SetTextColour(-1);
 
-#ifdef DEBUG
-	snprintf( sTmp, sTmpSize, "Version %s - Built %s - DEBUG", VERSION, __DATE__ );
-#else
-	snprintf( sTmp, sTmpSize, "Version %s - Built %s", VERSION, __DATE__ );
-#endif
-
-	pie_DrawText270(sTmp, pie_GetVideoBufferWidth()-10, pie_GetVideoBufferHeight()-15);
+	iV_DrawTextRotated(versionString, pie_GetVideoBufferWidth() - 10, pie_GetVideoBufferHeight() - 15, 270.f);
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -1499,20 +1368,6 @@ void displayTextOption(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD 
 
 	iV_DrawText( psBut->pText, fx, fy);
 
-
-
-	if(!greyOut)													// dont snap to unavailable buttons.
-	{
-//		AddCursorSnap(&InterfaceSnap, (SWORD)(fx+10) ,(short) fy,psWidget->formID,psWidget->id,NULL);
-		if (psWidget->style & WBUT_TXTCENTRE) {							//check for centering, calculate offset.
-//			DBPRINTF(("%d : %s\n",fx+fw/2,psBut->pText);
-			AddCursorSnap(&InterfaceSnap, (SWORD)(fx+fw/2) ,(short) fy,psWidget->formID,psWidget->id,&FrontendBias);
-		} else {
-//			DBPRINTF(("%d : %s\n",fx+10,psBut->pText);
-			AddCursorSnap(&InterfaceSnap, (SWORD)(fx+10) ,(short) fy,psWidget->formID,psWidget->id,&FrontendBias);
-		}
-	}
-
 	return;
 }
 
@@ -1536,7 +1391,7 @@ void displayTextAt270(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *
 	fy = yOffset + psWidget->y + iV_GetTextWidth(psLab->aText) ;
 
 
-	iV_DrawText270( psLab->aText, fx, fy);
+	iV_DrawTextRotated(psLab->aText, fx, fy, 270.f);
 }
 
 

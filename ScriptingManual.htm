@@ -153,13 +153,18 @@ div.Section1
 <p class=MsoPlainText><b><span lang=EN-GB style='font-family:Arial'>Warzone2100.
 Script language notes.</span></b></p>
 
-<p class=MsoPlainText><b><span lang=EN-GB style='font-family:Arial'>Original Author: Pumpkin
-Studios. 1999</span></b></p>
-
-<p class=MsoPlainText><b><span lang=EN-GB style='font-family:Arial'>Last Author: $Author$</span></b></p>
+<p class=MsoPlainText><b><span lang=EN-GB style='font-family:Arial'>Original
+Author: Pumpkin Studios. 1999</span></b></p>
 
 <p class=MsoPlainText><b><span lang=EN-GB style='font-family:Arial'>Last
-update: $Date$, $Revision$, <a href="http://wz2100.net/">WRP</a></span></b></p>
+Author: $Author$</span></b></p>
+
+<p class=MsoPlainText><b><span lang=EN-GB style='font-family:Arial'>Last
+update: $Date: 2007-07-15 </span></b><b><span lang=EN-GB style='font-family:
+ Arial'>17:53:41</span></b><b><span lang=EN-GB style='font-family:Arial'> +0200
+(So, </span></b><b><span lang=EN-GB style='font-family:Arial'>15 Jul 2007</span></b><b><span
+lang=EN-GB style='font-family:Arial'>) $, $Revision$, <a
+href="http://wz2100.net/">WRP</a></span></b></p>
 
 <p class=MsoPlainText><b><span lang=EN-GB style='font-family:Arial'>&nbsp;</span></b></p>
 
@@ -182,8 +187,7 @@ responsibility for any damage resulting from modifcation of Warzone 2100.</span>
 <p class=normal><span lang=EN-GB><a href="#Vlo_files_explained">Vlo files
 explained</a></span></p>
 
-<p class=normal><span lang=EN-GB><a href="#Slo_files_explained">Slo files
-explained</a></span></p>
+<p class=normal><span lang=EN-GB><a href="#Slo_files_explained">Slo files explained</a></span></p>
 
 <p class=normal><span lang=EN-GB><a href="#Event_trigger_concept_explained">Event/trigger
 concept explained</a></span></p>
@@ -306,8 +310,7 @@ In the first line a .slo file is attached to this particular .vlo file. </span><
 class=a><span lang=EN-GB>variable_definitions </span></span><span lang=EN-GB>that
 resides inside the curly braces is the heart of every .vlo file, it contains
 definitions of the data that will be used in the main script part - the .slo
-file. Each variable definition starts on a new line and is structured as
-follows:</span></p>
+file. Each variable definition starts on a new line and is structured as follows:</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>&nbsp;</span></p>
 
@@ -332,16 +335,15 @@ Since it is a string it must be put inside quotation marks. All components, be
 it some research, structure, droid template or a weapon is refered by its
 internal name in the game and are defined in the appropriate txt data files.</span></p>
 
-<p><span lang=EN-GB>Each variable definition in a .vlo file starts on the new
-line and ends at the end of the line.</span></p>
+<p><span lang=EN-GB>Each variable definition in a .vlo file starts on the new line
+and ends at the end of the line.</span></p>
 
 <p><span lang=EN-GB>It is also possible to define arrays of some data type. For
 example if you want to use the following 3 research topics in your script you
 might want to define them like this:</span></p>
 
 <p class=code><span lang=EN-GB>myResearch[0]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-RESEARCHSTAT&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-&quot;R-Vehicle-Body11&quot;</span></p>
+RESEARCHSTAT&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;R-Vehicle-Body11&quot;</span></p>
 
 <p class=code><span lang=EN-GB>myResearch[1]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 RESEARCHSTAT&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -375,7 +377,7 @@ lang=EN-GB>Variable declarations</span></p>
 <p class=code style='margin-left:36.0pt;text-indent:-18.0pt'><a
 name="Variable_declaration"></a><a name="Event_and_function_declaration"></a><span
 lang=EN-GB>2.</span><span lang=EN-GB style='font-size:7.0pt;font-family:"Times New Roman"'>&nbsp;
-</span><span lang=EN-GB>Event and function </span><span lang=EN-GB>declaration</span></p>
+</span><span lang=EN-GB>Event and function declaration</span></p>
 
 <p class=code style='margin-left:36.0pt;text-indent:-18.0pt'><span lang=EN-GB>3.</span><span
 lang=EN-GB style='font-size:7.0pt;font-family:"Times New Roman"'>&nbsp; </span><span
@@ -414,8 +416,7 @@ RESEARCHSTAT&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; myResearch[3];</span></p>
 lang=EN-GB>public</span></span><span lang=EN-GB> signals that the variable is
 defined in the corresponding .vlo files. Note that unlike in .vlo files
 variable declarations in .slo files end with a semicolon and unlike in .vlo
-files it is possible to declare more than one variable of the same type at
-once.</span></p>
+files it is possible to declare more than one variable of the same type at once.</span></p>
 
 <p class=MsoNormal><span lang=EN-GB>&nbsp;</span></p>
 
@@ -440,9 +441,9 @@ the .slo file.</span></p>
 <p class=MsoPlainText><span lang=EN-GB style='font-family:Arial'>&nbsp;</span></p>
 
 <p class=note0><em><span lang=EN-GB style='font-family:Arial'>NOTE: All
-variables are initialized to their default values when created. STRUCTURE/DROID/FEATURE
-variables are initialized to NULLOBJECT, STRINGs to &quot;&quot;, FLOATs to
-0.0, INTs to 0, BOOLs to FALSE etc. </span></em></p>
+variables are initialized to their default values when created.
+STRUCTURE/DROID/FEATURE variables are initialized to NULLOBJECT, STRINGs to
+&quot;&quot;, FLOATs to 0.0, INTs to 0, BOOLs to FALSE etc. </span></em></p>
 
 <p class=code><em><span lang=EN-GB style='font-family:"Courier New";font-style:
 normal'>&nbsp;</span></em></p>
@@ -484,18 +485,18 @@ inside an event.</span></p>
 
 <p class=code><span lang=EN-GB>{</span></p>
 
-<p class=code><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-console(&quot;Hello world!&quot;);</span></p>
+<p class=code><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; console(&quot;Hello
+world!&quot;);</span></p>
 
 <p class=code><span lang=EN-GB>}</span></p>
 
 <p class=code><span lang=EN-GB>&nbsp;</span></p>
 
 <p class=normal><span lang=EN-GB>This piece of code will output &quot;Hello
-world!&quot; to the game console every 5 seconds. Note that triggers are put
-inside the round braces after the event name while code that is to be executed
-resides inside the curly braces. The syntax of the executable code is very
-close to the C/C++ syntax.</span></p>
+world!&quot; to the game console every 5 seconds. Note that triggers are put inside
+the round braces after the event name while code that is to be executed resides
+inside the curly braces. The syntax of the executable code is very close to the
+C/C++ syntax.</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
@@ -575,7 +576,8 @@ event name.</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
-<p class=code><span lang=EN-GB>event myEvent;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<p class=code><span lang=EN-GB>event
+myEvent;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 //declaration of the event</span></p>
 
 <p class=code><span lang=EN-GB>&nbsp;</span></p>
@@ -590,8 +592,8 @@ event name.</span></p>
 
 <p class=code><span lang=EN-GB>{</span></p>
 
-<p class=code><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-setEventTrigger(myEvent, inactive);&nbsp;&nbsp; //deactivate myEvent</span></p>
+<p class=code><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; setEventTrigger(myEvent,
+inactive);&nbsp;&nbsp; //deactivate myEvent</span></p>
 
 <p class=code><span lang=EN-GB>}</span></p>
 
@@ -753,8 +755,8 @@ lang=EN-GB>.</span></p>
 
 <p class=note0><span lang=EN-GB>NOTE: </span><span class=a><span lang=EN-GB
 style='font-size:12.0pt'>ref</span></span><span lang=EN-GB> keyword means that
-a pointer to the provided variable is passed to the interpreter, so that a
-callback can modify value of the variable.</span></p>
+a pointer to the provided variable is passed to the interpreter, so that a callback
+can modify value of the variable.</span></p>
 
 <p class=MsoPlainText><span lang=EN-GB>&nbsp;</span></p>
 
@@ -763,8 +765,7 @@ callback can modify value of the variable.</span></p>
 <p class=normal><span lang=EN-GB>It is possible to reuse a trigger for more
 than one event if a trigger is declared in the <span class=a><span
 style='font-family:Arial'><a href="#Event_and_function_declaration">Event and
-function declaration</a></span>. </span>Trigger declaration has following
-syntax:</span></p>
+function declaration</a></span>. </span>Trigger declaration has following syntax:</span></p>
 
 <p class=normal><span class=a><span lang=EN-GB>&nbsp;</span></span></p>
 
@@ -922,9 +923,8 @@ compare numeric expressions to give a boolean </span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
-<p class=code><span lang=EN-GB>&lt;&nbsp;
-&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span lang=EN-GB
-style='font-family:Arial'>Less than / Greater than</span></p>
+<p class=code><span lang=EN-GB>&lt;&nbsp; &gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span lang=EN-GB style='font-family:Arial'>Less than / Greater than</span></p>
 
 <p class=code><span lang=EN-GB>&lt;=
 &gt;=&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span lang=EN-GB
@@ -1105,8 +1105,7 @@ lang=EN-GB>:</span></p>
 
 <p class=MsoPlainText><span lang=EN-GB>{</span></p>
 
-<p class=MsoPlainText><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-&lt;code&gt;</span></p>
+<p class=MsoPlainText><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;code&gt;</span></p>
 
 <p class=MsoPlainText><span lang=EN-GB>}</span></p>
 
@@ -1360,8 +1359,7 @@ macros (current max depth is 10).</span></p>
 
 <p class=code><span lang=EN-GB>&nbsp;</span></p>
 
-<p class=code><span lang=EN-GB>#define CURRENT_PLAYER_NAME
-getPlayerName(CURRENT_PLAYER)</span></p>
+<p class=code><span lang=EN-GB>#define CURRENT_PLAYER_NAME getPlayerName(CURRENT_PLAYER)</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
@@ -1441,7 +1439,8 @@ droid.weapon - the WEAPON of the droid DROIDID - (simple) literally just an ID
 of a droid</span></p>
 
 <p class=MsoNormal style='margin-bottom:12.0pt'><span lang=EN-GB>droid.selected
-– holds TRUE if droid is currently selected</span></p>
+– holds TRUE if droid is currently selected<br>
+droid.group – the GROUP droid belongs to</span></p>
 
 <p class=MsoNormal><span class=codebold><span lang=EN-GB>FEATURE</span></span><span
 lang=EN-GB> - (complex) defined by the ID got from the world editor. It is a
@@ -1521,6 +1520,13 @@ group.y - average y coord<br>
 group.members - number of units in the group<br>
 group.health - average %age health of the units</span></p>
 
+<p class=MsoNormal><span lang=EN-GB>group.type – type of the group, one of:
+GT_NORMAL, GT_COMMAND or GT_TRANSPORTER (refer to <a
+href="#Script_Function_Constants">Script Function Constants</a>)</span></p>
+
+<p class=MsoNormal><span lang=EN-GB>group.commander – commander of the group, if
+type = GT_COMMAND or NULLOBJECT</span></p>
+
 <p class=MsoNormal><span lang=EN-GB>&nbsp;</span></p>
 
 <p class=note0><span lang=EN-GB>NOTE: transporters and commanders can't be
@@ -1591,15 +1597,15 @@ have an indeterminate effect.</span></p>
 <p class=normal><span lang=EN-GB>WARNING setting the fog colour to BLACK(0, 0,
 0) does not turn fog off and should be avoided.</span></p>
 
-<p class=normal><span lang=EN-GB>Arizona: NEW 204, 149, 70 Nick approved
-24/09/98&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Old 176,
-143, 95&nbsp;&nbsp; B08F5F)</span></p>
+<p class=normal><span lang=EN-GB>Arizona</span><span lang=EN-GB>: NEW 204, 149,
+70 Nick approved </span><span lang=EN-GB>24/09/98</span><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+(Old 176, 143, 95&nbsp;&nbsp; B08F5F)</span></p>
 
-<p class=normal><span lang=EN-GB>Urban:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 201,
-146, 15 C9920F</span></p>
+<p class=normal><span lang=EN-GB>Urban:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+201, 146, 15 C9920F</span></p>
 
-<p class=normal><span lang=EN-GB>Rockies:&nbsp;&nbsp;&nbsp;&nbsp; 182, 225,
-236&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; B6E1EC</span></p>
+<p class=normal><span lang=EN-GB>Rockies</span><span lang=EN-GB>:&nbsp;&nbsp;&nbsp;&nbsp;
+182, 225, 236&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; B6E1EC</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
@@ -1653,8 +1659,8 @@ research</span></p>
 
 <p class=code><span lang=EN-GB>completeResearch(RESEARCHSTAT, PLAYER)</span></p>
 
-<p class=normal><span lang=EN-GB>This function acts as if the research was
-performed by the player giving them the results</span></p>
+<p class=normal><span lang=EN-GB>This function acts as if the research was performed
+by the player giving them the results</span></p>
 
 <p class=normal><span lang=EN-GB>RESEARCHSTAT is defined by the name from
 Access</span></p>
@@ -1672,8 +1678,8 @@ research</span></p>
 
 <p class=code><span lang=EN-GB>&nbsp;</span></p>
 
-<p class=normal><span lang=EN-GB>These functions check for when an object/droid/structure
-belonging to a player is within range of a position</span></p>
+<p class=normal><span lang=EN-GB>These functions check for when an
+object/droid/structure belonging to a player is within range of a position</span></p>
 
 <p class=normal><span lang=EN-GB>PLAYER is the id of the player whose unit is
 checked for in range</span></p>
@@ -1711,8 +1717,7 @@ world coords</span></p>
 <p class=normal><span lang=EN-GB>This functions checks for when a player has
 seen a given object - either by unit or structure</span></p>
 
-<p class=normal><span lang=EN-GB>OBJECT is any type of DROID, FEATURE,
-STRUCTURE</span></p>
+<p class=normal><span lang=EN-GB>OBJECT is any type of DROID, FEATURE, STRUCTURE</span></p>
 
 <p class=normal><span lang=EN-GB>PLAYER is the id of the player to check for
 having seen</span></p>
@@ -1771,8 +1776,8 @@ checked for the building</span></p>
 
 <p class=code><span lang=EN-GB>bool structureIdle(STRUCTURE)</span></p>
 
-<p class=normal><span lang=EN-GB>This function checks whether the structure is
-doing anything. Returns TRUE if idle</span></p>
+<p class=normal><span lang=EN-GB>This function checks whether the structure is doing
+anything. Returns TRUE if idle</span></p>
 
 <p class=normal><span lang=EN-GB>STRUCTURE is a valid structure defined by ID</span></p>
 
@@ -1905,8 +1910,7 @@ be used in e.g. destroyFeature.</span></p>
 <p class=normal><span lang=EN-GB>This function centres the view on the object
 supplied</span></p>
 
-<p class=normal><span lang=EN-GB>OBJECT is any type of DROID, FEATURE,
-STRUCTURE</span></p>
+<p class=normal><span lang=EN-GB>OBJECT is any type of DROID, FEATURE, STRUCTURE</span></p>
 
 <p class=code><span lang=EN-GB>&nbsp;</span></p>
 
@@ -1916,11 +1920,10 @@ X, Y )</span></p>
 <p class=normal><span lang=EN-GB>Builds a structure belonging to PLAYER centred
 at (X, Y).</span></p>
 
-<p class=normal><span lang=EN-GB>The structure must be previously enabled via
-enableStructure().</span></p>
+<p class=normal><span lang=EN-GB>The structure must be previously enabled via enableStructure().</span></p>
 
-<p class=normal><span lang=EN-GB>The structure identifier is returned - this can
-be used in e.g. destroyStructure.</span></p>
+<p class=normal><span lang=EN-GB>The structure identifier is returned - this
+can be used in e.g. destroyStructure.</span></p>
 
 <p class=code><span lang=EN-GB>&nbsp;</span></p>
 
@@ -2202,7 +2205,8 @@ to</span></p>
 <p class=normal><span lang=EN-GB>adds the POWER amount to the PLAYER's current
 level</span></p>
 
-<p class=normal><span lang=EN-GB>POWER is the value to add to the player's power</span></p>
+<p class=normal><span lang=EN-GB>POWER is the value to add to the player's
+power</span></p>
 
 <p class=normal><span lang=EN-GB>PLAYER is the id of the player </span></p>
 
@@ -2333,7 +2337,8 @@ for a player (1-100)</span></p>
 <p class=normal><span lang=EN-GB>Starts a mission for the currently selected
 player - NB Transporters must be filled if</span></p>
 
-<p class=normal><span lang=EN-GB>you want units to appear on the Mission map</span></p>
+<p class=normal><span lang=EN-GB>you want units to appear on the </span><span
+ lang=EN-GB>Mission</span><span lang=EN-GB> map</span></p>
 
 <p class=normal><span lang=EN-GB>MISSION_TYPE is a predefined type - see <a
 href="#Script_Function_Constants">Script Function Constants</a></span></p>
@@ -2558,8 +2563,8 @@ an object</span></p>
 
 <p class=functioncode0><span lang=EN-GB>STRUCTURE objToStructure(BASEOBJ)</span></p>
 
-<p class=normal><span lang=EN-GB>Convert a BASEOBJ to STRUCTURE when
-BASEOBJ.type == OBJ_STRUCTURE. Returns NULLOBJECT otherwise</span></p>
+<p class=normal><span lang=EN-GB>Convert a BASEOBJ to STRUCTURE when BASEOBJ.type
+== OBJ_STRUCTURE. Returns NULLOBJECT otherwise</span></p>
 
 <p class=functioncode0><span lang=EN-GB>&nbsp;</span></p>
 
@@ -2946,7 +2951,8 @@ coordinates of the midpoint of the nearest gateway.</span></p>
 <p class=functioncode0><span lang=EN-GB>void setWaterTile(int tileNum)</span></p>
 
 <p class=normal><span lang=EN-GB>Sets the tile to use for underwater. Count
-from the top of the tileset pcx - presently 17 for arizona.</span></p>
+from the top of the tileset pcx - presently 17 for </span><span lang=EN-GB>arizona</span><span
+lang=EN-GB>.</span></p>
 
 <p class=functioncode0><span lang=EN-GB>&nbsp;</span></p>
 
@@ -2969,6 +2975,14 @@ droid)</span></p>
 <p class=normal><span lang=EN-GB>adds the unit droid to the command group of
 the command unit commander</span></p>
 
+<p class=normal><span lang=EN-GB>&nbsp;</span></p>
+
+<p class=normal><span lang=EN-GB style='font-family:"Courier New"'>cmdDroidMaxGroup(DROID
+commander)</span></p>
+
+<p class=normal><span lang=EN-GB>Returns max number of droids ‘commander’ can
+have in his group.</span></p>
+
 <p class=functioncode0><span lang=EN-GB>&nbsp;</span></p>
 
 <p class=functioncode0><span lang=EN-GB>bool testStructureModule(int
@@ -2983,8 +2997,8 @@ true if the structure has _any_ number of modules attached.</span></p>
 <p class=normal><span lang=EN-GB>If the structure pointer that's sent in is
 NULL (ie - no structure is specified), then it'll return </span></p>
 
-<p class=normal><span lang=EN-GB>TRUE is _any_ of the player's structures
-possess _any_ module. In all other cases, it'll return FALSE.</span></p>
+<p class=normal><span lang=EN-GB>TRUE is _any_ of the player's structures possess
+_any_ module. In all other cases, it'll return FALSE.</span></p>
 
 <p class=functioncode0><span lang=EN-GB>&nbsp;</span></p>
 
@@ -3023,16 +3037,15 @@ variables. Can be used to find if the reticule is up or the</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
-<p class=normal><span lang=EN-GB>e.g.&nbsp;&nbsp;&nbsp;
-getGameStatus(STATUS_ReticuleIsOpen); will return TRUE if the reticule is open
-(on screen) or FALSE if the reticule is not (disabled)</span></p>
+<p class=normal><span lang=EN-GB>e.g.&nbsp;&nbsp;&nbsp; getGameStatus(STATUS_ReticuleIsOpen);
+will return TRUE if the reticule is open (on screen) or FALSE if the reticule
+is not (disabled)</span></p>
 
 <p class=normal><span lang=EN-GB>or</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-&nbsp;&nbsp;&nbsp;
-getGameStatus(STATUS_BattleMapViewEnabled);&nbsp;&nbsp;&nbsp;&nbsp; will return
-TRUE if we are in the battle map mode</span></p>
+&nbsp;&nbsp;&nbsp; getGameStatus(STATUS_BattleMapViewEnabled);&nbsp;&nbsp;&nbsp;&nbsp;
+will return TRUE if we are in the battle map mode</span></p>
 
 <p class=normal><span lang=EN-GB>or</span></p>
 
@@ -3105,8 +3118,8 @@ take over</span></p>
 
 <p class=functioncode0><span lang=EN-GB>&nbsp;</span></p>
 
-<p class=functioncode0><span lang=EN-GB>STRUCTURE
-takeOverSingleStructure(STRUCTURE structToTakeOver, int playerToGain)</span></p>
+<p class=functioncode0><span lang=EN-GB>STRUCTURE takeOverSingleStructure(STRUCTURE
+structToTakeOver, int playerToGain)</span></p>
 
 <p class=normal><span lang=EN-GB>this replaces the existing structure
 (structToTakeOver) by a new one for the playerToGain. </span></p>
@@ -3119,8 +3132,8 @@ function****</span></p>
 
 <p class=functioncode0><span lang=EN-GB>&nbsp;</span></p>
 
-<p class=functioncode0><span lang=EN-GB>int takeOverStructsInArea(int fromPlayer,
-int toPlayer, int x1, int y1,</span></p>
+<p class=functioncode0><span lang=EN-GB>int takeOverStructsInArea(int
+fromPlayer, int toPlayer, int x1, int y1,</span></p>
 
 <p class=functioncode0><span lang=EN-GB>int x2, int y2)</span></p>
 
@@ -3228,8 +3241,8 @@ object target</span></p>
 <p class=functioncode0><span lang=EN-GB>void fireWeaponAtLoc(WEAPON weap, int
 x, int y)</span></p>
 
-<p class=normal><span lang=EN-GB>fire a single shot of the weapon weap at the
-location x,y</span></p>
+<p class=normal><span lang=EN-GB>fire a single shot of the weapon weap at the location
+x,y</span></p>
 
 <p class=functioncode0><span lang=EN-GB>&nbsp;</span></p>
 
@@ -3258,8 +3271,8 @@ for the specified player</span></p>
 
 <p class=functioncode0><span lang=EN-GB>setDroidKills(DROID droid, int kills)</span></p>
 
-<p class=normal><span lang=EN-GB>sets the number of kills for a unit.&nbsp;
-currently the level boudaries are:</span></p>
+<p class=normal><span lang=EN-GB>sets the number of kills for a unit.&nbsp; currently
+the level boudaries are:</span></p>
 
 <p class=normal><span lang=EN-GB>4, 8, 16, 32, 64, 128, 256, 128</span></p>
 
@@ -3365,8 +3378,7 @@ skGetFactoryCapacity( STRUCTURE str)</span></p>
 <p class=functioncode0><span lang=EN-GB>void&nbsp;&nbsp; skDifficultyModifier(
 int pl)</span></p>
 
-<p class=normal><span lang=EN-GB>Apply the frontend slider settings to player
-pl.</span></p>
+<p class=normal><span lang=EN-GB>Apply the frontend slider settings to player pl.</span></p>
 
 <p class=functioncode0><span lang=EN-GB>&nbsp;</span></p>
 
@@ -3377,8 +3389,8 @@ int x , ref int y , STRUCTURESTAT defenceStat,</span></p>
 player)</span></p>
 
 <p class=normal><span lang=EN-GB>Given a starting x and y, make unit ‘unit’
-belonging to ‘player’ build either a ‘defenceStat’ or a row of ‘wallStat’s.
-returns </span></p>
+belonging to ‘player’ build either a ‘defenceStat’ or a row of ‘wallStat’s. returns
+</span></p>
 
 <p class=normal><span lang=EN-GB>Modified x and y’s.</span></p>
 
@@ -3404,9 +3416,9 @@ forPlayer, int, fromPlayer,</span></p>
 
 <p class=functioncode0><span lang=EN-GB>int x, int y, int z)</span></p>
 
-<p class=normal><span lang=EN-GB>Put a flashing beacon on the map for player
-‘forPlayer’ on position x/y. Unless removed manually the beacon is removed
-automatically from the map after a timeout.</span></p>
+<p class=normal><span lang=EN-GB>Put a flashing beacon on the map for player ‘forPlayer’
+on position x/y. Unless removed manually the beacon is removed automatically
+from the map after a timeout.</span></p>
 
 <p class=MsoPlainText><span lang=EN-GB>&nbsp;</span></p>
 
@@ -3434,8 +3446,8 @@ map.</span></p>
 
 <p class=functioncode0><span lang=EN-GB>&nbsp;</span></p>
 
-<p class=functioncode0><span lang=EN-GB>bool fogTileInRange(ref int tileX, ref
-int tileY, int x, int y,</span></p>
+<p class=functioncode0><span lang=EN-GB>bool fogTileInRange(ref int tileX, ref int
+tileY, int x, int y,</span></p>
 
 <p class=functioncode0><span lang=EN-GB>int rangeX, int rangeY, int
 searchRange, int player, int threatRange)</span></p>
@@ -3444,8 +3456,8 @@ searchRange, int player, int threatRange)</span></p>
 unrevealed location in range with starting location x/y, range ‘searchRange’
 and closest to location x/y. If ‘searchRange’ is -1, then entire map is being
 searched. ‘Player’ is the player who is looking for an unrevealed map location.
-If ‘threatRange’ != -1 then also checks for enemy presence. Locations with enemy
-presence are ignored then.</span></p>
+If ‘threatRange’ != -1 then also checks for enemy presence. Locations with
+enemy presence are ignored then.</span></p>
 
 <p class=normal><span lang=EN-GB>Returns TRUE if any locations satisfying the
 search conditions were found, returns FALSE otherwise.</span></p>
@@ -3456,8 +3468,8 @@ search conditions were found, returns FALSE otherwise.</span></p>
 int range, int player)</span></p>
 
 <p class=normal><span lang=EN-GB>Returns TRUE if there are no unrevealed tiles
-left in locations for player ‘player’ with center x/y and radius ‘range’. All
-coordinates are in world units.</span></p>
+left in locations for player ‘player’ with center x/y and radius ‘range’. All coordinates
+are in world units.</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
@@ -3515,12 +3527,11 @@ numEnemyWeapDroidsInRange(int lookingPlayer, int x, int y,</span></p>
 <p class=functioncode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int
 range, bool includeVTOLs)</span></p>
 
-<p class=functioncode0><span lang=EN-GB>int&nbsp;&nbsp;
-numEnemyWeapStructsInRange(int lookingPlayer, int x, int y, int
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; range)</span></p>
+<p class=functioncode0><span lang=EN-GB>int&nbsp;&nbsp; numEnemyWeapStructsInRange(int
+lookingPlayer, int x, int y, int &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; range)</span></p>
 
-<p class=functioncode0><span lang=EN-GB>int&nbsp;&nbsp; numEnemyWeapObjInRange(int
-lookingPlayer, int x, int y,</span></p>
+<p class=functioncode0><span lang=EN-GB>int&nbsp;&nbsp;
+numEnemyWeapObjInRange(int lookingPlayer, int x, int y,</span></p>
 
 <p class=functioncode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int
 range, bool includeVTOLs)</span></p>
@@ -3537,8 +3548,8 @@ are ignored.</span></p>
 <p class=functioncode0><span lang=EN-GB>int numFriendlyWeapDroidsInRange(int
 lookingPlayer, int x, int y,</span></p>
 
-<p class=functioncode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int
-range, bool includeVTOLs)</span></p>
+<p class=functioncode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int range,
+bool includeVTOLs)</span></p>
 
 <p class=functioncode0><span lang=EN-GB>int numFriendlyWeapStructsInRange(int
 lookingPlayer, int x, int y, int &nbsp; range)</span></p>
@@ -3592,8 +3603,8 @@ lookingPlayer, int, x, int y, int range, bool includeVTOLs)</span></p>
 (structures and units) at location x/y within range ‘range’ that are visible to
 ‘lookingPlayer’.</span></p>
 
-<p class=normal><span lang=EN-GB>If ‘includeVTOLs’ is set to FALSE, then VTOLs
-are ignored.</span></p>
+<p class=normal><span lang=EN-GB>If ‘includeVTOLs’ is set to FALSE, then VTOLs are
+ignored.</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
@@ -3695,6 +3706,13 @@ identical. Comparison is case-sensitive.</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
+<p class=normal><span lang=EN-GB style='font-family:"Courier New"'>int
+calcDroidPower(DROID droid)</span></p>
+
+<p class=normal><span lang=EN-GB>Returns cost of the ‘droid’.</span></p>
+
+<p class=normal><span lang=EN-GB>&nbsp;</span></p>
+
 <p class=header><a name="Debugging_Script_Functions"><span lang=EN-GB>Debugging
 Script Functions</span></a></p>
 
@@ -3722,8 +3740,8 @@ debug output for player ‘player’ was previously turned on with dbgMsgOn().</span
 string assertMessage, int player)</span></p>
 
 <p class=normal><span lang=EN-GB>If ‘assertExpression’ evaluates to FALSE, then
-‘assertMessage’ is output to the game console. Must turn on debug output for
-’player‘ with dbgMsgOn() first.</span></p>
+‘assertMessage’ is output to the game console. Must turn on debug output for ’player‘
+with dbgMsgOn() first.</span></p>
 
 <p class=note0><span lang=EN-GB>NOTE: in debug game builds failed assertation
 will cause&nbsp; game assertation.</span></p>
@@ -3755,8 +3773,8 @@ that are constant throughout the game.</span></p>
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
 <p class=normal><span class=constantscode><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-NULLOBJECT</span></span><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - used
-to check that a BASEOBJECT/FEATURE/STRUCTURE has
+NULLOBJECT</span></span><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - used to
+check that a BASEOBJECT/FEATURE/STRUCTURE has
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; been
 assigned by a function</span></p>
@@ -3810,8 +3828,8 @@ INTELMAP</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
-<p class=normal><span lang=EN-GB>&nbsp;- When flashing an icon - with
-scrFlashOn()&nbsp; scrFlashOff()</span></p>
+<p class=normal><span lang=EN-GB>&nbsp;- When flashing an icon - with scrFlashOn()&nbsp;
+scrFlashOff()</span></p>
 
 <p class=normal><span lang=EN-GB>you can additional use</span></p>
 
@@ -3868,8 +3886,7 @@ CAMP_MSG</span></p>
 <p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 MISS_MSG</span></p>
 
-<p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-PROX_MSG</span></p>
+<p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PROX_MSG</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
@@ -4140,45 +4157,55 @@ lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb
 <p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span><span class=constantscode><span lang=EN-GB>DROID_WEAPON</span></span><span
 lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-- Weapon unit</span></p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Weapon unit</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span><span class=constantscode><span lang=EN-GB>DROID_SENSOR</span></span><span
 lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-- Sensor unit</span></p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Sensor unit</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span><span class=constantscode><span lang=EN-GB>DROID_ECM</span></span><span
 lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-- ECM unit</span></p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- ECM unit</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span><span class=constantscode><span lang=EN-GB>DROID_CONSTRUCT&nbsp;&nbsp;&nbsp;
-</span></span><span lang=EN-GB>- Constructor unit</span></p>
+</span></span><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-
+Constructor unit</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span><span class=constantscode><span lang=EN-GB>DROID_PERSON</span></span><span
 lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-- person</span></p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- person</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span><span class=constantscode><span lang=EN-GB>DROID_CYBORG</span></span><span
 lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-- cyborg/super cyborg</span></p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- cyborg/super cyborg</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span><span class=constantscode><span lang=EN-GB>DROID_TRANSPORTER</span></span><span
-lang=EN-GB>&nbsp;&nbsp;&nbsp; - guess what this is!</span></p>
+lang=EN-GB>&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-
+guess what this is!</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span><span class=constantscode><span lang=EN-GB>DROID_COMMAND</span></span><span
-lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -
-Command unit</span></p>
+lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Command unit</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span><span class=constantscode><span lang=EN-GB>DROID_REPAIR</span></span><span
 lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-- Repair Unit</span></p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Repair Unit</span></p>
+
+<p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span lang=EN-GB style='font-family:"Courier New"'>DROID_CYBORG_CONSTRUCT</span><span
+lang=EN-GB> &nbsp;- Cyborg engineer</span></p>
+
+<p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span lang=EN-GB style='font-family:"Courier New"'>DROID_CYBORG_REPAIR</span><span
+lang=EN-GB> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Cyborg mechanic</span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
@@ -4267,7 +4294,8 @@ IMAGE_CURSOR_SELECT</span></p>
 <p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 IMAGE_CURSOR_ATTACK</span></p>
 
-<p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; IMAGE_CURSOR_MOVE</span></p>
+<p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+IMAGE_CURSOR_MOVE</span></p>
 
 <p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 IMAGE_CURSOR_JAM</span></p>
@@ -4296,7 +4324,8 @@ IMAGE_CURSOR_ATTACH</span></p>
 <p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 IMAGE_CURSOR_LOCKON</span></p>
 
-<p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; IMAGE_CURSOR_FIX</span></p>
+<p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+IMAGE_CURSOR_FIX</span></p>
 
 <p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 IMAGE_CURSOR_EMBARK</span></p>
@@ -4394,8 +4423,8 @@ true if we are in battlemap mode</span></p>
 
 <p class=normal><span lang=EN-GB>Possible values for targetedObjectType:</span></p>
 
-<p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MT_TERRAIN
-</span></p>
+<p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+MT_TERRAIN </span></p>
 
 <p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 MT_RESOURCE</span></p>
@@ -4430,13 +4459,13 @@ MT_ENEMYSTR</span></p>
 <p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 MT_TRANDROID</span></p>
 
-<p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-MT_OWNDROID</span></p>
+<p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MT_OWNDROID</span></p>
 
 <p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 MT_OWNDROIDDAM</span></p>
 
-<p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MT_ENEMYDROID</span></p>
+<p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+MT_ENEMYDROID</span></p>
 
 <p class=constantscode0><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 MT_COMMAND</span></p>
@@ -4521,7 +4550,7 @@ lang=EN-GB>DT_WEAP_ALL</span></span><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nb
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
-<p class=normal><span lang=EN-GB>body types:</span></p>
+<p class=normal><span lang=EN-GB>Body types:</span></p>
 
 <p class=constantscode0 style='margin-left:35.4pt'><span lang=EN-GB>DT_LIGHT</span></p>
 
@@ -4553,6 +4582,14 @@ lang=EN-GB>DT_SUPER_HEAVY&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&
 
 <p class=MsoNormal><span lang=EN-GB>&nbsp;</span></p>
 
+<p class=MsoNormal><span lang=EN-GB>Group types:</span></p>
+
+<p class=constantscode0 style='margin-left:35.4pt'><span lang=EN-GB>GT_NORMAL</span></p>
+
+<p class=constantscode0 style='margin-left:35.4pt'><span lang=EN-GB>GT_COMMAND</span></p>
+
+<p class=constantscode0 style='margin-left:35.4pt'><span lang=EN-GB>GT_TRANSPORTER</span></p>
+
 <p class=MsoNormal><span lang=EN-GB>&nbsp;</span></p>
 
 <p class=header><a name="Script_Function_Externals"><span lang=EN-GB>Script
@@ -4561,8 +4598,8 @@ Function Externals</span></a></p>
 <p class=MsoPlainText><span lang=EN-GB>&nbsp;</span></p>
 
 <p class=normal><span lang=EN-GB>These represent variables that are defined in
-the game which can be accessed in the scripts. It will only be possible to set
-the value that is held for some of the variables. </span></p>
+the game which can be accessed in the scripts. It will only be possible to set the
+value that is held for some of the variables. </span></p>
 
 <p class=normal><span lang=EN-GB>&nbsp;</span></p>
 
@@ -4868,8 +4905,7 @@ destroyed</span></p>
 
 <p class=callbackcode0><span lang=EN-GB>&nbsp;</span></p>
 
-<p class=callbackcode0><span lang=EN-GB>CALL_FEATURE_DESTROYED, ref FEATURE
-feature</span></p>
+<p class=callbackcode0><span lang=EN-GB>CALL_FEATURE_DESTROYED, ref FEATURE feature</span></p>
 
 <p class=normal><span lang=EN-GB>triggered when either a unit or a structure
 for player is destroyed</span></p>
@@ -4961,8 +4997,8 @@ has left the multiplayer game.</span></p>
 <p class=callbackcode0><span lang=EN-GB>CALL_ALLIANCEOFFER, ref int one, ref
 int two</span></p>
 
-<p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; One offers
-two an alliance.</span></p>
+<p class=normal><span lang=EN-GB>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; One
+offers two an alliance.</span></p>
 
 </div>
 

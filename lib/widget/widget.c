@@ -23,8 +23,6 @@
  * The main interface functions to the widget library
  */
 
-#include <string.h>
-
 #include "lib/framework/frame.h"
 #include "lib/framework/frameint.h"
 
@@ -37,15 +35,7 @@
 #include "editbox.h"
 #include "bar.h"
 #include "slider.h"
-
 #include "tip.h"
-
-
-#include <assert.h>
-
-/* The initial and extension number of strings to allocate in the string heap */
-#define WIDG_STRINIT		100
-#define WIDG_STREXT			10
 
 /* the widget to be returned by widgRunScreen */
 static WIDGET	*psRetWidget;
@@ -53,16 +43,12 @@ static WIDGET	*psRetWidget;
 static	BOOL	bWidgetsActive = TRUE;
 
 /* The widget the mouse is over this update */
-static WIDGET	*psMouseOverWidget;
+static WIDGET	*psMouseOverWidget = NULL;
 
 static UDWORD	pressed, released;
-
-
-
 static WIDGET_AUDIOCALLBACK AudioCallback = NULL;
 static SWORD HilightAudioID = -1;
 static SWORD ClickedAudioID = -1;
-
 
 /* Function prototypes */
 void widgHiLite(WIDGET *psWidget, W_CONTEXT *psContext);
@@ -165,7 +151,6 @@ void widgReleaseWidgetList(WIDGET *psWidgets)
 			break;
 		}
 	}
-
 }
 
 /* Release a screen and all its associated data */

@@ -16,20 +16,18 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 // ExpandLimitsDlg.cpp : implementation file
 //
 
 #include "stdafx.h"
 #include "btedit.h"
-#include "debugprint.h"
+#include "debugprint.hpp"
 #include "expandlimitsdlg.h"
-
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#undef THIS_FILE
-static char THIS_FILE[] = __FILE__;
-#endif
 
 /////////////////////////////////////////////////////////////////////////////
 // CExpandLimitsDlg dialog
@@ -73,22 +71,23 @@ BOOL CExpandLimitsDlg::OnInitDialog()
 	
 	CComboBox *List = (CComboBox*)GetDlgItem(IDC_EXCLUDELIST);
 
-	ListNode<CScrollLimits> *TmpNode = m_World->GetScrollLimits();
-	int ListSize = 0;
-	char *FirstString;
+	size_t ListSize = 0;
+	const char* FirstString;
 
 	// Add the strings to the list box.
-	while(TmpNode!=NULL) {
-		List->AddString(TmpNode->GetData()->ScriptName);
-		if(ListSize == 0) {
-			FirstString = TmpNode->GetData()->ScriptName;
-		}
-		ListSize++;
-		TmpNode = TmpNode->GetNextNode();
+	std::list<CScrollLimits>::const_iterator curNode;
+	for (curNode = m_World->GetScrollLimits().begin(); curNode != m_World->GetScrollLimits().end(); ++curNode)
+	{
+		List->AddString(curNode->ScriptName);
+		if(ListSize == 0)
+			FirstString = curNode->ScriptName;
+
+		++ListSize;
 	}
 
 	// Set the default selection.
-	if(ListSize) {
+	if(ListSize)
+	{
 		List->SelectString(-1, FirstString);
 		m_ExcludeSelected = 0;
 	}
@@ -96,21 +95,21 @@ BOOL CExpandLimitsDlg::OnInitDialog()
 
 	List = (CComboBox*)GetDlgItem(IDC_INCLUDELIST);
 
-	TmpNode = m_World->GetScrollLimits();
 	ListSize = 0;
 
 	// Add the strings to the list box.
-	while(TmpNode!=NULL) {
-		List->AddString(TmpNode->GetData()->ScriptName);
-		if(ListSize == 0) {
-			FirstString = TmpNode->GetData()->ScriptName;
-		}
-		ListSize++;
-		TmpNode = TmpNode->GetNextNode();
+	for (curNode = m_World->GetScrollLimits().begin(); curNode != m_World->GetScrollLimits().end(); ++curNode)
+	{
+		List->AddString(curNode->ScriptName);
+		if(ListSize == 0)
+			FirstString = curNode->ScriptName;
+
+		++ListSize;
 	}
 
 	// Set the default selection.
-	if(ListSize) {
+	if(ListSize)
+	{
 		List->SelectString(-1, FirstString);
 		m_IncludeSelected = 0;
 	}

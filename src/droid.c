@@ -223,8 +223,8 @@ SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD wea
 			level = MAX(level, cmdLevel);
 		}
 
-		// Reduce damage taken by 6% for each experience level
-		actualDamage = (actualDamage * (100 - 6 * level)) / 100;
+		// Reduce damage taken by EXP_REDUCE_DAMAGE % for each experience level
+		actualDamage = (actualDamage * (100 - EXP_REDUCE_DAMAGE * level)) / 100;
 
 		debug( LOG_ATTACK, "        penetrated: %d\n", actualDamage);
 	}
@@ -291,6 +291,13 @@ SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD wea
 void droidRelease(DROID *psDroid)
 {
 	DROID	*psCurr, *psNext;
+
+	/* remove animation if present */
+	if (psDroid->psCurAnim != NULL)
+	{
+		animObj_Remove(&psDroid->psCurAnim, psDroid->psCurAnim->psAnim->uwID);
+		psDroid->psCurAnim = NULL;
+	}
 
 	if (psDroid->droidType == DROID_TRANSPORTER)
 	{

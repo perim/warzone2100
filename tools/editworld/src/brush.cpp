@@ -16,6 +16,10 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 
 #include "stdafx.h"
@@ -23,14 +27,8 @@
 #include "bteditdoc.h"
 #include "brush.h"
 #include "tiletypes.h"
-#include "debugprint.h"
+#include "debugprint.hpp"
 #include "assert.h"
-
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#undef THIS_FILE
-static char THIS_FILE[] = __FILE__;
-#endif
 
 extern DWORD g_Flags[MAXTILES];
 extern CUndoRedo *g_UndoRedo;

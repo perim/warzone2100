@@ -96,19 +96,15 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	UDWORD			xDiff, yDiff, distSquared;
 	UDWORD			dice, damLevel;
 	SDWORD			missDir, missDist, missX,missY;
-	SDWORD			hitMod, hitInc, fireChance;
+	SDWORD			resultHitChance=0,baseHitChance=0,fireChance;
 	UDWORD			firePause;
 	SDWORD			targetDir,dirDiff;
 	SDWORD			longRange;
 	DROID			*psDroid = NULL;
-	SDWORD			level, cmdLevel;
-	BOOL			bMissVisible;
-	//Watermelon:minOffset
 	int				minOffset = 5;
 	//Watermelon:predicted X,Y offset per sec
 	SDWORD			predictX;
 	SDWORD			predictY;
-	//Watermelon:dist
 	SDWORD			dist;
 
 	CHECK_OBJECT(psAttacker);
@@ -131,11 +127,11 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	/* Get the stats for the weapon */
 	psStats = asWeaponStats + psWeap->nStat;
 
-    //check valid weapon/prop combination
-    if (!validTarget(psAttacker, psTarget, weapon_slot))
-    {
-        return;
-    }
+	// check valid weapon/prop combination
+	if (!validTarget(psAttacker, psTarget, weapon_slot))
+	{
+		return;
+	}
 
 	/*see if reload-able weapon and out of ammo*/
 	if (psStats->reloadTime && !psWeap->ammo)
@@ -146,7 +142,7 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 		}
 		//reset the ammo level
 		psWeap->ammo = psStats->numRounds;
-    }
+	}
 
 	/* See when the weapon last fired to control it's rate of fire */
 	firePause = weaponFirePause(psStats, psAttacker->player);
@@ -174,7 +170,6 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 		firePause += firePause;
 	}
 
-
 	if (gameTime - psWeap->lastFired <= firePause)
 	{
 		/* Too soon to fire again */
@@ -197,7 +192,8 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 		if(!visibleObjWallBlock(psAttacker, psTarget))
 		{
 			// Can't see the target - can't hit it with direct fire
-			debug(LOG_NEVER, "directLOS failed\n");
+			debug(LOG_SENSOR, "combFire(%u[%s]->%u): Droid has no direct line of sight to target",
+			      psAttacker->id, ((DROID *)psAttacker)->aName, psTarget->id);
 			return;
 		}
 	}
@@ -209,71 +205,38 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 		if (!visibleObjWallBlock(psAttacker, psTarget))
 		{
 			// Can't see the target - can't hit it with direct fire
-			debug(LOG_NEVER, "directLOS failed\n");
+			debug(LOG_SENSOR, "combFire(%u[%s]->%u): Structure has no direct line of sight to target",
+			      psAttacker->id, ((STRUCTURE *)psAttacker)->pStructureType->pName, psTarget->id);
 			return;
 		}
 	}
 	else if ( proj_Direct(psStats) )
 	{
+		// VTOL or tall building
 		if (!visibleObject(psAttacker, psTarget))
 		{
 			// Can't see the target - can't hit it with direct fire
-			debug(LOG_NEVER, "directLOS failed\n");
+			debug(LOG_SENSOR, "combFire(%u[%s]->%u): Tall object has no direct line of sight to target",
+			      psAttacker->id, psStats->pName, psTarget->id);
 			return;
 		}
 	}
 	else
 	{
+		// Indirect fire
 		if (!psTarget->visible[psAttacker->player])
 		{
 			// Can't get an indirect LOS - can't hit it with the weapon
-			debug(LOG_NEVER, "indirectLOS failed\n");
+			debug(LOG_SENSOR, "combFire(%u[%s]->%u): Object has no indirect sight of target",
+			      psAttacker->id, psStats->pName, psTarget->id);
 			return;
 		}
 	}
 
-/*	if ( proj_Direct(psStats) ||
-		 ((psAttacker->type == OBJ_DROID) &&
-		  !proj_Direct(psStats) &&
-		   actionInsideMinRange(psDroid, psDroid->psActionTarget)) )
+	// if the turret doesn't turn, check if the attacker is in alignment with the target
+	if (psAttacker->type == OBJ_DROID && !psStats->rotate)
 	{
-		switch (psAttacker->type)
-		{
-		case OBJ_DROID:
-			if (!visibleObjWallBlock(psAttacker, psTarget))
-			{
-				// Can't see the target - can't hit it with direct fire
-				debug( LOG_ATTACK, "directLOS failed\n" );
-				return;
-			}
-			break;
-		default:
-			if (!visibleObject(psAttacker, psTarget))
-			{
-				// Can't see the target - can't hit it with direct fire
-				debug( LOG_ATTACK, "directLOS failed\n" );
-				return;
-			}
-			break;
-		}
-	}
-	else
-	{
-		if (!psTarget->visible[psAttacker->player])
-		{
-			// Can't get an indirect LOS - can't hit it with the weapon
-			debug( LOG_ATTACK, "indirectLOS failed\n");
-			return;
-		}
-	}*/
-
-	// if the turret doesn't turn, check the attacker is in alignment with the
-	// target
-	if (psAttacker->type == OBJ_DROID &&
-		!psStats->rotate)
-	{
-		targetDir = (SDWORD)calcDirection(psAttacker->x,psAttacker->y,
-										  psTarget->x,psTarget->y);
+		targetDir = calcDirection(psAttacker->x, psAttacker->y, psTarget->x, psTarget->y);
 		dirDiff = labs(targetDir - (SDWORD)psAttacker->direction);
 		if (dirDiff > FIXED_TURRET_DIR)
 		{
@@ -281,48 +244,76 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 		}
 	}
 
-	// base modifier 100% of original
-	hitMod = 100;
-	// base hit increment of zero
-	hitInc = 0;
+	// base hit chance, based on weapon's chance to hit as defined in
+	// weapons.txt and with applied weapon upgrades, without any accuracy modifiers
+	baseHitChance = 0;
 
-	// apply upgrades - do these when know if its longHit or shortHit
-	//hitMod = hitMod * (asWeaponUpgrade[psAttacker->player]
-	//							[psStats->weaponSubClass].shortHit + 100) / 100;
+	/* Now see if the target is in range  - also check not too near */
+	xDiff = abs(psAttacker->x - psTarget->x);
+	yDiff = abs(psAttacker->y - psTarget->y);
+	distSquared = xDiff*xDiff + yDiff*yDiff;
+	dist = sqrtf(distSquared);
+	longRange = proj_GetLongRange(psStats);
 
-	// add the attackers experience modifier
-	if (psAttacker->type == OBJ_DROID)
+	if (distSquared <= (psStats->shortRange * psStats->shortRange) &&
+		distSquared >= (psStats->minRange * psStats->minRange))
 	{
-//		hitMod = hitMod + (hitMod * 5) * getDroidLevel((DROID *)psAttacker) / 100;
-//		hitMod = hitMod + hitMod * cmdDroidHitMod((DROID *)psAttacker) / 100;
-		level = getDroidLevel((DROID *)psAttacker);
-		cmdLevel = cmdGetCommanderLevel((DROID *)psAttacker);
-		if (level > cmdLevel)
+		// get weapon chance to hit in the short range
+		baseHitChance = weaponShortHit(psStats,psAttacker->player);
+	}
+	else if ((SDWORD)distSquared <= longRange * longRange &&
+			 ( (distSquared >= psStats->minRange * psStats->minRange) ||
+			   ((psAttacker->type == OBJ_DROID) &&
+			   !proj_Direct(psStats) &&
+			   actionInsideMinRange(psDroid, psTarget, weapon_slot)) ))
+	{
+		// get weapon chance to hit in the long range
+		baseHitChance = weaponLongHit(psStats,psAttacker->player);
+	}
+	else
+	{
+		/* Out of range */
+		debug(LOG_NEVER, "combFire(%u[%s]->%u): Out of range", psAttacker->id, psStats->pName, psTarget->id);
+		return;
+	}
+
+	// if target was in range deal with weapon fire
+	if(baseHitChance > 0)
+	{
+		/* note when the weapon fired */
+		psWeap->lastFired = gameTime;
+
+		/* reduce ammo if salvo */
+		if (psStats->reloadTime)
 		{
-			hitInc += 5 * level;
-		}
-		else
-		{
-			hitInc += 5 * cmdLevel;
+			psWeap->ammo--;
 		}
 	}
 
-	// subtract the defenders experience modifier
-/*	if (psTarget->type == OBJ_DROID)
+	// apply experience accuracy modifiers to the base
+	//hit chance, not to the final hit chance
+	resultHitChance = baseHitChance;
+
+	// add the attacker's experience
+	if (psAttacker->type == OBJ_DROID)
 	{
-//		hitMod = hitMod - hitMod * 2 * getDroidLevel((DROID *)psTarget) / 100;
-//		hitMod = hitMod - hitMod * cmdDroidEvasionMod((DROID *)psTarget) / 100;
-		level = getDroidLevel((DROID *)psTarget);
-		cmdLevel = cmdGetCommanderLevel((DROID *)psTarget);
-		if (level > cmdLevel)
-		{
-			hitInc -= 5 * level;
-		}
-		else
-		{
-			hitInc -= 5 * cmdLevel;
-		}
-	}*/
+		SDWORD	level = getDroidLevel((DROID *)psAttacker);
+		SDWORD	cmdLevel = cmdGetCommanderLevel((DROID *)psAttacker);
+
+		// increase total accuracy by EXP_ACCURACY_BONUS % for each experience level
+		resultHitChance += EXP_ACCURACY_BONUS * MAX(level, cmdLevel) * baseHitChance / 100;
+	}
+
+	// subtract the defender's experience
+	if (psTarget->type == OBJ_DROID)
+	{
+		SDWORD	level = getDroidLevel((DROID *)psTarget);
+		SDWORD	cmdLevel = cmdGetCommanderLevel((DROID *)psTarget);
+
+		// decrease weapon accuracy by EXP_ACCURACY_BONUS % for each experience level
+		resultHitChance -= EXP_ACCURACY_BONUS * MAX(level, cmdLevel) * baseHitChance / 100;
+
+	}
 
 	// fire while moving modifiers
 	if (psAttacker->type == OBJ_DROID &&
@@ -335,7 +326,7 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 			return;
 			break;
 		case FOM_PARTIAL:
-			hitMod = 50*hitMod/100;
+			resultHitChance = FOM_PARTIAL_ACCURACY_PENALTY * resultHitChance / 100;
 			break;
 		case FOM_YES:
 			// can fire while moving
@@ -344,182 +335,74 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	}
 
 	// visibility modifiers
-	if (psTarget->visible[psAttacker->player] < VIS_ATTACK_MOD_LEVEL)
+	//if (psTarget->visible[psAttacker->player] < VIS_ATTACK_MOD_LEVEL)
+	if (psTarget->visible[psAttacker->player] == 0)		//not sure if this can ever be > 0 here
 	{
-		hitMod = 50*hitMod/100;
+		resultHitChance = INVISIBLE_ACCURACY_PENALTY * resultHitChance / 100;
 	}
 
-	debug(LOG_NEVER, "%s Hit mod %d : ", psStats->pName, hitMod);
+	// cap resultHitChance to 0-100%, just in case
+	resultHitChance = MAX(0, resultHitChance);
+	resultHitChance = MIN(100, resultHitChance);
 
-	/* Now see if the target is in range  - also check not too near*/
-	xDiff = abs(psAttacker->x - psTarget->x);
-	yDiff = abs(psAttacker->y - psTarget->y);
-	distSquared = xDiff*xDiff + yDiff*yDiff;
-	//Watermelon:dist
-	dist = (SDWORD)sqrtf(distSquared);
-	longRange = proj_GetLongRange(psStats);
-	if (distSquared <= (psStats->shortRange * psStats->shortRange) &&
-		distSquared >= (psStats->minRange * psStats->minRange))
+	HIT_ROLL(dice);
+
+	// see if we were lucky to hit the target
+	if (dice <= resultHitChance)
 	{
-		/* note when the weapon fired */
-		psWeap->lastFired = gameTime;
-		/*reduce ammo if salvo*/
-		if (psStats->reloadTime)
+		/* Kerrrbaaang !!!!! a hit */
+		//Watermelon:Target prediction
+		if(psTarget->type == OBJ_DROID)
 		{
-			psWeap->ammo--;
-		}
+			predictX = (SDWORD)(trigSin( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed );
+			predictX += psTarget->x;
+			predictY = (SDWORD)(trigCos( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed );
+			predictY += psTarget->y;
 
-		/* Can do a short range shot - see if it hits */
-		/************************************************/
-		/* NEED TO TAKE ACCOUNT OF ECM, BODY SHAPE ETC. */
-		/************************************************/
-		HIT_ROLL(dice);
-		//if (dice <= psStats->shortHit * hitMod /100)
-		if (dice <= (weaponShortHit(psStats,psAttacker->player) * hitMod /100) + hitInc)
-		{
-			/* Kerrrbaaang !!!!! a hit */
-			//Watermelon:Target prediction
-			if(psTarget->type == OBJ_DROID)
-			{
-				predictX = (SDWORD)(trigSin( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed );
-				predictX += psTarget->x;
-				predictY = (SDWORD)(trigCos( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed );
-				predictY += psTarget->y;
-
-				// Make sure we don't pass any negative or out of bounds numbers to proj_SendProjectile
-				predictX = MAX(predictX, 0);
-				predictX = MIN(predictX, world_coord(mapWidth - 1));
-				predictY = MAX(predictY, 0);
-				predictY = MIN(predictY, world_coord(mapHeight - 1));
-			}
-			else
-			{
-				predictX = psTarget->x;
-				predictY = psTarget->y;
-			}
-			debug(LOG_NEVER, "Shot hit (%d)\n", dice);
-			if (!proj_SendProjectile(psWeap, psAttacker, psAttacker->player,
-								predictX, predictY, psTarget->z, psTarget, FALSE, FALSE, weapon_slot))
-			{
-				/* Out of memory - we can safely ignore this */
-				debug(LOG_NEVER, "Out of memory");
-				return;
-			}
+			// Make sure we don't pass any negative or out of bounds numbers to proj_SendProjectile
+			predictX = MAX(predictX, 0);
+			predictX = MIN(predictX, world_coord(mapWidth - 1));
+			predictY = MAX(predictY, 0);
+			predictY = MIN(predictY, world_coord(mapHeight - 1));
 		}
 		else
 		{
-			goto missed;
+			predictX = psTarget->x;
+			predictY = psTarget->y;
 		}
-	}
-	else if ((SDWORD)distSquared <= longRange * longRange &&
-			 ( (distSquared >= psStats->minRange * psStats->minRange) ||
-			   ((psAttacker->type == OBJ_DROID) &&
-			   !proj_Direct(psStats) &&
-			   actionInsideMinRange(psDroid, psTarget, weapon_slot)) ))
-	{
-		//Watermelon:Change actionInMinRange to int
-		/* note when the weapon fired */
-		psWeap->lastFired = gameTime;
-		/*reduce ammo if salvo*/
-		if (psStats->reloadTime)
+		debug(LOG_SENSOR, "combFire: Accurate prediction range (%d)", dice);
+		if (!proj_SendProjectile(psWeap, psAttacker, psAttacker->player,
+							predictX, predictY, psTarget->z, psTarget, FALSE, FALSE, weapon_slot))
 		{
-			psWeap->ammo--;
-		}
-
-		/* Can do a long range shot - see if it hits */
-		/************************************************/
-		/* NEED TO TAKE ACCOUNT OF ECM, BODY SHAPE ETC. */
-		/************************************************/
-		HIT_ROLL(dice);
-		//if (dice <= psStats->longHit * hitMod /100)
-		if (dice <= (weaponLongHit(psStats,psAttacker->player) * hitMod /100) + hitInc)
-		{
-			/* Kerrrbaaang !!!!! a hit */
-			//Watermelon:Target prediction
-			if(psTarget->type == OBJ_DROID)
-			{
-				predictX = (SDWORD)(trigSin( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed );
-				predictX += psTarget->x;
-				predictY = (SDWORD)(trigCos( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed );
-				predictY += psTarget->y;
-
-				// Make sure we don't pass any negative or out of bounds numbers to proj_SendProjectile
-				predictX = MAX(predictX, 0);
-				predictX = MIN(predictX, world_coord(mapWidth - 1));
-				predictY = MAX(predictY, 0);
-				predictY = MIN(predictY, world_coord(mapHeight - 1));
-			}
-			else
-			{
-				predictX = psTarget->x;
-				predictY = psTarget->y;
-			}
-			debug(LOG_NEVER, "Shot hit (%d)\n", dice);
-			if (!proj_SendProjectile(psWeap, psAttacker, psAttacker->player,
-								predictX, predictY, psTarget->z, psTarget, FALSE, FALSE, weapon_slot))
-			{
-				/* Out of memory - we can safely ignore this */
-				debug(LOG_NEVER, "Out of memory");
-				return;
-			}
-		}
-		else
-		{
-			goto missed;
+			/* Out of memory - we can safely ignore this */
+			debug(LOG_ERROR, "Out of memory");
+			return;
 		}
 	}
 	else
 	{
-		/* Out of range */
-		debug(LOG_NEVER, "Out of range\n");
-		return;
+		goto missed;
 	}
+
+	debug(LOG_SENSOR, "combFire: %u[%s]->%u: resultHitChance=%d, visibility=%hhu : ",
+	      psAttacker->id, psStats->pName, psTarget->id, resultHitChance, psTarget->visible[psAttacker->player]);
 
 	return;
 
 missed:
 	/* Deal with a missed shot */
-	debug(LOG_NEVER, "Missed shot (%d)\n", dice);
 
-	/*
-	// Approximate the distance between the attacker and target
-	xDiff = ABSDIF(psAttacker->x,psTarget->x);
-	yDiff = ABSDIF(psAttacker->y,psTarget->y);
-	missDist = (xDiff > yDiff ? xDiff + (yDiff >> 1) : yDiff + (xDiff >> 1));
-
-	// Calculate where the shot will end up
-	missDist = missDist >> 2;
-	if (missDist < MIN_MISSDIST)
-	{
-		missDist = MIN_MISSDIST;
-	}
-	missDir = rand() % BUL_MAXSCATTERDIR;
-	missX = aScatterDir[missDir].x * (rand() % missDist) + psTarget->x;
-	missY = aScatterDir[missDir].y * (rand() % missDist) + psTarget->y;
-	*/
-	//Watermelon:add a more 'accurate' miss
-	missDist = 2 * (100 - (weaponLongHit(psStats,psAttacker->player) * hitMod /100) + hitInc);
+	missDist = 2 * (100 - resultHitChance);
 	missDir = rand() % BUL_MAXSCATTERDIR;
 	missX = aScatterDir[missDir].x * missDist + psTarget->x + minOffset;
 	missY = aScatterDir[missDir].y * missDist + psTarget->y + minOffset;
 
-	debug(LOG_NEVER, "Miss Loc: w(%4d,%4d), t(%3d,%3d)\n",
-		missX, missY, missX>>TILE_SHIFT, missY>>TILE_SHIFT);
+	debug(LOG_NEVER, "combFire: Missed shot (%d) ended up at (%4d,%4d)", dice, missX, missY);
 
-	// decide if a miss is visible
-	bMissVisible = FALSE;
-	if (psTarget->player == selectedPlayer)
-	{
-		bMissVisible = TRUE;
-	}
-
-	/* Fire off the bullet to the miss location */
-	if (!proj_SendProjectile( psWeap, psAttacker, psAttacker->player, missX,missY, psTarget->z, NULL, bMissVisible, FALSE, weapon_slot) )
-	{
-		/* Out of memory */
-		debug(LOG_NEVER, "Out of memory");
-		return;
-	}
+	/* Fire off the bullet to the miss location. The miss is only visible if the player owns
+	 * the target. (Why? - Per) */
+	proj_SendProjectile(psWeap, psAttacker, psAttacker->player, missX,missY, psTarget->z, NULL,
+	                    psTarget->player == selectedPlayer, FALSE, weapon_slot);
 
 	return;
 }

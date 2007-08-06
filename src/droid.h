@@ -56,6 +56,21 @@ extern DROID_TEMPLATE			*apsDroidTemplates[MAX_PLAYERS];
 //used to stop structures being built too near the edge and droids being placed down - pickATile
 #define TOO_NEAR_EDGE	3
 
+/* Define max number of allowed droids per droid type */
+#define MAX_COMMAND_DROIDS		10		// max number of commanders a player can have
+#define MAX_CONSTRUCTOR_DROIDS	15		// max number of constructors a player can have
+
+/* Experience modifies */
+#define EXP_REDUCE_DAMAGE		6		// damage of a droid is reduced by this value per experience level, in %
+#define EXP_ACCURACY_BONUS		5		// accuracy of a droid is increased by this value per experience level, in %
+
+/* Misc accuracy modifiers */
+#define	FOM_PARTIAL_ACCURACY_PENALTY	50	// penalty for not being fully able to fire while moving, in %
+#define	INVISIBLE_ACCURACY_PENALTY		50	// accuracy penalty for the unit firing at a target it can't see, in %
+
+/* Minumum number of droids a commander can control in its group */
+#define	MIN_CMD_GROUP_DROIDS	6
+
 /* Info stored for each droid neighbour */
 typedef struct _naybor_info
 {
@@ -103,9 +118,6 @@ extern DROID* buildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y,
 
 /* Set the asBits in a DROID structure given it's template. */
 extern void droidSetBits(DROID_TEMPLATE *pTemplate,DROID *psDroid);
-
-// calculate the experience level of a droid
-extern SDWORD droidCalcExp(DROID *psDroid);
 
 /* Calculate the weight of a droid from it's template */
 extern UDWORD calcDroidWeight(DROID_TEMPLATE *psTemplate);

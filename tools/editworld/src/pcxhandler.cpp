@@ -16,6 +16,10 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 
 //#include "stdafx.h"
@@ -23,311 +27,286 @@
 #include "windowsx.h"
 #include "stdio.h"
 #include "typedefs.h"
-#include "debugprint.h"
+#include "debugprint.hpp"
 
 #include "pcxhandler.h"
 
+#include <assert.h>
+
+// Forward declarations of internal utility functions
+static inline WORD EncodedGet(WORD *pbyt, WORD *pcnt, std::istream& input);
+static inline WORD EncodeLine(const char* inBuff, WORD inLen, std::ostream& output);
+static inline WORD EncodedPut(UBYTE byt, UBYTE cnt, std::ostream& output);
 
 // Round the given value up to the nearest power of 2.
-//
-DWORD Power2(DWORD Value)
+int Power2(int value)
 {
-	if(IsPower2(Value)) {
-		return Value;
-	}
+	if(IsPower2(value))
+		return value;
 
-	for(int i=31; i>=0; i--) {
-		if(Value & 1<<i) {
+	for(int i = 31; i >= 0; --i)
+	{
+		if(value & 1 << i)
 			break;
-		}
 	}
 
-	ASSERT(i!=31);	// Overflow.
+	assert(i != 31);	// Overflow.
 
-	return 1<<(i+1);
+	return 1 << (i + 1);
 }
 
-// Return TRUE if the given value is a power of 2.
-//
-BOOL IsPower2(DWORD Value)
+PCXHandler::PCXHandler() :
+	_BitmapInfo(NULL),
+	_DIBBitmap(NULL),
+	_Palette(NULL)
 {
-	int Bits = 0;
-
-	while(Value) {
-		if(Value & 1) {
-			Bits++;
-		}
-		Value = Value >> 1;
-	}
-
-	if(Bits != 1) {
-		return FALSE;
-	}
-
-	return TRUE;
 }
 
-
-
-PCXHandler::PCXHandler(void)
-{
-	m_Palette=NULL;
-	m_DIBBitmap=NULL;
-	m_BitmapInfo=NULL;
-}
-
-PCXHandler::~PCXHandler(void)
+PCXHandler::~PCXHandler()
 {
 //	DebugPrint("Deleted PCXHandler\n");
 
-	if(m_Palette!=NULL) {
-		delete m_Palette;
-	}
-	if(m_DIBBitmap!=NULL) {
-		DeleteObject(m_DIBBitmap);
-	}
-	if(m_BitmapInfo!=NULL) {
-		delete m_BitmapInfo;
-	}
+	delete _Palette;
+
+	if (_DIBBitmap != NULL)
+		DeleteObject(_DIBBitmap);
+
+	delete _BitmapInfo;
 }
 
-BOOL PCXHandler::ReadPCX(char *FilePath,DWORD Flags)
+bool PCXHandler::ReadPCX(std::istream& input, DWORD Flags)
 {
-	FILE	*fid;
-
-	fid=fopen(FilePath,"rb");
-    if(fid==NULL) {
-//		MessageBox( NULL, FilePath, "Unable to open file.", MB_OK );
-		return FALSE;
-	}
-	
 // Read the PCX header.
-	fread(&m_Header,sizeof(PCXHeader),1,fid);
+	input.read(reinterpret_cast<char*>(&_Header), sizeof(_Header));
 
-	if(m_Header.Manufacturer != 10) {
-		fclose(fid);
-		MessageBox( NULL, FilePath, "File is not a valid PCX.", MB_OK );
-		return FALSE;
+	if (_Header.Manufacturer != 10)
+	{
+		MessageBox(NULL, "", "File is not a valid PCX.", MB_OK);
+		return false;
 	}
 
-	if(m_Header.NPlanes != 1) {
-		MessageBox( NULL, FilePath, "Unable to load PCX. Not 256 colour.", MB_OK );
-		return FALSE;
+	if(_Header.NPlanes != 1)
+	{
+		MessageBox(NULL, "", "Unable to load PCX. Not 256 colour.", MB_OK);
+		return false;
 	}
 
 // Allocate memory for the bitmap.
 
-	LONG Height = m_Header.Window[3]+1;
-	if(Flags & BMR_ROUNDUP) {
+	int Height = _Header.Window[3] + 1;
+	if(Flags & BMR_ROUNDUP)
+	{
 		Height = Power2(Height);
 	}
 
-	BYTE *Bitmap=new BYTE[m_Header.NPlanes*m_Header.BytesPerLine*Height];
-	LONG Size=m_Header.NPlanes*m_Header.BytesPerLine*(m_Header.Window[3]+1);
-
-	if(Bitmap==NULL) {
-		fclose(fid);
-		MessageBox( NULL, FilePath, "Could not allocate memory.", MB_OK );
-		return FALSE;
-	}
+	char* Bitmap = new char[_Header.NPlanes * _Header.BytesPerLine * Height];
+	LONG Size = _Header.NPlanes * _Header.BytesPerLine * (_Header.Window[3] + 1);
 
 // Decode the bitmap.
-	WORD	chr,cnt,i;
+	WORD	chr,cnt;
 	LONG	decoded=0;
-	BYTE	*bufr=Bitmap;
+	char*	bufr = Bitmap;
 
-	while( (!EncodedGet(&chr, &cnt, fid)) && (decoded < Size) ) {
-		for(i=0; i<cnt; i++) {
+	while (!EncodedGet(&chr, &cnt, input)
+	    && decoded < Size)
+	{
+		for(unsigned int i = 0; i < cnt; ++i)
+		{
 			*bufr++ = (UBYTE)chr;
 			decoded++;
 		}
 	}
 
 	WORD PaletteSize=0;
+	unsigned int i;
 
 // If there's a palette on the end then read it.
 
 //	DebugPrint("PCX Version %d\n",m_Header.Version);
 
-	switch(m_Header.Version) {
-		case	5:
-			fseek(fid,-769,SEEK_END);
-			if(getc(fid)==12) {
-				PaletteSize=1<<m_Header.BitsPerPixel;
-				m_Palette=new PALETTEENTRY[PaletteSize];
+	switch(_Header.Version)
+	{
+		case 5:
+		{
+			input.seekg(-769, std::istream::end);
+			int paletteIdentifier = input.get();
+			if (paletteIdentifier != 12
+			 && paletteIdentifier != std::istream::traits_type::eof())
+				break;
 
-				for (i=0; i<PaletteSize; i++)
-				{
-					m_Palette[i].peRed   = (BYTE)getc(fid);
-					m_Palette[i].peGreen = (BYTE)getc(fid);
-					m_Palette[i].peBlue  = (BYTE)getc(fid);
-					m_Palette[i].peFlags = (BYTE)0;
-				}
+			PaletteSize = 1 << _Header.BitsPerPixel;
+			_Palette = new PALETTEENTRY[PaletteSize];
+
+			for (i = 0; i < PaletteSize; ++i)
+			{
+				_Palette[i].peRed   = (BYTE)input.get();
+				_Palette[i].peGreen = (BYTE)input.get();
+				_Palette[i].peBlue  = (BYTE)input.get();
+				_Palette[i].peFlags = (BYTE)0;
 			}
+
 			break;
+		}
 		default:
-			fclose(fid);
-			MessageBox( NULL, FilePath, "Version not supported.", MB_OK );
-			return FALSE;
+			MessageBox(NULL, "", "PCX version not supported.", MB_OK);
+			return false;
 	}
 
-	fclose(fid);
-	
-	m_BitmapInfo=(BITMAPINFO*)new BYTE[sizeof(BITMAPINFO)+sizeof(RGBQUAD)*PaletteSize];
-	m_BitmapInfo->bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
-	m_BitmapInfo->bmiHeader.biWidth=m_Header.Window[2]+1;
-	m_BitmapInfo->bmiHeader.biHeight=-Height;	//(m_Header.Window[3]+1);
-	m_BitmapInfo->bmiHeader.biPlanes=1;
-	m_BitmapInfo->bmiHeader.biBitCount=m_Header.BitsPerPixel*m_Header.NPlanes;
-	m_BitmapInfo->bmiHeader.biCompression=BI_RGB;
-	m_BitmapInfo->bmiHeader.biSizeImage=0;
-	m_BitmapInfo->bmiHeader.biXPelsPerMeter=0;
-	m_BitmapInfo->bmiHeader.biYPelsPerMeter=0;
-	m_BitmapInfo->bmiHeader.biClrUsed=0;
-	m_BitmapInfo->bmiHeader.biClrImportant=0;
+	_BitmapInfo = reinterpret_cast<BITMAPINFO*>(new char[sizeof(BITMAPINFO) + sizeof(RGBQUAD) * PaletteSize]);
+	_BitmapInfo->bmiHeader.biSize          = sizeof(BITMAPINFOHEADER);
+	_BitmapInfo->bmiHeader.biWidth         = _Header.Window[2]+1;
+	_BitmapInfo->bmiHeader.biHeight        = -Height;	//(m_Header.Window[3]+1);
+	_BitmapInfo->bmiHeader.biPlanes        = 1;
+	_BitmapInfo->bmiHeader.biBitCount      = _Header.BitsPerPixel * _Header.NPlanes;
+	_BitmapInfo->bmiHeader.biCompression   = BI_RGB;
+	_BitmapInfo->bmiHeader.biSizeImage     = 0;
+	_BitmapInfo->bmiHeader.biXPelsPerMeter = 0;
+	_BitmapInfo->bmiHeader.biYPelsPerMeter = 0;
+	_BitmapInfo->bmiHeader.biClrUsed       = 0;
+	_BitmapInfo->bmiHeader.biClrImportant  = 0;
 
-	for(i=0; i<PaletteSize; i++) {
-		m_BitmapInfo->bmiColors[i].rgbRed   = m_Palette[i].peRed;
-		m_BitmapInfo->bmiColors[i].rgbGreen = m_Palette[i].peGreen;
-		m_BitmapInfo->bmiColors[i].rgbBlue  = m_Palette[i].peBlue;
-		m_BitmapInfo->bmiColors[i].rgbReserved = 0;
+	for(i = 0; i < PaletteSize; ++i)
+	{
+		_BitmapInfo->bmiColors[i].rgbRed   = _Palette[i].peRed;
+		_BitmapInfo->bmiColors[i].rgbGreen = _Palette[i].peGreen;
+		_BitmapInfo->bmiColors[i].rgbBlue  = _Palette[i].peBlue;
+		_BitmapInfo->bmiColors[i].rgbReserved = 0;
 	}
 
-	m_DIBBitmap=CreateDIBSection(NULL,m_BitmapInfo,DIB_RGB_COLORS,&m_DIBBits,NULL,0);
+	_DIBBitmap = CreateDIBSection(NULL, _BitmapInfo, DIB_RGB_COLORS, &_DIBBits, NULL, 0);
 
-	if(m_DIBBitmap==NULL) {
-		MessageBox( NULL, FilePath, "Failed to create DIB.", MB_OK );
-		return FALSE;
+	if(!_DIBBitmap)
+	{
+		MessageBox( NULL, "", "Failed to create DIB.", MB_OK );
+		return false;
 	}
 
-	BYTE	*Dst=(BYTE*)m_DIBBits;
-	BYTE	*Src;
-	WORD	j,p;
+	char* Dst = reinterpret_cast<char*>(_DIBBits);
 
-	for(j=0; j < Height; j++) {
-		Src=Bitmap+j*m_Header.BytesPerLine*m_Header.NPlanes;
-		for(i=0; i < m_Header.BytesPerLine; i++) {
-			for(p=0; p < m_Header.NPlanes; p++) {
-				*Dst=*(Src+m_Header.BytesPerLine*p);
+	for(int j = 0; j < Height; ++j)
+	{
+		char* Src = Bitmap + j * _Header.BytesPerLine * _Header.NPlanes;
+
+		for(i = 0; i < _Header.BytesPerLine; ++i)
+		{
+			for(unsigned int p = 0; p < _Header.NPlanes; ++p)
+			{
+				*Dst = *(Src + _Header.BytesPerLine * p);
 				Dst++;
-			}	
+			}
+
 			Src++;
 		}
 	}
 
-	delete Bitmap;
+	delete [] Bitmap;
 
-	return TRUE;
+	return true;
 }
 
-
-BOOL PCXHandler::Create(int Width,int Height,void *Bits,PALETTEENTRY *Palette)
+bool PCXHandler::Create(int Width,int Height,void *Bits, PALETTEENTRY *Palette)
 {
-	m_Header.Manufacturer = 10;
-	m_Header.Version = 5;
-	m_Header.Encoding = 1;
-	m_Header.BitsPerPixel = 8;
-	m_Header.Window[0] = 0;
-	m_Header.Window[1] = 0;
-	m_Header.Window[2] = Width-1;
-	m_Header.Window[3] = Height-1;
-	m_Header.HRes = 150;
-	m_Header.VRes = 150;
-	memset(m_Header.Colormap,0,48*sizeof(BYTE));
-	m_Header.Reserved = 0;
-	m_Header.NPlanes = 1;
-	m_Header.BytesPerLine = Width;
-	m_Header.PaletteInfo = 1;
-	memset(m_Header.Filler,0,58*sizeof(BYTE));
+	_Header.Manufacturer = 10;
+	_Header.Version      = 5;
+	_Header.Encoding     = 1;
+	_Header.BitsPerPixel = 8;
+	_Header.Window[0]    = 0;
+	_Header.Window[1]    = 0;
+	_Header.Window[2]    = Width - 1;
+	_Header.Window[3]    = Height - 1;
+	_Header.HRes         = 150;
+	_Header.VRes         = 150;
+	memset(_Header.Colormap, 0, 48 * sizeof(char));
+	_Header.Reserved     = 0;
+	_Header.NPlanes      = 1;
+	_Header.BytesPerLine = Width;
+	_Header.PaletteInfo  = 1;
+	memset(_Header.Filler, 0, 58 * sizeof(char));
 
-	int PaletteSize=1<<m_Header.BitsPerPixel;
-	m_Palette = new PALETTEENTRY[PaletteSize];
+	unsigned int PaletteSize = 1 << _Header.BitsPerPixel;
+	_Palette = new PALETTEENTRY[PaletteSize];
 
-	for (int i=0; i<PaletteSize; i++) {
-		m_Palette[i] = Palette[i];
+	for (unsigned int i = 0; i < PaletteSize; ++i)
+	{
+		_Palette[i] = Palette[i];
 	}
 
-	m_BitmapInfo=(BITMAPINFO*)new BYTE[sizeof(BITMAPINFO)+sizeof(RGBQUAD)*PaletteSize];
-	m_BitmapInfo->bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
-	m_BitmapInfo->bmiHeader.biWidth=m_Header.Window[2]+1;
-	m_BitmapInfo->bmiHeader.biHeight=-Height;
-	m_BitmapInfo->bmiHeader.biPlanes=1;
-	m_BitmapInfo->bmiHeader.biBitCount=m_Header.BitsPerPixel*m_Header.NPlanes;
-	m_BitmapInfo->bmiHeader.biCompression=BI_RGB;
-	m_BitmapInfo->bmiHeader.biSizeImage=0;
-	m_BitmapInfo->bmiHeader.biXPelsPerMeter=0;
-	m_BitmapInfo->bmiHeader.biYPelsPerMeter=0;
-	m_BitmapInfo->bmiHeader.biClrUsed=0;
-	m_BitmapInfo->bmiHeader.biClrImportant=0;
+	_BitmapInfo = reinterpret_cast<BITMAPINFO*>(new char[sizeof(BITMAPINFO) + sizeof(RGBQUAD) * PaletteSize]);
+	_BitmapInfo->bmiHeader.biSize          = sizeof(BITMAPINFOHEADER);
+	_BitmapInfo->bmiHeader.biWidth         = _Header.Window[2] + 1;
+	_BitmapInfo->bmiHeader.biHeight        = -Height;
+	_BitmapInfo->bmiHeader.biPlanes        = 1;
+	_BitmapInfo->bmiHeader.biBitCount      = _Header.BitsPerPixel * _Header.NPlanes;
+	_BitmapInfo->bmiHeader.biCompression   = BI_RGB;
+	_BitmapInfo->bmiHeader.biSizeImage     = 0;
+	_BitmapInfo->bmiHeader.biXPelsPerMeter = 0;
+	_BitmapInfo->bmiHeader.biYPelsPerMeter = 0;
+	_BitmapInfo->bmiHeader.biClrUsed       = 0;
+	_BitmapInfo->bmiHeader.biClrImportant  = 0;
 
-	for(i=0; i<PaletteSize; i++) {
-		m_BitmapInfo->bmiColors[i].rgbRed   = m_Palette[i].peRed;
-		m_BitmapInfo->bmiColors[i].rgbGreen = m_Palette[i].peGreen;
-		m_BitmapInfo->bmiColors[i].rgbBlue  = m_Palette[i].peBlue;
-		m_BitmapInfo->bmiColors[i].rgbReserved = 0;
+	for(i = 0; i < PaletteSize; ++i)
+	{
+		_BitmapInfo->bmiColors[i].rgbRed      = _Palette[i].peRed;
+		_BitmapInfo->bmiColors[i].rgbGreen    = _Palette[i].peGreen;
+		_BitmapInfo->bmiColors[i].rgbBlue     = _Palette[i].peBlue;
+		_BitmapInfo->bmiColors[i].rgbReserved = 0;
 	}
 
-	m_DIBBitmap=CreateDIBSection(NULL,m_BitmapInfo,DIB_RGB_COLORS,&m_DIBBits,NULL,0);
+	_DIBBitmap = CreateDIBSection(NULL, _BitmapInfo, DIB_RGB_COLORS, &_DIBBits, NULL, 0);
 
-	if(m_DIBBitmap==NULL) {
+	if(!_DIBBitmap)
+	{
 		MessageBox( NULL, "Error", "Failed to create DIB.", MB_OK );
-		return FALSE;
+		return false;
 	}
 
-	BYTE	*Dst=(BYTE*)m_DIBBits;
-	BYTE	*Src;
-	WORD	j,p;
+	char* Dst = reinterpret_cast<char*>(_DIBBits);
+	char* Src;
 
-	for(j=0; j < Height; j++) {
-		Src=((BYTE*)Bits)+j*m_Header.BytesPerLine*m_Header.NPlanes;
-		for(i=0; i < m_Header.BytesPerLine; i++) {
-			for(p=0; p < m_Header.NPlanes; p++) {
-				*Dst=*(Src+m_Header.BytesPerLine*p);
-				Dst++;
-			}	
-			Src++;
+	for(int j = 0; j < Height; ++j)
+	{
+		Src = reinterpret_cast<char*>(Bits) + j * _Header.BytesPerLine * _Header.NPlanes;
+		for(i = 0; i < _Header.BytesPerLine; ++i)
+		{
+			for(unsigned int p = 0; p < _Header.NPlanes; ++p)
+			{
+				*Dst = *(Src + _Header.BytesPerLine * p);
+				++Dst;
+			}
+
+			++Src;
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 
-
-BOOL PCXHandler::WritePCX(char *FilePath)
+bool PCXHandler::WritePCX(std::ostream& output)
 {
-	FILE *fid;
-
-	fid=fopen(FilePath,"wb");
-    if(fid==NULL) {
-		MessageBox( NULL, FilePath, "Unable to create file.", MB_OK );
-		return FALSE;
-	}
-
 // Write the PCX header.
-	fwrite(&m_Header,sizeof(PCXHeader),1,fid);
+	output.write(reinterpret_cast<const char*>(&_Header), sizeof(_Header));
 
 // Encode and write the body.
-	BYTE *Ptr = (BYTE*)m_DIBBits;
-	for(int i=0; i<GetBitmapHeight(); i++) {
-		EncodeLine(Ptr,(WORD)GetBitmapWidth(),fid);
+	char* Ptr = reinterpret_cast<char*>(_DIBBits);
+	for(unsigned int i = 0; i < GetBitmapHeight(); ++i)
+	{
+		EncodeLine(Ptr, (WORD)GetBitmapWidth(), output);
 		Ptr += GetBitmapWidth();
 	}
 
 // Write the palette.
-	putc(12,fid);
-	int PaletteSize=1<<m_Header.BitsPerPixel;
-	for (i=0; i<PaletteSize; i++)
+	// Magic number for palette identification
+	output.put(12);
+	const unsigned int PaletteSize = 1 << _Header.BitsPerPixel;
+	for (i = 0; i < PaletteSize; ++i)
 	{
-		putc(m_Palette[i].peRed,fid);
-		putc(m_Palette[i].peGreen,fid);
-		putc(m_Palette[i].peBlue,fid);
+		output.put(_Palette[i].peRed);
+		output.put(_Palette[i].peGreen);
+		output.put(_Palette[i].peBlue);
 	}
 	
-	fclose(fid);
-
-	return TRUE;
+	return true;
 }
-
 
 /* This procedure reads one encoded block from the image file and
 stores a count and data byte. Result:
@@ -337,109 +316,119 @@ int *pbyt;     where to place data
 int *pcnt;     where to place count
 FILE *fid;     image file handle
 */
-WORD PCXHandler::EncodedGet(WORD *pbyt, WORD *pcnt, FILE *fid)
+static inline WORD EncodedGet(WORD *pbyt, WORD *pcnt, std::istream& input)
 {
-	WORD i;
+	*pcnt = 1;     /* safety play */
 
-  *pcnt = 1;     /* safety play */
+	int i = input.get();
+	if (i == std::istream::traits_type::eof())
+		return std::istream::traits_type::eof();
 
-  i=getc(fid);
-  if(feof(fid)) {
-	  return(1);
-  }
+	if ((0xc0 & i) == 0xc0)
+	{
+		*pcnt = 0x3f & i;
 
-  if(0xc0 == (0xc0 & i)) {
-    *pcnt = 0x3f&i;
-	  i=getc(fid);
-	  if(feof(fid)) {
-		  return(1);
-	  }
-  }
-  *pbyt = i;
+		i = input.get();
+		if(i == std::istream::traits_type::eof())
+			return std::istream::traits_type::eof();
+	}
 
-  return(0);
+	*pbyt = i;
+
+	return 0;
 }
-
 
 /* This subroutine encodes one scanline and writes it to a file
 unsigned char *inBuff;  pointer to scanline data
 int inLen;              length of raw scanline in bytes
 FILE *fp;               file to be written to
 */
-WORD PCXHandler::EncodeLine(UBYTE *inBuff, WORD inLen, FILE *fid)
+static inline WORD EncodeLine(const char* inBuff, WORD inLen, std::ostream& output)
 {  /* returns number of bytes written into outBuff, 0 if failed */
 
-  UBYTE thisone, last;
-  WORD srcIndex, i;
+	WORD i;
 
-  register WORD total;
-  register UBYTE runCount; /* max single runlength is 63 */
+	int total = 0;
+	unsigned int runCount = 1; /* max single runlength is 63 */
 
-  total = 0;
-  last = *(inBuff);
-  runCount = 1;
+	char last = *inBuff;
+	char thisone;
 
-  for (srcIndex = 1; srcIndex < inLen; srcIndex++)
-  {
-    thisone = *(++inBuff);
-    if (thisone == last)
-    {
-      runCount++;  /* it encodes */
-      if (runCount == 63)
-      {
-        if (!(i=EncodedPut(last, runCount, fid)))
-          return(0);
-        total += i;
-        runCount = 0;
-      }
-    }
-    else
-    {  /* thisone != last */
-      if (runCount)
-      {
-        if (!(i=EncodedPut(last, runCount, fid)))
-          return(0);
-        total += i;
-      }
-      last = thisone;
-      runCount = 1;
-    }
-  } /* endloop */
+	for (unsigned int srcIndex = 1; srcIndex < inLen; srcIndex++)
+	{
+		thisone = *(++inBuff);
+		if (thisone == last)
+		{
+			++runCount;  /* it encodes */
+			if (runCount == 63)
+			{
+				if (!(i = EncodedPut(last, runCount, output)))
+					return 0;
 
-  if (runCount)
-  {  /* finish up */
-    if (!(i=EncodedPut(last, runCount, fid)))
-      return(0);
-    return(total + i);
-  }
-  return(total);
+				total += i;
+				runCount = 0;
+			}
+		}
+		else
+		{  /* thisone != last */
+			if (runCount)
+			{
+				if (!(i = EncodedPut(last, runCount, output)))
+					return 0;
+
+				total += i;
+			}
+
+			last = thisone;
+			runCount = 1;
+		}
+	} /* endloop */
+
+	if (runCount)
+	{  /* finish up */
+		if (!(i = EncodedPut(last, runCount, output)))
+			return 0;
+
+		return total + i;
+	}
+
+	return total;
 }
-
-
 
 /* subroutine for writing an encoded byte pair 
 (or single byte  if it doesn't encode) to a file
 unsigned char byt, cnt;
 FILE *fid;
 */
-WORD PCXHandler::EncodedPut(UBYTE byt, UBYTE cnt, FILE *fid) /* returns count of bytes written, 0 if err */
+static inline WORD EncodedPut(UBYTE byt, UBYTE cnt, std::ostream& output) /* returns count of bytes written, 0 if err */
 {
-  if(cnt)
-  {
-    if((cnt==1) && (0xc0 != (0xc0&byt)))
-    {
-      if(EOF == putc((int)byt, fid))
-        return(0); /* disk write error (probably full) */
-      return(1);
-    }
-    else
-   {
-     if(EOF == putc((int)0xC0 | cnt, fid))
-       return(0);  /* disk write error */
-     if(EOF == putc((int)byt, fid))
-       return(0);  /* disk write error */
-     return(2);
-    }
-  }
-  return(0);
+	if(cnt)
+	{
+		if (cnt == 1
+		 && 0xc0 != (0xc0 & byt))
+		{
+			output.put(byt);
+			if (output.bad()
+			 || output.fail())
+				return 0; /* write error (disk is probably full) */
+
+			return 1;
+		}
+		else
+		{
+			output.put(0xC0 | cnt);
+			if (output.bad()
+			 || output.fail())
+				return 0; /* write error (disk is probably full) */
+
+			output.put(byt);
+			if (output.bad()
+			 || output.fail())
+				return 0; /* write error (disk is probably full) */
+
+			return 2;
+		}
+	}
+
+	return 0;
 }

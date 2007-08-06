@@ -73,13 +73,9 @@
  *
  *********************************************************/
 
-static BOOL bTilesPCXLoaded = FALSE;
-
 // whether a save game is currently being loaded
 static BOOL saveFlag = FALSE;
 extern char	aCurrResDir[255];		// Arse
-
-static void dataISpriteRelease(void *pData);
 
 extern int scr_lineno;
 
@@ -659,10 +655,14 @@ static BOOL dataIMDBufferLoad(const char *pBuffer, UDWORD size, void **ppData)
 }
 
 
-static BOOL dataIMGPAGELoad(const char *fileName, void **ppData)
+/*!
+ * Load an image from file
+ */
+static BOOL dataImageLoad(const char *fileName, void **ppData)
 {
-	iTexture *psSprite = (iTexture*) malloc(sizeof(iTexture));
-	if (!psSprite)	{
+	iV_Image *psSprite = malloc(sizeof(iV_Image));
+	if (!psSprite)
+	{
 		return FALSE;
 	}
 
@@ -678,68 +678,21 @@ static BOOL dataIMGPAGELoad(const char *fileName, void **ppData)
 }
 
 
-void dataIMGPAGERelease(void *pData)
-{
-	iTexture *psSprite = (iTexture*) pData;
-	dataISpriteRelease(psSprite);
-}
-
-
-// Tertiles loader. This version for hardware renderer.
+// Tertiles (terrain tiles) loader.
 static BOOL dataTERTILESLoad(const char *fileName, void **ppData)
 {
-	// tile loader.
-	if (bTilesPCXLoaded)
-	{
-		debug( LOG_TEXTURE, "Reloading terrain tiles\n" );
-		iV_unloadImage(&tilesPCX);
-		if(!iV_loadImage_PNG(fileName, &tilesPCX))
-		{
-			debug( LOG_ERROR, "TERTILES reload failed" );
-			return FALSE;
-		}
-	}
-	else
-	{
-		debug( LOG_TEXTURE, "Loading terrain tiles\n" );
-		if(!iV_loadImage_PNG(fileName, &tilesPCX))
-		{
-			debug( LOG_ERROR, "TERTILES load failed" );
-			return FALSE;
-		}
-	}
+	texLoad(fileName);
+	debug(LOG_TEXTURE, "HW Tiles loaded");
 
-	getTileRadarColours();
-	if (bTilesPCXLoaded)
-	{
-		remakeTileTexturePages(&tilesPCX, TILE_WIDTH, TILE_HEIGHT);
-	}
-	else
-	{
-		makeTileTexturePages(&tilesPCX, TILE_WIDTH, TILE_HEIGHT);
-	}
+	// set a dummy value so the release function gets called
+	*ppData = (void *)1;
 
-	if (bTilesPCXLoaded)
-	{
-		*ppData = NULL;
-	}
-	else
-	{
-		bTilesPCXLoaded = TRUE;
-		*ppData = &tilesPCX;
-	}
-	debug( LOG_TEXTURE, "HW Tiles loaded\n" );
 	return TRUE;
 }
 
 static void dataTERTILESRelease(void *pData)
 {
-	iTexture *psSprite = (iTexture*) pData;
-
-	freeTileTextures();
-	iV_unloadImage(psSprite);
-	// We are not allowed to free psSprite also, this would give an error on Windows: HEAP[Warzone.exe]: Invalid Address specified to RtlFreeHeap( xxx, xxx )
-	bTilesPCXLoaded = FALSE;
+	debug(LOG_TEXTURE, "=== dataTERTILESRelease ===");
 	pie_TexShutDown();
 }
 
@@ -765,96 +718,43 @@ static void dataIMGRelease(void *pData)
 /* Load a texturepage into memory */
 static BOOL dataTexPageLoad(const char *fileName, void **ppData)
 {
-	char texfile[MAX_PATH] = {'\0'}, texpage[MAX_PATH] = {'\0'};
-	SDWORD id;
+	char texpage[MAX_PATH] = {'\0'};
 
-	strncpy(texfile, GetLastResourceFilename(), MAX_PATH);
-	texfile[MAX_PATH-1] = '\0';
-
-	strncpy(texpage, texfile, MAX_PATH);
+	// This hackery is needed, because fileName will include the directory name, whilst the LastResourceFilename will not, and we need a short name to identify the texpage
+	strncpy(texpage, GetLastResourceFilename(), MAX_PATH);
 
 	pie_MakeTexPageName(texpage);
-	SetLastResourceFilename(texpage);
+	dataImageLoad(fileName, ppData);
 
 	// see if this texture page has already been loaded
 	if (resPresent("TEXPAGE", texpage))
 	{
 		// replace the old texture page with the new one
-		debug(LOG_TEXTURE, "fileTexPageLoad: replacing %s with new texture %s", texpage, texfile);
-		id = pie_ReloadTexPage(texpage, fileName);
-		ASSERT( id >= 0, "pie_ReloadTexPage failed" );
-		*ppData = NULL;
+		debug(LOG_TEXTURE, "fileTexPageLoad: replacing %s with new texture %s", texpage, fileName);
+		(void) pie_ReplaceTexPage(*ppData, texpage);
 	}
 	else
 	{
-		TEXTUREPAGE *NewTexturePage;
-		iPalette	*psPal;
-		iTexture	*psSprite;
-
-		debug(LOG_TEXTURE, "fileTexPageLoad: adding page %s with texture %s", texpage, texfile);
-
-		NewTexturePage = (TEXTUREPAGE*)malloc(sizeof(TEXTUREPAGE));
-		if (!NewTexturePage) return FALSE;
-
-		NewTexturePage->Texture=NULL;
-		NewTexturePage->Palette=NULL;
-
-		psPal = (iPalette*)malloc(sizeof(iPalette));
-		if (!psPal) return FALSE;
-
-		psSprite = (iTexture*)malloc(sizeof(iTexture));
-		if (!psSprite)
-		{
-			return FALSE;
-		}
-
-		if (!iV_loadImage_PNG(fileName, psSprite))
-		{
-			return FALSE;
-		}
-
-		NewTexturePage->Texture=psSprite;
-		NewTexturePage->Palette=psPal;
-
-		pie_AddTexPage(psSprite, texpage, 1, TRUE);
-
-		*ppData = NewTexturePage;
+		debug(LOG_TEXTURE, "fileTexPageLoad: adding page %s with texture %s", texpage, fileName);
+		SetLastResourceFilename(texpage);
+		(void) pie_AddTexPage(*ppData, texpage, 0);
 	}
 
 	return TRUE;
-
 }
 
-/* Release an iSprite */
-static void dataISpriteRelease(void *pData)
+
+/*!
+ * Release an Image
+ */
+static void dataImageRelease(void *pData)
 {
-	iTexture *psSprite = (iTexture*) pData;
+	iV_Image *psSprite = (iV_Image*) pData;
 
 	if( psSprite )
 	{
-		iV_unloadImage(psSprite);
 		free(psSprite);
-		psSprite = NULL;
 	}
-}
-
-
-/* Release a texPage */
-static void dataTexPageRelease(void *pData)
-{
-	TEXTUREPAGE *Tpage = (TEXTUREPAGE *) pData;
-
-	// We need to handle null texpage data
-	if (Tpage == NULL) return;
-
-	if (Tpage->Texture != NULL)
-	{
-		dataISpriteRelease(Tpage->Texture);
-	}
-	if (Tpage->Palette != NULL)
-		free(Tpage->Palette);
-
-	free(Tpage);
 }
 
 
@@ -1086,10 +986,10 @@ static const RES_TYPE_MIN_FILE FileResourceTypes[] =
 	{"AUDIOCFG", dataAudioCfgLoad, NULL},
 	{"ANI", dataAnimLoad, dataAnimRelease},
 	{"ANIMCFG", dataAnimCfgLoad, NULL},
-	{"IMGPAGE", dataIMGPAGELoad, dataIMGPAGERelease},
-	{"TERTILES", dataTERTILESLoad, dataTERTILESRelease},     // freed by 3d shutdow},// Tertiles Files. This version used when running with hardware renderer.
+	{"IMGPAGE", dataImageLoad, dataImageRelease},
+	{"TERTILES", dataTERTILESLoad, dataTERTILESRelease},
 	{"IMG", dataIMGLoad, dataIMGRelease},
-	{"TEXPAGE", dataTexPageLoad, dataTexPageRelease},
+	{"TEXPAGE", dataTexPageLoad, dataImageRelease},
 	{"STR_RES", dataStrResLoad, dataStrResRelease},
 };
 
@@ -1098,29 +998,33 @@ BOOL dataInitLoadFuncs(void)
 {
 	// Using iterator style: begin iterator (ResourceTypes),
 	// end iterator (EndType), and current iterator (CurrentType)
-	{  // iterate through buffer load functions
+
+	// iterate through buffer load functions
+	{
 		const RES_TYPE_MIN_BUF *CurrentType;
 		// Points just past the last item in the list
 		const RES_TYPE_MIN_BUF *EndType = &BufferResourceTypes[sizeof(BufferResourceTypes) / sizeof(RES_TYPE_MIN_BUF)];
 
 		for (CurrentType = BufferResourceTypes; CurrentType != EndType; ++CurrentType)
 		{
-			if(!resAddBufferLoad(CurrentType->aType,CurrentType->buffLoad,CurrentType->release))
+			if(!resAddBufferLoad(CurrentType->aType, CurrentType->buffLoad, CurrentType->release))
 			{
-				return FALSE;	// error whilst adding a buffer load
+				return FALSE; // error whilst adding a buffer load
 			}
 		}
 	}
-	{  // iterate through file load functions
+
+	// iterate through file load functions
+	{
 		const RES_TYPE_MIN_FILE *CurrentType;
 		// Points just past the last item in the list
 		const RES_TYPE_MIN_FILE *EndType = &FileResourceTypes[sizeof(FileResourceTypes) / sizeof(RES_TYPE_MIN_BUF)];
 
 		for (CurrentType = FileResourceTypes; CurrentType != EndType; ++CurrentType)
 		{
-			if(!resAddFileLoad(CurrentType->aType,CurrentType->fileLoad,CurrentType->release))
+			if(!resAddFileLoad(CurrentType->aType, CurrentType->fileLoad, CurrentType->release))
 			{
-				return FALSE;	// error whilst adding a buffer load
+				return FALSE; // error whilst adding a buffer load
 			}
 		}
 	}

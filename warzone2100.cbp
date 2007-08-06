@@ -35,6 +35,7 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-Werror-implicit-function-declaration" />
+			<Add option="-std=gnu99" />
 			<Add option='-DVERSION=\\&quot;TRUNK\\&quot;' />
 			<Add option='-DLOCALEDIR=\\&quot;\\&quot;' />
 			<Add option='-DPACKAGE=\\&quot;warzone2100\\&quot;' />
@@ -133,6 +134,10 @@
 		</Unit>
 		<Unit filename="lib/framework/trig.h" />
 		<Unit filename="lib/framework/types.h" />
+		<Unit filename="lib/framework/utf8.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="lib/framework/utf8.h" />
 		<Unit filename="lib/framework/wzglobal.h" />
 		<Unit filename="lib/gamelib/anim.c">
 			<Option compilerVar="CC" />
@@ -254,6 +259,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="lib/netplay/netplay.h" />
+		<Unit filename="lib/netplay/nettypes.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="lib/netplay/nettypes.h" />
 		<Unit filename="lib/script/chat_lexer.l">
 			<Option compilerVar="CC" />
 			<Option compile="1" />
@@ -470,10 +479,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/console.h" />
-		<Unit filename="src/csnap.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="src/csnap.h" />
 		<Unit filename="src/data.c">
 			<Option compilerVar="CC" />
 		</Unit>

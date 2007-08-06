@@ -34,7 +34,6 @@
 #include "map.h"
 #include "loop.h"
 #include "atmos.h"	// temporary only for here
-#include "csnap.h"
 /* Includes direct access to render library */
 #include "lib/ivis_common/piedef.h"
 #include "lib/ivis_common/piestate.h"
@@ -2016,10 +2015,22 @@ static inline void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 	{
 		// Display unit info.
 		/* We've clicked on one of our own droids */
+#ifdef DEBUG
+		if (getDebugMappingStatus()) // cheating on, so output debug info
+		{
+			CONPRINTF(ConsoleString, (ConsoleString,
+			          "%s - Damage %d%% - ID %d - kills %d - order %d - action %d - sensor range %hu power %hu - ECM %u",
+			          droidGetName(psDroid), 100 - PERCENT(psDroid->body, psDroid->originalBody), psDroid->id, 
+			          psDroid->numKills / 100, psDroid->order, psDroid->action, psDroid->sensorRange, 
+			          psDroid->sensorPower, psDroid->ECMMod));
+			FeedbackClickedOn();
+		}
+		else
+#endif
 		if(godMode)
 		{
 			CONPRINTF(ConsoleString, (ConsoleString,
-			        _("%s - Damage %d%% - Serial ID %d - Kills %d order %d action %d, %s"),
+			          "%s - Damage %d%% - Serial ID %d - Kills %d order %d action %d, %s",
 			droidGetName(psDroid), 100 - PERCENT(psDroid->body,
 			psDroid->originalBody),psDroid->id, psDroid->numKills / 100,
 			psDroid->order, psDroid->action, getDroidLevelName(psDroid)));

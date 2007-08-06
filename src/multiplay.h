@@ -75,7 +75,7 @@ typedef enum _msgtype
 	NET_SCORESUBMIT,		//36 submission of scores to host.
 	NET_DESTROYXTRA,		//37 destroy droid with destroyer intact.
 	NET_VTOL,				//38 vtol rearmed
-	NET_VTOLREARM,			//39 vtol rearm
+	NET_UNUSED_39,			//39 unused
 
 	NET_WHITEBOARD,			//40 whiteboard.
     NET_SECONDARY_ALL,      //41 complete secondary order.
@@ -91,7 +91,6 @@ typedef enum _msgtype
 	NET_BEACONMSG,
 	NET_SET_TEAMS,
 	NET_TEAMREQUEST
-
 } MESSAGE_TYPES;
 
 
@@ -103,7 +102,6 @@ typedef struct {
 	char		version[8];					// version of warzone
 	UBYTE		maxPlayers;					// max players to allow
 	char		name[128];					// game name   (to be used)
-	BOOL		bComputerPlayers;			// Allow computer players
 	BOOL		fog;
 	UDWORD		power;						// power level for arena game
 //	UDWORD		techLevel;					// tech levels to use . 0= all levels.
@@ -174,7 +172,7 @@ extern UBYTE				bDisplayMultiJoiningStatus;	// draw load progress?
 
 //#define DMATCH					11			// to easily distinguish game types when joining.
 #define CAMPAIGN				12
-#define TEAMPLAY				13
+//#define TEAMPLAY				13
 
 #define	SKIRMISH				14
 #define MULTI_SKIRMISH2			18
@@ -293,7 +291,6 @@ extern BOOL sendDroidEmbark     (DROID *psDroid);
 extern BOOL sendDroidDisEmbark  (DROID *psDroid);
 extern BOOL sendDestroyExtra	(BASE_OBJECT *psKilled,BASE_OBJECT *psKiller);
 extern BOOL sendHappyVtol		(DROID *psDroid);
-extern BOOL sendVtolRearm		(DROID *psDroid,STRUCTURE *psStruct, UBYTE chosen);
 
 // Startup. mulitopt
 extern BOOL multiTemplateSetup	(void);

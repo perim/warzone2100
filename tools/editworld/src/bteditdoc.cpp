@@ -16,6 +16,10 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+	$Revision$
+	$Id$
+	$HeadURL$
 */
 // BTEditDoc.cpp : implementation of the CBTEditDoc class
 //
@@ -28,27 +32,21 @@
 #include "mapprefs.h"
 #include "textureprefs.h"
 #include "dibdraw.h"
-#include "debugprint.h"
+#include "debugprint.hpp"
 #include "wfview.h"
 #include "textureview.h"
 #include "bteditview.h"
 #include "snapprefs.h"
-#include "savesegmentdialog.h"
+#include "savesegmentdialog.hpp"
 #include "limitsdialog.h"
-#include "initiallimitsdlg.h"
+#include "initiallimitsdlg.hpp"
 #include "expandlimitsdlg.h"
 #include "exportinfo.h"
 #include "playermap.h"
-#include "gateinterface.h"
+#include "gateway.hpp"
 #include "pasteprefs.h"
 
 #include <string>
-
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#undef THIS_FILE
-static char THIS_FILE[] = __FILE__;
-#endif
 
 #define MAX_FILESTRING 512
 
@@ -298,59 +296,57 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // CBTEditDoc construction/destruction
 
-CBTEditDoc::CBTEditDoc()
+CBTEditDoc::CBTEditDoc() :
+	m_EnableRefresh(FALSE),
+	m_PathName(NULL),
+	m_FileName(NULL),
+	m_FullPath(NULL),
+	m_RadarMap(NULL),
+	m_RadarMode(RADAR_TEXTURES),
+	m_TileBuffer(NULL),
+	m_ObjectBufferSize(0),
+	m_ObjectBuffer(NULL),
+	m_SnapX(16), m_SnapZ(m_SnapX),
+	m_EnableGravity(TRUE),
+	m_RotSnap(45),
+	m_2DMode(M2D_WORLD),
+	m_TVMode(MTV_TEXTURES),
+	m_DrawMode(DM_TEXTURED),
+	m_ShadeMode(SM_GOURAUD),
+	m_ShowLocators(TRUE),
+	m_ScaleLocators(FALSE),
+	m_ShowSeaLevel(FALSE),
+	m_ShowVerticies(FALSE),
+	m_2DGotFocus(FALSE),
+	m_3DGotFocus(FALSE),
+	m_CameraMode(MCAM_FREE),
+	m_TileMode(FALSE),
+	m_AutoSync(FALSE),
+	m_ViewFeatures(TRUE),
+	m_ShowBoxes(FALSE),
+	m_AutoHeight(TRUE),
+	m_CurrentPlayer(0),
+	m_ButtonLapse(0),
+	m_Captureing(FALSE),
+	m_PasteFlags(PF_PASTEALL),
+	m_PasteWithPlayerID(TRUE),
+	m_BrushProp(NULL /* new CBrushProp(NULL) */),
+	m_CurrentEdgeBrush(0),
+	m_EnableAutoSnap(TRUE)
 {
 	BTEditDoc = this;
+
+	g_UndoRedo = NULL;
 
 	DebugOpen("\\bteditlog.txt");
 //	SetCurrentDirectory("Data");
 
 	TRACE0("CBTEditDoc\n");
-	m_EnableRefresh = FALSE;
-	m_PathName = NULL;
-	m_FileName = NULL;
-	m_FullPath = NULL;
-	m_RadarMap = NULL;
-	m_RadarMode = RADAR_TEXTURES;
 
-	m_TileBuffer = NULL;
-
-	m_ObjectBufferSize = 0;
-	m_ObjectBuffer = NULL;
-
-	m_SnapX = m_SnapZ = 16;
-	m_EnableGravity = TRUE;
-	m_RotSnap = 45;
-	m_2DMode = M2D_WORLD;
-	m_TVMode = MTV_TEXTURES;
-	m_DrawMode = DM_TEXTURED;
-	m_ShadeMode = SM_GOURAUD;
-	m_ShowLocators = TRUE;
-	m_ScaleLocators = FALSE;
-	m_ShowSeaLevel = FALSE;
-	m_ShowVerticies = FALSE;
-	m_2DGotFocus = FALSE;
-	m_3DGotFocus = FALSE;
-	m_CameraMode = MCAM_FREE;
-	m_TileMode = FALSE;
-	m_AutoSync = FALSE;
-	m_ViewFeatures = TRUE;
-	m_ShowBoxes = FALSE;
-	m_AutoHeight = TRUE;
-	m_CurrentPlayer = 0;
-	g_UndoRedo = NULL;
-	m_ButtonLapse = 0;
-	m_Captureing = FALSE;
-	m_PasteFlags = PF_PASTEALL;
-	m_PasteWithPlayerID = TRUE;
-	m_BrushProp = NULL;	//new CBrushProp(NULL);
-
-	for(int i=0; i<MAXEDGEBRUSHES; i++) {
+	for(int i = 0; i < MAXEDGEBRUSHES; ++i)
+	{
 		m_EdgeBrush[i] = NULL;
 	}
-	m_CurrentEdgeBrush = 0;
-
-	m_EnableAutoSnap = TRUE;
 }
 
 CBTEditDoc::~CBTEditDoc()
@@ -393,7 +389,6 @@ BOOL CBTEditDoc::OnNewDocument()
 	CenterCamera();
 
 //	m_UnitIDs = NULL;
-//	m_ObjectDatabase = NULL;
 //	m_DatabaseTypes = NULL;
 //	m_Deployments = NULL;
 
@@ -1404,10 +1399,7 @@ void CBTEditDoc::OnCloseDocument()
 	if(m_TileBuffer) delete m_TileBuffer;
 	m_TileBuffer = NULL;
 
-	if(m_ObjectBuffer) {
-		m_ObjectBuffer->DeleteList();
-		m_ObjectBuffer = NULL;
-	}
+	m_ObjectBuffer.clear();
 	m_ObjectBufferSize = 0;
 
 	DeleteData();
@@ -1643,6 +1635,21 @@ void CBTEditDoc::DisplayExportSummary(void)
 	delete String;
 }
 
+// Proxy class that serves as InputIterator (as defined by the C++ standard in
+// section 24.1.1) for the initialisation of InitialLimitsDlg
+class scrollLimitStringIterator : public std::list<CScrollLimits>::const_iterator
+{
+	public:
+		inline scrollLimitStringIterator(const std::list<CScrollLimits>::const_iterator& rhs) :
+			std::list<CScrollLimits>::const_iterator(rhs)
+		{}
+
+		inline std::string operator*() const
+		{
+			return std::string(const_iterator::operator*().ScriptName);
+		}
+};
+
 	
 // Write out the map in Deliverance format ( Scenario Start ).
 //
@@ -1656,14 +1663,15 @@ BOOL CBTEditDoc::WriteDeliveranceStart(char *FileName)
 	_splitpath(FileName,Drive,Dir,FName,Ext);
 
 	// Need to specify scroll limits to use.
-	CInitialLimitsDlg Dlg(m_HeightMap);
+	InitialLimitsDlg Dlg(scrollLimitStringIterator(m_HeightMap->GetScrollLimits().begin()), scrollLimitStringIterator(m_HeightMap->GetScrollLimits().end()));
 	if(Dlg.DoModal() != IDOK) {
 		return TRUE;
 	}
 
-	int LimitsIndex;
-	if( (LimitsIndex = Dlg.GetSelected()) < 0) {
-		MessageBox(NULL,"You must select some scroll limits","Error",MB_OK);
+	int LimitsIndex = Dlg.Selected();
+	if (LimitsIndex < 0)
+	{
+		MessageBox(NULL,"You must select some scroll limits", "Error", MB_OK);
 	}
 
 // Create the save game directory.
@@ -2752,19 +2760,16 @@ void CBTEditDoc::DrawRadarMap2D(CDIBDraw *DIBDraw,DWORD XPos,DWORD YPos)
 		if(m_EditTool != ET_GATEWAY) {
 
 			if(m_HeightMap->GetNumScrollLimits()) {
-				ListNode<CScrollLimits> *Node;
-
 				HDC	dc=(HDC)DIBDraw->GetDIBDC();
 				HPEN NormalPen = CreatePen(PS_SOLID,1,RGB(255,0,255));
 				HPEN OldPen = (HPEN)SelectObject(dc,NormalPen);
 				
-				for(Node = m_HeightMap->GetScrollLimits(); Node != NULL; Node = Node->GetNextNode()) {
-					CScrollLimits *Data = Node->GetData();
-
-					int x0 = (Data->MinX + OVERSCAN)*m_RadarScale;
-					int y0 = (Data->MinZ + OVERSCAN)*m_RadarScale;
-					int x1 = (Data->MaxX + OVERSCAN)*m_RadarScale;
-					int y1 = (Data->MaxZ + OVERSCAN)*m_RadarScale;
+				for(std::list<CScrollLimits>::const_iterator curNode = m_HeightMap->GetScrollLimits().begin(); curNode != m_HeightMap->GetScrollLimits().end(); ++curNode)
+				{
+					int x0 = (curNode->MinX + OVERSCAN)*m_RadarScale;
+					int y0 = (curNode->MinZ + OVERSCAN)*m_RadarScale;
+					int x1 = (curNode->MaxX + OVERSCAN)*m_RadarScale;
+					int y1 = (curNode->MaxZ + OVERSCAN)*m_RadarScale;
 
 					MoveToEx(dc,x0,y0,NULL);
 					LineTo(dc,x1,y0);
@@ -2778,38 +2783,38 @@ void CBTEditDoc::DrawRadarMap2D(CDIBDraw *DIBDraw,DWORD XPos,DWORD YPos)
 			}
 		}
 
-		if(m_EditTool == ET_GATEWAY) {
-			ListNode<GateWay> *TmpNode;
-			GateWay *Data;
-
-			HDC	dc=(HDC)DIBDraw->GetDIBDC();
+		if(m_EditTool == ET_GATEWAY)
+		{
+			HDC	dc = (HDC)DIBDraw->GetDIBDC();
 			HPEN NormalPen = CreatePen(PS_SOLID,1,RGB(255,255,0));
 			HPEN OldPen = (HPEN)SelectObject(dc,NormalPen);
 
-			TmpNode = m_HeightMap->GetGateWays();
-			while(TmpNode!=NULL) {
-				Data = TmpNode->GetData();
-				int x0 = (((int)Data->x0) + OVERSCAN)*m_RadarScale;
-				int y0 = (((int)Data->y0) + OVERSCAN)*m_RadarScale;
-				int x1 = (((int)Data->x1) + OVERSCAN)*m_RadarScale;
-				int y1 = (((int)Data->y1) + OVERSCAN)*m_RadarScale;
+			for (std::list<GateWay>::const_iterator curGateway = m_HeightMap->GetGateWays().begin(); curGateway != m_HeightMap->GetGateWays().end(); ++curGateway)
+			{
+				int x0 = (static_cast<int>(curGateway->x0) + OVERSCAN) * m_RadarScale;
+				int y0 = (static_cast<int>(curGateway->y0) + OVERSCAN) * m_RadarScale;
+				int x1 = (static_cast<int>(curGateway->x1) + OVERSCAN) * m_RadarScale;
+				int y1 = (static_cast<int>(curGateway->y1) + OVERSCAN) * m_RadarScale;
 
-				if(x0 == x1) {
-					for(; y0 < y1+1; y0++) {
-						MoveToEx(dc,x0,y0,NULL);
-						LineTo(dc,x0+1,y0);
-					}
-				} else {
-					for(; x0 < x1+1; x0++) {
-						MoveToEx(dc,x0,y0,NULL);
-						LineTo(dc,x0+1,y0);
+				if(x0 == x1)
+				{
+					for(; y0 < y1+1; y0++)
+					{
+						MoveToEx(dc, x0, y0, NULL);
+						LineTo(dc, x0 + 1, y0);
 					}
 				}
-
-				TmpNode = TmpNode->GetNextNode();
+				else
+				{
+					for (; x0 < x1+1; x0++)
+					{
+						MoveToEx(dc, x0, y0, NULL);
+						LineTo(dc, x0 + 1, y0);
+					}
+				}
 			}
 
-			SelectObject(dc,OldPen);
+			SelectObject(dc, OldPen);
 			DeleteObject(NormalPen);
 		}
 
@@ -2862,19 +2867,16 @@ void CBTEditDoc::DrawRadarMap3D(CDIBDraw *DIBDraw,D3DVECTOR &CamPos)
 		CDC	*dc=dc->FromHandle((HDC)DIBDraw->GetDIBDC());
 
 		if(m_HeightMap->GetNumScrollLimits()) {
-			ListNode<CScrollLimits> *Node;
-
 			HDC	dc=(HDC)DIBDraw->GetDIBDC();
 			HPEN NormalPen = CreatePen(PS_SOLID,1,RGB(255,0,255));
 			HPEN OldPen = (HPEN)SelectObject(dc,NormalPen);
 			
-			for(Node = m_HeightMap->GetScrollLimits(); Node != NULL; Node = Node->GetNextNode()) {
-				CScrollLimits *Data = Node->GetData();
-
-				int x0 = (Data->MinX + OVERSCAN)*m_RadarScale;
-				int y0 = (Data->MinZ + OVERSCAN)*m_RadarScale;
-				int x1 = (Data->MaxX + OVERSCAN)*m_RadarScale;
-				int y1 = (Data->MaxZ + OVERSCAN)*m_RadarScale;
+			for(std::list<CScrollLimits>::const_iterator curNode = m_HeightMap->GetScrollLimits().begin(); curNode != m_HeightMap->GetScrollLimits().end(); ++curNode)
+			{
+				int x0 = (curNode->MinX + OVERSCAN)*m_RadarScale;
+				int y0 = (curNode->MinZ + OVERSCAN)*m_RadarScale;
+				int x1 = (curNode->MaxX + OVERSCAN)*m_RadarScale;
+				int y1 = (curNode->MaxZ + OVERSCAN)*m_RadarScale;
 
 				MoveToEx(dc,x0,y0,NULL);
 				LineTo(dc,x1,y0);
@@ -3247,10 +3249,7 @@ void CBTEditDoc::YFlipClipboard(void)
 //
 void CBTEditDoc::CopyObjectRect(int Tile0,int Tile1)
 {
-	if(m_ObjectBuffer) {
-		m_ObjectBuffer->DeleteList();
-		m_ObjectBuffer = NULL;
-	}
+	m_ObjectBuffer.clear();
 	m_ObjectBufferSize = 0;
 
 	int y0 = Tile0 / m_MapWidth;
@@ -3292,30 +3291,22 @@ void CBTEditDoc::CopyObjectRect(int Tile0,int Tile1)
 
 // Copy all the objects within the area into the object clipboard.
 	C3DObjectInstance *Instance;
-	for(int i=0; i<m_HeightMap->GetNumObjects(); i++) {
+	for (unsigned int i = 0; i < m_HeightMap->GetNumObjects(); ++i)
+	{
 		Instance = m_HeightMap->GetObjectPointer(i);
-		if( (Instance->Position.x >= tx0) &&
-			(Instance->Position.z >= tz0) &&
-			(Instance->Position.x <= tx1) &&
-			(Instance->Position.z <= tz1) ) {
+		if (Instance->Position.x >= tx0
+		 && Instance->Position.z >= tz0
+		 && Instance->Position.x <= tx1
+		 && Instance->Position.z <= tz1)
+		{
+			C3DObjectInstance Data = *Instance;
 
-			ListNode<C3DObjectInstance> *TmpNode;
-			C3DObjectInstance *Data;
-			if(m_ObjectBuffer == NULL) {
-				m_ObjectBuffer = new ListNode<C3DObjectInstance>;
-				Data = m_ObjectBuffer->GetData();
-			} else {
-				TmpNode = new ListNode<C3DObjectInstance>;
-				TmpNode->AppendNode(m_ObjectBuffer);
-				Data = TmpNode->GetData();
-			}
+			Data.Selected = FALSE;
+			Data.Position.x -= tx0;
+			Data.Position.z -= tz1;
 
-			*Data = *Instance;
-			Data->Selected = FALSE;
-			Data->Position.x -= tx0;
-			Data->Position.z -= tz1;
-
-			m_ObjectBufferSize++;
+			m_ObjectBuffer.push_back(Data);
+			++m_ObjectBufferSize;
 		}
 	}
 }
@@ -3323,11 +3314,11 @@ void CBTEditDoc::CopyObjectRect(int Tile0,int Tile1)
 
 BOOL CBTEditDoc::WriteClipboard(char *FileName)
 {
-	if(m_TileBuffer) {
-		FILE *Stream;
-
-		Stream = fopen(FileName,"wb");
-		if(Stream == NULL) return FALSE;
+	if(m_TileBuffer)
+	{
+		FILE* Stream = fopen(FileName,"wb");
+		if(Stream == NULL)
+			return FALSE;
 
 		ClipboardHeader Header;
 		Header.Type[0] = 'c';
@@ -3338,7 +3329,7 @@ BOOL CBTEditDoc::WriteClipboard(char *FileName)
 		Header.Height = m_TileBufferHeight;
 		Header.NumObjects = m_ObjectBufferSize;
 
-		fwrite((void*)&Header,sizeof(ClipboardHeader),1,Stream);
+		fwrite(reinterpret_cast<const char*>(&Header), sizeof(ClipboardHeader), 1, Stream);
 
 		CTile *SrcTile = m_TileBuffer;
 
@@ -3349,22 +3340,15 @@ BOOL CBTEditDoc::WriteClipboard(char *FileName)
 			}
 		}
 
-		if(m_ObjectBuffer) {
-			ListNode<C3DObjectInstance> *TmpNode;
-			C3DObjectInstance *Data;
-			TmpNode = m_ObjectBuffer;
-
-			while(TmpNode!=NULL) {
-				Data = TmpNode->GetData();
-
-				fwrite((void*)Data,sizeof(C3DObjectInstance),1,Stream);
-
-				TmpNode = TmpNode->GetNextNode();
-			}
+		for (std::list<C3DObjectInstance>::const_iterator curNode = m_ObjectBuffer.begin(); curNode != m_ObjectBuffer.end(); ++curNode)
+		{
+			fwrite(reinterpret_cast<const char*>(&*curNode), sizeof(*curNode), 1, Stream);
 		}
 
 		fclose(Stream);
-	} else {
+	}
+	else
+	{
 		MessageBox(NULL,"The clipboard is empty","Nothing to save",MB_OK);
 	}
 
@@ -3374,10 +3358,9 @@ BOOL CBTEditDoc::WriteClipboard(char *FileName)
 
 BOOL CBTEditDoc::ReadClipboard(char *FileName)
 {
-	FILE *Stream;
-
-	Stream = fopen(FileName,"rb");
-	if(Stream == NULL) return FALSE;
+	FILE* Stream = fopen(FileName,"rb");
+	if(Stream == NULL)
+		return FALSE;
 
 	ClipboardHeader Header;
 
@@ -3392,13 +3375,10 @@ BOOL CBTEditDoc::ReadClipboard(char *FileName)
 		return FALSE;
 	}
 
-	if(m_TileBuffer) delete m_TileBuffer;
+	delete m_TileBuffer;
 	m_TileBuffer = NULL;
 
-	if(m_ObjectBuffer) {
-		m_ObjectBuffer->DeleteList();
-		m_ObjectBuffer = NULL;
-	}
+	m_ObjectBuffer.clear();
 	m_ObjectBufferSize = 0;
 
 	m_TileBufferWidth = Header.Width;
@@ -3408,26 +3388,20 @@ BOOL CBTEditDoc::ReadClipboard(char *FileName)
 	m_TileBuffer = new CTile[m_TileBufferWidth*m_TileBufferHeight];
 	CTile *DstTile = m_TileBuffer;
 
-	for(int y=0; y<m_TileBufferHeight; y++) {
-		for(int x=0; x<m_TileBufferWidth; x++) {
-			fread((void*)DstTile,sizeof(CTile),1,Stream);
-			DstTile++;
+	for (int y = 0; y < m_TileBufferHeight; ++y)
+	{
+		for (int x = 0; x < m_TileBufferWidth; ++x)
+		{
+			fread(reinterpret_cast<char*>(DstTile), sizeof(*DstTile), 1, Stream);
+			++DstTile;
 		}
 	}
 
-	for(int i=0; i<m_ObjectBufferSize; i++) {
-		ListNode<C3DObjectInstance> *TmpNode;
-		C3DObjectInstance *Data;
-		if(m_ObjectBuffer == NULL) {
-			m_ObjectBuffer = new ListNode<C3DObjectInstance>;
-			Data = m_ObjectBuffer->GetData();
-		} else {
-			TmpNode = new ListNode<C3DObjectInstance>;
-			TmpNode->AppendNode(m_ObjectBuffer);
-			Data = TmpNode->GetData();
-		}
-
-		fread(Data,sizeof(C3DObjectInstance),1,Stream);
+	for (unsigned int i = 0; i < m_ObjectBufferSize; ++i)
+	{
+		C3DObjectInstance Data;
+		fread(&Data, sizeof(Data), 1, Stream);
+		m_ObjectBuffer.push_back(Data);
 	}
 
 	return TRUE;
@@ -3440,45 +3414,43 @@ BOOL CBTEditDoc::ReadClipboard(char *FileName)
 //
 void CBTEditDoc::PasteObjectRect(int Dest)
 {
-	if(m_ObjectBuffer) {
-		int y0 = Dest / m_MapWidth;
-		int x0 = Dest % m_MapWidth;
+	if (m_ObjectBuffer.empty())
+		return;
+
+	int y0 = Dest / m_MapWidth;
+	int x0 = Dest % m_MapWidth;
 
 // Convert the tile coordinates to world coordinates.
-		x0 *= m_TileWidth;
-		x0 -= m_MapWidth*m_TileWidth/2;
-		y0 *= m_TileHeight;
-		y0 -= m_MapHeight*m_TileHeight/2;
+	x0 *= m_TileWidth;
+	x0 -= m_MapWidth*m_TileWidth/2;
+	y0 *= m_TileHeight;
+	y0 -= m_MapHeight*m_TileHeight/2;
 
-		float tx0 = (float)x0;
-		float tz0 = -(float)y0;
+	float tx0 = (float)x0;
+	float tz0 = -(float)y0;
 
 // Add all the objects in the object clipboard to the world.
-		ListNode<C3DObjectInstance> *TmpNode;
-		C3DObjectInstance *Data;
-		TmpNode = m_ObjectBuffer;
+	for (std::list<C3DObjectInstance>::const_iterator curNode = m_ObjectBuffer.begin(); curNode != m_ObjectBuffer.end(); ++curNode)
+	{
+		D3DVECTOR Position = curNode->Position;
+		Position.x += tx0;
+		Position.z += tz0;
+		Position.y = m_HeightMap->GetHeight(Position.x,-Position.z);
 
-		while(TmpNode!=NULL) {
-			Data = TmpNode->GetData();
-			D3DVECTOR Position = Data->Position;
-			Position.x += tx0;
-			Position.z += tz0;
-			Position.y = m_HeightMap->GetHeight(Position.x,-Position.z);
-
-			int ObjID;
-			if(m_PasteWithPlayerID) {
-				// Paste object using current player id.
-				ObjID = m_HeightMap->AddObject(Data->ObjectID,Data->Rotation,Position,m_CurrentPlayer);
-			} else {
-				// Paste object using source player id.
-				ObjID = m_HeightMap->AddObject(Data->ObjectID,Data->Rotation,Position,Data->PlayerID);
-			}
-			m_HeightMap->SnapObject(ObjID);
-			m_HeightMap->SetObjectTileFlags(ObjID,TF_HIDE);
-			m_HeightMap->SetObjectTileHeights(ObjID);
-
-			TmpNode = TmpNode->GetNextNode();
+		int ObjID;
+		if(m_PasteWithPlayerID)
+		{
+			// Paste object using current player id.
+			ObjID = m_HeightMap->AddObject(curNode->ObjectID, curNode->Rotation, Position, m_CurrentPlayer);
 		}
+		else
+		{
+			// Paste object using source player id.
+			ObjID = m_HeightMap->AddObject(curNode->ObjectID, curNode->Rotation, Position, curNode->PlayerID);
+		}
+		m_HeightMap->SnapObject(ObjID);
+		m_HeightMap->SetObjectTileFlags(ObjID,TF_HIDE);
+		m_HeightMap->SetObjectTileHeights(ObjID);
 	}
 }
 
@@ -5067,19 +5039,17 @@ void CBTEditDoc::OnUpdateEnableautosnap(CCmdUI* pCmdUI)
 
 void CBTEditDoc::OnFileSavemapsegment() 
 {
-	CSaveSegmentDialog Dlg;
+	SaveSegmentDialog Dlg(NULL, 0, 0, 16, 16);
 
-	Dlg.SetStartX(0);
-	Dlg.SetStartY(0);
-	Dlg.SetWidth(16);
-	Dlg.SetHeight(16);
-	if(Dlg.DoModal()==IDOK) {
+	if(Dlg.DoModal() == IDOK)
+	{
 		char FileName[256];
 		char PathName[256];
 		char FullPath[256];
 
-		if(GetFilePath((char*)LandscapeFilters,"lnd","*.lnd",FALSE,PathName,FileName,FullPath)) {
-			WriteProject(FullPath,Dlg.GetStartX(),Dlg.GetStartY(),Dlg.GetWidth(),Dlg.GetHeight());
+		if(GetFilePath((char*)LandscapeFilters, "lnd", "*.lnd", FALSE, PathName, FileName, FullPath))
+		{
+			WriteProject(FullPath, Dlg.StartX(), Dlg.StartY(), Dlg.Width(), Dlg.Height());
 		}
 	}
 }
@@ -5470,7 +5440,7 @@ void CBTEditDoc::OnMapExportmapasbitmap()
 
 		// Create a big BMP to put the bitmap in.
 		BMPHandler *Bmp = new BMPHandler;
-		Bmp->Create(BigWidth,BigHeight,NULL,NULL,16,FALSE);
+		Bmp->Create(BigWidth, BigHeight, 16);
 		// Create a device context for the BMP so we can blit into it.
 		HDC BmpHdc = (HDC)Bmp->CreateDC((void*)m_3DWnd);
 
@@ -5503,7 +5473,7 @@ void CBTEditDoc::OnMapExportmapasbitmap()
 		// All done so delete the BMP's device context
 		Bmp->DeleteDC((void*)BmpHdc);				  
 		// save it to disk.
-   		Bmp->WriteBMP(FullPath,FALSE);
+   		Bmp->WriteBMP(FullPath);
 		// and delete the BMP.
 		delete Bmp;
 

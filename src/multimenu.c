@@ -44,7 +44,6 @@
 #include "loadsave.h"		// for drawbluebox
 #include "console.h"
 #include "ai.h"
-#include "csnap.h"
 #include "frend.h"
 #include "lib/netplay/netplay.h"
 #include "multiplay.h"
@@ -171,17 +170,6 @@ static BOOL enumerateMultiMaps(char *found, UDWORD *players,BOOL first, UBYTE ca
 	}
 	while(lev)
 	{
-//		if(game.type == DMATCH)
-//		{
-//			if(lev->type == DMATCH)
-//			{
-//				strcpy(found,lev->pName);
-//				*players = lev->players;
-//				lev = lev->psNext;
-//				return TRUE;
-//			}
-//		}
-//		else
 		if(game.type == SKIRMISH)
 		{
 			if(lev->type == MULTI_SKIRMISH2)
@@ -212,7 +200,7 @@ static BOOL enumerateMultiMaps(char *found, UDWORD *players,BOOL first, UBYTE ca
 				return TRUE;
 			}
 		}
-		else	//  campaign, teamplay
+		else	//  campaign
 		{
 // 'service pack 1'
 			if(lev->type == MULTI_CAMPAIGN2)
@@ -284,8 +272,6 @@ void displayRequestOption(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWO
 		iV_DrawImage(FrontImages,IMAGE_WEE_GUY,(x+(6*count)+6),y+16);
 	}
 
-	AddCursorSnap(&InterfaceSnap, (SWORD)(x+5),(SWORD)(y+5),psWidget->formID,psWidget->id,NULL);
-
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -304,7 +290,7 @@ void displayCamTypeBut(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD 
 	} else {
 		iV_SetTextColour(PIE_TEXT_LIGHTBLUE);
 	}
-	pie_DrawText(buffer, x+2, y+12);
+	iV_DrawText(buffer, x+2, y+12);
 
 }
 
@@ -325,7 +311,7 @@ void displayNumPlayersBut(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWO
 	} else {
 		sprintf(buffer, "%iP", (int)(psWidget->UserData));
 	}
-	pie_DrawText(buffer, x+2, y+12);
+	iV_DrawText(buffer, x+2, y+12);
 
 }
 
@@ -811,7 +797,6 @@ void displayMultiPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD
 
 		//c3-7 alliance
 		//manage buttons by showing or hiding them. gifts only in campaign,
-//		if(game.type != DMATCH)
 		{
 			if(game.alliance != NO_ALLIANCES)
 			{
@@ -819,8 +804,11 @@ void displayMultiPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD
 				{
 					if(player != selectedPlayer &&  !giftsUp[player] )
 					{
-						widgReveal(psWScreen,MULTIMENU_GIFT_RAD+ player);
-						widgReveal(psWScreen,MULTIMENU_GIFT_RES+ player);
+						if (game.alliance != ALLIANCES_TEAMS)
+						{
+							widgReveal(psWScreen,MULTIMENU_GIFT_RAD+ player);
+							widgReveal(psWScreen,MULTIMENU_GIFT_RES+ player);
+						}
 						widgReveal(psWScreen,MULTIMENU_GIFT_DRO+ player);
 						widgReveal(psWScreen,MULTIMENU_GIFT_POW+ player);
 						giftsUp[player] = TRUE;
@@ -830,8 +818,11 @@ void displayMultiPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD
 				{
 					if(player != selectedPlayer && giftsUp[player])
 					{
-						widgHide(psWScreen,MULTIMENU_GIFT_RAD+ player);
-						widgHide(psWScreen,MULTIMENU_GIFT_RES+ player);
+						if (game.alliance != ALLIANCES_TEAMS)
+						{
+							widgHide(psWScreen,MULTIMENU_GIFT_RAD+ player);
+							widgHide(psWScreen,MULTIMENU_GIFT_RES+ player);
+						}
 						widgHide(psWScreen,MULTIMENU_GIFT_DRO+ player);
 						widgHide(psWScreen,MULTIMENU_GIFT_POW+ player);
 						giftsUp[player] = FALSE;
@@ -847,14 +838,7 @@ void displayMultiPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD
 		iV_DrawText(str, x+MULTIMENU_C8, y+MULTIMENU_FONT_OSET);
 
 		//c9:kills,
-//		if(game.type == DMATCH)
-//		{
-//			sprintf(str,"%d",getMultiStats(player,TRUE).recentKills);
-//		}
-//		else
-//		{
-			sprintf(str,"%d",getMultiStats(player,TRUE).recentKills);
-//		}
+		sprintf(str,"%d",getMultiStats(player,TRUE).recentKills);
 		iV_DrawText(str, x+MULTIMENU_C9, y+MULTIMENU_FONT_OSET);
 
 		if(!getDebugMappingStatus())
@@ -1084,15 +1068,17 @@ void addMultiPlayer(UDWORD player,UDWORD pos)
 
 		//can't break alliances in 'Locked Teams' mode
 		if(game.alliance != ALLIANCES_TEAMS)
+		{
 			widgAddButton(psWScreen, &sButInit);
+		}
 
 		sButInit.pDisplay = intDisplayImageHilight;
 
-//		if(game.type != DMATCH)
-//		{
 			// add the gift buttons.
 			sButInit.y		+= 1;	// move down a wee bit.
 
+		if (game.alliance != ALLIANCES_TEAMS)
+		{
 			sButInit.id		= MULTIMENU_GIFT_RAD+ player;
 			sButInit.x		= MULTIMENU_C4;
 			sButInit.pTip	= _("Give Visibility Report");
@@ -1104,6 +1090,7 @@ void addMultiPlayer(UDWORD player,UDWORD pos)
 			sButInit.pTip	= _("Leak Technology Documents");
 			sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_MULTI_TEK_HI , IMAGE_MULTI_TEK);
 			widgAddButton(psWScreen, &sButInit);
+		}
 
 			sButInit.id		= MULTIMENU_GIFT_DRO + player;
 			sButInit.x		= MULTIMENU_C6;
@@ -1118,8 +1105,6 @@ void addMultiPlayer(UDWORD player,UDWORD pos)
 			widgAddButton(psWScreen, &sButInit);
 
 			giftsUp[player] = TRUE;				// note buttons are up!
-//		}
-
 	}
 }
 
@@ -1366,8 +1351,7 @@ static BOOL intCheckAllianceValid( UBYTE player1, UBYTE player2 )
 {
 	UBYTE	i, iAlliances, iHumanPlayers;
 
-	/* only interested in teamplay */
-	if ( bMultiPlayer && game.type != TEAMPLAY )
+	if ( bMultiPlayer )
 	{
 		return TRUE;
 	}
@@ -1449,10 +1433,7 @@ void intProcessMultiMenu(UDWORD id)
 			break;
 
 		case ALLIANCE_FORMED:
-			if(game.type != TEAMPLAY)									// cant break state in teamplay..
-			{
-				breakAlliance((UBYTE)selectedPlayer,i,TRUE,TRUE);		// break an alliance
-			}
+			breakAlliance((UBYTE)selectedPlayer,i,TRUE,TRUE);		// break an alliance
 			break;
 		default:
 			break;

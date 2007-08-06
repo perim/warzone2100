@@ -42,12 +42,6 @@
 #include "piematrix.h"
 #include "pietexture.h"
 
-/// Stores the from and to verticles from an edge
-typedef struct edge_
-{
-	int from, to;
-} EDGE;
-
 extern BOOL drawing_interface;
 
 /***************************************************************************/
@@ -212,24 +206,24 @@ static inline void pie_Polygon(const SDWORD numVerts, const PIEVERTEXF* pVrts, c
 		if (light)
 		{
 			const Vector3f
-					p1 = { pVrts[0].sx, pVrts[0].sy, pVrts[0].sz },
-					p2 = { pVrts[1].sx, pVrts[1].sy, pVrts[1].sz },
-					p3 = { pVrts[2].sx, pVrts[2].sy, pVrts[2].sz };
-			Vector3f v1, v2, n;
+					p1 = { pVrts[0].x, pVrts[0].y, pVrts[0].z },
+					p2 = { pVrts[1].x, pVrts[1].y, pVrts[1].z },
+					p3 = { pVrts[2].x, pVrts[2].y, pVrts[2].z },
+					v1 = Vector3f_Sub(p3, p1),
+					v2 = Vector3f_Sub(p2, p1),
+					normal = Vector3f_CrossP(v1, v2);
 
-			Vector3f_Sub(&v1, &p3, &p1);
-			Vector3f_Sub(&v2, &p2, &p1);
-			Vector3f_CP(&n, &v1, &v2);
+			STATIC_ASSERT(sizeof(Vector3f) == sizeof(float[3]));
 
-			glNormal3f(n.x, n.y, n.z);
+			glNormal3fv((float*)&normal);
 		}
 	}
 
 	for (i = 0; i < numVerts; i++)
 	{
 		glColor4ub(pVrts[i].light.byte.r, pVrts[i].light.byte.g, pVrts[i].light.byte.b, pVrts[i].light.byte.a);
-		glTexCoord2f(pVrts[i].tu, pVrts[i].tv);
-		glVertex3f(pVrts[i].sx, pVrts[i].sy, pVrts[i].sz);
+		glTexCoord2f(pVrts[i].u, pVrts[i].v);
+		glVertex3f(pVrts[i].x, pVrts[i].y, pVrts[i].z);
 	}
 
 	glEnd();
@@ -292,8 +286,8 @@ static inline void pie_PiePolyFrame(PIEPOLY *poly, SDWORD frame, const BOOL ligh
 
 			for (j = 0; j < poly->nVrts; j++)
 			{
-				poly->pVrts[j].tu += uFrame;
-				poly->pVrts[j].tv += vFrame;
+				poly->pVrts[j].u += uFrame;
+				poly->pVrts[j].v += vFrame;
 			}
 		}
 	}
@@ -438,11 +432,11 @@ static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELI
 				n < pPolys->npnts;
 				n++, index++)
 		{
-			pieVrts[n].sx = scrPoints[*index].x;
-			pieVrts[n].sy = scrPoints[*index].y;
-			pieVrts[n].sz = scrPoints[*index].z;
-			pieVrts[n].tu = pPolys->vrt[n].u;
-			pieVrts[n].tv = pPolys->vrt[n].v;
+			pieVrts[n].x = scrPoints[*index].x;
+			pieVrts[n].y = scrPoints[*index].y;
+			pieVrts[n].z = scrPoints[*index].z;
+			pieVrts[n].u = pPolys->texCoord[n].x;
+			pieVrts[n].v = pPolys->texCoord[n].y;
 			pieVrts[n].light.argb = colour.argb;
 			pieVrts[n].specular.argb = specular.argb;
 		}
@@ -553,7 +547,7 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 	pVertices = shape->points;
 	if( flag & pie_STATIC_SHADOW && shape->shadowEdgeList )
 	{
-		drawlist = (EDGE*)shape->shadowEdgeList;
+		drawlist = shape->shadowEdgeList;
 		edge_count = shape->nShadowEdges;
 	}
 	else
@@ -568,10 +562,10 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 				Vector3f_Set(&p[j], pVertices[current].x, scale_y(pVertices[current].y, flag, flag_data), pVertices[current].z);
 			}
 
-			Vector3f_Sub(&v[0], &p[2], &p[0]);
-			Vector3f_Sub(&v[1], &p[1], &p[0]);
-			Vector3f_CP(&normal, &v[0], &v[1]);
-			if (Vector3f_SP(&normal, light) > 0)
+			v[0] = Vector3f_Sub(p[2], p[0]);
+			v[1] = Vector3f_Sub(p[1], p[0]);
+			normal = Vector3f_CrossP(v[0], v[1]);
+			if (Vector3f_ScalarP(normal, *light) > 0)
 			{
 				first = pPolys->pindex[0];
 				for (n = 1; n < pPolys->npnts; n++) {
@@ -955,43 +949,6 @@ void pie_DrawImage(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style)
 }
 
 /***************************************************************************
- * pie_Drawimage270
- *
- * General purpose blit function
- * Will support zbuffering, non_textured, coloured lighting and alpha effects
- *
- * replaces all ivis blit functions
- *
- ***************************************************************************/
-
-void pie_DrawImage270( PIEIMAGE *image, PIERECT *dest )
-{
-	PIELIGHT colour;
-
-	polyCount++;
-
-	pie_SetTexturePage(image->texPage);
-
-	colour.argb = pie_GetColour();
-
-	glColor4ub(colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a);
-
-	glBegin(GL_TRIANGLE_FAN);
-		glTexCoord2f(image->tu + image->tw, image->tv);
-		glVertex2f(dest->x, dest->y);
-
-		glTexCoord2f(image->tu + image->tw, image->tv + image->th);
-		glVertex2f(dest->x + dest->h, dest->y);
-
-		glTexCoord2f(image->tu, image->tv + image->th);
-		glVertex2f(dest->x + dest->h, dest->y + dest->w);
-
-		glTexCoord2f(image->tu, image->tv);
-		glVertex2f(dest->x, dest->y + dest->w);
-	glEnd();
-}
-
-/***************************************************************************
  * pie_DrawRect
  *
  * universal rectangle function for hardware
@@ -1044,8 +1001,8 @@ void pie_DrawTexTriangle(const PIEVERTEX *aVrts, const void* psEffects)
 		for ( i = 0; i < 3; i++ )
 		{
 			glColor4ub( aVrts[i].light.byte.r, aVrts[i].light.byte.g, aVrts[i].light.byte.b, aVrts[i].light.byte.a );
-			glTexCoord2f( aVrts[i].tu, aVrts[i].tv + offset );
-			glVertex3f( aVrts[i].sx, aVrts[i].sy, aVrts[i].sz );
+			glTexCoord2f( aVrts[i].u, aVrts[i].v + offset );
+			glVertex3f( aVrts[i].x, aVrts[i].y, aVrts[i].z );
 		}
 	glEnd();
 

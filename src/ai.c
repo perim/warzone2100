@@ -157,7 +157,7 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 
 								// make sure target is near enough
 								if(dirtySqrt(psDroid->x,psDroid->y,tempTarget->x,tempTarget->y)
-									< (psDroid->sensorRange * 2))
+									< (psDroid->sensorRange))
 								{
 									targetInQuestion = tempTarget;		//consider this target
 								}
@@ -274,9 +274,12 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker, SDWORD weapon_slot)
 {
 	SDWORD			targetTypeBonus=0, damageRatio=0, attackWeight=0, noTarget=-1;
-	DROID			*targetDroid;
-	STRUCTURE		*targetStructure;
+	UDWORD			weaponSlot;
+	DROID			*targetDroid=NULL,*psAttackerDroid=NULL,*psGroupDroid,*psDroid;
+	STRUCTURE		*targetStructure=NULL;
 	WEAPON_EFFECT	weaponEffect;
+	WEAPON_STATS	*attackerWeapon;
+	BOOL			bEmpWeap=FALSE,bCmdAttached=FALSE,bTargetingCmd=FALSE;
 
 	if(psTarget == NULL || psAttacker == NULL){
 		return noTarget;
@@ -287,17 +290,72 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 	/* Get attacker weapon effect */
 	if(psAttacker->type == OBJ_DROID)
 	{
-		weaponEffect = ((WEAPON_STATS *)(asWeaponStats + ((DROID *)psAttacker)->asWeaps[weapon_slot].nStat))->weaponEffect;
+		psAttackerDroid = (DROID *)psAttacker;
+
+		attackerWeapon = (WEAPON_STATS *)(asWeaponStats +
+			psAttackerDroid->asWeaps[weapon_slot].nStat);
+
+
+		//check if this droid is assigned to a commander
+		bCmdAttached = (psAttackerDroid->droidType != DROID_COMMAND &&
+						psAttackerDroid->psGroup != NULL &&
+						psAttackerDroid->psGroup->type == GT_COMMAND);
+
+		//find out if current target is targeting our commander
+		if(bCmdAttached)
+		{
+			if(psTarget->type == OBJ_DROID)
+			{
+				psDroid = (DROID *)psTarget;
+
+				//go through all enemy weapon slots
+				for(weaponSlot = 0; !bTargetingCmd &&
+					weaponSlot < ((DROID *)psTarget)->numWeaps; weaponSlot++)
+				{
+					//see if this weapon is targeting our commander
+					if( ( psDroid->psActionTarget[weaponSlot] ==
+						(BASE_OBJECT *)psAttackerDroid->psGroup->psCommander) ||
+						( psDroid->psTarget[weaponSlot] ==
+						(BASE_OBJECT *)psAttackerDroid->psGroup->psCommander) )
+					{
+						bTargetingCmd = TRUE;
+					}
+				}
+			}
+			else
+			{
+				if(psTarget->type == OBJ_STRUCTURE)
+				{
+					//go through all enemy weapons
+					for(weaponSlot = 0; !bTargetingCmd &&
+						weaponSlot < ((STRUCTURE *)psTarget)->numWeaps; weaponSlot++)
+					{
+						if( ((STRUCTURE *)psTarget)->psTarget[weaponSlot] ==
+								(BASE_OBJECT *)psAttackerDroid->psGroup->psCommander)
+						{
+							bTargetingCmd = TRUE;
+						}
+					}
+				}
+			}
+		}
 	}
 	else if(psAttacker->type == OBJ_STRUCTURE)
 	{
-		weaponEffect = ((WEAPON_STATS *)(asWeaponStats + ((STRUCTURE *)psAttacker)->asWeaps[weapon_slot].nStat))->weaponEffect;
+		attackerWeapon = ((WEAPON_STATS *)(asWeaponStats +
+			((STRUCTURE *)psAttacker)->asWeaps[weapon_slot].nStat));
 	}
 	else	/* feature */
 	{
 		ASSERT(!"invalid attacker object type", "targetAttackWeight: Invalid attacker object type");
 		return noTarget;
 	}
+
+	//Get weapon effect
+	weaponEffect = attackerWeapon->weaponEffect;
+
+	//See if attacker is using an EMP weapon
+	bEmpWeap = (attackerWeapon->weaponSubClass == WSC_EMP);
 
 	/* Calculate attack weight */
 	if(psTarget->type == OBJ_DROID)
@@ -355,6 +413,14 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 				- WEIGHT_DIST_TILE_DROID * ( dirtySqrt(psAttacker->x, psAttacker->y, targetDroid->x, targetDroid->y) >> TILE_SHIFT ) // farer droids are less attractive
 				+ WEIGHT_HEALTH_DROID * damageRatio // we prefer damaged droids
 				+ targetTypeBonus; // some droid types have higher priority
+
+		/* If attacking with EMP try to avoid targets that were already "EMPed" */
+		if(bEmpWeap &&
+			(targetDroid->lastHitWeapon == WSC_EMP) &&
+			((gameTime - targetDroid->timeLastHit) < EMP_DISABLE_TIME))		//target still disabled
+		{
+			attackWeight /= EMP_DISABLED_PENALTY_F;
+		}
 	}
 	else if(psTarget->type == OBJ_STRUCTURE)
 	{
@@ -390,8 +456,16 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 				+ targetTypeBonus; // some structure types have higher priority
 
 		/* Go for unfinished structures only if nothing else found (same for non-visible structures) */
-		if(targetStructure->status != SS_BUILT)			//a decoy?
+		if(targetStructure->status != SS_BUILT)		//a decoy?
+		{
 			attackWeight /= WEIGHT_STRUCT_NOTBUILT_F;
+		}
+
+		/* EMP should only attack structures if no enemy droids are around */
+		if(bEmpWeap)
+		{
+			attackWeight /= EMP_STRUCT_PENALTY_F;
+		}
 
 	}
 	else	//a feature
@@ -403,6 +477,34 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 	if(!visibleObjWallBlock((BASE_OBJECT *)psAttacker, psTarget))
 	{
 		attackWeight /= WEIGHT_NOT_VISIBLE_F;
+	}
+
+	/* Commander-related criterias */
+	if(bCmdAttached)	//attached to a commander and don't have a target assigned by some order
+	{
+		ASSERT(psAttackerDroid->psGroup->psCommander != NULL, "Commander is NULL");
+
+		//if commander is being targeted by our target, try to defend the commander
+		if(bTargetingCmd)
+		{
+			attackWeight += WEIGHT_CMD_RANK * ( 1 + getDroidLevel(psAttackerDroid->psGroup->psCommander));
+		}
+
+		//fire support - go through all droids assigned to the commander
+		for(psGroupDroid = psAttackerDroid->psGroup->psList;
+			psGroupDroid; psGroupDroid = psGroupDroid->psGrpNext)
+		{
+			for(weaponSlot = 0; weaponSlot < psGroupDroid->numWeaps; weaponSlot++)
+			{
+				//see if this droid is currently targeting current target
+				if(psGroupDroid->psTarget[weaponSlot] == psTarget ||
+				   psGroupDroid->psActionTarget[weaponSlot] == psTarget)
+				{
+					//we prefer targets that are already targeted and hence will be destroyed faster
+					attackWeight += WEIGHT_CMD_SAME_TARGET;
+				}
+			}
+		}
 	}
 
 	return attackWeight;
@@ -516,7 +618,7 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 		/* find a new target */
 		newTargetWeight = aiBestNearestTarget((DROID *)psObj, &psTarget, weapon_slot);
 
-		/* Calculate weight of the current target of updating */
+		/* Calculate weight of the current target if updating */
 		if(bUpdateTarget){
 			curTargetWeight = targetAttackWeight(((DROID *)psObj)->psActionTarget[0], psObj, weapon_slot);
 		}
@@ -564,7 +666,7 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 			// set bCommanderBlock so that the structure does not fire until the commander
 			// has a target - (slow firing weapons will not be ready to fire otherwise).
 			bCommanderBlock = TRUE;
-			if (psCommander->action == DACTION_ATTACK 
+			if (psCommander->action == DACTION_ATTACK
 			    && psCommander->psActionTarget[0] != NULL
 			    && !psCommander->psActionTarget[0]->died)
 			{
