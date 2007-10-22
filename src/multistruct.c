@@ -30,7 +30,7 @@
 #include "lib/framework/frame.h"
 #include "droid.h"
 #include "droiddef.h"
-#include "base.h"
+#include "basedef.h"
 #include "power.h"
 #include "geometry.h"								// for gettilestructure
 #include "anim_id.h"
@@ -45,6 +45,7 @@
 #include "multigifts.h"
 #include "multirecv.h"
 #include "lib/sound/audio_id.h"
+#include "lib/sound/sound.h"
 
 // ////////////////////////////////////////////////////////////////////////////
 // structures
@@ -121,11 +122,11 @@ BOOL recvBuildStarted(NETMSG *pMsg)
 			psDroid->psTarStats[0] = (BASE_STATS *) psStats;
 			if(targetId)
 			{
-				setDroidTarget(psDroid, IdToPointer(targetId, ANYPLAYER), 0);
+				psDroid->psTarget[0] = IdToPointer(targetId,ANYPLAYER);
 			}
 			else
 			{
-				setDroidTarget(psDroid, NULL, 0);
+				psDroid->psTarget[0] = 0;
 			}
 
 			if (IsStatExpansionModule(psStats))
