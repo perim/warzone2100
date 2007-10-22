@@ -48,7 +48,7 @@
 #include "ingameop.h"
 #include "mission.h"
 #include "transporter.h"
-#include "winmain.h"
+#include "main.h"
 
 extern void addText(int FontID,UDWORD FormID,UDWORD id,  UDWORD PosX, UDWORD PosY, char *txt, UDWORD attachID,BOOL *State);
 
@@ -78,7 +78,7 @@ static BOOL addIGTextButton(UDWORD id, UWORD y, const char *string, UDWORD Style
 	sButInit.width		= INTINGAMEOP_OP_W;
 	sButInit.height		= INTINGAMEOP_OP_H;
 
-	sButInit.FontID		= WFont;
+	sButInit.FontID		= font_regular;
 	sButInit.pDisplay	= displayTextOption;
 	sButInit.pText		= string;
 	widgAddButton(psWScreen, &sButInit);

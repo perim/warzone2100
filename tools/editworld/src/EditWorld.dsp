@@ -90,6 +90,10 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;hpj;bat;for;f90"
 # Begin Source File
 
+SOURCE=.\aboutdialog.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\autoflagdialog.cpp
 # End Source File
 # Begin Source File
@@ -218,10 +222,6 @@ SOURCE=.\savesegmentdialog.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\stdafx.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\tdview.cpp
 # End Source File
 # Begin Source File
@@ -242,12 +242,20 @@ SOURCE=.\tiletypes.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\undoredo.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\wfview.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl;fi;fd"
+# Begin Source File
+
+SOURCE=.\aboutdialog.hpp
+# End Source File
 # Begin Source File
 
 SOURCE=.\autoflagdialog.hpp
@@ -279,10 +287,6 @@ SOURCE=.\bteditview.h
 # Begin Source File
 
 SOURCE=.\chnkio.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\d3dwrap.h
 # End Source File
 # Begin Source File
 
@@ -342,10 +346,6 @@ SOURCE=.\heightmap.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\infodialog.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\initiallimitsdlg.hpp
 # End Source File
 # Begin Source File
@@ -354,11 +354,7 @@ SOURCE=.\keyhandler.hpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\limitsdialog.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\listtemp.h
+SOURCE=.\limitsdialog.hpp
 # End Source File
 # Begin Source File
 
@@ -395,10 +391,6 @@ SOURCE=.\resource.h
 # Begin Source File
 
 SOURCE=.\savesegmentdialog.hpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\snapprefs.h
 # End Source File
 # Begin Source File
 
@@ -455,14 +447,6 @@ SOURCE=.\res\arrowcop.cur
 # Begin Source File
 
 SOURCE=.\res\bitmap1.bmp
-# End Source File
-# Begin Source File
-
-SOURCE=.\res\bitmap2.bmp
-# End Source File
-# Begin Source File
-
-SOURCE=.\res\bmp00001.bmp
 # End Source File
 # Begin Source File
 

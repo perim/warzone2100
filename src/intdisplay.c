@@ -233,8 +233,7 @@ void intUpdateProgressBar(WIDGET *psWidget, W_CONTEXT *psContext)
 		return;
 	}
 
-//	ASSERT( !psObj->died,"intUpdateProgressBar: object is dead" );
-	if(psObj->died && psObj->died != NOT_CURRENT_LIST)
+	if (isDead((BASE_OBJECT *)psObj))
 	{
 		return;
 	}
@@ -416,18 +415,16 @@ void intUpdateQuantity(WIDGET *psWidget, W_CONTEXT *psContext)
 	if( (psObj != NULL) &&
 		(psObj->type == OBJ_STRUCTURE) && (StructureIsManufacturing(Structure)) )
 	{
-		ASSERT( !psObj->died,"intUpdateQuantity: object is dead" );
+		ASSERT(!isDead(psObj),"intUpdateQuantity: object is dead");
 
 		/*Quantity = StructureGetFactory(Structure)->quantity;
 		if (Quantity == NON_STOP_PRODUCTION)
 		{
-			Label->aText[0] = (UBYTE)('*');
-			Label->aText[1] = (UBYTE)('\0');
+			strncpy(Label->aText, "*", sizeof(Label->aText));
 		}
 		else
 		{
-			Label->aText[0] = (UBYTE)('0'+Quantity / 10);
-			Label->aText[1] = (UBYTE)('0'+Quantity % 10);
+			snprintf(Label->aText, sizeof(Label->aText), "%02u", Quantity);
 		}*/
 
 		psTemplate = (DROID_TEMPLATE *)StructureGetFactory(Structure)->psSubject;
@@ -445,8 +442,7 @@ void intUpdateQuantity(WIDGET *psWidget, W_CONTEXT *psContext)
         }
 		if (Quantity)
 		{
-			Label->aText[0] = (UBYTE)('0'+Quantity / 10);
-			Label->aText[1] = (UBYTE)('0'+Quantity % 10);
+			snprintf(Label->aText, sizeof(Label->aText), "%02u", Quantity);
 		}
 		Label->style &= ~WIDG_HIDDEN;
 	}
@@ -459,18 +455,19 @@ void intUpdateQuantity(WIDGET *psWidget, W_CONTEXT *psContext)
 //callback to display the factory number
 void intAddFactoryInc(WIDGET *psWidget, W_CONTEXT *psContext)
 {
-	BASE_OBJECT			*psObj;
-	STRUCTURE			*Structure;
-	W_LABEL				*Label = (W_LABEL*)psWidget;
+	W_LABEL         *Label = (W_LABEL*)psWidget;
+	BASE_OBJECT     *psObj = (BASE_OBJECT*)Label->pUserData;
 
 	// Get the object associated with this widget.
-	psObj = (BASE_OBJECT*)Label->pUserData;
 	if (psObj != NULL)
 	{
+		STRUCTURE*  Structure;
+		FACTORY*    Factory;
+
 		ASSERT( psObj != NULL,
 			"intAddFactoryInc: invalid structure pointer" );
 
-		ASSERT( !psObj->died,"intAddFactoryInc: object is dead" );
+		ASSERT(!isDead(psObj), "intAddFactoryInc: object is dead");
 
 		Structure = (STRUCTURE*)psObj;
 
@@ -479,14 +476,14 @@ void intAddFactoryInc(WIDGET *psWidget, W_CONTEXT *psContext)
 			Structure->pStructureType->type == REF_VTOL_FACTORY),
 			"intAddFactoryInc: structure is not a factory" );
 
-		Label->aText[0] = (UBYTE)('0' + (((FACTORY *)Structure->pFunctionality)->
-			psAssemblyPoint->factoryInc+1));
-		Label->aText[1] = (UBYTE)('\0');
+		Factory = (FACTORY *)Structure->pFunctionality;
+
+		snprintf(Label->aText, sizeof(Label->aText), "%u", Factory->psAssemblyPoint->factoryInc + 1);
 		Label->style &= ~WIDG_HIDDEN;
 	}
 	else
 	{
-		Label->aText[0] = (UBYTE)0;
+		Label->aText[0] = '\0';
 		Label->style |= WIDG_HIDDEN;
 	}
 }
@@ -523,13 +520,12 @@ void intAddProdQuantity(WIDGET *psWidget, W_CONTEXT *psContext)
 
 		if (quantity != 0)
 		{
-			Label->aText[0] = (UBYTE)('0' + quantity);
-			Label->aText[1] = (UBYTE)('\0');
+			snprintf(Label->aText, sizeof(Label->aText), "%u", quantity);
 			Label->style &= ~WIDG_HIDDEN;
 		}
 		else
 		{
-			Label->aText[0] = (UBYTE)0;
+			Label->aText[0] = '\0';
 			Label->style |= WIDG_HIDDEN;
 		}
 	}
@@ -546,33 +542,20 @@ void intAddLoopQuantity(WIDGET *psWidget, W_CONTEXT *psContext)
 	{
 		psFactory = (FACTORY *)((STRUCTURE *)Label->pUserData)->pFunctionality;
 
-		if (psFactory->quantity)
+		if (psFactory->quantity == INFINITE_PRODUCTION)
 		{
-			if (psFactory->quantity == INFINITE_PRODUCTION)
-			{
-				Label->aText[0] = (UBYTE)(7);
-				Label->aText[1] = (UBYTE)('\0');
-			}
-			else
-			{
-				Label->aText[0] = (UBYTE)('0' + psFactory->quantity / 10);
-				Label->aText[1] = (UBYTE)('0' + (psFactory->quantity + DEFAULT_LOOP) % 10);
-				Label->aText[2] = (UBYTE)('\0');
-			}
+			strncpy(Label->aText, "∞", sizeof(Label->aText));
 		}
 		else
 		{
-			//set to default loop quantity
-			Label->aText[0] = (UBYTE)('0');
-			Label->aText[1] = (UBYTE)('0' + DEFAULT_LOOP);
-			Label->aText[2] = (UBYTE)('\0');
+			snprintf(Label->aText, sizeof(Label->aText), "%02u", psFactory->quantity + DEFAULT_LOOP);
 		}
 		Label->style &= ~WIDG_HIDDEN;
 	}
 	else
 	{
 		//hide the label if no factory
-		Label->aText[0] = (UBYTE)0;
+		Label->aText[0] = '\0';
 		Label->style |= WIDG_HIDDEN;
 	}
 }
@@ -591,19 +574,19 @@ void intUpdateCommandSize(WIDGET *psWidget, W_CONTEXT *psContext)
 		ASSERT( psObj != NULL,
 			"intUpdateCommandSize: invalid droid pointer" );
 
-		ASSERT( !psObj->died,"intUpdateCommandSize: droid has died" );
+		ASSERT(!isDead(psObj), "intUpdateCommandSize: droid has died");
 
 		psDroid = (DROID *)psObj;
 
 		ASSERT( psDroid->droidType == DROID_COMMAND,
 			"intUpdateCommandSize: droid is not a command droid" );
 
-		sprintf(Label->aText, "%d/%d", psDroid->psGroup ? grpNumMembers(psDroid->psGroup) : 0, cmdDroidMaxGroup(psDroid));
+		snprintf(Label->aText, sizeof(Label->aText), "%d/%d", psDroid->psGroup ? grpNumMembers(psDroid->psGroup) : 0, cmdDroidMaxGroup(psDroid));
 		Label->style &= ~WIDG_HIDDEN;
 	}
 	else
 	{
-		Label->aText[0] = (UBYTE)0;
+		Label->aText[0] = '\0';
 		Label->style |= WIDG_HIDDEN;
 	}
 }
@@ -623,7 +606,7 @@ void intUpdateCommandExp(WIDGET *psWidget, W_CONTEXT *psContext)
 		ASSERT( psObj != NULL && psObj->type == OBJ_DROID,
 			"intUpdateCommandSize: invalid droid pointer" );
 
-		ASSERT( !psObj->died,"intUpdateCommandSize: droid has died" );
+		ASSERT(!isDead(psObj), "intUpdateCommandSize: droid has died");
 
 		psDroid = (DROID *)psObj;
 
@@ -641,7 +624,7 @@ void intUpdateCommandExp(WIDGET *psWidget, W_CONTEXT *psContext)
 	}
 	else
 	{
-		Label->aText[0] = (UBYTE)0;
+		Label->aText[0] = '\0';
 		Label->style |= WIDG_HIDDEN;
 	}
 }
@@ -661,7 +644,7 @@ void intUpdateCommandFact(WIDGET *psWidget, W_CONTEXT *psContext)
 		ASSERT( psObj != NULL && psObj->type == OBJ_DROID,
 			"intUpdateCommandSize: invalid droid pointer" );
 
-		ASSERT( !psObj->died,"intUpdateCommandSize: droid has died" );
+		ASSERT(!isDead(psObj), "intUpdateCommandSize: droid has died");
 
 		psDroid = (DROID *)psObj;
 
@@ -696,7 +679,7 @@ void intUpdateCommandFact(WIDGET *psWidget, W_CONTEXT *psContext)
 	}
 	else
 	{
-		Label->aText[0] = (UBYTE)0;
+		Label->aText[0] = '\0';
 		Label->style |= WIDG_HIDDEN;
 	}
 }
@@ -730,7 +713,7 @@ void intDisplayPowerBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD
 
 	BarWidth = BarGraph->width;
 #if	DRAW_POWER_BAR_TEXT
-    iV_SetFont(WFont);
+    iV_SetFont(font_regular);
 	sprintf( szVal, "%d", realPower );
 	textWidth = iV_GetTextWidth( szVal );
 	BarWidth -= textWidth;
@@ -898,7 +881,6 @@ void intDisplayStatusButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UD
 	Down = Form->state & (WCLICK_DOWN | WCLICK_LOCKED | WCLICK_CLICKLOCK);
 
 	{
-
 		Hilight = Form->state & WCLICK_HILITE;
 
 		if(Hilight) {
@@ -913,7 +895,7 @@ void intDisplayStatusButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UD
 		Image = -1;
 		psObj = (BASE_OBJECT*)Buffer->Data;	// Get the object associated with this widget.
 
-		if (psObj && (psObj->died) && (psObj->died != NOT_CURRENT_LIST))
+		if (psObj && isDead(psObj))
 		{
 			// this may catch this horrible crash bug we've been having,
 			// who knows?.... Shipping tomorrow, la de da :-)
@@ -1106,7 +1088,6 @@ void intDisplayObjectButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UD
 	Down = Form->state & (WCLICK_DOWN | WCLICK_LOCKED | WCLICK_CLICKLOCK);
 
 	{
-
 		Hilight = Form->state & WCLICK_HILITE;
 
 		if(Hilight) {
@@ -1120,7 +1101,7 @@ void intDisplayObjectButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UD
 		Object = NULL;
 		psObj = (BASE_OBJECT*)Buffer->Data;	// Get the object associated with this widget.
 
-		if (psObj && psObj->died && psObj->died != NOT_CURRENT_LIST)
+		if (psObj && isDead(psObj))
 		{
 			// this may catch this horrible crash bug we've been having,
 			// who knows?.... Shipping tomorrow, la de da :-)
@@ -2176,12 +2157,13 @@ void intDisplayEditBox(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD 
 void intDisplayNumber(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
 {
 	W_LABEL		*Label = (W_LABEL*)psWidget;
-	UDWORD		i = 0;
 	UDWORD		x = Label->x + xOffset;
 	UDWORD		y = Label->y + yOffset;
 	UDWORD		Quantity;// = (UDWORD)Label->pUserData;
 	STRUCTURE	*psStruct;
 	FACTORY		*psFactory;
+
+	unsigned int i;
 
 	//Quantity depends on the factory
 	Quantity = 1;
@@ -2200,22 +2182,18 @@ void intDisplayNumber(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *
 		}*/
 	}
 
-		if(Quantity >= STAT_SLDSTOPS)
+	if(Quantity >= STAT_SLDSTOPS)
+	{
+		iV_DrawImage(IntImages,IMAGE_SLIDER_INFINITY,x+4,y);
+	}
+	else
+	{
+		snprintf(Label->aText, sizeof(Label->aText), "%02u", Quantity);
+
+		for (i = 0; Label->aText[i]; ++i)
 		{
-			iV_DrawImage(IntImages,IMAGE_SLIDER_INFINITY,x+4,y);
-		}
-		else
-		{
-			Label->aText[0] = (UBYTE)('0' + Quantity / 10);
-			Label->aText[1] = (UBYTE)('0' + Quantity % 10);
-			Label->aText[2] = 0;
-
-			while(Label->aText[i]) {
-
-				iV_DrawImage(IntImages,(UWORD)(IMAGE_0 + (Label->aText[i]-'0')),x,y);
-				x += iV_GetImageWidth(IntImages,(UWORD)(IMAGE_0 + (Label->aText[i]-'0')))+1;
-
-				i++;
+			iV_DrawImage(IntImages, (UWORD)(IMAGE_0 + (Label->aText[i] - '0')), x, y);
+			x += iV_GetImageWidth(IntImages, (UWORD)(IMAGE_0 + (Label->aText[i]-'0'))) + 1;
 		}
 	}
 }

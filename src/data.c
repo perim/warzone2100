@@ -75,7 +75,6 @@
 
 // whether a save game is currently being loaded
 static BOOL saveFlag = FALSE;
-extern char	aCurrResDir[255];		// Arse
 
 extern int scr_lineno;
 
@@ -718,10 +717,10 @@ static void dataIMGRelease(void *pData)
 /* Load a texturepage into memory */
 static BOOL dataTexPageLoad(const char *fileName, void **ppData)
 {
-	char texpage[MAX_PATH] = {'\0'};
+	char texpage[PATH_MAX] = {'\0'};
 
 	// This hackery is needed, because fileName will include the directory name, whilst the LastResourceFilename will not, and we need a short name to identify the texpage
-	strncpy(texpage, GetLastResourceFilename(), MAX_PATH);
+	strncpy(texpage, GetLastResourceFilename(), PATH_MAX);
 
 	pie_MakeTexPageName(texpage);
 	dataImageLoad(fileName, ppData);
@@ -876,15 +875,27 @@ static void dataStrResRelease(void *pData)
 
 /* Load a script file */
 // All scripts, binary or otherwise are now passed through this routine
-static BOOL dataScriptLoad(const char *pBuffer, UDWORD size, void **ppData)
+static BOOL dataScriptLoad(const char* fileName, void **ppData)
 {
-	SCRIPT_CODE		*psProg=NULL;
-	BOOL			printHack = FALSE;
+	static const bool printHack = false;
+	SCRIPT_CODE** psProg = (SCRIPT_CODE**)ppData;
+	PHYSFS_file* fileHandle;
 
-	debug(LOG_WZ, "COMPILING SCRIPT ...%s",GetLastResourceFilename());
+	debug(LOG_WZ, "COMPILING SCRIPT ...%s", GetLastResourceFilename());
 	scr_lineno = 1;
 
-	if (!scriptCompile(pBuffer, size, &psProg, SCRIPTTYPE))		// see script.h
+	fileHandle = PHYSFS_openRead(fileName);
+
+	if (fileHandle == NULL)
+	{
+		return FALSE;
+	}
+
+	*psProg = scriptCompile(fileHandle, SCRIPTTYPE);
+
+	PHYSFS_close(fileHandle);
+
+	if (!*psProg)		// see script.h
 	{
 		debug(LOG_ERROR, "Script %s did not compile", GetLastResourceFilename());
 		return FALSE;
@@ -892,17 +903,18 @@ static BOOL dataScriptLoad(const char *pBuffer, UDWORD size, void **ppData)
 
 	if (printHack)
 	{
-		cpPrintProgram(psProg);
+		cpPrintProgram(*psProg);
 	}
-
-	*ppData = psProg;
 
 	return TRUE;
 }
 
 // Load a script variable values file
-static BOOL dataScriptLoadVals(const char *pBuffer, UDWORD size, void **ppData)
+static BOOL dataScriptLoadVals(const char* fileName, void **ppData)
 {
+	BOOL success;
+	PHYSFS_file* fileHandle;
+
 	*ppData = NULL;
 
 	// don't load anything if a saved game is being loaded
@@ -911,16 +923,23 @@ static BOOL dataScriptLoadVals(const char *pBuffer, UDWORD size, void **ppData)
 		return TRUE;
 	}
 
-	debug(LOG_WZ, "Loading script data %s",GetLastResourceFilename());
+	debug(LOG_WZ, "Loading script data %s", GetLastResourceFilename());
 
-	if (!scrvLoad(pBuffer, size))
+	fileHandle = PHYSFS_openRead(fileName);
+
+	if (fileHandle == NULL)
 	{
-		debug(LOG_ERROR, "Script %s did not compile", GetLastResourceFilename());
 		return FALSE;
 	}
 
-	*ppData = NULL;
-	return TRUE;
+	success = scrvLoad(fileHandle);
+
+	if (!success)
+		debug(LOG_ERROR, "Script %s did not compile", GetLastResourceFilename());
+
+	PHYSFS_close(fileHandle);
+
+	return success;
 }
 
 // New reduced resource type ... specially for PSX
@@ -968,8 +987,6 @@ static const RES_TYPE_MIN_BUF BufferResourceTypes[] =
 	{"RSTRRES", bufferRSTRRESLoad, NULL},
 	{"RFUNC", bufferRFUNCLoad, NULL},
 	{"SMSG", bufferSMSGLoad, dataSMSGRelease},
-	{"SCRIPT", dataScriptLoad, (RES_FREE)scriptFreeCode},
-	{"SCRIPTVAL", dataScriptLoadVals, NULL},
 	{"IMD", dataIMDBufferLoad, (RES_FREE)iV_IMDRelease},
 };
 
@@ -990,6 +1007,8 @@ static const RES_TYPE_MIN_FILE FileResourceTypes[] =
 	{"TERTILES", dataTERTILESLoad, dataTERTILESRelease},
 	{"IMG", dataIMGLoad, dataIMGRelease},
 	{"TEXPAGE", dataTexPageLoad, dataImageRelease},
+	{"SCRIPT", dataScriptLoad, (RES_FREE)scriptFreeCode},
+	{"SCRIPTVAL", dataScriptLoadVals, NULL},
 	{"STR_RES", dataStrResLoad, dataStrResRelease},
 };
 

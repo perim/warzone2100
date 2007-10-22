@@ -66,13 +66,13 @@ BOOL scrGroupAddDroid(void)
 	}
 	if (psDroid->droidType == DROID_COMMAND)
 	{
-		ASSERT( FALSE,
+		debug( LOG_ERROR,
 			"scrGroupAdd: cannot add a command droid to a group" );
 		return FALSE;
 	}
 	if (psDroid->droidType == DROID_TRANSPORTER)
 	{
-		ASSERT( FALSE,
+		debug( LOG_ERROR,
 			"scrGroupAdd: cannot add a transporter to a group" );
 		return FALSE;
 	}
@@ -427,8 +427,10 @@ BOOL scrOrderGroupLoc(void)
 			"scrOrderGroupLoc: Invalid order" );
 		return FALSE;
 	}
-	if (x < 0 || x > (SDWORD)(mapWidth << TILE_SHIFT) ||
-		y < 0 || y > (SDWORD)(mapHeight << TILE_SHIFT))
+	if (x < 0
+	 || x > world_coord(mapWidth)
+	 || y < 0
+	 || y > world_coord(mapHeight))
 	{
 		ASSERT( FALSE,
 			"scrOrderGroupLoc: Invalid location" );
@@ -467,7 +469,8 @@ BOOL scrOrderGroupObj(void)
 		order != DORDER_OBSERVE &&
 		order != DORDER_EMBARK &&
 		order != DORDER_FIRESUPPORT &&
-		order != DORDER_ATTACK_M)
+		order != DORDER_ATTACK_M &&
+		order != DORDER_DROIDREPAIR)
 	{
 		ASSERT( FALSE,
 			"scrOrderGroupObj: Invalid order" );
@@ -476,6 +479,7 @@ BOOL scrOrderGroupObj(void)
 
 	debug( LOG_NEVER, "scrOrderGroupObj: group %p (%d) order %d,  obj type %d player %d id %d\n",
 		psGroup, grpNumMembers(psGroup), order, psObj->type, psObj->player, psObj->id);
+
 	orderGroupObj(psGroup, order, psObj);
 
 	return TRUE;
@@ -543,8 +547,10 @@ BOOL scrOrderDroidLoc(void)
 			"scrOrderUnitLoc: Invalid order" );
 		return FALSE;
 	}
-	if (x < 0 || x > (SDWORD)(mapWidth << TILE_SHIFT) ||
-		y < 0 || y > (SDWORD)(mapHeight << TILE_SHIFT))
+	if (x < 0
+	 || x > world_coord(mapWidth)
+	 || y < 0
+	 || y > world_coord(mapHeight))
 	{
 		ASSERT( FALSE,
 			"scrOrderUnitLoc: Invalid location" );
@@ -1769,7 +1775,7 @@ BOOL scrSkDifficultyModifier(void)
 
 	// power modifier
 	amount = game.skDiff[player]*40;		//(0-DIFF_SLIDER_STOPS)*25
-	
+
 	if(amount > 0)
 	{
 		addPower(player,amount);
@@ -1849,16 +1855,16 @@ static BOOL defenseLocation(BOOL variantB)
 
     // check for wacky coords.
 	if(		*pX < 0
-		||	*pX > (SDWORD)(mapWidth<<TILE_SHIFT)
+		||	*pX > world_coord(mapWidth)
 		||	*pY < 0
-		||	*pY > (SDWORD)(mapHeight<<TILE_SHIFT)
+		||	*pY > world_coord(mapHeight)
 	  )
 	{
 		goto failed;
 	}
 
-	x = *pX >> TILE_SHIFT;					// change to tile coords.
-	y = *pY >> TILE_SHIFT;
+	x = map_coord(*pX);					// change to tile coords.
+	y = map_coord(*pY);
 
 	// go down the gateways, find the nearest gateway with >1 empty tiles
 	nearestSoFar = UDWORD_MAX;
@@ -1965,8 +1971,8 @@ static BOOL defenseLocation(BOOL variantB)
 	}
 
 	// back to world coords and store result.
-	*pX = (x << TILE_SHIFT) + (TILE_UNITS/2);		// return centre of tile.
-	*pY = (y << TILE_SHIFT) + (TILE_UNITS/2);
+	*pX = world_coord(x) + (TILE_UNITS / 2);		// return centre of tile.
+	*pY = world_coord(y) + (TILE_UNITS / 2);
 
 	scrFunctionResult.v.bval = TRUE;
 	if (!stackPushResult(VAL_BOOL,&scrFunctionResult))		// success
@@ -1983,8 +1989,8 @@ static BOOL defenseLocation(BOOL variantB)
 	y = (psChosenGate->y1 + psChosenGate->y2)/2;
 
 	//find start pos of the gateway
-	x1 = (psChosenGate->x1 << TILE_SHIFT) + (TILE_UNITS/2);
-	y1 = (psChosenGate->y1 << TILE_SHIFT) + (TILE_UNITS/2);
+	x1 = world_coord(psChosenGate->x1) + (TILE_UNITS / 2);
+	y1 = world_coord(psChosenGate->y1) + (TILE_UNITS / 2);
 
 	if(variantB) {
 	    offset = 2;
@@ -1994,21 +2000,21 @@ static BOOL defenseLocation(BOOL variantB)
 	if(psChosenGate->x1 == psChosenGate->x2)	//vert
 	{
 		x2 = x1;	//vert: end x pos of the first section = start x pos
-		y2 = ((y-1) << TILE_SHIFT) + (TILE_UNITS/2);	//start y loc of the first sec
+		y2 = world_coord(y - 1) + TILE_UNITS / 2;	//start y loc of the first sec
 		x3 = x1;
-		y3 = ((y+offset) << TILE_SHIFT) + (TILE_UNITS/2);
+		y3 = world_coord(y + offset) + TILE_UNITS / 2;
 	}
 	else		//hor
 	{
-		x2 = ((x-1) << TILE_SHIFT) + (TILE_UNITS/2);
+		x2 = world_coord(x - 1) + TILE_UNITS / 2;
 		y2 = y1;
-		x3 = ((x+offset) << TILE_SHIFT) + (TILE_UNITS/2);
+		x3 = world_coord(x+offset) + TILE_UNITS / 2;
 		y3 = y1;
 
 	}
 	//end coords of the second section
-	x4 = (psChosenGate->x2 << TILE_SHIFT) + (TILE_UNITS/2);
-	y4 = (psChosenGate->y2 << TILE_SHIFT) + (TILE_UNITS/2);
+	x4 = world_coord(psChosenGate->x2) + TILE_UNITS / 2;
+	y4 = world_coord(psChosenGate->y2) + TILE_UNITS / 2;
 
 	// first section.
 	if(x1 == x2 && y1 == y2)	//first sec is 1 tile only: ((2 tile gate) or (3 tile gate and first sec))

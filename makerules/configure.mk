@@ -65,6 +65,11 @@ endif
 
 CPPFLAGS+=-fexceptions
 
+ifeq ($(strip $(USE_GETTEXT)),yes)
+CFLAGS+=-DENABLE_NLS=1
+LDFLAGS+=-lintl
+endif
+
 ifeq ($(strip $(PLATFORM)),windows)
 DIRSEP=\\
 RMF=del /F
@@ -101,12 +106,12 @@ LDFLAGS+=-lSDL -lSDL_net -lpng -lphysfs -lz -lvorbisfile -lvorbis -logg -lstdc++
 # Additional platform-dependend libs
 
 ifeq ($(strip $(PLATFORM)),windows)
-LDFLAGS+=-ldbghelp -lshfolder -lwinmm -lwsock32 -lglu32 -lopengl32 -lopenal32
+LDFLAGS+=-ldbghelp -lshfolder -lwinmm -lwsock32 -lglc32 -lglu32 -lopengl32 -lopenal32
 else
 ifeq ($(strip $(PLATFORM)),mingw32)
-LDFLAGS+=-L. -ldbghelp -lshfolder -lwinmm -lwsock32 -lglu32 -lopengl32 -lopenal32
+LDFLAGS+=-L. -ldbghelp -lshfolder -lwinmm -lwsock32 -lglc32 -lglu32 -lopengl32 -lopenal32
 else
-LDFLAGS+=-lGLU -lGL -lopenal
+LDFLAGS+=-lGLC -lGLU -lGL -lopenal
 endif
 endif
 

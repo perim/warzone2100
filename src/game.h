@@ -69,13 +69,10 @@
 #define VERSION_32              32              //factory secondary order saved
 #define VERSION_33              33              //skirmish save
 #define VERSION_34              34              //saves AI names for multiplayer (.gam file)
+#define VERSION_35              35              //uses the (de)serialization API for saving/loading games and is big-endian instead of little-endian
 
 
-#ifdef SAVE_TEST
-#define	CURRENT_VERSION_NUM		VERSION_33
-#else
-#define	CURRENT_VERSION_NUM		VERSION_34
-#endif
+#define CURRENT_VERSION_NUM     VERSION_35
 
 //used in the loadGame
 #define KEEPOBJECTS				TRUE
@@ -99,9 +96,9 @@ enum {
 
 typedef struct _vis_save_header
 {
-	char		aFileType[4];
-	UDWORD		version;
-}VIS_SAVEHEADER;
+	char        aFileType[4];
+	uint32_t    version;
+} VIS_SAVEHEADER;
 
 typedef struct _fx_save_header
 {
@@ -114,10 +111,10 @@ typedef struct _fx_save_header
 typedef struct _score_save_header
 {
 	char		aFileType[4];
-	UDWORD		version;
-	UDWORD		entries;	// should always be one for this?
+	uint32_t    version;
+	uint32_t    entries;	// should always be one for this?
 
-}SCORE_SAVEHEADER;
+} SCORE_SAVEHEADER;
 
 /***************************************************************************/
 /*
@@ -126,9 +123,10 @@ typedef struct _score_save_header
 /***************************************************************************/
 
 extern BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL UserSaveGame);	// UserSaveGame is TRUE when the save game is not a new level (User Save Game)
+
 /*This just loads up the .gam file to determine which level data to set up - split up
 so can be called in levLoadData when starting a game from a load save game*/
-extern BOOL loadGameInit(const char *pGameToLoad);
+extern bool loadGameInit(const char* fileName);
 
 extern BOOL loadMissionExtras(const char *pGameToLoad, SWORD levelType);
 
@@ -139,12 +137,12 @@ extern BOOL loadScriptState(char *pFileName);
 extern BOOL loadTerrainTypeMap(const char *pFileData, UDWORD filesize);
 
 //direct access for forceloader
-extern BOOL gameLoad(char *pFileData, UDWORD filesize);
+extern bool gameLoad(const char* fileName);
 
 extern BOOL saveGame(char *aFileName, SDWORD saveType);
 
 // Get the campaign number for loadGameInit game
-extern UDWORD getCampaign(char *pGameToLoad, BOOL *bSkipCDCheck);
+extern UDWORD getCampaign(const char* fileName);
 
 /*calls windows find file tree*/
 extern BOOL getSaveGameName(char *pName);

@@ -32,6 +32,7 @@
 #include "display.h"	// gammaValue
 #include "lib/sound/sound.h"		// audio
 #include "lib/ivis_common/piestate.h"	// setgamma.
+#include "lib/ivis_common/textdraw.h" // text-antialiassing
 #include "warzoneconfig.h"	// renderMode
 #include "component.h"
 #include "text.h"
@@ -47,6 +48,7 @@
 #include "radar.h"
 // HACK bAllowDebugMode shouldn't be in clparse
 #include "clparse.h"
+#include "multiint.h"
 
 // ////////////////////////////////////////////////////////////////////////////
 
@@ -55,9 +57,6 @@
 #define DEFAULTGAMMA	20
 #define DEFAULTSCROLL	800
 #define DEFAULTMAPNAME	"Rush"
-
-extern  char	sForceName[256];
-extern	UBYTE	sPlayer[128];
 
 extern void registry_clear(void); // from configfile.c
 
@@ -516,6 +515,16 @@ BOOL loadConfig(void)
 		setWarzoneKeyNumeric("radarTerrainMode", radarDrawMode);
 	}
 
+	if (getWarzoneKeyNumeric("text-antialiassing", &val))
+	{
+		iV_SetTextAntialias(val);
+	}
+	else
+	{
+		iV_SetTextAntialias(true);
+		setWarzoneKeyNumeric("text-antialiassing", true);
+	}
+
 	return closeWarzoneKey();
 }
 
@@ -621,6 +630,8 @@ BOOL saveConfig(void)
 		setWarzoneKeyString("phrase3", ingame.phrases[3]);
 		setWarzoneKeyString("phrase4", ingame.phrases[4]);
 	}
+
+	setWarzoneKeyNumeric("text-antialiassing", iV_TextAntialiased());
 
 	return closeWarzoneKey();
 }

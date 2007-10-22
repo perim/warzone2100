@@ -297,23 +297,23 @@ static DEF_COLOURS	defaultColours;
 
 /********************  Functions  ********************/
 
-static void displayMultiChat( void )
+static void displayMultiChat(void)
 {
-UDWORD	pixelLength;
-UDWORD	pixelHeight;
+	UDWORD	pixelLength;
+	UDWORD	pixelHeight;
 
-		pixelLength = iV_GetTextWidth(sTextToSend);
-		pixelHeight = iV_GetTextLineSize();
+	pixelLength = iV_GetTextWidth(sTextToSend);
+	pixelHeight = iV_GetTextLineSize();
 
-		if(gameTime2%500<250)
-		{
-			iV_BoxFill( RET_X + pixelLength + 3, 474 + E_H - (pixelHeight/4), RET_X + pixelLength + 10, 473 + E_H, 255 );
-		}
+	if((gameTime2 % 500) < 250)
+	{
+		iV_BoxFill( RET_X + pixelLength + 3, 474 + E_H - (pixelHeight/4), RET_X + pixelLength + 10, 473 + E_H, 255 );
+	}
 
-		/* GET RID OF THE MAGIC NUMBERS BELOW */
-		iV_TransBoxFill( RET_X + 1, 474 + E_H - pixelHeight, RET_X + 1 + pixelLength + 2, 473 + E_H );
+	/* FIXME: GET RID OF THE MAGIC NUMBERS BELOW */
+	iV_TransBoxFill(RET_X + 1, 474 + E_H - pixelHeight, RET_X + 1 + pixelLength + 2, 473 + E_H);
 
-		iV_DrawText( sTextToSend, RET_X + 3, 469 + E_H );
+	iV_DrawText(sTextToSend, RET_X + 3, 469 + E_H);
 }
 
 // Optimisation to stop it being calculated every frame
@@ -335,8 +335,8 @@ void draw3DScene( void )
 	BOOL bPlayerHasHQ = FALSE;
 
 	// the world centre - used for decaying lighting etc
-	gridCentreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-	gridCentreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
+	gridCentreX = player.p.x + world_coord(visibleXTiles / 2);
+	gridCentreZ = player.p.z + world_coord(visibleYTiles / 2);
 
 	camera.p.z = distance;
 	camera.p.y = 0;
@@ -579,8 +579,8 @@ static void drawTiles(iView *camera, iView *player)
 	terrainMidY = visibleYTiles/2;
 
 	/* Find our position in tile coordinates */
-	playerXTile = player->p.x >> TILE_SHIFT;
-	playerZTile = player->p.z >> TILE_SHIFT;
+	playerXTile = map_coord(player->p.x);
+	playerZTile = map_coord(player->p.z);
 
 	/* Get the x,z translation components */
 	rx = (player->p.x) & (TILE_UNITS-1);
@@ -899,8 +899,8 @@ static void drawTiles(iView *camera, iView *player)
 BOOL init3DView(void)
 {
 	// the world centre - used for decaying lighting etc
-	gridCentreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-	gridCentreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
+	gridCentreX = player.p.x + world_coord(visibleXTiles / 2);
+	gridCentreZ = player.p.z + world_coord(visibleYTiles / 2);
 
 	edgeTile.texture = 0;
 
@@ -990,8 +990,8 @@ when flips and rotations are being done */
 static void flipsAndRots(int texture)
 {
 	/* Used to calculate texture coordinates, which are 0-255 in value */
-	const UDWORD xMult = (256 / TILES_IN_PAGE_COLUMN);
-	const UDWORD yMult = (256 / TILES_IN_PAGE_ROW);
+	const UDWORD xMult = (256 / (PAGE_WIDTH / TILE_WIDTH));
+	const UDWORD yMult = (256 / (PAGE_HEIGHT / TILE_HEIGHT));
 	Vector2i sPTemp;
 
 	/* Store the source rect as four points */
@@ -1197,8 +1197,8 @@ void	renderProjectile(PROJECTILE *psCurr)
 		iV_MatrixRotateX(imdRot2.x);
 
 		/* Spin the bullet around - remove later */
-//		centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-//		centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
+//		centreX = player.p.x + world_coord(visibleXTiles / 2);
+//		centreZ = player.p.z + world_coord(visibleYTiles / 2);
 
 		brightness = (UDWORD)lightDoFogAndIllumination(pie_MAX_BRIGHT_LEVEL,getCentreX()-psCurr->x,getCentreZ()-psCurr->y, &specular);
 		if(psStats->weaponSubClass == WSC_ROCKET || psStats->weaponSubClass == WSC_MISSILE ||
@@ -1595,8 +1595,8 @@ void setPlayerPos(SDWORD x, SDWORD y)
 		"setPlayerPos: position off map" );
 
 	// Find centre of grid thats actually DRAWN
-	midX = (x>>TILE_SHIFT)-(visibleXTiles/2);
-	midY = (y>>TILE_SHIFT)-(visibleYTiles/2);
+	midX = map_coord(x) - visibleXTiles / 2;
+	midY = map_coord(y) - visibleYTiles / 2;
 
 	player.p.x = midX*TILE_UNITS;
 	player.p.z = midY*TILE_UNITS;
@@ -1640,7 +1640,7 @@ void	renderFeature(FEATURE *psFeature)
 		featX = psFeature->x;
 		featY = psFeature->y;
 		/* Daft hack to get around the oild derrick issue */
-		if(!TILE_HAS_FEATURE(mapTile(featX>>TILE_SHIFT,featY>>TILE_SHIFT)))
+		if (!TILE_HAS_FEATURE(mapTile(map_coord(featX), map_coord(featY))))
 		{
 			return;
 		}
@@ -1946,7 +1946,7 @@ void	renderStructure(STRUCTURE *psStructure)
 		{
 			dv.y = psStructure->z;
 		} else {
-			dv.y = map_TileHeight(structX >> TILE_SHIFT, structY >> TILE_SHIFT);
+			dv.y = map_TileHeight(map_coord(structX), map_coord(structY));
 		}
 		/* Push the indentity matrix */
 		iV_MatrixBegin();
@@ -2430,8 +2430,8 @@ static BOOL	renderWallSection(STRUCTURE *psStructure)
 		/* Get it's x and y coordinates so we don't have to deref. struct later */
 		structX = psStructure->x;
 		structY = psStructure->y;
-//		centreX = ( player.p.x + ((visibleXTiles/2)<<TILE_SHIFT) );
-//		centreZ = ( player.p.z + ((visibleYTiles/2)<<TILE_SHIFT) );
+//		centreX = ( player.p.x + world_coord(visibleXTiles / 2) );
+//		centreZ = ( player.p.z + world_coord(visibleYTiles / 2) );
 		buildingBrightness = 200 - (100-PERCENT( psStructure->body , structureBody(psStructure)));
 
 		if(psStructure->selected)
@@ -3447,9 +3447,9 @@ static void	drawBuildingLines( void )
 		first.y = 116;
 		first.z = 1000;//buildSite.yTL * 128;
 
-		second.x = 3000;//mouseTileX<<TILE_SHIFT;//buildSite.xBR * 128;
+		second.x = 3000;//world_coord(mouseTileX);//buildSite.xBR * 128;
 		second.y = 116;
-		second.z = 3000;//mouseTileY<<TILE_SHIFT;//buildSite.yBR * 128;
+		second.z = 3000;//world_coord(mouseTileY);//buildSite.yBR * 128;
 
 		draw3dLine(&first,&second,rand()%255);
 

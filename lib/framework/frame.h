@@ -23,9 +23,9 @@
 #ifndef _frame_h
 #define _frame_h
 
-#include "platform.h"
+#include "wzglobal.h"
 
-/* This one must be invoked *after* platform.h to get _GNU_SOURCE! */
+/* This one must be invoked *after* wzglobal.h to get _GNU_SOURCE! */
 #include <string.h>
 #include <locale.h>
 #include <stdlib.h>
@@ -56,6 +56,7 @@
 
 #include "fractions.h"
 #include "trig.h"
+#include <physfs.h>
 
 
 /* Initialise the frame work library */
@@ -110,6 +111,9 @@ extern UDWORD frameGetAverageRate(void);
 extern BOOL loadFile(const char *pFileName,		// The filename
               char **ppFileData,	// A buffer containing the file contents
               UDWORD *pFileSize);	// The size of this buffer
+
+extern PHYSFS_file* openLoadFile(const char* fileName, bool hard_fail);
+extern PHYSFS_file* openSaveFile(const char* fileName);
 
 /* Save the data in the buffer into the given file */
 extern BOOL saveFile(const char *pFileName, const char *pFileData, UDWORD fileSize);
@@ -205,5 +209,46 @@ static inline void endian_fract(float *fract) {
 #endif
 
 void setupExceptionHandler(const char * programCommand);
+
+static inline bool PHYSFS_writeSBE8(PHYSFS_file* file, int8_t val)
+{
+	return (PHYSFS_write(file, &val, sizeof(int8_t), 1) == 1);
+}
+
+static inline bool PHYSFS_writeUBE8(PHYSFS_file* file, uint8_t val)
+{
+	return (PHYSFS_write(file, &val, sizeof(uint8_t), 1) == 1);
+}
+
+static inline bool PHYSFS_readSBE8(PHYSFS_file* file, int8_t* val)
+{
+	return (PHYSFS_read(file, val, sizeof(int8_t), 1) == 1);
+}
+
+static inline bool PHYSFS_readUBE8(PHYSFS_file* file, uint8_t* val)
+{
+	return (PHYSFS_read(file, val, sizeof(uint8_t), 1) == 1);
+}
+
+static inline bool PHYSFS_writeBEFloat(PHYSFS_file* file, float val)
+{
+	// For the purpose of endian conversions a IEEE754 float can be considered
+	// the same to a 32bit integer.
+	// We're using a union here to prevent type punning of pointers.
+	union {
+		float f;
+		uint32_t i;
+	} writeValue;
+	writeValue.f = val;
+	return (PHYSFS_writeUBE32(file, writeValue.i) != 0);
+}
+
+static inline bool PHYSFS_readBEFloat(PHYSFS_file* file, float* val)
+{
+	// For the purpose of endian conversions a IEEE754 float can be considered
+	// the same to a 32bit integer.
+	uint32_t* readValue = (uint32_t*)val;
+	return (PHYSFS_readUBE32(file, readValue) != 0);
+}
 
 #endif

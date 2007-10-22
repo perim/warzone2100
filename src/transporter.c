@@ -27,6 +27,7 @@
 #include "lib/framework/frame.h"
 #include "lib/framework/strres.h"
 #include "lib/widget/widget.h"
+#include "lib/ivis_common/textdraw.h"
 
 #include "stats.h"
 #include "hci.h"
@@ -229,8 +230,7 @@ static BOOL _intAddTransporter(DROID *psSelected, BOOL offWorld)
     multiPlayer where the transporter can be killed*/
     if (bMultiPlayer)
     {
-        if (psCurrTransporter && psCurrTransporter->died &&
-            psCurrTransporter->died != NOT_CURRENT_LIST)
+        if (psCurrTransporter && isDead((BASE_OBJECT *)psCurrTransporter))
         {
             intRemoveTransNoAnim();
             return TRUE;
@@ -291,7 +291,7 @@ static BOOL _intAddTransporter(DROID *psSelected, BOOL offWorld)
 	sButInit.width = CLOSE_WIDTH;
 	sButInit.height = CLOSE_HEIGHT;
 	sButInit.pTip = _("Close");
-	sButInit.FontID = WFont;
+	sButInit.FontID = font_regular;
 	sButInit.pDisplay = intDisplayImageHilight;
 	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
 	if (!widgAddButton(psWScreen, &sButInit))
@@ -380,7 +380,7 @@ BOOL intAddTransporterContents(void)
 	sButInit.width = CLOSE_WIDTH;
 	sButInit.height = CLOSE_HEIGHT;
 	sButInit.pTip = _("Close");
-	sButInit.FontID = WFont;
+	sButInit.FontID = font_regular;
 	sButInit.pDisplay = intDisplayImageHilight;
 	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
 	if (!widgAddButton(psWScreen, &sButInit))
@@ -407,7 +407,7 @@ BOOL intAddTransporterContents(void)
 		sLabInit.width = 16;
 		sLabInit.height = 16;
 		sLabInit.pText = "10";
-		sLabInit.FontID = WFont;
+		sLabInit.FontID = font_regular;
 		sLabInit.pCallback = intUpdateTransCapacity;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
@@ -431,7 +431,7 @@ BOOL intAddTransporterContents(void)
 		sButFInit.height = iV_GetImageHeight(IntImages,IMAGE_LAUNCHUP);
 		sButFInit.pTip = _("Launch Transport");
 		//sButInit.pText = "Launch";
-//		sButFInit.FontID = WFont;
+//		sButFInit.FontID = font_regular;
 		sButFInit.pDisplay = intDisplayImageHilight;
 
 		sButFInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_LAUNCHDOWN,IMAGE_LAUNCHUP);
@@ -501,7 +501,7 @@ BOOL intAddTransporterLaunch(DROID *psDroid)
 	sLabInit.width = 16;
 	sLabInit.height = 16;
 	sLabInit.pText = "00/10";
-	sLabInit.FontID = WFont;
+	sLabInit.FontID = font_regular;
 	sLabInit.pCallback = intUpdateTransCapacity;
 	if (!widgAddLabel(psWScreen, &sLabInit))
 	{
@@ -877,7 +877,7 @@ BOOL intAddDroidsAvailForm(void)
 	sButInit.width = CLOSE_WIDTH;
 	sButInit.height = CLOSE_HEIGHT;
 	sButInit.pTip = _("Close");
-	sButInit.FontID = WFont;
+	sButInit.FontID = font_regular;
 	sButInit.pDisplay = intDisplayImageHilight;
 	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
 	if (!widgAddButton(psWScreen, &sButInit))
@@ -1106,8 +1106,8 @@ UDWORD calcRemainingCapacity(DROID *psTransporter)
 	SDWORD	capacity = TRANSPORTER_CAPACITY;
 	DROID *psDroid,*psNext;
 
-	// If it's dead, and it really is dead then just return 0.
-	if ( ( psTransporter->died ) && (psTransporter->died != NOT_CURRENT_LIST) )
+	// If it's dead then just return 0.
+	if (isDead((BASE_OBJECT *)psTransporter))
 	{
 		return 0;
 	}
@@ -1512,21 +1512,21 @@ void transporterRemoveDroid(UDWORD id)
             if (bMultiPlayer)
             {
                 //set the units next to the transporter's current location
-                droidX = psCurrTransporter->x >> TILE_SHIFT;
-                droidY = psCurrTransporter->y >> TILE_SHIFT;
+                droidX = map_coord(psCurrTransporter->x);
+                droidY = map_coord(psCurrTransporter->y);
             }
             else
             {
         		//pick a tile because save games won't remember where the droid was when it was loaded
-	        	droidX = getLandingX(0) >> TILE_SHIFT;
-		        droidY = getLandingY(0) >> TILE_SHIFT;
+	        	droidX = map_coord(getLandingX(0));
+		        droidY = map_coord(getLandingY(0));
             }
     		if (!pickATileGen(&droidX, &droidY,LOOK_FOR_EMPTY_TILE,zonedPAT))
 	    	{
 		    	ASSERT( FALSE, "transporterRemoveUnit: Unable to find a valid location" );
     		}
-	    	psDroid->x = (UWORD)(droidX << TILE_SHIFT);
-		    psDroid->y = (UWORD)(droidY << TILE_SHIFT);
+	    	psDroid->x = (UWORD)world_coord(droidX);
+		    psDroid->y = (UWORD)world_coord(droidY);
     		psDroid->z = map_Height(psDroid->x, psDroid->y);
 	    	updateDroidOrientation(psDroid);
 		    //initialise the movement data

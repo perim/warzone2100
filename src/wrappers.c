@@ -45,7 +45,7 @@
 #include "hci.h"		// access to widget screen.
 #include "lib/widget/widget.h"
 #include "wrappers.h"
-#include "winmain.h"
+#include "main.h"
 #include "objects.h"
 #include "display.h"
 #include "display3d.h"
@@ -90,7 +90,6 @@ STAR	stars[30];	// quick hack for loading stuff
 #define LOAD_BOX_SHADES	6
 
 
-extern int WFont;
 extern BOOL bLoadSaveUp;
 
 static BOOL		firstcall = FALSE;

@@ -270,8 +270,8 @@ void	kf_MaxPower( void )
 {
 	if(!bMultiPlayer|| (NetPlay.bComms == 0))
 	{
-		asPower[selectedPlayer]->currentPower=SDWORD_MAX;
-		addConsoleMessage("Max Power!!",LEFT_JUSTIFY);
+		asPower[selectedPlayer]->currentPower = SDWORD_MAX / 2;
+		addConsoleMessage("Power overwhelming",LEFT_JUSTIFY);
 	}
 }
 
@@ -1282,7 +1282,7 @@ void	kf_FinishAllResearch(void)
 		if (IsResearchCompleted(pPlayerRes) == FALSE)
 		{
 			MakeResearchCompleted(pPlayerRes);
-			researchResult(j, selectedPlayer, FALSE);
+			researchResult(j, selectedPlayer, FALSE, NULL);
 		}
 	}
 	CONPRINTF(ConsoleString, (ConsoleString, _("Researched EVERYTHING for you!")));
@@ -1384,7 +1384,7 @@ SDWORD	xJump,yJump;
 		player.p.x = xJump;
 		player.p.z = yJump;
 		player.r.y = 0; // face north
-		setViewPos(psStruct->x>>TILE_SHIFT,psStruct->y>>TILE_SHIFT,TRUE);
+		setViewPos(map_coord(psStruct->x), map_coord(psStruct->y), TRUE);
 		psOldRE = psStruct;
 	}
 	else

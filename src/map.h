@@ -71,7 +71,6 @@ typedef enum _terrain_type
 #define BITS_NODRAWTILE	0x4
 #define BITS_FPATHBLOCK	0x10		// bit set temporarily by find path to mark a blocking tile
 #define BITS_GATEWAY	0x40		// bit set to show a gateway on the tile
-#define BITS_TALLSTRUCTURE 0x80		// bit set to show a tall structure which camera needs to avoid.
 
 #define TILE_IS_NOTBLOCKING(x)	(x->texture & TILE_NOTBLOCKING)
 
@@ -83,7 +82,8 @@ typedef enum _terrain_type
 					    || ((STRUCTURE*)x->psObject)->pStructureType->type == REF_WALLCORNER))
 #define TILE_DRAW(x)			(!((x)->tileInfoBits & BITS_NODRAWTILE))
 #define TILE_HIGHLIGHT(x)		(x->texture & TILE_HILIGHT)
-#define TILE_HAS_TALLSTRUCTURE(x)	(x->tileInfoBits & BITS_TALLSTRUCTURE)
+#define TILE_HAS_TALLSTRUCTURE(x)	((TILE_HAS_STRUCTURE(x) && ((STRUCTURE*)x->psObject)->sDisplay.imd->ymax > TALLOBJECT_YMAX) \
+                                         || (TILE_HAS_FEATURE(x) && ((FEATURE*)x->psObject)->sDisplay.imd->ymax > TALLOBJECT_YMAX))
 #define TILE_HAS_SMALLSTRUCTURE(x)	(TILE_HAS_STRUCTURE(x) && ((STRUCTURE*)x->psObject)->pStructureType->height == 1)
 
 #define SET_TILE_NOTBLOCKING(x)	(x->texture |= TILE_NOTBLOCKING)
@@ -93,8 +93,6 @@ typedef enum _terrain_type
 #define CLEAR_TILE_NODRAW(x)	(x->tileInfoBits = (UBYTE)((x)->tileInfoBits & (~BITS_NODRAWTILE)))
 #define SET_TILE_HIGHLIGHT(x)	(x->texture = (UWORD)((x)->texture | TILE_HILIGHT))
 #define CLEAR_TILE_HIGHLIGHT(x)	(x->texture = (UWORD)((x)->texture & (~TILE_HILIGHT)))
-#define SET_TILE_TALLSTRUCTURE(x)	(x->tileInfoBits = (UBYTE)((x)->tileInfoBits | BITS_TALLSTRUCTURE))
-#define CLEAR_TILE_TALLSTRUCTURE(x)	(x->tileInfoBits = (UBYTE)((x)->tileInfoBits & (~BITS_TALLSTRUCTURE)))
 
 // Multiplier for the tile height
 #define	ELEVATION_SCALE	2
@@ -121,7 +119,7 @@ extern UBYTE terrainTypes[MAX_TILE_TEXTURES];
 typedef struct _maptile
 {
 	UBYTE			tileInfoBits;
-	UBYTE			tileVisBits;	// COMPRESSED - bit per player
+	uint8_t			tileVisBits;	// COMPRESSED - bit per player
 	UBYTE			height;			// The height at the top left of the tile
 	UBYTE			illumination;	// How bright is this tile?
 	UWORD			texture;		// Which graphics texture is on this tile
@@ -163,15 +161,29 @@ extern MAPTILE *psMapTiles;
 /* The number of units accross a tile */
 #define TILE_UNITS (1<<TILE_SHIFT)
 
-
-static inline UDWORD world_coord(UDWORD mapCoord)
+static inline int32_t world_coord(int32_t mapCoord)
 {
-	return mapCoord * TILE_UNITS;
+	return mapCoord << TILE_SHIFT;
 }
 
-static inline UDWORD map_coord(UDWORD worldCoord)
+static inline int32_t map_coord(int32_t worldCoord)
 {
-	return worldCoord / TILE_UNITS;
+	return worldCoord >> TILE_SHIFT;
+}
+
+/* Make sure world coordinates are inside the map */
+/** Clip world coordinates to make sure they're inside the map's boundaries
+ *  \param worldX a pointer to a X coordinate inside the map
+ *  \param worldY a pointer to a Y coordinate inside the map
+ *  \post 0 <= *worldX <= world_coord(mapWidth) and
+ *        0 <= *worldy <= world_coord(mapHeight)
+ */
+static inline void clip_world_offmap(int* worldX, int* worldY)
+{
+	*worldX = MAX(0, *worldX);
+	*worldY = MAX(0, *worldY);
+	*worldX = MIN(world_coord(mapWidth), *worldX);
+	*worldY = MIN(world_coord(mapHeight), *worldY);
 }
 
 /* maps a position down to the corner of a tile */
@@ -266,8 +278,8 @@ extern void getTileMaxMin(UDWORD x, UDWORD y, UDWORD *pMax, UDWORD *pMin);
 MAPTILE *GetCurrentMap(void);	// returns a pointer to the current loaded map data
 UDWORD GetHeightOfMap(void);
 UDWORD GetWidthOfMap(void);
-extern BOOL	readVisibilityData(char *pFileData, UDWORD fileSize);
-extern BOOL	writeVisibilityData( char *pFileName );
+extern bool readVisibilityData(const char* fileName);
+extern bool	writeVisibilityData(const char* fileName);
 
 //scroll min and max values
 extern SDWORD		scrollMinX, scrollMaxX, scrollMinY, scrollMaxY;

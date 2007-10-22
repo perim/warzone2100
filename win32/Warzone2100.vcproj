@@ -71,7 +71,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="SDL.lib SDLmain.lib SDL_net.lib png.lib zlib.lib ogg.lib vorbis.lib vorbisfile.lib physfs.lib OpenAL32.lib OpenGL32.lib GLU32.lib shfolder.lib winmm.lib wsock32.lib dbghelp.lib"
+				AdditionalDependencies="SDL.lib SDLmain.lib SDL_net.lib png.lib zlib.lib ogg.lib vorbis.lib vorbisfile.lib physfs.lib OpenAL32.lib glc32.lib OpenGL32.lib GLU32.lib shfolder.lib winmm.lib wsock32.lib dbghelp.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-Dbg.exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;__DEVPKG__\lib&quot;"
@@ -156,7 +156,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="SDL.lib SDLmain.lib SDL_net.lib png.lib zlib.lib ogg.lib vorbis.lib vorbisfile.lib physfs.lib OpenAL32.lib OpenGL32.lib GLU32.lib shfolder.lib winmm.lib wsock32.lib dbghelp.lib"
+				AdditionalDependencies="SDL.lib SDLmain.lib SDL_net.lib png.lib zlib.lib ogg.lib vorbis.lib vorbisfile.lib physfs.lib OpenAL32.lib glc32.lib OpenGL32.lib GLU32.lib shfolder.lib winmm.lib wsock32.lib dbghelp.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;__DEVPKG__\lib&quot;"
 				IgnoreDefaultLibraryNames="libcmt.lib"
@@ -240,6 +240,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\lib\framework\strnlen1.c"
+					>
+				</File>
+				<File
 					RelativePath="..\lib\framework\strres.c"
 					>
 				</File>
@@ -257,10 +261,6 @@
 				</File>
 				<File
 					RelativePath="..\lib\framework\trig.c"
-					>
-				</File>
-				<File
-					RelativePath="..\lib\framework\utf8.c"
 					>
 				</File>
 			</Filter>
@@ -1281,7 +1281,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\lib\framework\utf8.h"
+				RelativePath="..\lib\framework\strnlen1.h"
 				>
 			</File>
 			<File

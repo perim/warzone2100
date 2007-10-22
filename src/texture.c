@@ -55,7 +55,7 @@ static int newPage(const char *name, int level, int width, int height, int count
 {
 	int texPage = firstPage + ((count + 1) / TILES_IN_PAGE);
 
-	// debug(LOG_TEXTURE, "newPage: texPage=%d firstPage=%d %s %d (%d,%d) (count %d + 1) / %d _TEX_INDEX=%u", 
+	// debug(LOG_TEXTURE, "newPage: texPage=%d firstPage=%d %s %d (%d,%d) (count %d + 1) / %d _TEX_INDEX=%u",
 	//      texPage, firstPage, name, level, width, height, count, TILES_IN_PAGE, _TEX_INDEX);
 	if (texPage == _TEX_INDEX)
 	{
@@ -76,27 +76,26 @@ static int newPage(const char *name, int level, int width, int height, int count
 	glTexImage2D(GL_TEXTURE_2D, level, wz_texture_compression, width, height, 0,
 	             GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+	// Use anisotropic filtering, if available, but only max 4.0 to reduce processor burden
+	if (check_extension("GL_EXT_texture_filter_anisotropic"))
+	{
+		GLfloat max;
+
+		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, MIN(4.0f, max));
+	}
+
 	return texPage;
-}
-
-static inline WZ_DECL_CONST unsigned int getTileUIndex(unsigned int tileNumber)
-{
-	return (tileNumber % TILES_IN_PAGE) % TILES_IN_PAGE_COLUMN;
-}
-
-static inline WZ_DECL_CONST unsigned int getTileVIndex(unsigned int tileNumber)
-{
-	return (tileNumber % TILES_IN_PAGE) / TILES_IN_PAGE_ROW;
 }
 
 void texLoad(const char *fileName)
 {
-	char fullPath[MAX_PATH], partialPath[MAX_PATH], *buffer;
+	char fullPath[PATH_MAX], partialPath[PATH_MAX], *buffer;
 	unsigned int i, j, k, size;
 	int texPage;
 
@@ -136,13 +135,19 @@ void texLoad(const char *fileName)
 	for (j = 0; j < MIPMAP_LEVELS; j++)
 	{
 		int xOffset = 0, yOffset = 0; // offsets into the texture atlas
-		int xSize = TILES_IN_PAGE_COLUMN * i;
-		int ySize = TILES_IN_PAGE_ROW * i;
+		int xSize = 1;
+		int ySize = 1;
+		const int xLimit = TILES_IN_PAGE_COLUMN * i;
+		const int yLimit = TILES_IN_PAGE_ROW * i;
+
+		// pad width and height into ^2 values
+		while (xLimit > (xSize *= 2));
+		while (yLimit > (ySize *= 2));
 
 		// Generate the empty texture buffer in VRAM
 		texPage = newPage(fileName, j, xSize, ySize, 0);
 
-		sprintf(partialPath, "%s-%02d", fileName, i);
+		sprintf(partialPath, "%s-%d", fileName, i);
 
 		// Load until we cannot find anymore of them
 		for (k = 0; k < MAX_TILES; k++)
@@ -162,35 +167,35 @@ void texLoad(const char *fileName)
 				break;
 			}
 			// Insert into texture page
-			glTexSubImage2D(GL_TEXTURE_2D, j, xOffset, yOffset, tile.width, tile.height, 
+			glTexSubImage2D(GL_TEXTURE_2D, j, xOffset, yOffset, tile.width, tile.height,
 			                GL_RGBA, GL_UNSIGNED_BYTE, tile.bmp);
 			free(tile.bmp);
+			if (i == TILE_WIDTH) // dealing with main texture page; so register coordinates
+			{
+				// 256 is an integer hack for GLfloat texture coordinates
+				tileTexInfo[k].uOffset = xOffset / (xSize / 256);
+				tileTexInfo[k].vOffset = yOffset / (ySize / 256);
+				tileTexInfo[k].texPage = texPage;
+				debug(LOG_TEXTURE, "  texLoad: Registering k=%d i=%d u=%f v=%f xoff=%d yoff=%d xsize=%d ysize=%d tex=%d (%s)",
+				     k, i, tileTexInfo[k].uOffset, tileTexInfo[k].vOffset, xOffset, yOffset, xSize, ySize, texPage, fullPath);
+			}
 			xOffset += i; // i is width of tile
-			if (xOffset >= xSize)
+			if (xOffset + i > xLimit)
 			{
 				yOffset += i; // i is also height of tile
 				xOffset = 0;
 			}
-			if (i == TILE_WIDTH) // dealing with main texture page; so register coordinates
-			{
-				// 256 is an integer hack for GLfloat texture coordinates
-				tileTexInfo[k].uOffset = getTileUIndex(k) * (256 / TILES_IN_PAGE_COLUMN);
-				tileTexInfo[k].vOffset = getTileVIndex(k) * (256 / TILES_IN_PAGE_ROW);
-				tileTexInfo[k].texPage = texPage;
-				//debug(LOG_TEXTURE, "  texLoad: Registering k=%d i=%d u=%f v=%f xoff=%u yoff=%u tex=%d (%s)", 
-				//     k, i, tileTexInfo[k].uOffset, tileTexInfo[k].vOffset, xOffset, yOffset, texPage, fullPath);
-			}
-			if (yOffset >= ySize)
+			if (yOffset + i > yLimit)
 			{
 				/* Change to next texture page */
 				xOffset = 0;
 				yOffset = 0;
-				debug(LOG_TEXTURE, "texLoad: Extra page added at %d for %s, was page %d, opengl id %u", 
+				debug(LOG_TEXTURE, "texLoad: Extra page added at %d for %s, was page %d, opengl id %u",
 				      k, partialPath, texPage, _TEX_PAGE[texPage].id);
 				texPage = newPage(fileName, j, xSize, ySize, k);
 			}
 		}
-		debug(LOG_TEXTURE, "texLoad: Found %d textures for %s mipmap level %d, added to page %d, opengl id %u", 
+		debug(LOG_TEXTURE, "texLoad: Found %d textures for %s mipmap level %d, added to page %d, opengl id %u",
 		      k, partialPath, i, texPage, _TEX_PAGE[texPage].id);
 		i /= 2;	// halve the dimensions for the next series; OpenGL mipmaps start with largest at level zero
 	}

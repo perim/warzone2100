@@ -96,9 +96,6 @@
 
 struct	_dragBox dragBox3D,wallDrag;
 
-// control whether the scroll is limited to visible tiles
-//#define VISIBLE_SCROLL
-
 #define POSSIBLE_SELECTIONS		13
 #define POSSIBLE_TARGETS		23
 
@@ -1082,9 +1079,6 @@ void scroll(void)
 	float	radians;
 	float	cosine, sine;
 	SDWORD	xDif,yDif;
-#ifdef VISIBLE_SCROLL
-	SDWORD	newx,newy;
-#endif
 	UDWORD	timeDiff;
 	BOOL	bRetardScroll = FALSE;
 	BOOL mouseAtLeft = FALSE, mouseAtRight = FALSE,
@@ -1291,38 +1285,8 @@ void scroll(void)
 	yDif = ROUND(sine * scrollStepLeftRight - cosine * scrollStepUpDown);
 
 	/* Adjust player's position by these components */
-#ifdef VISIBLE_SCROLL
-	newx = player.p.x + xDif;
-	newy = player.p.z + yDif;
-	if (mapTile((((VISIBLE_XTILES/2)<<TILE_SHIFT) + newx) >> TILE_SHIFT,
-				(((VISIBLE_YTILES/2)<<TILE_SHIFT) + newy) >> TILE_SHIFT)->tileVisBits & (1 << selectedPlayer))
-	{
-		player.p.x = newx;
-		player.p.z = newy;
-	}
-	else
-	{
-		if (player.p.x >> TILE_SHIFT != newx >> TILE_SHIFT)
-		{
-			scrollSpeedLeftRight = 0;
-		}
-		else
-		{
-			player.p.x = newx;
-		}
-		if (player.p.z >> TILE_SHIFT != newy >> TILE_SHIFT)
-		{
-			scrollSpeedUpDown = 0;
-		}
-		else
-		{
-			player.p.z = newy;
-		}
-	}
-#else
 	player.p.x += xDif;
 	player.p.z += yDif;
-#endif
 
 	edgeOfMap = CheckScrollLimits();
 }
@@ -1659,7 +1623,7 @@ void FinishDeliveryPosition(UDWORD xPos,UDWORD yPos,void *UserData)
 {
 	//This deals with adding waypoints and moving the primary
 	processDeliveryPoint(((FLAG_POSITION*)UserData)->player,
-		xPos<<TILE_SHIFT, yPos<<TILE_SHIFT);
+		world_coord(xPos), world_coord(yPos));
 
 	//deselect it
 	((FLAG_POSITION*)UserData)->selected = FALSE;
@@ -2019,9 +1983,9 @@ static inline void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 		if (getDebugMappingStatus()) // cheating on, so output debug info
 		{
 			CONPRINTF(ConsoleString, (ConsoleString,
-			          "%s - Damage %d%% - ID %d - kills %d - order %d - action %d - sensor range %hu power %hu - ECM %u",
-			          droidGetName(psDroid), 100 - PERCENT(psDroid->body, psDroid->originalBody), psDroid->id, 
-			          psDroid->numKills / 100, psDroid->order, psDroid->action, psDroid->sensorRange, 
+			          "%s - Damage %d%% - ID %d - kills %d, %s - order %d - action %d - sensor range %hu power %hu - ECM %u",
+			          droidGetName(psDroid), 100 - PERCENT(psDroid->body, psDroid->originalBody), psDroid->id,
+			          psDroid->numKills / 100, getDroidLevelName(psDroid), psDroid->order, psDroid->action, psDroid->sensorRange,
 			          psDroid->sensorPower, psDroid->ECMMod));
 			FeedbackClickedOn();
 		}
@@ -2800,8 +2764,9 @@ void dealWithRMB( void )
 						psStructure = findDeliveryFactory((FLAG_POSITION *)psLocation);
 						if (psStructure)
 						{
-							setViewPos(psStructure->x >> TILE_SHIFT,
-								psStructure->y >> TILE_SHIFT,TRUE);
+							setViewPos(map_coord(psStructure->x),
+							           map_coord(psStructure->y),
+							           TRUE);
 						}
 					}
 					break;

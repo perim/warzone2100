@@ -46,7 +46,6 @@
 #include "lib/ivis_opengl/screen.h"
 #include "lib/netplay/netplay.h"
 #include "lib/script/script.h"
-#include "lib/sound/sound.h"
 #include "lib/widget/widget.h"
 
 #include "clparse.h"
@@ -64,7 +63,7 @@
 #include "research.h"
 #include "seqdisp.h"
 #include "warzoneconfig.h"
-#include "winmain.h"
+#include "main.h"
 #include "wrappers.h"
 
 #ifndef DATADIR
@@ -81,7 +80,7 @@
 # define WZ_WRITEDIR ".warzone2100"
 #endif
 
-char datadir[MAX_PATH] = "\0"; // Global that src/clparse.c:ParseCommandLine can write to, so it can override the default datadir on runtime. Needs to be \0 on startup for ParseCommandLine to work!
+char datadir[PATH_MAX] = "\0"; // Global that src/clparse.c:ParseCommandLine can write to, so it can override the default datadir on runtime. Needs to be \0 on startup for ParseCommandLine to work!
 
 char * global_mods[MAX_MODS] = { NULL };
 char * campaign_mods[MAX_MODS] = { NULL };
@@ -93,13 +92,13 @@ char * multiplay_mods[MAX_MODS] = { NULL };
 //flag to indicate when initialisation is complete
 BOOL	gameInitialised = FALSE;
 BOOL	bDisableLobby = FALSE;
-char	SaveGamePath[MAX_PATH];
-char	ScreenDumpPath[MAX_PATH];
-char	MultiForcesPath[MAX_PATH];
-char	MultiCustomMapsPath[MAX_PATH];
-char	MultiPlayersPath[MAX_PATH];
-char	KeyMapPath[MAX_PATH];
-char	UserMusicPath[MAX_PATH];
+char	SaveGamePath[PATH_MAX];
+char	ScreenDumpPath[PATH_MAX];
+char	MultiForcesPath[PATH_MAX];
+char	MultiCustomMapsPath[PATH_MAX];
+char	MultiPlayersPath[PATH_MAX];
+char	KeyMapPath[PATH_MAX];
+char	UserMusicPath[PATH_MAX];
 
 static FPSmanager wzFPSmanager;
 
@@ -145,7 +144,7 @@ static BOOL inList( char * list[], const char * item )
 
 void addSubdirs( const char * basedir, const char * subdir, const BOOL appendToPath, char * checkList[] )
 {
-	char tmpstr[MAX_PATH];
+	char tmpstr[PATH_MAX];
 	char ** subdirlist = PHYSFS_enumerateFiles( subdir );
 	char ** i = subdirlist;
 	while( *i != NULL )
@@ -171,7 +170,7 @@ void addSubdirs( const char * basedir, const char * subdir, const BOOL appendToP
 
 void removeSubdirs( const char * basedir, const char * subdir, char * checkList[] )
 {
-	char tmpstr[MAX_PATH];
+	char tmpstr[PATH_MAX];
 	char ** subdirlist = PHYSFS_enumerateFiles( subdir );
 	char ** i = subdirlist;
 	while( *i != NULL )
@@ -225,7 +224,7 @@ static void getPlatformUserDir(char * tmpstr)
 	if (!error)
 		error = FSpMakeFSRef(&fsspec, &fsref);
 	if (!error)
-		error = FSRefMakePath(&fsref, (UInt8 *) tmpstr, MAX_PATH);
+		error = FSRefMakePath(&fsref, (UInt8 *) tmpstr, PATH_MAX);
 	if (!error)
 		strcat( tmpstr, PHYSFS_getDirSeparator() );
 	else
@@ -241,7 +240,7 @@ static void initialize_PhysicsFS(void)
 {
 	PHYSFS_Version compiled;
 	PHYSFS_Version linked;
-	char tmpstr[MAX_PATH] = { '\0' };
+	char tmpstr[PATH_MAX] = { '\0' };
 
 	PHYSFS_VERSION(&compiled);
 	PHYSFS_getLinkedVersion(&linked);
@@ -302,7 +301,7 @@ static void initialize_PhysicsFS(void)
  */
 static void scanDataDirs( void )
 {
-	char tmpstr[MAX_PATH] = {'\0'}, prefix[MAX_PATH] = {'\0'};
+	char tmpstr[PATH_MAX] = {'\0'}, prefix[PATH_MAX] = {'\0'};
 
 	// Find out which PREFIX we are in...
 	strcpy( tmpstr, PHYSFS_getBaseDir() );
@@ -745,13 +744,6 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	/*** Initialize translations ***/
-	setlocale(LC_ALL, "");
-	(void)bindtextdomain(PACKAGE, LOCALEDIR);
-	(void)textdomain(PACKAGE);
-
-	SDL_initFramerate( &wzFPSmanager );
-
 	/*** Initialize PhysicsFS ***/
 	PHYSFS_init(argv[0]);
 	initialize_PhysicsFS();
@@ -767,6 +759,28 @@ int main(int argc, char *argv[])
 	setRegistryFilePath("config");
 	strcpy(KeyMapPath, "keymap.map");
 	strcpy(UserMusicPath, "music");
+
+	/*** Initialize translations ***/
+	setlocale(LC_MESSAGES, "");
+	setlocale(LC_NUMERIC, "C");		// set radix character to the period (".")
+#if defined(WZ_OS_WIN)
+	{
+		// Retrieve an absolute path to the locale directory
+		char localeDir[PATH_MAX];
+		snprintf(localeDir, PATH_MAX, "%s\\" LOCALEDIR, PHYSFS_getBaseDir());
+
+		// Guarantee to NUL-terminate
+		localeDir[sizeof(localeDir) - 1] = '\0';
+
+		// Set locale directory and translation domain name
+		(void)bindtextdomain(PACKAGE, localeDir);
+	}
+#else
+	(void)bindtextdomain(PACKAGE, LOCALEDIR);
+#endif
+	(void)textdomain(PACKAGE);
+
+	SDL_initFramerate( &wzFPSmanager );
 
 	// initialise all the command line states
 	war_SetDefaultStates();

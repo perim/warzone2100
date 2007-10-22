@@ -58,13 +58,12 @@
 #include "seqdisp.h"
 #include "text.h"
 #include "warzoneconfig.h"
-#include "winmain.h"
+#include "main.h"
 #include "wrappers.h"
 
 static int StartWithGame = 1; // New game starts in Cam 1.
 
 tMode titleMode; // the global case
-int				FEFont;
 char			pLevelName[MAX_LEVEL_NAME_SIZE+1];	//256];			// vital! the wrf file to use.
 
 BOOL			bForceEditorLoaded = FALSE;
@@ -223,14 +222,7 @@ BOOL startTitleMenu(void)
 	addBottomForm();
 
 	addTextButton(FRONTEND_SINGLEPLAYER, FRONTEND_POS2X, FRONTEND_POS2Y, _("Single Player Campaign"), FALSE, FALSE);
-	if(!bDisableLobby)
-	{
-		addTextButton(FRONTEND_MULTIPLAYER, FRONTEND_POS3X,FRONTEND_POS3Y, _("Multi Player Game"), FALSE, FALSE);
-	}
-	else
-	{
-		addTextButton(FRONTEND_MULTIPLAYER, FRONTEND_POS3X, FRONTEND_POS3Y, _("Multi Player Game"),FALSE,TRUE);
-	}
+	addTextButton(FRONTEND_MULTIPLAYER, FRONTEND_POS3X, FRONTEND_POS3Y, _("Multi Player Game"), FALSE, bDisableLobby);
 	addTextButton(FRONTEND_TUTORIAL, FRONTEND_POS4X, FRONTEND_POS4Y, _("Tutorial") ,FALSE,FALSE);
 	addTextButton(FRONTEND_OPTIONS, FRONTEND_POS5X, FRONTEND_POS5Y, _("Options") ,FALSE,FALSE);
 
@@ -476,6 +468,7 @@ BOOL startMultiPlayerMenu(void)
 	return TRUE;
 }
 
+
 BOOL runMultiPlayerMenu(void)
 {
 	UDWORD id;
@@ -483,25 +476,15 @@ BOOL runMultiPlayerMenu(void)
 	id = widgRunScreen(psWScreen);						// Run the current set of widgets
 	switch(id)
 	{
+	case FRONTEND_SKIRMISH:
+		NetPlay.bComms = FALSE; // use network = false
 	case FRONTEND_HOST:
 		ingame.bHostSetup = TRUE;
-		changeTitleMode(PROTOCOL);
+		changeTitleMode(MULTIOPTION);
 		break;
 	case FRONTEND_JOIN:
 		ingame.bHostSetup = FALSE;
 		changeTitleMode(PROTOCOL);
-		break;
-	case FRONTEND_SKIRMISH:
-		ingame.bHostSetup = TRUE;
-
-		// only pretend its a multiplayer.
-		NetPlay.bComms = FALSE; // use network = false
-
-//		strcpy(sPlayer,"LastUsed");					// initialize name string.
-//		loadMultiStats(sPlayer,&nullStats);
-//		NETchangePlayerName(1,sPlayer);
-
-		changeTitleMode(MULTIOPTION);
 		break;
 
 	case FRONTEND_QUIT:
@@ -511,7 +494,7 @@ BOOL runMultiPlayerMenu(void)
 		break;
 	}
 
-	widgDisplayScreen(psWScreen);					// show the widgets currently running
+	widgDisplayScreen(psWScreen); // show the widgets currently running
 
 	return TRUE;
 }
@@ -1214,7 +1197,7 @@ void addTextButton(UDWORD id,  UDWORD PosX, UDWORD PosY, const char *txt,BOOL bA
 
 	sButInit.height = FRONTEND_BUTHEIGHT;
 	sButInit.pDisplay = displayTextOption;
-	sButInit.FontID = FEFont;
+	sButInit.FontID = font_large;
 	sButInit.pText = txt;
 	widgAddButton(psWScreen, &sButInit);
 
@@ -1262,7 +1245,7 @@ void addSideText(UDWORD id,  UDWORD PosX, UDWORD PosY, const char *txt)
 	sLabInit.width = 30;
 	sLabInit.height = FRONTEND_BOTFORMH;
 
-	sLabInit.FontID = FEFont;
+	sLabInit.FontID = font_large;
 
 	sLabInit.pDisplay = displayTextAt270;
 	sLabInit.pText = txt;
@@ -1299,14 +1282,14 @@ void addText(int FontID,UDWORD FormID,UDWORD id,  UDWORD PosX, UDWORD PosY, char
 // show a background piccy
 static void displayTitleBitmap(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
 {
+	static const char versionString[] = "Version " VERSION " - Built " __DATE__
 #ifdef DEBUG
-	static const char versionString[] = "Version " VERSION " - Built " __DATE__ " - DEBUG";
-#else
-	static const char versionString[] = "Version " VERSION " - Built " __DATE__;
+	                                                                            " - DEBUG"
 #endif
+	;
 
-	iV_SetFont(WFont);
-	iV_SetTextColour(-1);
+	iV_SetFont(font_regular);
+	iV_SetTextColour(PIE_TEXT_WHITE);
 
 	iV_DrawTextRotated(versionString, pie_GetVideoBufferWidth() - 10, pie_GetVideoBufferHeight() - 15, 270.f);
 }
@@ -1381,7 +1364,7 @@ void displayTextAt270(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *
 
 	psLab = (W_LABEL *)psWidget;
 
-	iV_SetFont(FEFont);
+	iV_SetFont(font_large);
 
 
 	iV_SetTextColour(PIE_TEXT_WHITE);

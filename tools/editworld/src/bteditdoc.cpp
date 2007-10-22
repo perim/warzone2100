@@ -36,15 +36,15 @@
 #include "wfview.h"
 #include "textureview.h"
 #include "bteditview.h"
-#include "snapprefs.h"
 #include "savesegmentdialog.hpp"
-#include "limitsdialog.h"
+#include "limitsdialog.hpp"
 #include "initiallimitsdlg.hpp"
 #include "expandlimitsdlg.h"
 #include "exportinfo.h"
 #include "playermap.h"
 #include "gateway.hpp"
 #include "pasteprefs.h"
+#include "undoredo.h"
 
 #include <string>
 
@@ -1109,18 +1109,12 @@ void CBTEditDoc::UpdateTextureView(void)
 
 DWORD CBTEditDoc::Get2DViewWidth(void)
 {
-	DWORD MapWidth,MapHeight;
-	m_HeightMap->GetMapSize(&MapWidth,&MapHeight);
-
-	return MapWidth*m_TextureWidth;
+	return m_HeightMap->GetMapWidth() * m_TextureWidth;
 }
 
 DWORD CBTEditDoc::Get2DViewHeight(void)
 {
-	DWORD MapWidth,MapHeight;
-	m_HeightMap->GetMapSize(&MapWidth,&MapHeight);
-
-	return MapHeight*m_TextureHeight;
+	return m_HeightMap->GetMapHeight() * m_TextureHeight;
 }
 
 
@@ -1411,11 +1405,7 @@ void CBTEditDoc::OnCloseDocument()
 
 BOOL CBTEditDoc::WriteProject(char *FileName)
 {
-	DWORD MapWidth,MapHeight;
-
-	m_HeightMap->GetMapSize(&MapWidth,&MapHeight);
-
-	return WriteProject(FileName,0,0,MapWidth,MapHeight);
+	return WriteProject(FileName, 0, 0, m_HeightMap->GetMapWidth(), m_HeightMap->GetMapHeight());
 }
 
 
@@ -1455,9 +1445,6 @@ BOOL CBTEditDoc::WriteProject(char *FileName,UWORD StartX,UWORD StartY,UWORD Wid
 	Project.SetGravity(m_EnableGravity);
 	Project.SetSeaLevel(m_HeightMap->GetSeaLevel());
 
-	DWORD MapWidth,MapHeight;
-	m_HeightMap->GetMapSize(&MapWidth,&MapHeight);
-
 	Project.SetMapSize(Width,Height);
  	DWORD TileWidth,TileHeight;
 	m_HeightMap->GetTileSize(&TileWidth,&TileHeight);
@@ -1475,9 +1462,11 @@ BOOL CBTEditDoc::WriteProject(char *FileName,UWORD StartX,UWORD StartY,UWORD Wid
 
 
 	int GIndex = 0;
-	for(int y=StartY; y<StartY+Height; y++) {
-		for(int x=StartX; x<StartX+Width; x++) {
-			int Index = x + y*MapWidth;
+	for(int y=StartY; y<StartY+Height; y++)
+	{
+		for(int x=StartX; x<StartX+Width; x++)
+		{
+			int Index = x + y * m_HeightMap->GetMapWidth();
 
 			GrdTile = Project.GetTile(GIndex);
    			GrdTile->SetTextureID(m_HeightMap->GetTextureID(Index));
@@ -4669,266 +4658,6 @@ void CBTEditDoc::OnRedo()
 	Update3DView();
 }
 
-
-CUndoRedo::CUndoRedo(CHeightMap *HeightMap,UDWORD StackSize)
-{
-	m_HeightMap = HeightMap;
-	m_StackSize = StackSize;
-	m_Stack = new UndoRecord[StackSize];
-	for(UDWORD i=0; i<StackSize; i++) {
-		memset(&m_Stack[i],0,sizeof(UndoRecord));
-	}
-	m_StackPointer = -1;
-	m_GroupRefCount = 0;
-	m_GroupActive = FALSE;
-	m_GroupCounter = 0;
-}
-
-
-CUndoRedo::~CUndoRedo(void)
-{
-	for(UDWORD i=0; i<m_StackSize; i++) {
-		CleanUndoRecord(&m_Stack[i]);
-	}
-
-	delete m_Stack;
-}
-
-
-BOOL CUndoRedo::PushUndo(UndoRecord *UndoRec)
-{
-	// Get the next record.
-	m_StackPointer++;
-	if(m_StackPointer >= m_StackSize) {
-		m_StackPointer = 0;
-	}
-
-	// If it's already in use then clean it.
-	if(m_Stack[m_StackPointer].Flags) {
-		CleanUndoRecord(&m_Stack[m_StackPointer]);
-	}
-
-	// Copy the undo data into it.
-	m_Stack[m_StackPointer] = *UndoRec;
-
-	// And mark it as new.
-	m_Stack[m_StackPointer].Flags = UF_DONE;
-
-	if(m_GroupActive) {
-		if(m_GroupCounter > 0) {
-			m_Stack[m_StackPointer].Group = UF_INGROUP;
-		} else {
-			m_Stack[m_StackPointer].Group = UF_BEGINGROUP;
-		}
-	} else {
-		m_Stack[m_StackPointer].Group = UF_NOGROUP;
-	}
-
-	if(m_GroupActive) {
-		m_GroupCounter++;
-	}
-
-	return TRUE;
-}
-
-
-void CUndoRedo::BeginGroup(void)
-{
-	if(m_GroupRefCount == 0) {
-		m_GroupActive = TRUE;
-		m_GroupCounter = 0;
-	}
-	m_GroupRefCount++;
-}
-
-
-void CUndoRedo::EndGroup(void)
-{
-	m_GroupRefCount--;
-	if(m_GroupRefCount == 0) {
-		m_Stack[m_StackPointer].Group = UF_ENDGROUP;
-		m_GroupActive = FALSE;
-		m_GroupCounter = 0;
-	}
-}
-
-
-BOOL CUndoRedo::PopUndo(UndoRecord *UndoRec,BOOL *IsGroup)
-{
-	// If the current record is new.
-	if(m_Stack[m_StackPointer].Flags == UF_DONE) {
-		*IsGroup = (m_Stack[m_StackPointer].Group == UF_INGROUP) || (m_Stack[m_StackPointer].Group == UF_ENDGROUP);
-
-		// Return the record.
-		*UndoRec = m_Stack[m_StackPointer];
-
-		// Mark it as undone.
-		m_Stack[m_StackPointer].Flags = UF_UNDONE;
-
-		// Get previous record.
-		m_StackPointer--;
-		if(m_StackPointer < 0) {
-			m_StackPointer = m_StackSize-1;
-		}
-
-		return TRUE;
-	}
-
-	return FALSE;
-}
-
-
-BOOL CUndoRedo::GetRedo(UndoRecord *UndoRec,BOOL *IsGroup)
-{
-	SWORD Tmp = m_StackPointer;
-
-	// Get next record.
-	m_StackPointer++;
-	if(m_StackPointer >= m_StackSize) {
-		m_StackPointer = 0;
-	}
-
-	if(m_Stack[m_StackPointer].Flags == UF_UNDONE) {
-		*IsGroup = (m_Stack[m_StackPointer].Group == UF_INGROUP) || (m_Stack[m_StackPointer].Group == UF_BEGINGROUP);
-
-		// Return the record.
-		*UndoRec = m_Stack[m_StackPointer];
-
-		// Mark it as done.
-		m_Stack[m_StackPointer].Flags = UF_DONE;
-
-		return TRUE;
-	}
-
-	m_StackPointer = Tmp;
-	return FALSE;
-}
-
-
-void CUndoRedo::CleanUndoRecord(UndoRecord *UndoRec)
-{
-	if(UndoRec->Tile) delete UndoRec->Tile;
-	memset(UndoRec,0,sizeof(UndoRecord));
-}
-
-
-BOOL CUndoRedo::AddUndo(CTile *Tile)
-{
-	UndoRecord UndoRec;
-
-	memset(&UndoRec,0,sizeof(UndoRecord));
-	UndoRec.TilePointer = Tile;
-	UndoRec.Tile = new CTile;
-	*UndoRec.Tile = *Tile;
-	PushUndo(&UndoRec);
-
-	return TRUE;
-}
-
-
-void CUndoRedo::DumpRedo(void)
-{
-	static char *FlagNames[]={
-				"UF_FREE",
-				"UF_DONE",
-				"UF_UNDONE",
-				"UF_NOGROUP",
-				"UF_BEGINGROUP",
-				"UF_INGROUP",
-				"UF_ENDGROUP",
-				};
-
-	SWORD StackPointer = m_StackPointer;
-
-	StackPointer++;
-	if(StackPointer >= m_StackSize) {
-		StackPointer = 0;
-	}
-
-	while(m_Stack[StackPointer].Flags == UF_UNDONE) {
-		DebugPrint("sp %d : Flags %s Group %s\n",StackPointer,
-												FlagNames[m_Stack[StackPointer].Flags],
-												FlagNames[m_Stack[StackPointer].Group]);
-
-		// Get the next record.
-		StackPointer++;
-		if(StackPointer >= m_StackSize) {
-			StackPointer = 0;
-		}
-	}
-}
-
-
-void CUndoRedo::DumpUndo(void)
-{
-	static char *FlagNames[]={
-				"UF_FREE",
-				"UF_DONE",
-				"UF_UNDONE",
-				"UF_NOGROUP",
-				"UF_BEGINGROUP",
-				"UF_INGROUP",
-				"UF_ENDGROUP",
-				};
-
-	SWORD StackPointer = m_StackPointer;
-
-	while(m_Stack[StackPointer].Flags == UF_DONE) {
-		DebugPrint("sp %d : Flags %s Group %s\n",StackPointer,
-												FlagNames[m_Stack[StackPointer].Flags],
-												FlagNames[m_Stack[StackPointer].Group]);
-
-		// Get previous record.
-		StackPointer--;
-		if(StackPointer < 0) {
-			StackPointer = m_StackSize-1;
-		}
-	}
-}
-
-
-BOOL CUndoRedo::Undo(void)
-{
-	UndoRecord UndoRec;
-	BOOL IsGroup;
-
-	do {
-		if(!PopUndo(&UndoRec,&IsGroup)) {
-			return FALSE;
-		}
-
-		if(UndoRec.TilePointer) {
-			CTile Temp = *UndoRec.TilePointer;
-			*UndoRec.TilePointer = *UndoRec.Tile;
-			*UndoRec.Tile = Temp;
-		}
-	} while(IsGroup);
-
-	return TRUE;
-}
-
-
-BOOL CUndoRedo::Redo(void)
-{
-	UndoRecord UndoRec;
-	BOOL IsGroup;
-
-	do {
-		if(!GetRedo(&UndoRec,&IsGroup)) {
-			return FALSE;
-		}
-
-		if(UndoRec.TilePointer) {
-			CTile Temp = *UndoRec.TilePointer;
-			*UndoRec.TilePointer = *UndoRec.Tile;
-			*UndoRec.Tile = Temp;
-		}
-	} while(IsGroup);
-
-	return TRUE;
-}
-
-
 void CBTEditDoc::OnViewGouraudshading() 
 {
 	if(m_ShadeMode != SM_GOURAUD) {
@@ -5261,8 +4990,13 @@ BOOL CBTEditDoc::OnOpenDocument(LPCTSTR lpszPathName)
 
 void CBTEditDoc::OnMapEditscrolllimits() 
 {
-	CLimitsDialog LimitsDlg(m_HeightMap);
-	LimitsDlg.DoModal();
+	LimitsDialog LimitsDlg(m_HeightMap->GetScrollLimits().begin(), m_HeightMap->GetScrollLimits().end(), m_HeightMap->GetMapWidth(), m_HeightMap->GetMapHeight());
+
+	// Don't use the resulting list of scrolllimits if the user didn't press OK
+	if (LimitsDlg.DoModal() != IDOK)
+		return;
+
+	m_HeightMap->SetScrollLimits(LimitsDlg.firstLimit(), LimitsDlg.lastLimit());
 }
 
 

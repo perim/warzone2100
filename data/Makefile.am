@@ -1,8 +1,8 @@
-## Process this file with automake to produce Makefile.in
+SUBDIRS = mods
 
 BASELIST = anims audio components effects features \
 	gamedesc.lev images messages misc multiplay novideo.rpl palette.bin script \
-	sequenceaudio stats structs texpages wrf locale
+	sequenceaudio stats structs texpages wrf
 PATCHLIST = addon.lev anims components effects \
 	messages multiplay stats structs wrf
 
@@ -15,6 +15,7 @@ CLEANFILES=$(BASEARCHIVE) $(PATCHARCHIVE)
 MKDIR_P=$(mkdir_p)
 
 data: $(BASEARCHIVE) $(PATCHARCHIVE)
+	$(MAKE) $(AM_MAKEFLAGS) -C mods data
 
 $(BASEARCHIVE): $(BASELIST)
 	zip -ru0 $@ $(BASELIST) -x *svn*

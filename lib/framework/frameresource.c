@@ -36,15 +36,11 @@
 static RES_TYPE *psResTypes=NULL;
 
 /* The initial resource directory and the current resource directory */
-char aResDir[MAX_PATH];
-char aCurrResDir[MAX_PATH];
+char aResDir[PATH_MAX];
+char aCurrResDir[PATH_MAX];
 
 // the current resource block ID
-static SDWORD	resBlockID;
-
-// buffer to load file data into
-static char	*pFileBuffer = NULL;
-static SDWORD	fileBufferSize = 0;
+static SDWORD resBlockID;
 
 // prototypes
 static void ResetResourceFile(void);
@@ -97,7 +93,7 @@ void resShutDown(void)
 // set the base resource directory
 void resSetBaseDir(char *pResDir)
 {
-	strncpy(aResDir, pResDir, MAX_PATH - 1);
+	strncpy(aResDir, pResDir, PATH_MAX - 1);
 }
 
 /* Parse the res file */
@@ -108,10 +104,6 @@ BOOL resLoad(const char *pResFile, SDWORD blockID,
 	UDWORD	size;
 
 	strcpy(aCurrResDir, aResDir);
-
-	// Note the buffer for file data
-	pFileBuffer = pLoadBuffer;
-	fileBufferSize = bufferSize;
 
 	// Note the block id number
 	resBlockID = blockID;
@@ -233,7 +225,7 @@ void resToLower(char *pStr)
 }
 
 
-static char LastResourceFilename[MAX_PATH];
+static char LastResourceFilename[PATH_MAX];
 
 /*!
  * Returns the filename of the last resource file loaded
@@ -249,8 +241,8 @@ const char *GetLastResourceFilename(void)
  */
 void SetLastResourceFilename(const char *pName)
 {
-	strncpy(LastResourceFilename, pName, MAX_PATH-1);
-	LastResourceFilename[MAX_PATH-1] = '\0';
+	strncpy(LastResourceFilename, pName, PATH_MAX-1);
+	LastResourceFilename[PATH_MAX-1] = '\0';
 }
 
 
@@ -311,15 +303,6 @@ static BOOL RetreiveResourceFile(char *ResourceName, RESOURCEFILE **NewResource)
 
 	ResData= &LoadedResourceFiles[ResID];
 	*NewResource=ResData;
-
-#if 0
-	if (pFileBuffer && loadFile(ResourceName, &pBuffer, &size)) {
-		ResData->type=RESFILETYPE_PC_SBL;
-		ResData->size=size;
-		ResData->pBuffer=pBuffer;
-		return(TRUE);
-	}
-#endif
 
 	// This is needed for files that do not fit in the WDG cache ... (VAB file for example)
 	if (!loadFile(ResourceName, &pBuffer, &size))
@@ -433,10 +416,10 @@ static void makeLocaleFile(char fileName[])  // given string must have MAX_PATH 
 {
 #ifdef ENABLE_NLS
 	const char * language = getLanguage();
-	char localeFile[MAX_PATH];
+	char localeFile[PATH_MAX];
 
 	if ( language[0] == '\0' || // could not get language
-		 strlen(fileName) + strlen(language) + 1 >= MAX_PATH )
+		 strlen(fileName) + strlen(language) + 1 >= PATH_MAX )
 	{
 		return;
 	}
@@ -463,7 +446,7 @@ BOOL resLoadFile(const char *pType, const char *pFile)
 	RES_TYPE	*psT;
 	void		*pData;
 	RES_DATA	*psRes;
-	char		aFileName[MAX_PATH];
+	char		aFileName[PATH_MAX];
 	UDWORD HashedName, HashedType = HashString(pType);
 
 	// Find the resource-type
@@ -496,7 +479,7 @@ BOOL resLoadFile(const char *pType, const char *pFile)
 	}
 
 	// Create the file name
-	if (strlen(aCurrResDir) + strlen(pFile) + 1 >= MAX_PATH)
+	if (strlen(aCurrResDir) + strlen(pFile) + 1 >= PATH_MAX)
 	{
 		debug(LOG_ERROR, "resLoadFile: Filename too long!! %s%s", aCurrResDir, pFile);
 		return FALSE;

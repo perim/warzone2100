@@ -87,7 +87,7 @@
 #include "texture.h"
 #include "transporter.h"
 #include "warzoneconfig.h"
-#include "winmain.h"
+#include "main.h"
 #include "wrappers.h"
 
 #ifdef ARROWS
@@ -766,7 +766,7 @@ BOOL rebuildSearchPath( searchPathMode mode, BOOL force )
 {
 	static searchPathMode current_mode = mod_clean;
 	wzSearchPath * curSearchPath = searchPathRegistry;
-	char tmpstr[MAX_PATH] = "\0";
+	char tmpstr[PATH_MAX] = "\0";
 
 	if ( mode != current_mode || force )
 	{
@@ -1152,8 +1152,6 @@ BOOL frontendInitialise(const char *ResourceFile)
 #endif
 
 	FrontImages = (IMAGEFILE*)resGetData("IMG", "frend.img");
-	FEFont = iV_CreateFontIndirect(FrontImages,FEAsciiLookup,4);
-
    	/* Shift the interface initialisation here temporarily so that it
    		can pick up the stats after they have been loaded */
 	if (!intInitialise())

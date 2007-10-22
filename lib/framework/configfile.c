@@ -35,7 +35,7 @@ typedef struct	regkey_t
 	struct regkey_t *next;
 } regkey_t;
 static regkey_t* registry[REGISTRY_HASH_SIZE] = { NULL };
-static char      RegFilePath[MAX_PATH];
+static char      RegFilePath[PATH_MAX];
 
 //
 // =======================================================================================================================
@@ -176,7 +176,7 @@ static BOOL registry_load( const char *filename )
 	char buffer[MAXLINESIZE];
 	char *bptr = NULL, *bufstart = NULL;
 	char key[32];
-	unsigned int l;
+	int l; // sscanf expects an int to receive %n, not an unsigned int
 	UDWORD filesize;
 
 	debug(LOG_WZ, "Loading the registry from %s", filename);

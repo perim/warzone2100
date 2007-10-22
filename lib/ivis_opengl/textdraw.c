@@ -31,47 +31,21 @@
 #include "lib/ivis_common/bitimage.h"
 
 #include <GL/gl.h>
+#include <GL/glc.h>
 
-/***************************************************************************/
-/*
- *	Local Definitions
- */
-/***************************************************************************/
+static const char font_family[] = "DejaVu Sans Mono";
+static const char font_face_regular[] = "Book";
+static const char font_face_bold[] = "Bold";
 
-#define MAX_IVIS_FONTS	8
+static float font_size = 12.f;
+// Contains the font color in the following order: red, green, blue, alpha
+static float font_colour[4] = {1.f, 1.f, 1.f, 1.f};
 
-typedef struct
-{
-	IMAGEFILE *FontFile;	// The image data that contains the font.
-//	UWORD FontStartID;		// The image ID of character ASCII 33.
-//	UWORD FontEndID;		// The image ID of last character in the font.
-	int FontAbove;			// Max pixels above the base line.
-	int FontBelow;			// Max pixels below the base line.
-	int FontLineSize;		// Pixel spacing used for new lines.
-	int FontSpaceSize;		// Pixel spacing used for spaces.
-	SWORD FontColourIndex;	// The colour index to use.
-//	BOOL	bGameFont;
-	UWORD *AsciiTable;
-} IVIS_FONT;
+static GLint GLC_Context = 0;
+static GLint GLC_Font_Regular = 0;
+static GLint GLC_Font_Bold = 0;
 
-/***************************************************************************/
-/*
- *	Local Variables
- */
-/***************************************************************************/
-
-static SWORD TextColourIndex;
-static int NumFonts;
-static int ActiveFontID;
-static IVIS_FONT iVFonts[MAX_IVIS_FONTS];
-
-/***************************************************************************/
-/*
- *	Local ProtoTypes
- */
-/***************************************************************************/
-static void pie_BeginTextRender(SWORD ColourIndex);
-static void pie_TextRender(IMAGEFILE *ImageFile, UWORD ID, int x, int y);
+static bool anti_aliasing = true;
 
 /***************************************************************************/
 /*
@@ -79,127 +53,339 @@ static void pie_TextRender(IMAGEFILE *ImageFile, UWORD ID, int x, int y);
  */
 /***************************************************************************/
 
-void iV_ClearFonts(void)
+static inline void iV_printFontList()
 {
-	NumFonts = 0;
-	ActiveFontID = -1;
-}
+	unsigned int i;
+	GLint font_count = glcGeti(GLC_CURRENT_FONT_COUNT);
+	debug(LOG_NEVER, "GLC_CURRENT_FONT_COUNT = %d", font_count);
 
-// Create a font using an ascii lookup table.
-//
-// IMAGEFILE *ImageFile		Image file containing the font graphics.
-// UWORD *AsciiTable		Array of 256 Ascii to ImageID lookups.
-// int SpaceSize			Pixel size of a space.
-// BOOL bInGame				Specifies that the font is used in game (WHY?)
-//
-int iV_CreateFontIndirect(IMAGEFILE *ImageFile, UWORD *AsciiTable, int SpaceSize)
-{
-	int Above, Below;
-	int Height;
-	UWORD Index, c;
-	IVIS_FONT *Font;
-
-	assert(NumFonts < MAX_IVIS_FONTS - 1);
-
-	Font = &iVFonts[NumFonts];
-
-	Font->FontFile = ImageFile;
-	Font->AsciiTable = AsciiTable;
-	Font->FontSpaceSize = SpaceSize;
-	Font->FontLineSize = 0;
-	Font->FontAbove = 0;
-	Font->FontBelow = 0;
-
-	// Initialise the font metrics.
-	for (c = 0; c < 256; c++)
+	if (font_count == 0)
 	{
-		Index = (UWORD)AsciiTable[c];
-		Above = iV_GetImageYOffset(Font->FontFile, Index);
-		Below = Above + iV_GetImageHeight(Font->FontFile, Index);
+		debug(LOG_ERROR, "iV_printFontList: The required font (%s) isn't loaded", font_family);
 
-		Height = abs(Above) + abs(Below);
-
-		if (Above  < Font->FontAbove)
-		{
-			Font->FontAbove = Above;
-		}
-
-		if (Below  > Font->FontBelow)
-		{
-			Font->FontBelow = Below;
-		}
-
-		if (Height > Font->FontLineSize)
-		{
-			Font->FontLineSize = Height;
-		}
+		// Fall back to unselected fonts since the requested font apparently
+		// isn't available.
+		glcEnable(GLC_AUTO_FONT);
 	}
 
-	ActiveFontID = NumFonts;
-
-	NumFonts++;
-
-	return NumFonts - 1;
+	for (i = 0; i < font_count; ++i)
+	{
+		GLint font = glcGetListi(GLC_CURRENT_FONT_LIST, i);
+		/* The output of the family name and the face is printed using 2 steps
+		 * because glcGetFontc and glcGetFontFace return their result in the
+		 * same buffer (according to GLC specs).
+		 */
+		char prBuffer[1024];
+		snprintf(prBuffer, sizeof(prBuffer), "Font #%d : %s ", font, (const char*)glcGetFontc(font, GLC_FAMILY));
+		prBuffer[sizeof(prBuffer) - 1] = 0;
+		strncat(prBuffer, glcGetFontFace(font), sizeof(prBuffer));
+		prBuffer[sizeof(prBuffer) - 1] = 0;
+		debug(LOG_NEVER, prBuffer);
+	}
 }
 
-void iV_SetFont(int FontID)
+static void iV_initializeGLC()
 {
-	assert(FontID < NumFonts);
-	ActiveFontID = FontID;
+	if (GLC_Context)
+		return;
+
+	GLC_Context = glcGenContext();
+	if (!GLC_Context)
+		debug(LOG_ERROR, "glcGenContext() failed");
+	else
+		debug(LOG_NEVER, "glcGenContext() succesful: GLC_Context = %d", GLC_Context);
+
+	glcContext(GLC_Context);
+
+	glcDisable(GLC_AUTO_FONT);
+	glcRenderStyle(GLC_TRIANGLE);
+
+	GLC_Font_Regular = glcGenFontID();
+	GLC_Font_Bold = glcGenFontID();
+
+	if (!glcNewFontFromFamily(GLC_Font_Regular, font_family))
+			debug(LOG_ERROR, "glcNewFontFromFamily(GLC_Font_Regular (%d), \"%s\") failed", GLC_Font_Regular, font_family);
+		else
+			debug(LOG_NEVER, "glcNewFontFromFamily(GLC_Font_Regular (%d), \"%s\") succesful", GLC_Font_Regular, font_family);
+
+	if (!glcFontFace(GLC_Font_Regular, font_face_regular))
+			debug(LOG_ERROR, "glcFontFace(GLC_Font_Regular (%d), \"%s\") failed", GLC_Font_Regular, font_face_regular);
+		else
+			debug(LOG_NEVER, "glcFontFace(GLC_Font_Regular (%d), \"%s\") succesful", GLC_Font_Regular, font_face_regular);
+
+	if (!glcNewFontFromFamily(GLC_Font_Bold, font_family))
+			debug(LOG_ERROR, "glcNewFontFromFamily(GLC_Font_Bold (%d), \"%s\") failed", GLC_Font_Bold, font_family);
+		else
+			debug(LOG_NEVER, "glcNewFontFromFamily(GLC_Font_Bold (%d), \"%s\") succesful", GLC_Font_Bold, font_family);
+
+	if (!glcFontFace(GLC_Font_Bold, font_face_bold))
+			debug(LOG_ERROR, "glcFontFace(GLC_Font_Bold (%d), \"%s\") failed", GLC_Font_Bold, font_face_bold);
+		else
+			debug(LOG_NEVER, "glcFontFace(GLC_Font_Bold (%d), \"%s\") succesful", GLC_Font_Bold, font_face_bold);
+
+	debug(LOG_NEVER, "finished initializing GLC");
+
+	// Set GLC's string type to UTF-8
+	glcStringType(GLC_UTF8_QSO);
 }
 
-
-int iV_GetTextLineSize(void)
+void iV_TextInit()
 {
-	IVIS_FONT *Font = &iVFonts[ActiveFontID];
-	return abs(Font->FontAbove) + abs(Font->FontBelow);
+	iV_initializeGLC();
+	iV_SetFont(font_regular);
+
+#ifdef DEBUG
+	iV_printFontList();
+#endif
+}
+
+void iV_TextShutdown()
+{
+	if (GLC_Font_Regular)
+		glcDeleteFont(GLC_Font_Regular);
+
+	if (GLC_Font_Bold)
+		glcDeleteFont(GLC_Font_Bold);
+
+	glcContext(0);
+
+	if (GLC_Context)
+		glcDeleteContext(GLC_Context);
+}
+
+void iV_SetTextAntialias(bool enable)
+{
+	anti_aliasing = enable;
+}
+
+bool iV_TextAntialiased()
+{
+	return anti_aliasing;
+}
+
+void iV_SetFont(enum iV_fonts FontID)
+{
+	switch (FontID)
+	{
+		case font_regular:
+			iV_SetTextSize(12.f);
+			glcFont(GLC_Font_Regular);
+			break;
+
+		case font_large:
+			iV_SetTextSize(21.f);
+			glcFont(GLC_Font_Bold);
+			break;
+	}
+}
+
+static inline float getGLCResolution()
+{
+	float resolution = glcGetf(GLC_RESOLUTION);
+
+	// The default resolution as used by OpenGLC is 72 dpi
+	if (resolution == 0.f)
+		return 72.f;
+
+	return resolution;
+}
+
+static inline float getGLCPixelSize()
+{
+	float pixel_size = font_size * getGLCResolution() / 72.f;
+	return pixel_size;
+}
+
+static inline float getGLCPointWidth(const float* boundingbox)
+{
+	// boundingbox contains: [ xlb ylb xrb yrb xrt yrt xlt ylt ]
+	// l = left; r = right; b = bottom; t = top;
+	float rightTopX = boundingbox[4];
+	float leftTopX = boundingbox[6];
+
+	float point_width = rightTopX - leftTopX;
+
+	return point_width;
+}
+
+static inline float getGLCPointHeight(const float* boundingbox)
+{
+	// boundingbox contains: [ xlb ylb xrb yrb xrt yrt xlt ylt ]
+	// l = left; r = right; b = bottom; t = top;
+	float leftBottomY = boundingbox[1];
+	float leftTopY = boundingbox[7];
+
+	float point_height = fabsf(leftTopY - leftBottomY);
+
+	return point_height;
+}
+
+static inline float getGLCPointToPixel(float point_width)
+{
+	float pixel_width = point_width * getGLCPixelSize();
+
+	return pixel_width;
+}
+
+unsigned int iV_GetTextWidth(const char* string)
+{
+	float boundingbox[8];
+	float pixel_width, point_width;
+
+	glcMeasureString(GL_FALSE, string);
+	if (!glcGetStringMetric(GLC_BOUNDS, boundingbox))
+	{
+		debug(LOG_ERROR, "iV_GetTextWidth: couldn't retrieve a bounding box for the string");
+		return 0;
+	}
+
+	point_width = getGLCPointWidth(boundingbox);
+	pixel_width = getGLCPointToPixel(point_width);
+	return (unsigned int)pixel_width;
+}
+
+unsigned int iV_GetCountedTextWidth(const char* string, size_t string_length)
+{
+	float boundingbox[8];
+	float pixel_width, point_width;
+
+	glcMeasureCountedString(GL_FALSE, string_length, string);
+	if (!glcGetStringMetric(GLC_BOUNDS, boundingbox))
+	{
+		debug(LOG_ERROR, "iV_GetTextWidth: couldn't retrieve a bounding box for the string");
+		return 0;
+	}
+
+	point_width = getGLCPointWidth(boundingbox);
+	pixel_width = getGLCPointToPixel(point_width);
+	return (unsigned int)pixel_width;
+}
+
+unsigned int iV_GetTextHeight(const char* string)
+{
+	float boundingbox[8];
+	float pixel_height, point_height;
+
+	glcMeasureString(GL_FALSE, string);
+	if (!glcGetStringMetric(GLC_BOUNDS, boundingbox))
+	{
+		debug(LOG_ERROR, "iV_GetTextHeight: couldn't retrieve a bounding box for the string");
+		return 0;
+	}
+
+	point_height = getGLCPointHeight(boundingbox);
+	pixel_height = getGLCPointToPixel(point_height);
+	return (unsigned int)pixel_height;
+}
+
+unsigned int iV_GetCharWidth(uint32_t charCode)
+{
+	float boundingbox[8];
+	float pixel_width, point_width;
+
+	if (!glcGetCharMetric(charCode, GLC_BOUNDS, boundingbox))
+	{
+		debug(LOG_ERROR, "iV_GetCharWidth: couldn't retrieve a bounding box for the character");
+		return 0;
+	}
+
+	point_width = getGLCPointWidth(boundingbox);
+	pixel_width = getGLCPointToPixel(point_width);
+	return (unsigned int)pixel_width;
+}
+
+int iV_GetTextLineSize()
+{
+	float boundingbox[8];
+	float pixel_height, point_height;
+
+	if (!glcGetMaxCharMetric(GLC_BOUNDS, boundingbox))
+	{
+		debug(LOG_ERROR, "iV_GetCharWidth: couldn't retrieve a bounding box for the character");
+		return 0;
+	}
+
+	point_height = getGLCPointHeight(boundingbox);
+	pixel_height = getGLCPointToPixel(point_height);
+	return (unsigned int)pixel_height;
+}
+
+static float iV_GetMaxCharBaseY()
+{
+	float base_line[4]; // [ xl yl xr yr ]
+
+	if (!glcGetMaxCharMetric(GLC_BASELINE, base_line))
+	{
+		debug(LOG_ERROR, "iV_GetMaxCharBaseY: couldn't retrieve the baseline for the character");
+		return 0;
+	}
+
+	return base_line[1];
 }
 
 int iV_GetTextAboveBase(void)
 {
-	IVIS_FONT *Font = &iVFonts[ActiveFontID];
-	return Font->FontAbove;
+	float point_base_y = iV_GetMaxCharBaseY();
+	float point_top_y;
+	float boundingbox[8];
+	float pixel_height, point_height;
+
+	if (!glcGetMaxCharMetric(GLC_BOUNDS, boundingbox))
+	{
+		debug(LOG_ERROR, "iV_GetCharWidth: couldn't retrieve a bounding box for the character");
+		return 0;
+	}
+
+	point_top_y = boundingbox[7];
+	point_height = point_base_y - point_top_y;
+	pixel_height = getGLCPointToPixel(point_height);
+	return (int)pixel_height;
 }
 
 int iV_GetTextBelowBase(void)
 {
-	IVIS_FONT *Font = &iVFonts[ActiveFontID];
-	return Font->FontBelow;
-}
+	float point_base_y = iV_GetMaxCharBaseY();
+	float point_bottom_y;
+	float boundingbox[8];
+	float pixel_height, point_height;
 
-
-
-unsigned int iV_GetTextWidth(const char *String)
-{
-	unsigned int width = 0;
-	while (*String != 0)
+	if (!glcGetMaxCharMetric(GLC_BOUNDS, boundingbox))
 	{
-		width += iV_GetCharWidth(*(String++));
+		debug(LOG_ERROR, "iV_GetCharWidth: couldn't retrieve a bounding box for the character");
+		return 0;
 	}
 
-	return width;
-}
-
-
-unsigned int iV_GetCharWidth(char Char)
-{
-	UWORD ImageID;
-	IVIS_FONT* Font = &iVFonts[ActiveFontID];
-
-	if (Char == ASCII_COLOURMODE)
-		return 0;
-
-	if (Char == ASCII_SPACE)
-		return Font->FontSpaceSize;
-
-	ImageID = Font->AsciiTable[(unsigned char)Char];
-	return iV_GetImageWidth(Font->FontFile, ImageID) + 1;
+	point_bottom_y = boundingbox[1];
+	point_height = point_bottom_y - point_base_y;
+	pixel_height = getGLCPointToPixel(point_height);
+	return (int)pixel_height;
 }
 
 void iV_SetTextColour(SWORD Index)
 {
-	IVIS_FONT *Font = &iVFonts[ActiveFontID];
-	Font->FontColourIndex = Index;
+	switch (Index)
+	{
+		case PIE_TEXT_WHITE:
+			font_colour[0] = 1.f;
+			font_colour[1] = 1.f;
+			font_colour[2] = 1.f;
+			font_colour[3] = 1.f;
+			break;
+
+		case PIE_TEXT_LIGHTBLUE:
+			font_colour[0] = 0.627451f;
+			font_colour[1] = 0.627451f;
+			font_colour[2] = 1.f;
+			font_colour[3] = 1.f;
+			break;
+
+		case PIE_TEXT_DARKBLUE:
+			font_colour[0] = 0.376471f;
+			font_colour[1] = 0.376471f;
+			font_colour[2] = 0.752941f;
+			font_colour[3] = 1.f;
+			break;
+	};
 }
 
 // --------------------------------------------------------------------------
@@ -266,6 +452,7 @@ UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width
 		while (*curChar != 0 && WWidth < Width && !NewLine)
 		{
 			const char* startOfWord = curChar;
+			const unsigned int FStringWidth = iV_GetTextWidth(FString);
 
 			// Get the next word.
 			i = 0;
@@ -282,8 +469,8 @@ UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width
 					continue;
 				}
 
-				// Update this lines pixel width.
-				WWidth += iV_GetCharWidth(*curChar);
+				// Update this line's pixel width.
+				WWidth = FStringWidth + iV_GetCountedTextWidth(FWord, i + 1);
 
 				// If this word doesn't fit on the current line then break out
 				if (WWidth > Width)
@@ -363,6 +550,7 @@ UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width
 		}
 
 		// draw the text.
+		//iV_SetTextSize(12.f);
 		iV_DrawText(FString, jx, jy);
 
 
@@ -399,120 +587,44 @@ UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width
 	return jy;
 }
 
-
-
-void iV_DrawText(const char *string, UDWORD x, UDWORD y)
+void iV_DrawTextRotated(const char* string, float XPos, float YPos, float rotation)
 {
-	IVIS_FONT *Font = &iVFonts[ActiveFontID];
+	pie_SetTexturePage(-2);
 
-	/* Colour selection */
-	pie_BeginTextRender(Font->FontColourIndex);
-
-	for (; *string != 0; ++string)
+	// Enable Anti Aliasing if it's enabled
+	if (anti_aliasing)
 	{
-		unsigned int Index = (unsigned char)*string;
-		UWORD ImageID;
-
-		// Toggle colour mode?
-		if (Index == ASCII_COLOURMODE)
-		{
-			static SWORD OldTextColourIndex = -1;
-
-			if (TextColourIndex >= 0)
-			{
-				OldTextColourIndex = TextColourIndex;
-				TextColourIndex = -1;
-			}
-			else
-			{
-				if (OldTextColourIndex >= 0)
-				{
-					TextColourIndex = OldTextColourIndex;
-				}
-			}
-
-			// Don't draw this character
-			continue;
-		}
-		else if (Index == ASCII_SPACE)
-		{
-			x += Font->FontSpaceSize;
-
-			// Don't draw this character
-			continue;
-		}
-
-		// Draw the character
-		ImageID = Font->AsciiTable[Index];
-		pie_TextRender(Font->FontFile, ImageID, x, y);
-
-		// Advance the drawing position
-		x += iV_GetImageWidth(Font->FontFile, ImageID) + 1;
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glEnable(GL_POLYGON_SMOOTH);
 	}
-}
 
+	if (rotation != 0.f)
+		rotation = 360.f - rotation;
 
-void iV_DrawTextRotated(const char* string, unsigned int XPos, unsigned int YPos, float rotation)
-{
-	glTranslatef((float)XPos, (float)YPos, 0.f);
+	glTranslatef(XPos, YPos, 0.f);
+	glRotatef(180.f, 1.f, 0.f, 0.f);
 	glRotatef(rotation, 0.f, 0.f, 1.f);
+	glScalef(font_size, font_size, 0.f);
 
-	// Now call iV_DrawText at position (0,0) of the translated matrix
-	iV_DrawText(string, 0, 0);
+	glColor4fv(font_colour);
 
-	// Reset the tranlation matrix
+	glFrontFace(GL_CW);
+	glcRenderString(string);
+	glFrontFace(GL_CCW);
+
+	// Turn off anti aliasing (if we enabled it above)
+	if (anti_aliasing)
+	{
+		glDisable(GL_BLEND);
+		glDisable(GL_POLYGON_SMOOTH);
+	}
+
+	// Reset the current model view matrix
 	glLoadIdentity();
 }
 
-void pie_BeginTextRender(SWORD ColourIndex)
+void iV_SetTextSize(float size)
 {
-	TextColourIndex = ColourIndex;
-	pie_SetRendMode(REND_TEXT);
-	pie_SetBilinear(FALSE);
-}
-
-#define PIE_TEXT_WHITE_COLOUR		(0xffffffff)
-#define PIE_TEXT_LIGHTBLUE_COLOUR	(0xffa0a0ff)
-#define PIE_TEXT_DARKBLUE_COLOUR	(0xff6060c0)
-
-static void pie_TextRender(IMAGEFILE *ImageFile, UWORD ID, int x, int y)
-{
-	UDWORD Red;
-	UDWORD Green;
-	UDWORD Blue;
-	UDWORD Alpha = MAX_UB_LIGHT;
-	iColour* psPalette;
-
-
-	if (TextColourIndex == PIE_TEXT_WHITE
-	 || TextColourIndex == 255)
-	{
-		pie_SetColour(MAX_LIGHT);
-	}
-	else
-	{
-		if (TextColourIndex == PIE_TEXT_WHITE)
-		{
-			pie_SetColour(PIE_TEXT_WHITE_COLOUR);
-		}
-		else if (TextColourIndex == PIE_TEXT_LIGHTBLUE)
-		{
-			pie_SetColour(PIE_TEXT_LIGHTBLUE_COLOUR);
-		}
-		else if (TextColourIndex == PIE_TEXT_DARKBLUE)
-		{
-			pie_SetColour(PIE_TEXT_DARKBLUE_COLOUR);
-		}
-		else
-		{
-			psPalette = pie_GetGamePal();
-			Red  = psPalette[TextColourIndex].r;
-			Green = psPalette[TextColourIndex].g;
-			Blue = psPalette[TextColourIndex].b;
-			pie_SetColour(((Alpha << 24) | (Red << 16) | (Green << 8) | Blue));
-		}
-	}
-	pie_SetColourKeyedBlack(TRUE);
-	pie_DrawImageFileID(ImageFile, ID, x, y);
-	pie_SetColourKeyedBlack(FALSE);
+	font_size = size;
 }

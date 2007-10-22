@@ -28,14 +28,14 @@
  * are used outside of the framework library.
  */
 
-#include <stdio.h>
-
 #if !defined(_frame_h) && !defined(FRAME_LIB_INCLUDE)
-#error Framework header files MUST be included from Frame.h ONLY.
+# error Framework header files MUST be included from Frame.h ONLY.
 #endif
 
+#include <stdio.h>
 #include <assert.h>
 #include <stdarg.h>
+
 #include "types.h"
 
 /****************************************************************************************
@@ -43,11 +43,6 @@
  * Basic debugging macro's
  *
  */
-#ifdef _MSC_VER
-#ifdef _DEBUG
-#define DEBUG
-#endif
-#endif
 
 /* stores name of the last function or event called by scripts */
 #define MAX_EVENT_NAME_LEN	100
@@ -84,19 +79,6 @@ extern char last_called_script_event[MAX_EVENT_NAME_LEN];
  ***  by similar code in Freeciv. Parts ripped directly.
  ***
  ***/
-
-/* Want to use GCC's __attribute__ keyword to check variadic
- * parameters to printf-like functions, without upsetting other
- * compilers: put any required defines magic here.
- * If other compilers have something equivalent, could also
- * work that out here.   Should this use configure stuff somehow?
- * --dwp
- */
-#if defined(__GNUC__)
-#define wz__attribute(x)  __attribute__(x)
-#else
-#define wz__attribute(x)
-#endif
 
 /* Must match code_part_names in debug.c */
 typedef enum {
@@ -180,6 +162,6 @@ BOOL debug_enable_switch(const char *str);
  */
 #define debug(part, ...) do { if (enabled_debug[part]) _debug(part, __VA_ARGS__); } while(0)
 void _debug( code_part part, const char *str, ...)
-		wz__attribute((format (printf, 2, 3)) );
+		WZ_DECL_FORMAT(printf, 2, 3);
 
 #endif

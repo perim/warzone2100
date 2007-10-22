@@ -31,7 +31,7 @@
 #include "lib/framework/frame.h"
 #include "lib/widget/widget.h"
 
-#include "winmain.h"
+#include "main.h"
 #include "frontend.h"
 
 #include "lib/ivis_common/pieclip.h"
@@ -53,7 +53,7 @@
 
 extern BOOL NETsetupTCPIP(void ** addr, char * machine);
 
-extern char	datadir[MAX_PATH];
+extern char	datadir[PATH_MAX];
 extern char * global_mods[MAX_MODS];
 extern char * campaign_mods[MAX_MODS];
 extern char * multiplay_mods[MAX_MODS];
@@ -128,9 +128,9 @@ BOOL ParseCommandLineEarly(int argc, char** argv)
 		if ( strcasecmp(tokenType, "--version") == 0 )
 		{
 #ifdef DEBUG
-			fprintf( stdout, "Warzone 2100 - Version %s - Built %s - DEBUG\n", VERSION, __DATE__ );
+			fprintf(stdout, "Warzone 2100 - Version " VERSION " - Built " __DATE__ " - DEBUG\n");
 #else
-			fprintf( stdout, "Warzone 2100 - Version %s - Built %s\n", VERSION, __DATE__ );
+			fprintf(stdout, "Warzone 2100 - Version " VERSION " - Built " __DATE__ "\n");
 #endif
 			return FALSE;
 		}

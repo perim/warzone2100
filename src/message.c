@@ -835,9 +835,8 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 					return FALSE;
 				}
 
-				if ((audioID < 0
-				  || audioID > ID_MAX_SOUND)
-				 && audioID != NO_SOUND)
+				if ( ((audioID < 0) || (audioID >= ID_MAX_SOUND)) &&
+					 (audioID != NO_SOUND) )
 				{
 					debug( LOG_ERROR, "Invalid Weapon Sound ID - %d for weapon %s", audioID, audioName );
 					abort();
@@ -1172,8 +1171,8 @@ void addOilResourceProximities(void)
             if (psFeat->visible[selectedPlayer])
             {
                 //if there isn't an oil derrick built on it
-				if(!TILE_HAS_STRUCTURE(mapTile(psFeat->x >> TILE_SHIFT,
-					psFeat->y >> TILE_SHIFT)))
+				if (!TILE_HAS_STRUCTURE(mapTile(map_coord(psFeat->x),
+					map_coord(psFeat->y))))
 				{
                     //add a proximity message
 					psMessage = addMessage(MSG_PROXIMITY, TRUE, selectedPlayer);

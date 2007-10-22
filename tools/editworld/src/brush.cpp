@@ -29,6 +29,7 @@
 #include "tiletypes.h"
 #include "debugprint.hpp"
 #include "assert.h"
+#include "undoredo.h"
 
 extern DWORD g_Flags[MAXTILES];
 extern CUndoRedo *g_UndoRedo;
@@ -231,11 +232,11 @@ BOOL CEdgeBrush::Paint(DWORD XCoord,DWORD YCoord,BOOL SetHeight)
 {
 	DWORD DstCode;
 	int Edge;
-	DWORD mw;
-	DWORD mh;
+	unsigned int mw;
+	unsigned int mh;
 	BOOL ChangedHeights = FALSE;
 
-	m_HeightMap->GetMapSize(&mw,&mh);
+	m_HeightMap->GetMapSize(mw, mh);
 
 	int Count,Offset;
 

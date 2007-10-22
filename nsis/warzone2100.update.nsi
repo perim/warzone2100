@@ -207,7 +207,7 @@ Section $(TEXT_SecGrimMod) SecGrimMod
 
   SetOutPath "$INSTDIR\mods\global"
 
-;  File "..\data\grim.wz"
+;  File "..\data\mods\global\grim.wz"
 ;  !insertmacro VPatchFile "grim.wz.vpatch" "$INSTDIR\grim.wz" "$INSTDIR\grim.wz.tmp"
 
   SetOutPath "$INSTDIR"
@@ -250,6 +250,17 @@ FunctionEnd
 
   LangString TEXT_SecGrimMod ${LANG_ENGLISH} "Grim's graphics-update"
   LangString DESC_SecGrimMod ${LANG_ENGLISH} "Grim's graphics-update. Contains more detailed textures for campaign 1 as well as additional texture- and model-updates. Copyright (C) 2005-2007 Grim Moroe, Use is only permited for Warzone 2100."
+
+
+
+  LangString TEXT_SecBase ${LANG_DUTCH} "Standard installatie"
+  LangString DESC_SecBase ${LANG_DUTCH} "Standard installatie."
+
+  LangString TEXT_SecMods ${LANG_DUTCH} "Mods"
+  LangString DESC_SecMods ${LANG_DUTCH} "Verschillende mods."
+
+  LangString TEXT_SecGrimMod ${LANG_DUTCH} "Grim's graphische-update"
+  LangString DESC_SecGrimMod ${LANG_DUTCH} "Grim's graphische-update. Bevat meer gedetaïleerde textures voor campaign 1 en extra texture- en model-updates. Copyright (C) 2005-2007 Grim Moroe, gebruik is alleen toegestaan voor Warzone 2100."
 
 
 
