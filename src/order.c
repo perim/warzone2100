@@ -115,20 +115,13 @@ void initRunData(void)
     }
 }
 
-
-static void clearTargets(DROID * psDroid)
+void clearDroidTargets(DROID *psDroid)
 {
 	unsigned int i;
-	if (psDroid->numWeaps > 0)
+
+	for (i = 0; i < DROID_MAXWEAPS; i++)
 	{
-		for(i = 0; i < psDroid->numWeaps; i++)
-		{
-			psDroid->psTarget[i] = NULL;
-		}
-	}
-	else
-	{
-		psDroid->psTarget[0] = NULL;
+		setDroidTarget(psDroid, NULL, i);
 	}
 }
 
@@ -304,28 +297,18 @@ void orderUpdateDroid(DROID *psDroid)
 	DROID_OACTION_INFO oaInfo = {{NULL}};
 
 	// clear the target if it has died
-	if (psDroid->numWeaps > 0)
+	for (i = 0; i < DROID_MAXWEAPS; i++)
 	{
-		for (i = 0;i < psDroid->numWeaps;i++)
+		if (psDroid->psTarget[i] && psDroid->psTarget[i]->died)
 		{
-			if (psDroid->psTarget[i] && psDroid->psTarget[i]->died)
-			{
-				psDroid->psTarget[i] = NULL;
-			}
-		}
-	}
-	else
-	{
-		if (psDroid->psTarget[0] && psDroid->psTarget[0]->died)
-		{
-			psDroid->psTarget[0] = NULL;
+			setDroidTarget(psDroid, NULL, i);
 		}
 	}
 
 	//clear its base struct if its died
 	if (psDroid->psBaseStruct && psDroid->psBaseStruct->died)
 	{
-		psDroid->psBaseStruct = NULL;
+		setDroidBase(psDroid, NULL);
 	}
 
 	// check for died objects in the list
@@ -413,7 +396,7 @@ void orderUpdateDroid(DROID *psDroid)
 
 			/* clear order */
 			psDroid->order = DORDER_NONE;
-			clearTargets(psDroid);
+			clearDroidTargets(psDroid);
 			psDroid->psTarStats[0] = NULL;
 		}
 		break;
@@ -445,7 +428,7 @@ void orderUpdateDroid(DROID *psDroid)
 
 			    /* clear order */
 			    psDroid->order = DORDER_NONE;
-				clearTargets(psDroid);
+				clearDroidTargets(psDroid);
 			    psDroid->psTarStats[0] = NULL;
             }
 		}
@@ -456,7 +439,7 @@ void orderUpdateDroid(DROID *psDroid)
 		{
 			/* clear order */
 			psDroid->order = DORDER_NONE;
-			clearTargets(psDroid);
+			clearDroidTargets(psDroid);
 			psDroid->psTarStats[0] = NULL;
 
 //FFS! You only wan't to do this if the droid being tracked IS the transporter! Not all the time!
@@ -496,7 +479,7 @@ void orderUpdateDroid(DROID *psDroid)
 		if (psDroid->action == DACTION_NONE)
 		{
 			psDroid->order = DORDER_NONE;
-			clearTargets(psDroid);
+			clearDroidTargets(psDroid);
 			psDroid->psTarStats[0] = NULL;
 		}
 		break;
@@ -797,7 +780,7 @@ void orderUpdateDroid(DROID *psDroid)
 			{
 				// on hold orders give up
 				psDroid->order = DORDER_NONE;
-				psDroid->psTarget[0] = NULL;
+				setDroidTarget(psDroid, NULL, 0);
 			}
 			else if (!vtolDroid(psDroid) ||
 				allVtolsRearmed(psDroid))
@@ -866,7 +849,7 @@ void orderUpdateDroid(DROID *psDroid)
 			{
 				// on hold orders give up
 				psDroid->order = DORDER_NONE;
-				clearTargets(psDroid);
+				clearDroidTargets(psDroid);
 			}
 			else if (!vtolDroid(psDroid) ||
 				allVtolsRearmed(psDroid))
@@ -926,7 +909,7 @@ void orderUpdateDroid(DROID *psDroid)
 			        transporterAddDroid((DROID *)psDroid->psTarget[0], psDroid);
                     //order the droid to stop so moveUpdateDroid does not process this unit
                     orderDroid(psDroid, DORDER_STOP);
-     clearTargets(psDroid);
+			clearDroidTargets(psDroid);
 	    		    psDroid->psTarStats[0] = NULL;
 		    	    secondarySetState(psDroid, DSO_RETURN_TO_LOC, DSS_NONE);
                 }
@@ -1050,7 +1033,7 @@ void orderUpdateDroid(DROID *psDroid)
 			{
 				// finished all the structures - done
 				psDroid->order = DORDER_NONE;
-				psDroid->psTarget[0] = NULL;
+				setDroidTarget(psDroid, NULL, 0);
 				psDroid->psTarStats[0] = NULL;
 				break;
 			}
@@ -1087,11 +1070,9 @@ void orderUpdateDroid(DROID *psDroid)
 			}
 
 			// build another structure
-			psDroid->psTarget[0] = NULL;
+			setDroidTarget(psDroid, NULL, 0);
 			actionDroidLoc(psDroid, DACTION_BUILD, psDroid->orderX,psDroid->orderY);
 			//intRefreshScreen();
-
-
 		}
 		break;
 	case DORDER_FIRESUPPORT:
@@ -1367,7 +1348,7 @@ void orderUpdateDroid(DROID *psDroid)
 	{
 //		DBPRINTF(("VTOL %d: reseting to rearm order\n", psDroid->id));
 		psDroid->order = DORDER_REARM;
-		psDroid->psTarget[0] = psDroid->psActionTarget[0];
+		setDroidTarget(psDroid, psDroid->psActionTarget[0], 0);
 	}
 
 //	ASSERT( psDroid->x != 0 && psDroid->y != 0,
@@ -1383,13 +1364,6 @@ static void orderCmdGroupBase(DROID_GROUP *psGroup, DROID_ORDER_DATA *psData)
 
 	ASSERT( psGroup != NULL,
 		"cmdUnitOrderGroupBase: invalid unit group" );
-
-
-	if (bMultiPlayer && SendCmdGroup(psGroup, psData->x,	psData->y,	psData->psObj[0]) )
-	{	// turn off multiplay messages,since we've send a group one instead.
-		turnOffMultiMsg(TRUE);
-	}
-
 
 	if (psData->order == DORDER_RECOVER)
 	{
@@ -1694,18 +1668,8 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		// get the droid to stop doing whatever it is doing
 		actionDroid(psDroid, DACTION_NONE);
 		psDroid->order = DORDER_NONE;
-		if (psDroid->numWeaps > 0)
-		{
-			for (i = 0;i < psDroid->numWeaps;i++)
-			{
-				psDroid->psTarget[i] = 0;
-			}
-		}
-		else
-		{
-			psDroid->psTarget[0] = 0;
-		}
-		psDroid->psTarStats[0] = 0;
+		clearDroidTargets(psDroid);
+		psDroid->psTarStats[0] = NULL;
 		psDroid->orderX = 0;
 		psDroid->orderY = 0;
 		psDroid->orderX2 = 0;
@@ -1758,7 +1722,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		break;
 	case DORDER_RECOVER:
 		psDroid->order = DORDER_RECOVER;
-		psDroid->psTarget[0] = psOrder->psObj[0];
+		setDroidTarget(psDroid, psOrder->psObj[0], 0);
 		actionDroidLoc(psDroid, DACTION_MOVE, psOrder->psObj[0]->x,psOrder->psObj[0]->y);
 		break;
 	case DORDER_TRANSPORTOUT:
@@ -1785,9 +1749,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 	case DORDER_ATTACK:
 	case DORDER_ATTACKTARGET:
 		// If there arn't any weapons on slot 2 stop
-		//if (psDroid->numWeaps == 0)
-		//Watermelon:re-added if(psDroid->numWeaps == 0)
-        if ((psDroid->numWeaps == 0) ||
+		if ((psDroid->numWeaps == 0) ||
 			(psDroid->asWeaps[0].nStat == 0) ||
 			(psDroid->droidType == DROID_TRANSPORTER))
 		{
@@ -1822,7 +1784,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
             {
                 break;
             }
-			psDroid->psTarget[0] = psOrder->psObj[0];
+			setDroidTarget(psDroid, psOrder->psObj[0], 0);
 //			psDroid->order = DORDER_ATTACK;
 			psDroid->order = psOrder->order;
 
@@ -1888,7 +1850,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
             }
 			for (i = 0;i <psDroid->numWeaps;i++)
 			{
-				psDroid->psTarget[i] = psOrder->psObj[i];
+				setDroidTarget(psDroid, psOrder->psObj[i], i);
 			}
 //			psDroid->order = DORDER_ATTACK;
 			psDroid->order = psOrder->order;
@@ -1955,7 +1917,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 			psDroid->order = DORDER_BUILD;
 			psDroid->orderX = psOrder->x;
 			psDroid->orderY = psOrder->y;
-			psDroid->psTarget[0] = NULL;
+			setDroidTarget(psDroid, NULL, 0);
 			psDroid->psTarStats[0] = psOrder->psStats;
 
 			actionDroidLoc(psDroid, DACTION_BUILD, psOrder->x,psOrder->y);
@@ -1979,7 +1941,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 			psDroid->order = DORDER_BUILD;
 			psDroid->orderX = psOrder->psObj[0]->x;
 			psDroid->orderY = psOrder->psObj[0]->y;
-			psDroid->psTarget[0] = NULL;
+			setDroidTarget(psDroid, NULL, 0);
 			psDroid->psTarStats[0] = (BASE_STATS *)getModuleStat((STRUCTURE *)psOrder->psObj[0]);
 			ASSERT( psDroid->psTarStats[0] != NULL,
 				"orderUnitBase: should have found a module stats" );
@@ -2002,7 +1964,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		psDroid->orderY = psOrder->y;
 		psDroid->orderX2 = psOrder->x2;
 		psDroid->orderY2 = psOrder->y2;
-		psDroid->psTarget[0] = NULL;
+		setDroidTarget(psDroid, NULL, 0);
 		psDroid->psTarStats[0] = psOrder->psStats;
 		actionDroidLoc(psDroid, DACTION_BUILD, psOrder->x,psOrder->y);
 		break;
@@ -2016,7 +1978,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		psDroid->order = DORDER_HELPBUILD;
 		psDroid->orderX = psOrder->psObj[0]->x;
 		psDroid->orderY = psOrder->psObj[0]->y;
-		psDroid->psTarget[0] = psOrder->psObj[0];
+		setDroidTarget(psDroid, psOrder->psObj[0], 0);
 		psDroid->psTarStats[0]= (BASE_STATS *)((STRUCTURE *)psOrder->psObj[0])->pStructureType;
 		actionDroidLoc(psDroid, DACTION_BUILD, psDroid->orderX,psDroid->orderY);
 		break;
@@ -2029,7 +1991,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		psDroid->order = DORDER_DEMOLISH;
 		psDroid->orderX = psOrder->psObj[0]->x;
 		psDroid->orderY = psOrder->psObj[0]->y;
-		psDroid->psTarget[0] = psOrder->psObj[0];
+		setDroidTarget(psDroid, psOrder->psObj[0], 0);
 		oaInfo.objects[0] = (BASE_OBJECT *)psOrder->psObj[0];
 		actionDroidObj( psDroid, DACTION_DEMOLISH, &oaInfo);
 		break;
@@ -2043,7 +2005,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		psDroid->order = DORDER_REPAIR;
 		psDroid->orderX = psOrder->psObj[0]->x;
 		psDroid->orderY = psOrder->psObj[0]->y;
-		psDroid->psTarget[0] = psOrder->psObj[0];
+		setDroidTarget(psDroid, psOrder->psObj[0], 0);
 		oaInfo.objects[0] = (BASE_OBJECT *)psOrder->psObj[0];
 		actionDroidObj( psDroid, DACTION_REPAIR, &oaInfo);
 		break;
@@ -2054,25 +2016,24 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 			break;
 		}
 		psDroid->order = DORDER_DROIDREPAIR;
-		psDroid->psTarget[0] = psOrder->psObj[0];
+		setDroidTarget(psDroid, psOrder->psObj[0], 0);
 		oaInfo.objects[0] = (BASE_OBJECT *)psOrder->psObj[0];
 		actionDroidObj(psDroid, DACTION_DROIDREPAIR, &oaInfo);
 		break;
 	case DORDER_OBSERVE:
 		// keep an object within sensor view
 		psDroid->order = DORDER_OBSERVE;
-		psDroid->psTarget[0] = psOrder->psObj[0];
+		setDroidTarget(psDroid, psOrder->psObj[0], 0);
 		oaInfo.objects[0] = (BASE_OBJECT *)psOrder->psObj[0];
 		actionDroidObj(psDroid, DACTION_OBSERVE, &oaInfo);
 		break;
 	case DORDER_FIRESUPPORT:
-		//if (psDroid->numWeaps == 0)
-        if (psDroid->asWeaps[0].nStat == 0)
+		if (psDroid->asWeaps[0].nStat == 0)
 		{
 			break;
 		}
 		psDroid->order = DORDER_FIRESUPPORT;
-		psDroid->psTarget[0] = psOrder->psObj[0];
+		setDroidTarget(psDroid, psOrder->psObj[0], 0);
 		// let the order update deal with vtol droids
 		if (!vtolDroid(psDroid))
 		{
@@ -2224,7 +2185,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 				psDroid->order  = psOrder->order;
 				psDroid->orderX = psRepairFac->x;
 				psDroid->orderY = psRepairFac->y;
-				psDroid->psTarget[0] = (BASE_OBJECT *) psRepairFac;
+				setDroidTarget(psDroid, (BASE_OBJECT *) psRepairFac, 0);
                 /*if in multiPlayer, and the Transporter has been sent to be
                 repaired, need to find a suitable location to drop down*/
                 if (game.maxPlayers > 0 && psDroid->droidType == DROID_TRANSPORTER)
@@ -2266,7 +2227,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		psDroid->order = DORDER_EMBARK;
 		psDroid->orderX = psOrder->psObj[0]->x;
 		psDroid->orderY = psOrder->psObj[0]->y;
-		psDroid->psTarget[0] = psOrder->psObj[0];
+		setDroidTarget(psDroid, psOrder->psObj[0], 0);
 		actionDroidLoc(psDroid, DACTION_MOVE, psOrder->psObj[0]->x,psOrder->psObj[0]->y);
 		break;
     case DORDER_DISEMBARK:
@@ -2327,7 +2288,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 			psDroid->orderY = (UWORD)(psFactory->y +
 					world_coord(psFactory->pStructureType->baseBreadth) / 2 +
 					TILE_UNITS / 2);
-			psDroid->psTarget[0] = (BASE_OBJECT *) psFactory;
+			setDroidTarget(psDroid, (BASE_OBJECT *) psFactory, 0);
 			actionDroidObjLoc( psDroid, DACTION_MOVE, (BASE_OBJECT *) psFactory,
 								psDroid->orderX, psDroid->orderY);
 		}
@@ -2335,7 +2296,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		break;
 	case DORDER_GUARD:
 		psDroid->order = DORDER_GUARD;
-		psDroid->psTarget[0] = psOrder->psObj[0];
+		setDroidTarget(psDroid, psOrder->psObj[0], 0);
 		if (psOrder->psObj[0] != NULL)
 		{
 			psDroid->orderX = psOrder->psObj[0]->x;
@@ -2361,7 +2322,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		psDroid->order = DORDER_RESTORE;
 		psDroid->orderX = psOrder->psObj[0]->x;
 		psDroid->orderY = psOrder->psObj[0]->y;
-		psDroid->psTarget[0] = psOrder->psObj[0];
+		setDroidTarget(psDroid, psOrder->psObj[0], 0);
 		oaInfo.objects[0] = (BASE_OBJECT *)psOrder->psObj[0];
 		actionDroidObj( psDroid, DACTION_RESTORE, &oaInfo);
 		break;
@@ -2375,7 +2336,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		psDroid->order = DORDER_CLEARWRECK;
 		psDroid->orderX = psOrder->psObj[0]->x;
 		psDroid->orderY = psOrder->psObj[0]->y;
-		psDroid->psTarget[0] = psOrder->psObj[0];
+		setDroidTarget(psDroid, psOrder->psObj[0], 0);
 		oaInfo.objects[0] = (BASE_OBJECT *)psOrder->psObj[0];
 		actionDroidObj( psDroid, DACTION_CLEARWRECK, &oaInfo);
 		break;
@@ -2386,7 +2347,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 			break;
 		}
 		psDroid->order = DORDER_REARM;
-		psDroid->psTarget[0] = psOrder->psObj[0];
+		setDroidTarget(psDroid, psOrder->psObj[0], 0);
 		oaInfo.objects[0] = (BASE_OBJECT *)psOrder->psObj[0];
 		actionDroidObj(psDroid,DACTION_MOVETOREARM, &oaInfo);
         assignVTOLPad(psDroid, (STRUCTURE *)psOrder->psObj[0]);
@@ -2854,11 +2815,11 @@ void orderDroidAdd(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		//psDroid->asOrderList[psDroid->listSize].psObj = psOrder->psObj;
         if (psOrder->order == DORDER_BUILD || psOrder->order == DORDER_LINEBUILD)
         {
-		    psDroid->asOrderList[psDroid->listSize].psOrderTarget = (void *)psOrder->psStats;
-        }
+			setDroidOrderTarget(psDroid, (void *)psOrder->psStats, psDroid->listSize);
+		}
         else
         {
-		    psDroid->asOrderList[psDroid->listSize].psOrderTarget = (void *)psOrder->psObj[0];
+			setDroidOrderTarget(psDroid, (void *)psOrder->psObj[0], psDroid->listSize);
         }
 		psDroid->asOrderList[psDroid->listSize].x = (UWORD)psOrder->x;
 		psDroid->asOrderList[psDroid->listSize].y = (UWORD)psOrder->y;
