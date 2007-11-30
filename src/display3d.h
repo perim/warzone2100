@@ -28,9 +28,19 @@
 #include "objectdef.h"
 #include "message.h"
 
-extern BOOL xInOrder, yInOrder, yBeforeX, spinScene;
 
-extern UDWORD mapX,mapY;
+/*!
+ * Special tile types
+ */
+typedef enum
+{
+	RIVERBED_TILE = 5, //! Underwater ground
+	WATER_TILE = 17, //! Water surface
+	RUBBLE_TILE = 54, //! You can drive over these
+	BLOCKING_RUBBLE_TILE = 67 //! You cannot drive over these
+} TILE_ID;
+
+
 extern void	setViewAngle(SDWORD angle);
 extern UDWORD getViewDistance(void);
 extern void	setViewDistance(UDWORD dist);
@@ -48,8 +58,6 @@ extern void renderDroid					( DROID *psDroid );
 extern void renderStructure				( STRUCTURE *psStructure );
 extern void renderFeature				( FEATURE *psFeature );
 extern void renderProximityMsg			( PROXIMITY_DISPLAY	*psProxDisp);
-extern void drawTerrainTile				( UDWORD i, UDWORD j, BOOL onWaterEdge );
-extern void drawTerrainWaterTile		( UDWORD i, UDWORD j);
 extern void renderProjectile			( PROJECTILE *psCurr);
 extern void renderAnimComponent			( const COMPONENT_OBJECT *psObj );
 extern void renderDeliveryPoint			( FLAG_POSITION *psPosition );
@@ -77,7 +85,7 @@ extern BOOL	clipXY ( SDWORD x, SDWORD y);
 
 extern BOOL init3DView(void);
 extern void initViewPosition(void);
-extern iView player,camera;
+extern iView player;
 extern UDWORD distance;
 extern UDWORD terrainOutline;
 extern UDWORD xOffset,yOffset;
@@ -91,7 +99,6 @@ extern Sint32 playerXTile, playerZTile, // -> lighting.c
  rx, rz; // -> atmos.c
 
 extern SDWORD scrollSpeed;
-extern UDWORD worldAngle;
 //extern void	assignSensorTarget( DROID *psDroid );
 extern void assignSensorTarget( BASE_OBJECT *psObj );
 extern void assignDestTarget( void );
@@ -104,12 +111,7 @@ extern void setRubbleTile(UDWORD num);
 extern SDWORD	getCentreX( void );
 extern SDWORD	getCentreZ( void );
 
-
 extern SDWORD mouseTileX, mouseTileY;
-extern BOOL yBeforeX;
-extern UDWORD numDroidsSelected;
-extern UDWORD intensity1, intensity2, intensity3;
-extern UDWORD lightLevel;
 
 #define INITIAL_DESIRED_PITCH (325)
 #define INITIAL_STARTING_PITCH (-75)
@@ -117,26 +119,9 @@ extern UDWORD lightLevel;
 
 extern BOOL bRender3DOnly;
 
-extern const UDWORD visibleXTiles;
-extern const UDWORD visibleYTiles;
+extern const Vector2i visibleTiles;
 
-// Expanded PIEVERTEX.
-typedef struct {
-	// PIEVERTEX.
-	int x, y, z; unsigned int u, v; PIELIGHT light, specular;
-	Vector3i screen; //! Screenspace tile coordinates
-	// Extra data for water:
-	Vector3i water; //! Screenspace water coordinates
-	int water_height; //! Worldspace water height
-	PIELIGHT wlight; //! Special water lighting
-	UBYTE drawInfo; //! Draw this tile?
-	UBYTE bWater; //! Is it a watertile?
-} SVMESH;
-
-extern SVMESH tileScreenInfo[LAND_YGRD][LAND_XGRD];
-
-/* load IMDs AFTER RESOURCE FILE */
-extern BOOL loadExtraIMDs(void);
+extern TERRAIN_VERTEX tileScreenInfo[LAND_YGRD][LAND_XGRD];
 
 /*returns the graphic ID for a droid rank*/
 extern UDWORD  getDroidRankGraphic(DROID *psDroid);

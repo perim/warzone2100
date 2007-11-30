@@ -66,7 +66,6 @@
 #include "intimage.h"
 #include "intdisplay.h"
 #include "design.h"
-#include "text.h"
 #include "component.h"
 #include "lib/script/script.h"
 #include "scripttabs.h"
@@ -76,6 +75,7 @@
 #include "console.h"
 #include "cmddroid.h"
 #include "scriptextern.h"
+#include "mission.h"
 
 #include "multiplay.h"
 #include "multistat.h"
@@ -482,14 +482,14 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	if (psCurrTemplate != NULL)
 	{
 		memcpy(&sCurrDesign, psCurrTemplate, sizeof(DROID_TEMPLATE));
-		strncpy(aCurrName, getStatName( psCurrTemplate ), WIDG_MAXSTR - 1);
-		strcpy( sCurrDesign.aName, aCurrName );
+		strlcpy(aCurrName, getStatName(psCurrTemplate), sizeof(aCurrName));
+		strlcpy(sCurrDesign.aName, aCurrName, sizeof(sCurrDesign.aName));
 	}
 	else
 	{
 		memcpy(&sCurrDesign, &sDefaultDesignTemplate, sizeof(DROID_TEMPLATE));
-		strcpy(aCurrName, _("New Vehicle"));
-		strcpy( sCurrDesign.aName, aCurrName );
+		strlcpy(aCurrName, _("New Vehicle"), sizeof(aCurrName));
+		strlcpy(sCurrDesign.aName, aCurrName, sizeof(sCurrDesign.aName));
 	}
 
 	/* Add the design templates form */
@@ -542,7 +542,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 #else
 	sButInit.pDisplay = intDisplayButtonHilight;
 #endif
-	sButInit.pUserData = (void*)PACKDWORD_TRI(1, IMAGE_DES_BODYH, IMAGE_DES_BODY);
+	sButInit.UserData = PACKDWORD_TRI(1, IMAGE_DES_BODYH, IMAGE_DES_BODY);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -564,7 +564,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 #else
 	sButInit.pDisplay = intDisplayButtonHilight;
 #endif
-	sButInit.pUserData = (void*)PACKDWORD_TRI(1, IMAGE_DES_PROPULSIONH, IMAGE_DES_PROPULSION);
+	sButInit.UserData = PACKDWORD_TRI(1, IMAGE_DES_PROPULSIONH, IMAGE_DES_PROPULSION);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -587,7 +587,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 #else
 	sButInit.pDisplay = intDisplayButtonHilight;
 #endif
-	sButInit.pUserData = (void*)PACKDWORD_TRI(1, IMAGE_DES_TURRETH, IMAGE_DES_TURRET);
+	sButInit.UserData = PACKDWORD_TRI(1, IMAGE_DES_TURRETH, IMAGE_DES_TURRET);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -612,7 +612,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 #else
 	sButInit.pDisplay = intDisplayButtonHilight;
 #endif
-	sButInit.pUserData = (void*)PACKDWORD_TRI(1, IMAGE_DES_TURRETH, IMAGE_DES_TURRET);
+	sButInit.UserData = PACKDWORD_TRI(1, IMAGE_DES_TURRETH, IMAGE_DES_TURRET);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -638,7 +638,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 #else
 	sButInit.pDisplay = intDisplayButtonHilight;
 #endif
-	sButInit.pUserData = (void*)PACKDWORD_TRI(1, IMAGE_DES_TURRETH, IMAGE_DES_TURRET);
+	sButInit.UserData = PACKDWORD_TRI(1, IMAGE_DES_TURRETH, IMAGE_DES_TURRET);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -655,7 +655,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sButInit.pTip = _("Delete Design");
 	sButInit.FontID = font_regular;
 	sButInit.pDisplay = intDisplayButtonHilight;
-	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_DES_BINH, IMAGE_DES_BIN);
+	sButInit.UserData = PACKDWORD_TRI(0,IMAGE_DES_BINH, IMAGE_DES_BIN);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -759,7 +759,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sLabInit.FontID = font_regular;
 	sLabInit.pDisplay = intDisplayImage;
     //just to confuse things even more - the graphics were named incorrectly!
-	sLabInit.pUserData = (void*)IMAGE_DES_ARMOUR_EXPLOSIVE;//IMAGE_DES_ARMOUR_KINETIC;
+	sLabInit.UserData = IMAGE_DES_ARMOUR_EXPLOSIVE;//IMAGE_DES_ARMOUR_KINETIC;
 	if (!widgAddLabel(psWScreen, &sLabInit))
 	{
 		return TRUE;
@@ -769,7 +769,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 //	sLabInit.pText = "Armour against Heat weapons";
 	sLabInit.pTip = _("Thermal Armour");
 	sLabInit.pDisplay = intDisplayImage;
-	sLabInit.pUserData = (void*)IMAGE_DES_ARMOUR_KINETIC;//IMAGE_DES_ARMOUR_EXPLOSIVE;
+	sLabInit.UserData = IMAGE_DES_ARMOUR_KINETIC;//IMAGE_DES_ARMOUR_EXPLOSIVE;
 	if (!widgAddLabel(psWScreen, &sLabInit))
 	{
 		return TRUE;
@@ -790,7 +790,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 //	sLabInit.pText = "Power";
 	sLabInit.pTip = _("Engine Output");
 	sLabInit.pDisplay = intDisplayImage;
-	sLabInit.pUserData = (void*)IMAGE_DES_POWER;
+	sLabInit.UserData = IMAGE_DES_POWER;
 	if (!widgAddLabel(psWScreen, &sLabInit))
 	{
 		return TRUE;
@@ -800,7 +800,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 //	sLabInit.pText = "Weight";
 	sLabInit.pTip = _("Weight");
 	sLabInit.pDisplay = intDisplayImage;
-	sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
+	sLabInit.UserData = IMAGE_DES_WEIGHT;
 	if (!widgAddLabel(psWScreen, &sLabInit))
 	{
 		return TRUE;
@@ -831,7 +831,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 	sLabInit.y = DES_POWERY;
 	sLabInit.pTip = _("Total Power Required");
 	sLabInit.pDisplay = intDisplayImage;
-	sLabInit.pUserData = (void*)IMAGE_DES_POWER;
+	sLabInit.UserData = IMAGE_DES_POWER;
 	if (!widgAddLabel(psWScreen, &sLabInit))
 	{
 		return TRUE;
@@ -864,7 +864,7 @@ static BOOL _intAddDesign( BOOL bShowCentreScreen )
 						iV_GetImageHeight(IntImages,IMAGE_DES_BODYPOINTS));
 	sLabInit.pTip = _("Total Body Points");
 	sLabInit.pDisplay = intDisplayImage;
-	sLabInit.pUserData = (void*)IMAGE_DES_BODYPOINTS;
+	sLabInit.UserData = IMAGE_DES_BODYPOINTS;
 	if (!widgAddLabel(psWScreen, &sLabInit))
 	{
 		return TRUE;
@@ -999,7 +999,7 @@ static BOOL _intAddTemplateForm(DROID_TEMPLATE *psSelected)
 	sFormInit.tabVertOffset = (DES_TAB_HEIGHT/2);			//(DES_TAB_HEIGHT/2)+2;
 	sFormInit.tabMajorThickness = DES_TAB_HEIGHT;
 	sFormInit.pFormDisplay = intDisplayObjectForm;
-	sFormInit.pUserData = (void*)&StandardTab;
+	sFormInit.pUserData = &StandardTab;
 	sFormInit.pTabDisplay = intDisplayTab;
 	for (i=0; i< sFormInit.numMajor; i++)
 	{
@@ -1081,14 +1081,14 @@ BOOL intAddTemplateButtons(UDWORD formID, UDWORD formWidth, UDWORD formHeight,
 
 
 			// On the playstation the tips are additionaly setup when they are displayed ... because we only have one text name buffer
-			strncpy(aButText, getTemplateName( psTempl ), DES_COMPBUTMAXCHAR);
+			strlcpy(aButText, getTemplateName( psTempl ), sizeof(aButText));
 			sButInit.pTip = getTemplateName(psTempl);
 
 			BufferID = GetStatBuffer();
 			ASSERT( BufferID >= 0,"Unable to aquire stat buffer." );
 			RENDERBUTTON_INUSE(&StatBuffers[BufferID]);
 			StatBuffers[BufferID].Data = (void*)psTempl;
-			sButInit.pUserData = (void*)&StatBuffers[BufferID];
+			sButInit.pUserData = &StatBuffers[BufferID];
 			sButInit.pDisplay = intDisplayTemplateButton;
 
 			if (!widgAddForm(psWScreen, &sButInit))
@@ -1100,11 +1100,15 @@ BOOL intAddTemplateButtons(UDWORD formID, UDWORD formWidth, UDWORD formHeight,
 			sBarInit.size = (UWORD)(psTempl->powerPoints  / POWERPOINTS_DROIDDIV);
 			if(sBarInit.size > WBAR_SCALE) sBarInit.size = WBAR_SCALE;
 
-			sprintf(TempString,"%s - %d",_("Power Usage"),psTempl->powerPoints);
+			snprintf(TempString, sizeof(TempString), "%s - %d",_("Power Usage"), psTempl->powerPoints);
+			// Guarantee to nul-terminate
+			TempString[sizeof(TempString) - 1] = '\0';
+
 			ASSERT( BufferPos+strlen(TempString)+1 < STRING_BUFFER_SIZE,"String Buffer Overrun" );
-			strcpy(&StringBuffer[BufferPos],TempString);
+
+			strlcpy(&StringBuffer[BufferPos], TempString, sizeof(StringBuffer) - BufferPos);
 			sBarInit.pTip = &StringBuffer[BufferPos];
-			BufferPos += strlen(TempString)+1;
+			BufferPos += strlen(TempString) + 1;
 
 			sBarInit.formID = sButInit.id;
 			if (!widgAddBarGraph(psWScreen, &sBarInit))
@@ -1413,13 +1417,13 @@ static const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 		 psTemplate->asParts[COMP_BRAIN]		!= 0    )
 	{
 		const char * pStr = getStatName( psStats );
-		strcpy( aCurrName, pStr );
-		strcat( aCurrName, " " );
+		strlcpy(aCurrName, pStr, sizeof(aCurrName));
+		strlcat(aCurrName, " ", sizeof(aCurrName));
 	}
 
 	if ( psTemplate->numWeaps > 1 )
 	{
-		strcat( aCurrName, "Hydra " );
+		strlcat(aCurrName, "Hydra ", sizeof(aCurrName));
 	}
 
 	psStats = (COMP_BASE_STATS *) (asBodyStats + psTemplate->asParts[COMP_BODY]);
@@ -1433,8 +1437,8 @@ static const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 			return NULL;
 		}
 
-		strcat( aCurrName, pStr );
-		strcat( aCurrName, " " );
+		strlcat(aCurrName, pStr, sizeof(aCurrName));
+		strlcat(aCurrName, " ", sizeof(aCurrName));
 	}
 
 	psStats = (COMP_BASE_STATS *) (asPropulsionStats + psTemplate->asParts[COMP_PROPULSION]);
@@ -1448,7 +1452,7 @@ static const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 			return NULL;
 		}
 
-		strcat( aCurrName, pStr );
+		strlcat(aCurrName, pStr, sizeof(aCurrName));
 	}
 
 	return aCurrName;
@@ -1463,12 +1467,12 @@ static void intSetEditBoxTextFromTemplate( DROID_TEMPLATE *psTemplate )
 	widgSetString(psWScreen, IDDES_NAMEBOX, getStatName(psTemplate));
 #else
 
-	strcpy( aCurrName, "" );
+	strlcpy(aCurrName, "", sizeof(aCurrName));
 
 	/* show component names if default template else show stat name */
 	if ( psTemplate->droidType != DROID_DEFAULT )
 	{
-		strcpy( aCurrName, getTemplateName(psTemplate) );
+		strlcpy(aCurrName, getTemplateName(psTemplate), sizeof(aCurrName));
 	}
 	else
 	{
@@ -1629,7 +1633,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.id = IDDES_SENSORRANGELAB;
 		sLabInit.pTip = _("Sensor Range");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_RANGE;
+		sLabInit.UserData = IMAGE_DES_RANGE;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1638,7 +1642,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sLabInit.pTip = _("Sensor Power");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_POWER;
+		sLabInit.UserData = IMAGE_DES_POWER;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1647,7 +1651,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
+		sLabInit.UserData = IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1679,7 +1683,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.id = IDDES_ECMPOWERLAB;
 		sLabInit.pTip = _("ECM Power");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_POWER;
+		sLabInit.UserData = IMAGE_DES_POWER;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1688,7 +1692,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
+		sLabInit.UserData = IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1722,7 +1726,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.id = IDDES_CONSTPOINTSLAB;
 		sLabInit.pTip = _("Build Points");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_BUILDRATE;
+		sLabInit.UserData = IMAGE_DES_BUILDRATE;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1731,7 +1735,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
+		sLabInit.UserData = IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1765,7 +1769,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.id = IDDES_REPAIRPTLAB;
 		sLabInit.pTip = _("Build Points");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_BUILDRATE;
+		sLabInit.UserData = IMAGE_DES_BUILDRATE;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1774,7 +1778,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
+		sLabInit.UserData = IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1824,7 +1828,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.id = IDDES_WEAPRANGELAB;
 		sLabInit.pTip = _("Range");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_RANGE;
+		sLabInit.UserData = IMAGE_DES_RANGE;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1833,7 +1837,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sLabInit.pTip = _("Damage");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_DAMAGE;
+		sLabInit.UserData = IMAGE_DES_DAMAGE;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1842,7 +1846,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sLabInit.pTip = _("Rate-of-Fire");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_FIRERATE;
+		sLabInit.UserData = IMAGE_DES_FIRERATE;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1851,7 +1855,7 @@ static BOOL _intSetSystemForm(COMP_BASE_STATS *psStats)
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
+		sLabInit.UserData = IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -1998,7 +2002,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		sLabInit.id = IDDES_PROPAIRLAB;
 		sLabInit.pTip = _("Air Speed");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_HOVER;
+		sLabInit.UserData = IMAGE_DES_HOVER;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -2007,7 +2011,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
+		sLabInit.UserData = IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -2051,7 +2055,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		sLabInit.id = IDDES_PROPROADLAB;
 		sLabInit.pTip = _("Road Speed");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_ROAD;
+		sLabInit.UserData = IMAGE_DES_ROAD;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -2060,7 +2064,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sLabInit.pTip = _("Off-Road Speed");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_CROSSCOUNTRY;
+		sLabInit.UserData = IMAGE_DES_CROSSCOUNTRY;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -2069,7 +2073,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sLabInit.pTip = _("Water Speed");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_HOVER;	//WATER;
+		sLabInit.UserData = IMAGE_DES_HOVER;	//WATER;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -2078,7 +2082,7 @@ static BOOL intSetPropulsionForm(PROPULSION_STATS *psStats)
 		sLabInit.y += DES_CLICKBARHEIGHT + DES_CLICKGAP;
 		sLabInit.pTip = _("Weight");
 		sLabInit.pDisplay = intDisplayImage;
-		sLabInit.pUserData = (void*)IMAGE_DES_WEIGHT;
+		sLabInit.UserData = IMAGE_DES_WEIGHT;
 		if (!widgAddLabel(psWScreen, &sLabInit))
 		{
 			return FALSE;
@@ -2167,7 +2171,7 @@ static BOOL intAddComponentForm(UDWORD numButtons)
 	sFormInit.tabVertOffset = (DES_TAB_HEIGHT/2);
 	sFormInit.tabMajorThickness = DES_TAB_HEIGHT;
 	sFormInit.pFormDisplay = intDisplayObjectForm;
-	sFormInit.pUserData = (void*)&StandardTab;
+	sFormInit.pUserData = &StandardTab;
 	sFormInit.pTabDisplay = intDisplayTab;
 	for (i=0; i< sFormInit.numMajor; i++)
 	{
@@ -2200,7 +2204,7 @@ static BOOL intAddSystemButtons(SDWORD mode)
 	sButInit.pTip = _("Weapons");
 	sButInit.FontID = font_regular;
 	sButInit.pDisplay = intDisplayButtonHilight;
-	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_DES_EXTRAHI , IMAGE_DES_WEAPONS);
+	sButInit.UserData = PACKDWORD_TRI(0,IMAGE_DES_EXTRAHI , IMAGE_DES_WEAPONS);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -2224,7 +2228,7 @@ static BOOL intAddSystemButtons(SDWORD mode)
 	    sButInit.pTip = _("Systems");
 	    sButInit.FontID = font_regular;
 	    sButInit.pDisplay = intDisplayButtonHilight;
-	    sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_DES_EXTRAHI , IMAGE_DES_SYSTEMS);
+	    sButInit.UserData = PACKDWORD_TRI(0,IMAGE_DES_EXTRAHI , IMAGE_DES_SYSTEMS);
 	    if (!widgAddButton(psWScreen, &sButInit))
 	    {
 		    return FALSE;
@@ -2243,7 +2247,7 @@ static BOOL intAddSystemButtons(SDWORD mode)
 	sButInit.pTip = _("Command Turrets");
 	sButInit.FontID = font_regular;
 	sButInit.pDisplay = intDisplayButtonHilight;
-	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_DES_EXTRAHI , IMAGE_DES_COMMAND);
+	sButInit.UserData = PACKDWORD_TRI(0,IMAGE_DES_EXTRAHI , IMAGE_DES_COMMAND);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -2390,14 +2394,14 @@ static BOOL intAddComponentButtons(COMP_BASE_STATS *psStats, UDWORD size,
 		}
 
 		/* Set the tip and add the button */
-		strncpy(aButText, getStatName(psCurrStats), DES_COMPBUTMAXCHAR);
+		strlcpy(aButText, getStatName(psCurrStats), sizeof(aButText));
 		sButInit.pTip = getStatName(psCurrStats);
 
 		BufferID = GetObjectBuffer();
 		ASSERT( BufferID >= 0,"Unable to acquire Topic buffer." );
 		RENDERBUTTON_INUSE(&ObjectBuffers[BufferID]);
 		ObjectBuffers[BufferID].Data = psCurrStats;
-		sButInit.pUserData = (void*)&ObjectBuffers[BufferID];
+		sButInit.pUserData = &ObjectBuffers[BufferID];
 		sButInit.pDisplay = intDisplayComponentButton;
 
 		if (!widgAddForm(psWScreen, &sButInit))
@@ -2590,7 +2594,7 @@ static BOOL intAddExtraSystemButtons(UDWORD sensorIndex, UDWORD ecmIndex,
 			}
 
 			// Set the tip and add the button
-			strncpy(aButText, getStatName(psCurrStats), DES_COMPBUTMAXCHAR);
+			strlcpy(aButText, getStatName(psCurrStats), sizeof(aButText));
 			sButInit.pTip = getStatName(psCurrStats);
 
 			BufferID = sButInit.id-IDDES_EXTRASYSSTART;
@@ -2622,7 +2626,7 @@ static BOOL intAddExtraSystemButtons(UDWORD sensorIndex, UDWORD ecmIndex,
 			{
 				System0Buffers[BufferID].Data = psCurrStats;
 			}
-			sButInit.pUserData = (void*)&System0Buffers[BufferID];
+			sButInit.pUserData = &System0Buffers[BufferID];
 
 			sButInit.pDisplay = intDisplayComponentButton;
 
@@ -3374,8 +3378,7 @@ static void intSetPropulsionStats(PROPULSION_STATS *psStats)
     /* propulsion weight is a percentage of the body weight */
     if (sCurrDesign.asParts[COMP_BODY] != 0)
     {
-       	weight = psStats->weight * (asBodyStats + sCurrDesign.asParts[COMP_BODY])->
-            weight / 100;
+       	weight = psStats->weight * asBodyStats[sCurrDesign.asParts[COMP_BODY]].weight / 100;
     }
     else
     {
@@ -3455,8 +3458,7 @@ static void intSetPropulsionShadowStats(PROPULSION_STATS *psStats)
         /* propulsion weight is a percentage of the body weight */
         if (sCurrDesign.asParts[COMP_BODY] != 0)
         {
-       	    weight = psStats->weight * (asBodyStats + sCurrDesign.asParts[COMP_BODY])->
-                weight / 100;
+       	    weight = psStats->weight * asBodyStats[sCurrDesign.asParts[COMP_BODY]].weight / 100;
         }
         else
         {
@@ -3552,7 +3554,7 @@ static BOOL intValidTemplate(DROID_TEMPLATE *psTempl)
 	psTempl->droidType = droidTemplateType(psTempl);
 
 	/* copy current name into template */
-	strcpy( sCurrDesign.aName, aCurrName );
+	strlcpy(sCurrDesign.aName, aCurrName, sizeof(sCurrDesign.aName));
 
 	return TRUE;
 }
@@ -3651,9 +3653,8 @@ void intProcessDesign(UDWORD id)
 		{
 			desCreateDefaultTemplate();
 
-			strncpy(aCurrName, _("New Vehicle"),
-				WIDG_MAXSTR-1);
-			strcpy( sCurrDesign.aName, aCurrName );
+			strlcpy(aCurrName, _("New Vehicle"), sizeof(aCurrName));
+			strlcpy(sCurrDesign.aName, aCurrName, sizeof(sCurrDesign.aName));
 
 			/* hide body and system component buttons */
 			widgHide( psWScreen, IDDES_SYSTEMBUTTON );
@@ -3692,7 +3693,7 @@ void intProcessDesign(UDWORD id)
 			{
 				/* Set the new template */
 				memcpy(&sCurrDesign, psTempl, sizeof(DROID_TEMPLATE));
-				strncpy( aCurrName, getTemplateName(psTempl), WIDG_MAXSTR-1);
+				strlcpy(aCurrName, getTemplateName(psTempl), sizeof(aCurrName));
 
 				/* reveal body and propulsion component buttons */
 				widgReveal( psWScreen, IDDES_BODYBUTTON );
@@ -4009,8 +4010,7 @@ void intProcessDesign(UDWORD id)
 		/* update name if not customised */
 		if ( bTemplateNameCustomised == FALSE )
 		{
-			strcpy( sCurrDesign.aName,
-					GetDefaultTemplateName(&sCurrDesign) );
+			strlcpy(sCurrDesign.aName, GetDefaultTemplateName(&sCurrDesign), sizeof(sCurrDesign.aName));
 		}
 
 		/* Update the name in the edit box */
@@ -4174,8 +4174,7 @@ void intProcessDesign(UDWORD id)
 		/* update name if not customised */
 		if ( bTemplateNameCustomised == FALSE )
 		{
-			strcpy( sCurrDesign.aName,
-					GetDefaultTemplateName(&sCurrDesign) );
+			strlcpy(sCurrDesign.aName, GetDefaultTemplateName(&sCurrDesign), sizeof(sCurrDesign.aName));
 		}
 
 		/* Update the name in the edit box */
@@ -4228,9 +4227,8 @@ void intProcessDesign(UDWORD id)
 			break;
 			/* The name edit box */
 		case IDDES_NAMEBOX:
-			strncpy(sCurrDesign.aName, widgGetString(psWScreen, IDDES_NAMEBOX),
-						DROID_MAXNAME);
-			strncpy(aCurrName, sCurrDesign.aName,WIDG_MAXSTR-1);
+			strlcpy(sCurrDesign.aName, widgGetString(psWScreen, IDDES_NAMEBOX), sizeof(sCurrDesign.aName));
+			strlcpy(aCurrName, sCurrDesign.aName, sizeof(aCurrName));
 			break;
 		case IDDES_BIN:
 			/* Find the template for the current button */
@@ -4312,8 +4310,8 @@ void intProcessDesign(UDWORD id)
 
 				/* Set the new template */
 				memcpy(&sCurrDesign, psTempl, sizeof(DROID_TEMPLATE));
-				//strcpy( sCurrDesign.aName, aCurrName );
-				strncpy( aCurrName, getTemplateName(psTempl), WIDG_MAXSTR-1);
+				//strlcpy(sCurrDesign.aName, aCurrName, sizeof(aCurrName));
+				strlcpy(aCurrName, getTemplateName(psTempl), sizeof(aCurrName));
 
 				intSetEditBoxTextFromTemplate( psTempl );
 
@@ -4929,8 +4927,7 @@ static BOOL saveTemplate(void)
 
 		/* Copy the template */
 		memcpy(psTempl, &sCurrDesign, sizeof(DROID_TEMPLATE));
-		strncpy(psTempl->aName, aCurrName, DROID_MAXNAME);
-		psTempl->aName[DROID_MAXNAME - 1] = 0;
+		strlcpy(psTempl->aName, aCurrName, sizeof(psTempl->aName));
 
 		/* Now update the droid template form */
 		widgDelete(psWScreen, IDDES_TEMPLFORM);
@@ -5037,6 +5034,8 @@ void setDesignPauseState(void)
 {
 	if (!bMultiPlayer)
 	{
+		//need to clear mission widgets from being shown on design screen
+		clearMissionWidgets();
 		gameTimeStop();
 		setGameUpdatePause(TRUE);
 		setScrollPause(TRUE);
@@ -5048,6 +5047,8 @@ void resetDesignPauseState(void)
 {
 	if (!bMultiPlayer)
 	{
+		//put any widgets back on for the missions
+		resetMissionWidgets();
 		setGameUpdatePause(FALSE);
 		setScrollPause(FALSE);
 		gameTimeStart();

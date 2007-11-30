@@ -40,12 +40,10 @@
 #include "message.h"
 #include "intelmap.h"
 #include "map.h"
-#include "player.h"
 #include "structure.h"
 #include "display3d.h"
 #include "research.h"
 #include "lib/sound/sound.h"
-#include "text.h"
 #include "lib/sound/audio_id.h"
 #include "power.h"
 #include "console.h"
@@ -1596,7 +1594,7 @@ BOOL	scrAttackLocation(void)
 		return FALSE;
 	}
 
-	attackLocation(x, y, player);
+	debug(LOG_ERROR, "UNUSED FUNCTION attackLocation called - do not use!");
 
 	return TRUE;
 }
@@ -2636,32 +2634,13 @@ BOOL scrSetScrollParams(void)
 		return FALSE;
 	}
 
-	//check the values entered are valid
-	if (minX < 0)
-	{
-		ASSERT( FALSE, "Minimum scroll x value %d is less than zero - ", minX );
-		return FALSE;
-	}
-	if (minY < 0)
-	{
-		ASSERT( FALSE, "Minimum scroll y value %d is less than zero - ", minY );
-	}
-	if (maxX > (SDWORD)mapWidth)
-	{
-		ASSERT( FALSE, "Maximum scroll x value %d is greater than mapWidth - ", maxX );
-	}
-	if (maxX < (SDWORD)(visibleXTiles+1))
-	{
-		ASSERT( FALSE, "Maximum scroll x %d has to be bigger than Visible Width(22) - ", maxX );
-	}
-	if (maxY > (SDWORD)mapHeight)
-	{
-		ASSERT( FALSE, "Maximum scroll y value %d is greater than mapWidth - ", maxY );
-	}
-	if (maxY < (SDWORD)(visibleYTiles+1))
-	{
-		ASSERT( FALSE, "Maximum scroll y %d has to be bigger than Visible Height(22) - ", maxY );
-	}
+	// check that the values entered are valid
+	ASSERT(minX >= 0, "Minimum scroll x value %d is less than zero - ", minX);
+	ASSERT(minY >= 0, "Minimum scroll y value %d is less than zero - ", minY);
+	ASSERT(maxX <= mapWidth, "Maximum scroll x value %d is greater than mapWidth %d", maxX, (int)mapWidth);
+	ASSERT(maxY <= mapHeight, "Maximum scroll y value %d is greater than mapHeight %d", maxY, (int)mapHeight);
+	ASSERT(maxX <= visibleTiles.x, "Maximum scroll x %d has to be bigger than visible width %d - ", maxX, visibleTiles.x);
+	ASSERT(maxY <= visibleTiles.y, "Maximum scroll y %d has to be bigger than visible width %d - ", maxY, visibleTiles.y);
 
     prevMinX = scrollMinX;
     prevMinY = scrollMinY;
@@ -3715,7 +3694,7 @@ BOOL scrStartMission(void)
 
 	// tell the loop that a new level has to be loaded up - not yet!
 	//loopNewLevel = TRUE;
-	strcpy(pLevelName, pGame);
+	strlcpy(aLevelName, pGame, sizeof(aLevelName));
 
 	// find the level dataset
 	if (!levFindDataSet(pGame, &psNewLevel))
@@ -3947,22 +3926,19 @@ BOOL scrSetDepthFog(void)
 BOOL scrSetFogColour(void)
 {
 	SDWORD	red,green,blue;
-	SDWORD	scrFogColour;
+	PIELIGHT scrFogColour;
 
 	if (!stackPopParams(3, VAL_INT, &red, VAL_INT, &green, VAL_INT, &blue))
 	{
 		return FALSE;
 	}
 
+	scrFogColour.byte.r = red;
+	scrFogColour.byte.g = green;
+	scrFogColour.byte.b = blue;
+	scrFogColour.byte.a = 255;
 
-//	if (pie_GetRenderEngine() == ENGINE_GLIDE)
-//	{
-		red &= 0xff;
-		green &= 0xff;
-		blue &= 0xff;
-		scrFogColour = ((red << 16) + (green << 8) + blue);
-		pie_SetFogColour(scrFogColour);
-//	}
+	pie_SetFogColour(scrFogColour);
 
 	return TRUE;
 }
@@ -6703,7 +6679,7 @@ BOOL scrTutorialTemplates(void)
 	char			pName[MAX_NAME_SIZE];
 
 	// find ViperLtMGWheels
-	strcpy(pName,"ViperLtMGWheels");
+	strlcpy(pName, "ViperLtMGWheels", sizeof(pName));
 	if (!getResourceName(pName))
 	{
 		debug( LOG_ERROR, "tutorial template setup failed" );
@@ -10319,14 +10295,12 @@ VIEWDATA *HelpViewData(SDWORD sender, char *textMsg, UDWORD LocX, UDWORD LocY)
 	name[2] = 'l';
 	name[3] = 'p';
 	name[4] = '\0';
- 	psViewData->pName = (char *)malloc((strlen(name))+1);
+ 	psViewData->pName = strdup(name);
 	if (psViewData->pName == NULL)
 	{
 		debug(LOG_ERROR,"prepairHelpViewData() - ViewData Name - Out of memory");
 		return NULL;
 	}
-
-	strcpy(psViewData->pName,name);
 
 	//allocate space for text strings
 	psViewData->ppTextMsg = (char **) malloc(sizeof(char *));
@@ -10517,10 +10491,12 @@ SDWORD getNumRepairedBy(DROID *psDroidToCheck, SDWORD player)
 			continue;
 		}
 
-		if((psDroid->psTarget[0] != NULL) && (psDroid->psTarget[0]->type == OBJ_DROID))
+		if (psDroid->psTarget != NULL && psDroid->psTarget->type == OBJ_DROID)
 		{
-			if(((DROID *)psDroid->psTarget) == psDroidToCheck)
+			if ((DROID *)psDroid->psTarget == psDroidToCheck)
+			{
 				numRepaired++;
+			}
 		}
 	}
 
@@ -11214,11 +11190,15 @@ BOOL scrGetChatCmdDescription(void)
 
 	/* Allocate memory for the comamnd string */
 	pChatCommand = (char*)malloc(MAXSTRLEN);
-
-	ASSERT(pChatCommand != NULL, "scrGetCommandDescription: out of memory");
+	if (pChatCommand == NULL)
+	{
+		debug(LOG_ERROR, "scrGetCmdDescription: Out of memory!");
+		abort();
+		return FALSE;
+	}
 
 	/* Copy command */
-	strcpy(pChatCommand, chat_msg.cmdData[cmdIndex].pCmdDescription);
+	strlcpy(pChatCommand, chat_msg.cmdData[cmdIndex].pCmdDescription, MAXSTRLEN);
 
 	/* Make scrFunctionResult point to the valid command */
 	scrFunctionResult.v.sval = pChatCommand;

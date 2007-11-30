@@ -230,8 +230,8 @@ BOOL recvDroidEmbark(NETMSG *pMsg)
 
 		// Init the order for when disembark
 		psDroid->order = DORDER_NONE;
-		clearDroidTargets(psDroid);
-		psDroid->psTarStats[0] = NULL;
+		setDroidTarget(psDroid, NULL);
+		psDroid->psTarStats = NULL;
 	}
 
 	return TRUE;
@@ -777,7 +777,6 @@ static void ProcessDroidOrder(DROID *psDroid, DROID_ORDER order, uint32_t x, uin
 	// Target is an object
 	else
 	{
-		DROID_OACTION_INFO oaInfo = {{NULL}};
 		BASE_OBJECT *psObj = NULL;
 		DROID		*pD;
 
@@ -816,8 +815,7 @@ static void ProcessDroidOrder(DROID *psDroid, DROID_ORDER order, uint32_t x, uin
 		}
 
 		turnOffMultiMsg(TRUE);
-		oaInfo.objects[0] = psObj;
-		orderDroidObj(psDroid, order, &oaInfo);
+		orderDroidObj(psDroid, order, psObj);
 		turnOffMultiMsg(FALSE);
 	}
 }
@@ -927,9 +925,9 @@ BOOL sendWholeDroid(DROID *pD, UDWORD dest)
 
 	for (i = 0; i < pD->numWeaps; i++)
 	{
-		if (pD->psTarget[i])
+		if (pD->psActionTarget[i])
 		{
-			NetAdd(m,sizecount,pD->psTarget[i]->id);		sizecount+=sizeof(pD->psTarget[i]->id);
+			NetAdd(m,sizecount,pD->psActionTarget[i]->id);		sizecount+=sizeof(pD->psActionTarget[i]->id);
 			bNoTarget = FALSE;
 		}
 	}
@@ -939,9 +937,9 @@ BOOL sendWholeDroid(DROID *pD, UDWORD dest)
 		NetAdd(m,sizecount,noTarget);				sizecount+=sizeof(noTarget);
 	}
 
-	if (pD->psTarStats[0])
+	if (pD->psTarStats)
 	{
-		NetAdd(m,sizecount,pD->psTarStats[0]->ref);	sizecount+=sizeof(pD->psTarStats[0]->ref);
+		NetAdd(m,sizecount,pD->psTarStats->ref);	sizecount+=sizeof(pD->psTarStats->ref);
 	}
 	else
 	{
@@ -976,8 +974,7 @@ BOOL receiveWholeDroid(NETMSG *m)
 	NetGet(m,sizecount,player);					sizecount+=sizeof(player);
 
 	dt.pName = (char*)&dt.aName;
-	strncpy(dt.aName, &(m->body[sizecount]), DROID_MAXNAME-1);
-	dt.aName[DROID_MAXNAME-1]=0;		// just in case.
+	strlcpy(dt.aName, &(m->body[sizecount]), sizeof(dt.aName));
 	sizecount+=strlen(dt.pName)+1;		// name is pointed at directly into the buffer.
 
 	if(dt.asWeaps[0] == 0)
@@ -1031,9 +1028,9 @@ BOOL receiveWholeDroid(NETMSG *m)
 	for (i = 0;i < dt.numWeaps;i++)
 	{
 		NetGet(m, sizecount, id);			sizecount += sizeof(id);
-		pD->psTarget[i] = IdToPointer(id, ANYPLAYER);
+		pD->psActionTarget[i] = IdToPointer(id, ANYPLAYER);
 	}
-	pD->psTarStats[0] = NULL;
+	pD->psTarStats = NULL;
 
 	addDroid(pD, apsDroidLists);
 

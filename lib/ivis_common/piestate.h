@@ -83,15 +83,6 @@ typedef	enum	FOG_CAP
 				}
 				FOG_CAP;
 
-typedef	enum	TEX_CAP
-				{
-					TEX_CAP_2M,
-					TEX_CAP_8BIT,
-					TEX_CAP_FULL,
-					TEX_CAP_UNDEFINED
-				}
-				TEX_CAP;
-
 typedef	enum	COLOUR_MODE
 				{
 					COLOUR_FLAT_CONSTANT,
@@ -101,40 +92,17 @@ typedef	enum	COLOUR_MODE
 				}
 				COLOUR_MODE;
 
-typedef	enum	TEX_MODE
-				{
-					TEX_LOCAL,
-					TEX_NONE
-				}
-				TEX_MODE;
-
-typedef	enum	ALPHA_MODE
-				{
-					ALPHA_ITERATED,
-					ALPHA_CONSTANT
-				}
-				ALPHA_MODE;
-
-
 typedef struct	RENDER_STATE
 				{
 					FOG_CAP				fogCap;
 					BOOL				fogEnabled;
 					BOOL				fog;
-					UDWORD				fogColour;
+					PIELIGHT			fogColour;
 					SDWORD				texPage;
 					REND_MODE			rendMode;
-					BOOL				bilinearOn;
 					BOOL				keyingOn;
 					COLOUR_MODE			colourCombine;
-					TEX_MODE			texCombine;
-					ALPHA_MODE			alphaCombine;
 					TRANSLUCENCY_MODE	transMode;
-					UDWORD				colour;
-#ifdef STATES
-					BOOL				textured;
-					UBYTE				lightLevel;
-#endif
 				}
 				RENDER_STATE;
 
@@ -160,24 +128,18 @@ extern void pie_SetGammaValue(float val);
 //renderer capability
 extern void pie_SetFogCap(FOG_CAP val);
 extern FOG_CAP pie_GetFogCap(void);
-extern void pie_SetTexCap(TEX_CAP val);
-extern TEX_CAP pie_GetTexCap(void);
 //fog available
 extern void pie_EnableFog(BOOL val);
 extern BOOL pie_GetFogEnabled(void);
 //fog currently on
 extern void pie_SetFogStatus(BOOL val);
 extern BOOL pie_GetFogStatus(void);
-extern void pie_SetFogColour(UDWORD colour);
-extern UDWORD pie_GetFogColour(void) WZ_DECL_PURE;
+extern void pie_SetFogColour(PIELIGHT colour);
+extern PIELIGHT pie_GetFogColour(void) WZ_DECL_PURE;
 extern void pie_UpdateFogDistance(float begin, float end);
 //render states
 extern void pie_SetTexturePage(SDWORD num);
-extern void pie_SetBilinear(BOOL bilinearOn);
-extern BOOL pie_GetBilinear(void);
 extern void pie_SetColourKeyedBlack(BOOL keyingOn);
 extern void pie_SetRendMode(REND_MODE rendMode);
-extern void pie_SetColour(UDWORD val);
-extern UDWORD pie_GetColour(void);
 
 #endif // _pieState_h

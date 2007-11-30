@@ -28,11 +28,11 @@
 #include "lib/framework/frame.h"
 
 #include <time.h>			// for stats
-#include <SDL/SDL_thread.h>
+#include <SDL_thread.h>
 #ifdef WZ_OS_MAC
 #include <SDL_net/SDL_net.h>
 #else
-#include <SDL/SDL_net.h>
+#include <SDL_net.h>
 #endif
 #include <physfs.h>
 #include <string.h>
@@ -122,7 +122,7 @@ static NETBUFSOCKET*	bsocket = NULL;
 static NETBUFSOCKET*	connected_bsocket[MAX_CONNECTED_PLAYERS] = { NULL };
 static SDLNet_SocketSet	socket_set = NULL;
 static BOOL		is_server = FALSE;
-static TCPsocket	tmp_socket[MAX_TMP_SOCKETS] = { 0 };
+static TCPsocket	tmp_socket[MAX_TMP_SOCKETS] = { NULL };
 static SDLNet_SocketSet	tmp_socket_set = NULL;
 static NETMSG		message;
 static char*		hostname;
@@ -282,7 +282,7 @@ static unsigned int NET_CreatePlayer(const char* name, unsigned int flags)
 		if (players[i].allocated == FALSE)
 		{
 			players[i].allocated = TRUE;
-			strcpy(players[i].name, name);
+			strlcpy(players[i].name, name, sizeof(players[i].name));
 			players[i].flags = flags;
 			NETBroadcastPlayerInfo(i);
 			return i;
@@ -321,7 +321,7 @@ UDWORD NETplayerInfo(void)
 		if (players[i].allocated == TRUE)
 		{
 			NetPlay.players[NetPlay.playercount].dpid = i;
-			strcpy(NetPlay.players[NetPlay.playercount].name, players[i].name);
+			strlcpy(NetPlay.players[NetPlay.playercount].name, players[i].name, sizeof(NetPlay.players[NetPlay.playercount].name));
 
 			if (players[i].flags & PLAYER_HOST)
 			{
@@ -355,11 +355,11 @@ BOOL NETchangePlayerName(UDWORD dpid, char *newName)
 {
 	if(!NetPlay.bComms)
 	{
-		strcpy(NetPlay.players[0].name, newName);
+		strlcpy(NetPlay.players[0].name, newName, sizeof(NetPlay.players[0].name));
 		return TRUE;
 	}
 
-	strcpy(players[dpid].name, newName);
+	strlcpy(players[dpid].name, newName, sizeof(players[dpid].name));
 
 	NETBroadcastPlayerInfo(dpid);
 
@@ -1013,7 +1013,7 @@ receive_message:
 // ////////////////////////////////////////////////////////////////////////
 // Protocol functions
 
-BOOL NETsetupTCPIP(void ** addr, char * machine)
+BOOL NETsetupTCPIP(void ** addr, const char * machine)
 {
 	debug(LOG_NET, "NETsetupTCPIP(,%s)", machine ? machine : "NULL");
 
@@ -1222,7 +1222,7 @@ static void NETallowJoining(void)
 			tmp_socket[i] = SDLNet_TCP_Accept(tcp_socket);
 			SDLNet_TCP_AddSocket(tmp_socket_set, tmp_socket[i]);
 			if (SDLNet_CheckSockets(tmp_socket_set, 1000) > 0
-			    && SDLNet_SocketReady(tmp_socket)
+			    && SDLNet_SocketReady(tmp_socket[0])
 			    && SDLNet_TCP_Recv(tmp_socket[i], buffer, 5))
 			{
 				if(strcmp(buffer, "list")==0)
@@ -1350,11 +1350,11 @@ BOOL NEThostGame(const char* SessionName, const char* PlayerName,
 
 	is_server = TRUE;
 
-	strcpy(game.name, SessionName);
+	strlcpy(game.name, SessionName, sizeof(game.name));
 	memset(&game.desc, 0, sizeof(SESSIONDESC));
 	game.desc.dwSize = sizeof(SESSIONDESC);
 	//game.desc.guidApplication = GAME_GUID;
-	strcpy(game.desc.host, "");
+	game.desc.host[0] = '\0';
 	game.desc.dwCurrentPlayers = 1;
 	game.desc.dwMaxPlayers = plyrs;
 	game.desc.dwFlags = 0;
@@ -1456,7 +1456,7 @@ BOOL NETfindGame(void)
 		    && SDLNet_TCP_Recv(tcp_socket, buffer, sizeof(GAMESTRUCT)) == sizeof(GAMESTRUCT)
 		    && tmpgame->desc.dwSize == sizeof(SESSIONDESC))
 		{
-			strcpy(NetPlay.games[gamecount].name, tmpgame->name);
+			strlcpy(NetPlay.games[gamecount].name, tmpgame->name, sizeof(NetPlay.games[gamecount].name));
 			NetPlay.games[gamecount].desc.dwSize = tmpgame->desc.dwSize;
 			NetPlay.games[gamecount].desc.dwCurrentPlayers = tmpgame->desc.dwCurrentPlayers;
 			NetPlay.games[gamecount].desc.dwMaxPlayers = tmpgame->desc.dwMaxPlayers;
@@ -1464,15 +1464,21 @@ BOOL NETfindGame(void)
 			{
 				unsigned char* address = (unsigned char*)(&(ip.host));
 
-				sprintf(NetPlay.games[gamecount].desc.host,
+				snprintf(NetPlay.games[gamecount].desc.host, sizeof(NetPlay.games[gamecount].desc.host),
 					"%i.%i.%i.%i",
  					(int)(address[0]),
  					(int)(address[1]),
  					(int)(address[2]),
  					(int)(address[3]));
-			} else {
-				strcpy(NetPlay.games[gamecount].desc.host, tmpgame->desc.host);
+
+				// Guarantee to nul-terminate
+				NetPlay.games[gamecount].desc.host[sizeof(NetPlay.games[gamecount].desc.host) - 1] = '\0';
 			}
+			else
+			{
+				strlcpy(NetPlay.games[gamecount].desc.host, tmpgame->desc.host, sizeof(NetPlay.games[gamecount].desc.host));
+			}
+
 			gamecount++;
 		}
 	} while (gamecount<gamesavailable);
@@ -1485,7 +1491,6 @@ BOOL NETfindGame(void)
 // Functions used to setup and join games.
 BOOL NETjoinGame(UDWORD gameNumber, const char* playername)
 {
-	char* name;
 	IPaddress ip;
 	char buffer[sizeof(GAMESTRUCT)*2];
 	GAMESTRUCT* tmpgame = (GAMESTRUCT*)buffer;
@@ -1533,23 +1538,29 @@ BOOL NETjoinGame(UDWORD gameNumber, const char* playername)
 	    && SDLNet_TCP_Recv(tcp_socket, buffer, sizeof(GAMESTRUCT)*2) == sizeof(GAMESTRUCT)
 	    && tmpgame->desc.dwSize == sizeof(SESSIONDESC))
 	{
-		strcpy(NetPlay.games[gameNumber].name, tmpgame->name);
+		strlcpy(NetPlay.games[gameNumber].name, tmpgame->name, sizeof(NetPlay.games[gameNumber].name));
+
 		NetPlay.games[gameNumber].desc.dwSize = tmpgame->desc.dwSize;
 		NetPlay.games[gameNumber].desc.dwCurrentPlayers = tmpgame->desc.dwCurrentPlayers;
 		NetPlay.games[gameNumber].desc.dwMaxPlayers = tmpgame->desc.dwMaxPlayers;
-		strcpy(NetPlay.games[gameNumber].desc.host, tmpgame->desc.host);
+		strlcpy(NetPlay.games[gameNumber].desc.host, tmpgame->desc.host, sizeof(NetPlay.games[gameNumber].desc.host));
 		if (tmpgame->desc.host[0] == '\0')
 		{
 			unsigned char* address = (unsigned char*)(&(ip.host));
 
-			sprintf(NetPlay.games[gameNumber].desc.host,
+			snprintf(NetPlay.games[gameNumber].desc.host, sizeof(NetPlay.games[gameNumber].desc.host),
 				"%i.%i.%i.%i",
 				(int)(address[0]),
 				(int)(address[1]),
 				(int)(address[2]),
 				(int)(address[3]));
-		} else {
-			strcpy(NetPlay.games[gameNumber].desc.host, tmpgame->desc.host);
+
+			// Guarantee to nul-terminate
+			NetPlay.games[gameNumber].desc.host[sizeof(NetPlay.games[gameNumber].desc.host) - 1] = '\0';
+		}
+		else
+		{
+			strlcpy(NetPlay.games[gameNumber].desc.host, tmpgame->desc.host, sizeof(NetPlay.games[gameNumber].desc.host));
 		}
 	}
 
@@ -1558,8 +1569,7 @@ BOOL NETjoinGame(UDWORD gameNumber, const char* playername)
 
 	message.type = MSG_JOIN;
 	message.size = 64;
-	name = message.body;
-	strcpy(name, playername);
+	strlcpy(message.body, playername, sizeof(message.body));
 	NETsend(&message, 1, TRUE);
 
 	for (;;)
@@ -1581,7 +1591,7 @@ BOOL NETjoinGame(UDWORD gameNumber, const char* playername)
 			}
 			players[NetPlay.dpidPlayer].allocated = TRUE;
 			players[NetPlay.dpidPlayer].id = NetPlay.dpidPlayer;
-			strcpy(players[NetPlay.dpidPlayer].name, playername);
+			strlcpy(players[NetPlay.dpidPlayer].name, playername, sizeof(players[NetPlay.dpidPlayer].name));
 			players[NetPlay.dpidPlayer].flags = 0;
 
 			return TRUE;
@@ -1607,13 +1617,7 @@ PACKETDIR NETgetPacketDir()
  */
 void NETsetMasterserverName(const char* hostname)
 {
-	size_t name_size = strlen(hostname);
-
-	if ( name_size > 255 )
-	{
-		name_size = 255;
-	}
-	strncpy(masterserver_name, hostname, name_size);
+	strlcpy(masterserver_name, hostname, sizeof(masterserver_name));
 }
 
 

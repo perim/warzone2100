@@ -39,7 +39,6 @@
 
 #include "objects.h"
 #include "move.h"
-#include "findpath.h"
 #include "visibility.h"
 #include "map.h"
 #include "fpath.h"
@@ -256,6 +255,41 @@ extern UDWORD	selectedPlayer;
 
 static BOOL	g_bFormationSpeedLimitingOn = TRUE;
 
+/* Return the difference in directions */
+static UDWORD dirDiff(SDWORD start, SDWORD end)
+{
+	SDWORD retval, diff;
+
+	diff = end - start;
+
+	if (diff > 0)
+	{
+		if (diff < 180)
+		{
+			retval = diff;
+		}
+		else
+		{
+			retval = 360 - diff;
+		}
+	}
+	else
+	{
+		if (diff > -180)
+		{
+			retval = - diff;
+		}
+		else
+		{
+			retval = 360 + diff;
+		}
+	}
+
+	ASSERT( retval >=0 && retval <=180,
+		"dirDiff: result out of range" );
+
+	return retval;
+}
 
 /* Initialise the movement system */
 BOOL moveInitialise(void)
@@ -1898,6 +1932,7 @@ static void moveGetObstacleVector(DROID *psDroid, float *pX, float *pY)
 		}
 #endif
 	}
+	ASSERT(isfinite(*pX) && isfinite(*pY), "moveGetObstacleVector: bad float");
 }
 
 
@@ -1958,6 +1993,8 @@ static Vector2f moveGetDirection(DROID *psDroid)
 			dest = Vector2f_Normalise( Vector2f_Add(delta, nextDelta) );
 		}
 	}
+
+	ASSERT(isfinite(dest.x) && isfinite(dest.y), "moveGetDirection: bad float, early check");
 
 	// Transporters don't need to avoid obstacles, but everyone else should
 	if ( psDroid->droidType != DROID_TRANSPORTER )
@@ -2119,7 +2156,7 @@ SDWORD moveCalcDroidSpeed(DROID *psDroid)
 
 	mapX = map_coord(psDroid->x);
 	mapY = map_coord(psDroid->y);
-	speed = (SDWORD) calcDroidSpeed(psDroid->baseSpeed, TERRAIN_TYPE(mapTile(mapX,mapY)),
+	speed = (SDWORD) calcDroidSpeed(psDroid->baseSpeed, terrainType(mapTile(mapX,mapY)),
 							  psDroid->asBits[COMP_PROPULSION].nStat);
 
 /*	if ( vtolDroid(psDroid) &&
@@ -3759,7 +3796,7 @@ void moveUpdateDroid(DROID *psDroid)
 	if (map_coord(oldx) != map_coord(psDroid->x)
 	 || map_coord(oldy) != map_coord(psDroid->y))
 	{
-		visTilesUpdate((BASE_OBJECT *)psDroid,FALSE);
+		visTilesUpdate((BASE_OBJECT *)psDroid);
 		gridMoveObject((BASE_OBJECT *)psDroid, (SDWORD)oldx,(SDWORD)oldy);
 
 		// object moved from one tile to next, check to see if droid is near stuff.(oil)
@@ -3794,7 +3831,7 @@ void moveUpdateDroid(DROID *psDroid)
 //		"moveUpdateUnit (end): unit at (0,0)" );
 
 	/* If it's sitting in water then it's got to go with the flow! */
-	if(TERRAIN_TYPE(mapTile(psDroid->x/TILE_UNITS,psDroid->y/TILE_UNITS)) == TER_WATER)
+	if (terrainType(mapTile(psDroid->x/TILE_UNITS,psDroid->y/TILE_UNITS)) == TER_WATER)
 	{
 		updateDroidOrientation(psDroid);
 	}

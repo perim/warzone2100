@@ -113,7 +113,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		}
 		type = VAL_INT;
 		scrFunctionResult.v.ival = (SDWORD)((DROID *)psObj)->order;
-		if ((scrFunctionResult.v.ival == DORDER_GUARD) && (((DROID *)psObj)->psTarget[0] == NULL))
+		if (scrFunctionResult.v.ival == DORDER_GUARD && ((DROID *)psObj)->psTarget == NULL)
 		{
 			scrFunctionResult.v.ival = DORDER_NONE;
 		}
@@ -274,7 +274,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		else if (psObj->type == OBJ_DROID)
 		{
 			type = (INTERP_TYPE)ST_STRUCTURESTAT;
-			scrFunctionResult.v.ival = (SDWORD)((STRUCTURE_STATS *)(((DROID *)psObj)->psTarStats[0]) - asStructureStats);
+			scrFunctionResult.v.ival = (SDWORD)((STRUCTURE_STATS *)(((DROID *)psObj)->psTarStats) - asStructureStats);
 		}
 		else		//Nothing else supported
 		{
@@ -294,7 +294,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		else if (psObj->type == OBJ_DROID)
 		{
 			type = (INTERP_TYPE)ST_BASEOBJECT;
-			scrFunctionResult.v.oval = (((DROID *)psObj)->psTarget[0]);
+			scrFunctionResult.v.oval = ((DROID *)psObj)->psTarget;
 		}
 		else		//Nothing else supported
 		{
@@ -1167,10 +1167,10 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 		{
 			// find empty id and set track vals
 			index = audio_SetTrackVals(pName, FALSE, 100, 1800);
-			if (!index)
+			if (!index)			//this is a NON fatal error. 
 			{
+				// We can't find filename of the sound for some reason.
 				debug(LOG_ERROR, "Sound ID not available %s not found", pName);
-				abort();
 				break;
 			}
 		}

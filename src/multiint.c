@@ -27,7 +27,7 @@
 
 #include "lib/framework/frame.h"
 
-#include <SDL/SDL_opengl.h>
+#include <SDL_opengl.h>
 
 #include "lib/framework/frameresource.h"
 #include "lib/framework/frameint.h"
@@ -44,6 +44,7 @@
 #include "lib/ivis_common/piedef.h"
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/pieclip.h"
+#include "lib/ivis_common/piepalette.h"
 // FIXME Direct iVis implementation include!
 #include "lib/ivis_common/rendmode.h"
 #include "objmem.h"
@@ -94,7 +95,7 @@ extern BOOL				bSendingMap;
 
 extern void intDisplayTemplateButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
 
-extern BOOL NETsetupTCPIP(void ** addr, char * machine);
+extern BOOL NETsetupTCPIP(void ** addr, const char * machine);
 
 BOOL						bHosted			= FALSE;				//we have set up a game
 char						sPlayer[128];							// player name (to be used)
@@ -143,7 +144,7 @@ void		displayWhiteBoard			(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDW
 void		intDisplayFeBox				(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
 void		displayRemoteGame			(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
 void		displayPlayer				(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
-void		displayTeamChooser				(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
+void		displayTeamChooser			(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
 void		displayMultiEditBox			(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
 void		setLockedTeamsMode			(void);
 
@@ -309,15 +310,15 @@ void loadMapPreview(void)
 static void decideWRF(void)
 {
 	// try and load it from the maps directory first,
-	strcpy(pLevelName, MultiCustomMapsPath);
-	strcat(pLevelName, game.map);
-	strcat(pLevelName, ".wrf");
-	debug(LOG_WZ, "decideWRF: %s", pLevelName);
+	strlcpy(aLevelName, MultiCustomMapsPath, sizeof(aLevelName));
+	strlcat(aLevelName, game.map, sizeof(aLevelName));
+	strlcat(aLevelName, ".wrf", sizeof(aLevelName));
+	debug(LOG_WZ, "decideWRF: %s", aLevelName);
 	//if the file exists in the downloaded maps dir then use that one instead.
 	// FIXME: Try to incorporate this into physfs setup somehow for sane paths
-	if ( !PHYSFS_exists(pLevelName) )
+	if ( !PHYSFS_exists(aLevelName) )
 	{
-		strcpy(pLevelName, game.map);		// doesn't exist, must be a predefined one.
+		strlcpy(aLevelName, game.map, sizeof(aLevelName));		// doesn't exist, must be a predefined one.
 	}
 }
 
@@ -464,8 +465,8 @@ void runConnectionScreen(void )
 				SettingsUp = FALSE;
 			}
 
-			game.bytesPerSec = INETBYTESPERSEC;
-			game.packetsPerSec = INETPACKETS;
+			game.bytesPerSec = MAX_BYTESPERSEC;
+			game.packetsPerSec = MAX_PACKETSPERSEC;
 			NETsetupTCPIP(&finalconnection, addr); //inet
 
 			changeTitleMode(GAMEFIND);
@@ -534,7 +535,7 @@ static void addGames(void)
 
 			sButInit.pTip = NetPlay.games[i].name;
 
-			sButInit.pUserData = (void *)i;
+			sButInit.UserData = i;
 			widgAddButton(psWScreen, &sButInit);
 		}
 	}
@@ -1167,7 +1168,7 @@ static void addTeamChooser(UDWORD player)
 
 		sButInit.FontID = font_regular;
 		sButInit.pDisplay = displayMultiBut;
-		sButInit.pUserData = (void*)PACKDWORD_TRI(FALSE,IMAGE_TEAM0+i , IMAGE_TEAM0+i);
+		sButInit.UserData = PACKDWORD_TRI(FALSE,IMAGE_TEAM0+i , IMAGE_TEAM0+i);
 		sButInit.pText = "Team0";
 
 		if (!widgAddButton(psWScreen, &sButInit))
@@ -1258,7 +1259,7 @@ UDWORD addPlayerBox(BOOL players)
 				sButInit.pTip = "Choose team";	//Players[i].name;
 				sButInit.FontID = font_regular;
 				sButInit.pDisplay = displayTeamChooser;//intDisplayButtonHilight;
-				sButInit.pUserData = (void*) i;
+				sButInit.UserData = i;
 
 				if(bTeamChooserUp[i] && !bColourChooserUp )
 				{
@@ -1283,7 +1284,7 @@ UDWORD addPlayerBox(BOOL players)
 				sButInit.pTip = NULL;//Players[i].name;
 				sButInit.FontID = font_regular;
 				sButInit.pDisplay = displayPlayer;//intDisplayButtonHilight;
-				sButInit.pUserData = (void*) i;
+				sButInit.UserData = i;
 
 				if(bColourChooserUp && (teamChooserUp() < 0)
 					&& NetPlay.players[i].dpid == player2dpid[selectedPlayer])
@@ -1308,7 +1309,7 @@ UDWORD addPlayerBox(BOOL players)
 				sFormInit.height = MULTIOP_PLAYERHEIGHT;
 				sFormInit.pTip = NULL;//Players[i].name;
 				sFormInit.pDisplay = displayPlayer;//intDisplayButtonHilight;
-				sFormInit.pUserData = (void*) i;
+				sFormInit.UserData = i;
 				widgAddForm(psWScreen, &sFormInit);
 				addFESlider(MULTIOP_SKSLIDE+i,sFormInit.id, 43,9, DIFF_SLIDER_STOPS,
 					(game.skDiff[i] <= DIFF_SLIDER_STOPS ? game.skDiff[i] : DIFF_SLIDER_STOPS / 2), 0);	//set to 50% (value of UBYTE_MAX == human player)
@@ -2366,7 +2367,7 @@ BOOL startMultiOptions(BOOL bReenter)
 			game.maxPlayers = 4;
 		}
 
-		strncpy(game.version, buildTime, 8);		// note buildtime.
+		strlcpy(game.version, buildTime, sizeof(game.version));		// note buildtime.
 
 		ingame.localOptionsReceived = FALSE;
 		if(ingame.numStructureLimits)
@@ -2376,10 +2377,11 @@ BOOL startMultiOptions(BOOL bReenter)
 			ingame.pStructureLimits = NULL;
 		}
 
-		if(NetPlay.bLobbyLaunched)
+		if (NetPlay.bLobbyLaunched)
 		{
-			game.bytesPerSec	= INETBYTESPERSEC;					// maximum bitrate achieved before dropping checks.
-			game.packetsPerSec	= INETPACKETS;
+			// Maximum bitrate achieved before dropping checks
+			game.bytesPerSec	= MAX_BYTESPERSEC;
+			game.packetsPerSec	= MAX_PACKETSPERSEC;
 		}
 
 		loadMultiStats((char*)sPlayer,&nullStats);
@@ -2605,7 +2607,7 @@ void displayChatEdit(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *p
 {
 	UDWORD x = xOffset+psWidget->x;
 	UDWORD y = yOffset+psWidget->y -4;			// 4 is the magic number.
-	iV_Line(x, y, x+psWidget->width , y, iV_PaletteNearestColour(100,100,160) );
+	iV_Line(x, y, x + psWidget->width, y, 0x6464a0); // iV_PaletteNearestColour(100,100,160) );
 
 	return;
 }
@@ -2619,11 +2621,9 @@ void displayRemoteGame(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD 
 	UDWORD y = yOffset+psWidget->y;
 	BOOL Hilight = FALSE;
 	BOOL Down = FALSE;
-	UDWORD	i;
+	UDWORD	i = psWidget->UserData;
 	char	tmp[8];
 	UDWORD png;
-
-	i = (int)psWidget->pUserData;
 
 	// collate info
 	if( ((W_BUTTON*)psWidget)->state & (WBUTS_HILITE))
@@ -2727,13 +2727,12 @@ void displayTeamChooser(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD
 	UDWORD		x = xOffset+psWidget->x;
 	UDWORD		y = yOffset+psWidget->y;
 	BOOL		Hilight = FALSE;
-	UDWORD		i;
+	UDWORD		i = psWidget->UserData;
 
 	if( ((W_BUTTON*)psWidget)->state & (WBUTS_HILITE| WCLICK_DOWN | WCLICK_LOCKED | WCLICK_CLICKLOCK))
 	{
 		Hilight = TRUE;
 	}
-	i = (int)psWidget->pUserData;
 
 	ASSERT(playerTeamGUI[i] >= 0 && playerTeamGUI[i] < MAX_PLAYERS,
 		"displayTeamChooser: playerTeamGUI out of bounds" );
@@ -2751,14 +2750,13 @@ void displayPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pCo
 	UDWORD		y = yOffset+psWidget->y;
 	BOOL		Hilight = FALSE;
 	UDWORD		j;
-	UDWORD		i,eval;
+	UDWORD		i = psWidget->UserData, eval;
 	PLAYERSTATS stat;
 
 	if( ((W_BUTTON*)psWidget)->state & (WBUTS_HILITE| WCLICK_DOWN | WCLICK_LOCKED | WCLICK_CLICKLOCK))
 	{
 		Hilight = TRUE;
 	}
-	i = (int)psWidget->pUserData;
 
 	//bluboxes.
 	drawBlueBox(x,y,psWidget->width,psWidget->height);							// right
@@ -3001,7 +2999,7 @@ void displayMultiEditBox(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWOR
 {
 	UDWORD	x = xOffset+psWidget->x;
 	UDWORD	y = yOffset+psWidget->y;
-	UWORD	im = (UWORD)((UDWORD)psWidget->pUserData);
+	UWORD	im = psWidget->UserData;
 
 	drawBlueBox(x,y,psWidget->width,psWidget->height);
 	drawBlueBox(x+psWidget->width,y,psWidget->height,psWidget->height);	// box on end.
@@ -3010,9 +3008,14 @@ void displayMultiEditBox(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWOR
 
 	if( ((W_EDITBOX*)psWidget)->state & WEDBS_DISABLE)					// disabled
 	{
-		pie_UniTransBoxFill(x,y, x+psWidget->width+psWidget->height ,y+psWidget->height,(FILLRED<<16) | (FILLGREEN<<8) | FILLBLUE, FILLTRANS);
-	}
+		PIELIGHT colour;
 
+		colour.byte.r = FILLRED;
+		colour.byte.b = FILLBLUE;
+		colour.byte.g = FILLGREEN;
+		colour.byte.a = FILLTRANS;
+		pie_UniTransBoxFill(x, y, x + psWidget->width + psWidget->height, y+psWidget->height, colour);
+	}
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -3025,10 +3028,9 @@ void displayMultiBut(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *p
 	UDWORD	Down = 0;
 	UWORD	hiToUse = 0;
 	UDWORD	Grey = 0;
-	UWORD	im = (UWORD)UNPACKDWORD_TRI_B((UDWORD)psWidget->pUserData);
-	UWORD	im2= (UWORD)(UNPACKDWORD_TRI_C((UDWORD)psWidget->pUserData));
-	BOOL	usehl = ((UWORD)(UNPACKDWORD_TRI_A((UDWORD)psWidget->pUserData)));
-//	BOOL	snap = 1;
+	UWORD	im = UNPACKDWORD_TRI_B((UDWORD)psWidget->UserData);
+	UWORD	im2= UNPACKDWORD_TRI_C((UDWORD)psWidget->UserData);
+	BOOL	usehl = UNPACKDWORD_TRI_A((UDWORD)psWidget->UserData);
 
 	//evaluate
 	if( (usehl==1) && ((W_BUTTON*)psWidget)->state & WBUTS_HILITE)
@@ -3136,7 +3138,7 @@ static BOOL addMultiEditBox(UDWORD formid,UDWORD id,UDWORD x, UDWORD y, const ch
 	sEdInit.height = MULTIOP_EDITBOXH;
 	sEdInit.pText = tipres;
 	sEdInit.FontID = font_regular;
-	sEdInit.pUserData = (void*)icon;
+	sEdInit.UserData = icon;
 	sEdInit.pBoxDisplay = displayMultiEditBox;
 	if (!widgAddEditBox(psWScreen, &sEdInit))
 	{
@@ -3168,7 +3170,7 @@ BOOL addMultiBut(W_SCREEN *screen, UDWORD formid, UDWORD id, UDWORD x, UDWORD y,
 	sButInit.pTip = tipres;
 	sButInit.FontID = font_regular;
 	sButInit.pDisplay = displayMultiBut;
-	sButInit.pUserData = (void*)PACKDWORD_TRI(hiIt,norm , hi);
+	sButInit.UserData = PACKDWORD_TRI(hiIt,norm , hi);
 
 	return widgAddButton(screen, &sButInit);
 }

@@ -50,7 +50,7 @@ endif
 
 # Setup paths and static values
 
-CFLAGS+=-DVERSION=\"$(VERSION)\" -DYY_STATIC -DLOCALEDIR=\"$(LOCALEDIR)\" -DPACKAGE=\"$(PACKAGE)\" -I.. -I../.. -I$(DEVDIR)/include
+CFLAGS+=-DVERSION=\"$(VERSION)\" -DYY_STATIC -DLOCALEDIR=\"$(LOCALEDIR)\" -DPACKAGE=\"$(PACKAGE)\" -I.. -I../.. -I$(DEVDIR)/include -I$(DEVDIR)/include/SDL
 LDFLAGS+=-L$(DEVDIR)/lib
 
 
@@ -63,11 +63,10 @@ else
 CFLAGS+=-DNDEBUG
 endif
 
-CPPFLAGS+=-fexceptions
+CXXFLAGS+=-fexceptions
 
 ifeq ($(strip $(USE_GETTEXT)),yes)
 CFLAGS+=-DENABLE_NLS=1
-LDFLAGS+=-lintl
 endif
 
 ifeq ($(strip $(PLATFORM)),windows)
@@ -101,7 +100,7 @@ endif
 
 # Generic libs
 
-LDFLAGS+=-lSDL -lSDL_net -lpng -lphysfs -lz -lvorbisfile -lvorbis -logg -lstdc++
+LDFLAGS+=-lSDL -lSDL_net -lpng -lphysfs -lz -lvorbisfile -lvorbis -logg -lpopt -lintl -lstdc++
 
 # Additional platform-dependend libs
 

@@ -43,7 +43,6 @@
 #include "hci.h"									// for byte packing funcs.
 #include "display3ddef.h"							// tile size constants.
 #include "console.h"
-#include "text.h"									// to access strings
 #include "geometry.h"								// for gettilestructure
 #include "mapgrid.h"								// for move droids directly.
 #include "lib/netplay/netplay.h"
@@ -223,7 +222,7 @@ static BOOL sendDroidCheck(void)
 	NETMSG			msg;
 	UDWORD			i=0,count=0;
 	static UDWORD	lastSent=0;					// last time a struct was sent.
-	UDWORD			toSend =4;
+	UDWORD			toSend = 6;
 	if(lastSent > gameTime)lastSent= 0;
 	if((gameTime-lastSent) < DROID_FREQUENCY)	// only send a struct send if not done recently.
 	{
@@ -232,21 +231,6 @@ static BOOL sendDroidCheck(void)
 
 	lastSent = gameTime;
 	msg.size = 0;
-
-	switch(game.bytesPerSec)
-	{
-	case IPXBYTESPERSEC:
-		toSend = 6;
-		break;
-
-	case INETBYTESPERSEC:
-	case CABLEBYTESPERSEC:
-	case DEFAULTBYTESPERSEC:
-	case MODEMBYTESPERSEC:
-	default:
-		toSend = 4;
-		break;
-	}
 
 	while(count < toSend)	// send x droids.
 	{
@@ -283,7 +267,7 @@ static void packageCheck(UDWORD i, NETMSG *pMsg, DROID *pD)
 	NetAdd2( pMsg,		i+10,		pD->body);				// damage points
 	NetAdd2( pMsg,		i+14,		direction);			// direction
 
-	if(  pD->order == DORDER_ATTACK || pD->order == DORDER_ATTACK_M || pD->order == DORDER_MOVE || pD->order == DORDER_RTB    || pD->order == DORDER_RTR)
+	if (pD->order == DORDER_ATTACK || pD->order == DORDER_MOVE || pD->order == DORDER_RTB || pD->order == DORDER_RTR)
 	{
 		NetAdd2(pMsg,	i+16,		pD->sMove.fx);			//fraction move pos
 		NetAdd2(pMsg,	i+20,		pD->sMove.fy);
@@ -294,9 +278,9 @@ static void packageCheck(UDWORD i, NETMSG *pMsg, DROID *pD)
 		NetAdd2(pMsg,	i+20,		pD->y);
 	}
 
-	if(pD->order == DORDER_ATTACK || pD->order == DORDER_ATTACK_M)
+	if (pD->order == DORDER_ATTACK)
 	{
-		NetAdd2(pMsg,	i+24,		pD->psTarget[0]->id);		// target id
+		NetAdd2(pMsg,	i+24,		pD->psTarget->id);		// target id
 	}
 	else if(pD->order == DORDER_MOVE)
 	{
@@ -336,9 +320,7 @@ BOOL recvDroidCheck(NETMSG *m)
 		NetGet(m,					i+10,bod);							// Damage update.
 		NetGet(m,					i+14,dir);
 
-		if(   ord == DORDER_ATTACK || ord == DORDER_MOVE
-		   || ord == DORDER_RTB    || ord == DORDER_RTR ||
-			  ord == DORDER_ATTACK_M	)	// detailed position info mode
+		if (ord == DORDER_ATTACK || ord == DORDER_MOVE || ord == DORDER_RTB    || ord == DORDER_RTR)	// detailed position info mode
 		{
 			NetGet(m,				i+16,fx);
 			NetGet(m,				i+20,fy);
@@ -349,7 +331,7 @@ BOOL recvDroidCheck(NETMSG *m)
 			NetGet(m,				i+20,y);
 		}
 
-		if(ord == DORDER_ATTACK || ord == DORDER_ATTACK_M)
+		if (ord == DORDER_ATTACK)
 		{
 			NetGet(m,				i+24,target);
 		}
@@ -458,10 +440,8 @@ static void highLevelDroidUpdate(DROID *psDroid,UDWORD x, UDWORD y,
 	// remote droid is attacking, not here tho!
 	if(order == DORDER_ATTACK && psDroid->order != DORDER_ATTACK && psTarget)
 	{
-		DROID_OACTION_INFO oaInfo = {{psTarget}};
-
 		turnOffMultiMsg(TRUE);
-		orderDroidObj(psDroid, DORDER_ATTACK, &oaInfo);
+		orderDroidObj(psDroid, DORDER_ATTACK, psTarget);
 		turnOffMultiMsg(FALSE);
 	}
 
@@ -540,7 +520,6 @@ static void offscreenUpdate(DROID *psDroid,
 
 	// stage one, update the droids position & info, LOW LEVEL STUFF.
 	if(	   order == DORDER_ATTACK
-		|| order == DORDER_ATTACK_M
 		|| order == DORDER_MOVE
 		|| order ==	DORDER_RTB
 		|| order == DORDER_RTR)	// move order

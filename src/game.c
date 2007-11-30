@@ -29,6 +29,7 @@
 #include "lib/ivis_common/ivisdef.h"
 #include "lib/ivis_common/rendmode.h"
 #include "lib/ivis_common/piestate.h"
+#include "lib/ivis_common/piepalette.h"
 #include "lib/script/script.h"
 #include "lib/gamelib/gtime.h"
 #include "map.h"
@@ -37,7 +38,6 @@
 #include "game.h"
 #include "research.h"
 #include "power.h"
-#include "player.h"
 #include "projectile.h"
 #include "loadsave.h"
 #include "text.h"
@@ -73,8 +73,6 @@
 #include "multistat.h"
 #include "wrappers.h"
 
-
-#define ALLOWSAVE
 #define MAX_SAVE_NAME_SIZE_V19	40
 #define MAX_SAVE_NAME_SIZE	60
 
@@ -107,7 +105,7 @@ static bool serializeSaveGameHeader(PHYSFS_file* fileHandle, const GAME_SAVEHEAD
 	// Write version numbers below version 35 as little-endian, and those above as big-endian
 	if (serializeHeader->version < VERSION_35)
 		return PHYSFS_writeULE32(fileHandle, serializeHeader->version);
-    else
+	else
 		return PHYSFS_writeUBE32(fileHandle, serializeHeader->version);
 }
 
@@ -121,30 +119,33 @@ static bool deserializeSaveGameHeader(PHYSFS_file* fileHandle, GAME_SAVEHEADER* 
 	// All save game file versions below version 35 (i.e. _not_ version 35 itself)
 	// have their version numbers stored as little endian. Versions from 35 and
 	// onward use big-endian. This basically means that, because of endian
-	// swapping, numbers from 35 and onward will be rediculously high if a
+	// swapping, numbers from 35 and onward will be ridiculously high if a
 	// little-endian byte-order is assumed.
 
 	// Convert from little endian to native byte-order and check if we get a
-	// rediculously high number
+	// ridiculously high number
 	endian_udword(&serializeHeader->version);
 
 	if (serializeHeader->version <= VERSION_34)
 	{
-		// Apparently we don't get a rediculously high number if we assume
+		// Apparently we don't get a ridiculously high number if we assume
 		// little-endian, so lets assume our version number is 34 at max and return
+		debug(LOG_SAVEGAME, "deserializeSaveGameHeader: Version = %u (little-endian)", serializeHeader->version);
+
 		return true;
 	}
 	else
 	{
 		// Apparently we get a larger number than expected if using little-endian.
 		// So assume we have a version of 35 and onward
-
+		
 		// Reverse the little-endian decoding
 		endian_udword(&serializeHeader->version);
 	}
 
 	// Considering that little-endian didn't work we now use big-endian instead
 	serializeHeader->version = PHYSFS_swapUBE32(serializeHeader->version);
+	debug(LOG_SAVEGAME, "deserializeSaveGameHeader: Version %u = (big-endian)", serializeHeader->version);
 
 	return true;
 }
@@ -1472,37 +1473,24 @@ static bool deserializeSaveGameData(PHYSFS_file* fileHandle, SAVE_GAME* serializ
 typedef struct _save_move_control
 {
 	UBYTE	Status;						// Inactive, Navigating or moving point to point status
-	UBYTE	Mask;						// Mask used for the creation of this path
 	UBYTE	Position;	   				// Position in asPath
 	UBYTE	numPoints;					// number of points in asPath
 	PATH_POINT	asPath[TRAVELSIZE];		// Pointer to list of block X,Y coordinates.
-										// When initialised list is terminated by (0xffff,0xffff)
-										// Values prefixed by 0x8000 are pixel coordinates instead of
-										// block coordinates
 	SDWORD	DestinationX;				// DestinationX,Y should match objects current X,Y
 	SDWORD	DestinationY;				//		location for this movement to be complete.
 	SDWORD	srcX,srcY,targetX,targetY;
-
-	/* Stuff for John's movement update */
 	float	fx,fy;						// droid location as a fract
-	// NOTE: this is supposed to replace Speed
 	float	speed;						// Speed of motion
 	SWORD	boundX,boundY;				// Vector for the end of path boundary
 	SWORD	dir;						// direction of motion (not the direction the droid is facing)
-
 	SWORD	bumpDir;					// direction at last bump
 	UDWORD	bumpTime;					// time of first bump with something
 	UWORD	lastBump;					// time of last bump with a droid - relative to bumpTime
 	UWORD	pauseTime;					// when MOVEPAUSE started - relative to bumpTime
 	UWORD	bumpX,bumpY;				// position of last bump
-
 	UDWORD	shuffleStart;				// when a shuffle started
-
 	struct _formation	*psFormation;			// formation the droid is currently a member of
-
-	/* vtol movement - GJ */
 	SWORD	iVertSpeed;
-	/* Watermelon:I need num of DROID_MAXWEAPS of iAttackRuns */
 	UWORD	iAttackRuns[DROID_MAXWEAPS];
 } SAVE_MOVE_CONTROL;
 
@@ -2014,24 +2002,6 @@ typedef struct _save_message
 
 } SAVE_MESSAGE;
 
-typedef struct _save_proximity
-{
-	POSITION_TYPE	type;				/*the type of position obj - FlagPos or ProxDisp*/
-	UDWORD			frameNumber;		/*when the Position was last drawn*/
-	UDWORD			screenX;			/*screen coords and radius of Position imd */
-	UDWORD			screenY;
-	UDWORD			screenR;
-	UDWORD			player;				/*which player the Position belongs to*/
-	BOOL			selected;			/*flag to indicate whether the Position */
-	UDWORD			objId;					//Id for Proximity messages!
-	UDWORD			radarX;					//Used to store the radar coords - if to be drawn
-	UDWORD			radarY;
-	UDWORD			timeLastDrawn;			//stores the time the 'button' was last drawn for animation
-	UDWORD			strobe;					//id of image last used
-	UDWORD			buttonID;				//id of the button for the interface
-
-} SAVE_PROXIMITY;
-
 typedef struct _save_flag_v18
 {
 	POSITION_TYPE	type;				/*the type of position obj - FlagPos or ProxDisp*/
@@ -2206,12 +2176,6 @@ static BOOL loadSaveMessage(char *pFileData, UDWORD filesize, SWORD levelType);
 static BOOL loadSaveMessageV(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWORD version, SWORD levelType);
 static BOOL writeMessageFile(char *pFileName);
 
-#ifdef SAVE_PROXIMITY
-static BOOL loadSaveProximity(char *pFileData, UDWORD filesize);
-static BOOL loadSaveProximityV(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWORD version);
-static BOOL writeProximityFile(char *pFileName);
-#endif
-
 static BOOL loadSaveFlag(char *pFileData, UDWORD filesize);
 static BOOL loadSaveFlagV(char *pFileData, UDWORD filesize, UDWORD numFlags, UDWORD version);
 static BOOL writeFlagFile(char *pFileName);
@@ -2284,9 +2248,7 @@ bool loadGameInit(const char* fileName)
 BOOL loadMissionExtras(const char *pGameToLoad, SWORD levelType)
 {
 	char			aFileName[256];
-
 	UDWORD			fileExten, fileSize;
-
 	char			*pFileData = NULL;
 
 	strcpy(aFileName, pGameToLoad);
@@ -2294,38 +2256,6 @@ BOOL loadMissionExtras(const char *pGameToLoad, SWORD levelType)
 	aFileName[fileExten - 1] = '\0';
 	strcat(aFileName, "/");
 
-#ifdef SAVE_PROXIMITY
-	if (saveGameVersion >= VERSION_11)
-	{
-		//if user save game then load up the proximity messages AFTER any droids or structures are loaded
-		//if ((gameType == GTYPE_SAVE_START) ||
-		//	(gameType == GTYPE_SAVE_MIDMISSION))
-        //only do proximity messages is a mid-save game
-		if (gameType == GTYPE_SAVE_MIDMISSION)
-		{
-			//load in the proximity list file
-			aFileName[fileExten] = '\0';
-			strcat(aFileName, "proxstate.bjo");
-			// Load in the chosen file data
-			pFileData = fileLoadBuffer;
-			if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
-			{
-				//load the proximity status data
-				if (pFileData)
-				{
-					if (!loadSaveProximity(pFileData, fileSize))
-					{
-						debug( LOG_NEVER, "loadMissionExtras: Fail 2\n" );
-						return FALSE;
-					}
-				}
-			}
-
-		}
-}
-#endif
-
-//#ifdef NEW_SAVE //V11 Save
 	if (saveGameVersion >= VERSION_11)
 	{
 		//if user save game then load up the messages AFTER any droids or structures are loaded
@@ -2351,8 +2281,7 @@ BOOL loadMissionExtras(const char *pGameToLoad, SWORD levelType)
 			}
 
 		}
-    }
-//#endif
+	}
 
 	return TRUE;
 }
@@ -2515,6 +2444,8 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 
 		if (saveGameVersion >= VERSION_15)//V21
 		{
+			PIELIGHT colour;
+
 			offWorldKeepLists	= saveGameData.offWorldKeepLists;
 			setRubbleTile(saveGameData.RubbleTile);
 			setUnderwaterTile(saveGameData.WaterTile);
@@ -2548,7 +2479,8 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 				fogStatus = saveGameData.fogState;
 				fogStatus &= FOG_FLAGS;
 			}
-			pie_SetFogColour(saveGameData.fogColour);
+			colour.argb = saveGameData.fogColour;
+			pie_SetFogColour(colour);
 		}
 		if (saveGameVersion >= VERSION_19)//V21
 		{
@@ -3289,7 +3221,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 
 	LOADBARCALLBACK();	//	loadingScreenCallback();
 
-//#ifdef NEW_SAVE //V11 Save
 	if (saveGameVersion >= VERSION_11)
 	{
 		//if user save game then load up the Visibility
@@ -3308,11 +3239,9 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 			}
 		}
 	}
-//#endif
 
 	LOADBARCALLBACK();	//	loadingScreenCallback();
 
-//#ifdef NEW_SAVE_V13 //V13 Save
 	if (saveGameVersion > VERSION_12)
 	{
 		//if user save game then load up the Visibility
@@ -3339,7 +3268,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 
 		}
 	}
-//#endif
 	LOADBARCALLBACK();	//	loadingScreenCallback();
 
 	if (saveGameVersion > VERSION_12)
@@ -3386,8 +3314,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 
 	LOADBARCALLBACK();	//	loadingScreenCallback();
 
-//#endif
-//#ifdef NEW_SAVE_V12 //v12 Save
 	if (saveGameVersion >= VERSION_12)
 	{
 		//if user save game then load up the flags AFTER any droids or structures are loaded
@@ -3544,9 +3470,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		}
 	}
 
-	/* Reset the player AI */
-	playerReset();
-
 	//turn power on for rest of game
 	powerCalculated = TRUE;
 
@@ -3697,7 +3620,6 @@ error:
 	return FALSE;
 }
 // -----------------------------------------------------------------------------------------
-#ifdef ALLOWSAVE
 
 // Modified by AlexL , now takes a filename, with no popup....
 BOOL saveGame(char *aFileName, SDWORD saveType)
@@ -3729,6 +3651,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	/* Write the data to the file */
 	if (!writeMapFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeMapFile(\"%s\") failed", aFileName);
 		goto error;
 	}
 
@@ -3739,6 +3662,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	//ppsCurrentDroidLists = apsDroidLists;
 	if (!writeDroidFile(aFileName,apsDroidLists))
 	{
+		debug(LOG_ERROR, "saveGame: writeDroidFile(\"%s\") failed", aFileName);
 		goto error;
 	}
 
@@ -3748,19 +3672,9 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	/*Write the data to the file*/
 	if (!writeStructFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeStructFile(\"%s\") failed", aFileName);
 		goto error;
 	}
-/*
-    //we do this later on!!!!
-	//create the production filename
-	// aFileName[fileExtension] = '\0';
-	strcat(aFileName, "prod.bjo");
-	//Write the data to the file
-	if (!writeProductionFile(aFileName))
-	{
-		goto error;
-	}
-*/
 
 	//create the templates filename
 	aFileName[fileExtension] = '\0';
@@ -3768,6 +3682,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	/*Write the data to the file*/
 	if (!writeTemplateFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeTemplateFile(\"%s\") failed", aFileName);
 		goto error;
 	}
 
@@ -3777,6 +3692,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	/*Write the data to the file*/
 	if (!writeFeatureFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeFeatureFile(\"%s\") failed", aFileName);
 		goto error;
 	}
 
@@ -3786,6 +3702,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	/*Write the data to the file*/
 	if (!writeTerrainTypeMapFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeTerrainTypeMapFile(\"%s\") failed", aFileName);
 		goto error;
 	}
 
@@ -3795,6 +3712,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	/*Write the data to the file*/
 	if (!writeStructLimitsFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeStructLimitsFile(\"%s\") failed", aFileName);
 		goto error;
 	}
 
@@ -3804,6 +3722,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	/*Write the data to the file*/
 	if (!writeCompListFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeCompListFile(\"%s\") failed", aFileName);
 		goto error;
 	}
 	//create the structure type lists filename
@@ -3812,6 +3731,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	/*Write the data to the file*/
 	if (!writeStructTypeListFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeStructTypeListFile(\"%s\") failed", aFileName);
 		goto error;
 	}
 
@@ -3821,64 +3741,60 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	/*Write the data to the file*/
 	if (!writeResearchFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeResearchFile(\"%s\") failed", aFileName);
 		goto error;
 	}
 
-//#ifdef NEW_SAVE //V11 Save
 	//create the message filename
 	aFileName[fileExtension] = '\0';
 	strcat(aFileName, "messtate.bjo");
 	/*Write the data to the file*/
 	if (!writeMessageFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeMessageFile(\"%s\") failed", aFileName);
 		goto error;
 	}
-//#endif
 
-//#ifdef NEW_SAVE //V14 Save
 	//create the proximity message filename
 	aFileName[fileExtension] = '\0';
 	strcat(aFileName, "proxstate.bjo");
 	/*Write the data to the file*/
 	if (!writeMessageFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeMessageFile(\"%s\") failed", aFileName);
 		goto error;
 	}
-//#endif
 
-//#ifdef NEW_SAVE //V11 Save
 	//create the message filename
 	aFileName[fileExtension] = '\0';
 	strcat(aFileName, "visstate.bjo");
 	/*Write the data to the file*/
 	if (!writeVisibilityData(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeVisibilityData(\"%s\") failed", aFileName);
 		goto error;
 	}
-//#endif
 
-//#ifdef NEW_SAVE_V13 //V13 Save
 	//create the message filename
 	aFileName[fileExtension] = '\0';
 	strcat(aFileName, "prodstate.bjo");
 	/*Write the data to the file*/
 	if (!writeProductionFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeProductionFile(\"%s\") failed", aFileName);
 		goto error;
 	}
 
-//#endif
 
-//#ifdef FX_SAVE //added at V13 save
 	//create the message filename
 	aFileName[fileExtension] = '\0';
 	strcat(aFileName, "fxstate.bjo");
 	/*Write the data to the file*/
 	if (!writeFXData(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeFXData(\"%s\") failed", aFileName);
 		goto error;
 	}
-//#endif
 
 	//added at V15 save
 	//create the message filename
@@ -3887,40 +3803,29 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	/*Write the data to the file*/
 	if (!writeScoreData(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeScoreData(\"%s\") failed", aFileName);
 		goto error;
 	}
-//#endif
 
-//#ifdef NEW_SAVE //V12 Save
 	//create the message filename
 	aFileName[fileExtension] = '\0';
 	strcat(aFileName, "flagstate.bjo");
 	/*Write the data to the file*/
 	if (!writeFlagFile(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeFlagFile(\"%s\") failed", aFileName);
 		goto error;
 	}
-//#endif
 
-//#ifdef NEW_SAVE //V21 Save
 	//create the message filename
 	aFileName[fileExtension] = '\0';
 	strcat(aFileName, "command.bjo");
 	/*Write the data to the file*/
 	if (!writeCommandLists(aFileName))
 	{
+		debug(LOG_ERROR, "saveGame: writeCommandLists(\"%s\") failed", aFileName);
 		goto error;
 	}
-//#endif
-
-	//create the structLimits filename
-	/*aFileName[sOFN.nFileExtension] = '\0';
-	strcat(aFileName, "limits.bjo");*/
-	/*Write the data to the file DONE IN SCRIPTS NOW*/
-	/*if (!writeStructLimitsFile(aFileName))
-	{
-		goto error;
-	}*/
 
 	// save the script state if necessary
 	if (saveType == GTYPE_SAVE_MIDMISSION)
@@ -3930,6 +3835,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 		/*Write the data to the file*/
 		if (!writeScriptState(aFileName))
 		{
+			debug(LOG_ERROR, "saveGame: writeScriptState(\"%s\") failed", aFileName);
 			goto error;
 		}
 	}
@@ -3941,6 +3847,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	//ppsCurrentDroidLists = mission.apsDroidLists;
 	if (!writeDroidFile(aFileName, mission.apsDroidLists))
 	{
+		debug(LOG_ERROR, "saveGame: writeDroidFile(\"%s\") failed", aFileName);
 		goto error;
 	}
 
@@ -3968,6 +3875,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	//ppsCurrentDroidLists = apsLimboDroids;
 	if (!writeDroidFile(aFileName, apsLimboDroids))
 	{
+		debug(LOG_ERROR, "saveGame: writeDroidFile(\"%s\") failed", aFileName);
 		goto error;
 	}
 
@@ -3984,6 +3892,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 		/* Write the data to the file */
 		if (!writeMapFile(aFileName))
 		{
+			debug(LOG_ERROR, "saveGame: writeMapFile(\"%s\") failed", aFileName);
 			goto error;
 		}
 
@@ -3993,6 +3902,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 		/* Write the data to the file */
 		if (!writeVisibilityData(aFileName))
 		{
+			debug(LOG_ERROR, "saveGame: writeVisibilityData(\"%s\") failed", aFileName);
 			goto error;
 		}
 
@@ -4002,6 +3912,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 		/*Write the data to the file*/
 		if (!writeStructFile(aFileName))
 		{
+			debug(LOG_ERROR, "saveGame: writeStructFile(\"%s\") failed", aFileName);
 			goto error;
 		}
 
@@ -4011,6 +3922,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 		/*Write the data to the file*/
 		if (!writeFeatureFile(aFileName))
 		{
+			debug(LOG_ERROR, "saveGame: writeFeatureFile(\"%s\") failed", aFileName);
 			goto error;
 		}
 
@@ -4020,6 +3932,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 		/*Write the data to the file*/
 		if (!writeFlagFile(aFileName))
 		{
+			debug(LOG_ERROR, "saveGame: writeFlagFile(\"%s\") failed", aFileName);
 			goto error;
 		}
 
@@ -4043,6 +3956,7 @@ bool writeMapFile(const char* fileName)
 {
 	char* pFileData = NULL;
 	UDWORD fileSize;
+	char fileNameMod[250], *dot;
 
 	/* Get the save data */
 	bool status = mapSave(&pFileData, &fileSize);
@@ -4053,6 +3967,19 @@ bool writeMapFile(const char* fileName)
 		status = saveFile(fileName, pFileData, fileSize);
 	}
 
+	/* Save in new savegame format */
+	strcpy(fileNameMod, fileName);
+	dot = strrchr(fileNameMod, '.');
+	*dot = '\0';
+	strcat(fileNameMod, ".wzs");
+	debug(LOG_WZ, "SAVING %s INTO NEW FORMAT AS %s!", fileName, fileNameMod);
+	if (!mapSaveTagged(fileNameMod))
+	{
+		debug(LOG_ERROR, "Saving %s into new format as %s FAILED!", fileName, fileNameMod);
+	}
+	debug(LOG_WZ, "Loading new savegame format for validation");
+	mapLoadTagged(fileNameMod);
+
 	if (pFileData != NULL)
 	{
 		free(pFileData);
@@ -4060,9 +3987,6 @@ bool writeMapFile(const char* fileName)
 
 	return status;
 }
-
-#endif
-
 
 // -----------------------------------------------------------------------------------------
 bool gameLoad(const char* fileName)
@@ -4107,7 +4031,6 @@ bool gameLoad(const char* fileName)
 
 	//set main version Id from game file
 	saveGameVersion = fileHeader.version;
-
 
 	/* Check the file version */
 	if (fileHeader.version < VERSION_7)
@@ -4391,8 +4314,6 @@ UDWORD getCampaign(const char* fileName)
 		return 0;
 	}
 
-//	DBMB(("IsScenario = %d\nfor the game that's being loaded.", IsScenario));
-
 	PHYSFS_close(fileHandle);
 	return 0;
 }
@@ -4417,9 +4338,6 @@ bool gameLoadV7(PHYSFS_file* fileHandle)
 		return false;
 	}
 
-
-//	DBERROR(("gameLoadV7: this is and outdated save game"));
-
 	/* GAME_SAVE_V7 */
 	endian_udword(&saveGame.gameTime);
 	endian_udword(&saveGame.GameType);
@@ -4443,14 +4361,14 @@ bool gameLoadV7(PHYSFS_file* fileHandle)
 
 		IsScenario = FALSE;
 		//copy the level name across
-		strcpy(pLevelName, saveGame.levelName);
+		strlcpy(aLevelName, saveGame.levelName, sizeof(aLevelName));
 		//load up the level dataset
-		if (!levLoadData(pLevelName, saveGameName, gameType))
+		if (!levLoadData(aLevelName, saveGameName, gameType))
 		{
 			return false;
 		}
 		// find the level dataset
-		if (!levFindDataSet(pLevelName, &psNewLevel))
+		if (!levFindDataSet(aLevelName, &psNewLevel))
 		{
 			debug( LOG_ERROR, "gameLoadV7: couldn't find level data" );
 			abort();
@@ -4733,6 +4651,8 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 
 	if (version >= VERSION_15)
 	{
+		PIELIGHT colour;
+
 		offWorldKeepLists	= saveGameData.offWorldKeepLists;
 		setRubbleTile(saveGameData.RubbleTile);
 		setUnderwaterTile(saveGameData.WaterTile);
@@ -4766,7 +4686,8 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 			fogStatus = saveGameData.fogState;
 			fogStatus &= FOG_FLAGS;
 		}
-		pie_SetFogColour(saveGameData.fogColour);
+		colour.argb = saveGameData.fogColour;
+		pie_SetFogColour(colour);
 	}
 
 	if (version >= VERSION_17)
@@ -4912,14 +4833,14 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 
 		IsScenario = FALSE;
 		//copy the level name across
-		strcpy(pLevelName, saveGameData.levelName);
+		strlcpy(aLevelName, saveGameData.levelName, sizeof(aLevelName));
 		//load up the level dataset
-		if (!levLoadData(pLevelName, saveGameName, gameType))
+		if (!levLoadData(aLevelName, saveGameName, gameType))
 		{
 			return FALSE;
 		}
 		// find the level dataset
-/*		if (!levFindDataSet(pLevelName, &psNewLevel))
+/*		if (!levFindDataSet(aLevelName, &psNewLevel))
 		{
 			DBERROR(("gameLoadV6: couldn't find level data"));
 			return FALSE;
@@ -4928,7 +4849,7 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 		if (gameType == GTYPE_SAVE_START)
 		{
 //			launchMission();
-			if (!levLoadData(pLevelName, NULL, 0))
+			if (!levLoadData(aLevelName, NULL, 0))
 			{
 				return FALSE;
 			}
@@ -5052,15 +4973,15 @@ static bool writeGameFile(const char* fileName, SDWORD saveType)
 	saveGame.GameType = saveType;
 
 	//save the current level so we can load up the STARTING point of the mission
-	if (strlen(pLevelName) > MAX_LEVEL_SIZE)
+	if (strlen(aLevelName) > MAX_LEVEL_SIZE)
 	{
 		ASSERT( FALSE,
 			"writeGameFile:Unable to save level name - too long (max20) - %s",
-			pLevelName );
+			aLevelName );
 
 		return false;
 	}
-	strcpy(saveGame.levelName, pLevelName);
+	strlcpy(saveGame.levelName, aLevelName, sizeof(saveGame.levelName));
 
 	//save out the players power
 	for (i = 0; i < MAX_PLAYERS; ++i)
@@ -5089,7 +5010,7 @@ static bool writeGameFile(const char* fileName, SDWORD saveType)
 	saveGame.offWorldKeepLists = offWorldKeepLists;
 	saveGame.RubbleTile	= getRubbleTileNum();
 	saveGame.WaterTile	= getWaterTileNum();
-	saveGame.fogColour	= pie_GetFogColour();
+	saveGame.fogColour	= pie_GetFogColour().argb;
 	saveGame.fogState	= fogStatus;
 	if(pie_GetFogEnabled())
 	{
@@ -5245,8 +5166,6 @@ BOOL loadSaveDroidInit(char *pFileData, UDWORD filesize)
 	return TRUE;
 }
 
-
-
 // -----------------------------------------------------------------------------------------
 // Used for all droids
 BOOL loadSaveDroidInitV2(char *pFileData, UDWORD filesize,UDWORD quantity)
@@ -5284,13 +5203,7 @@ BOOL loadSaveDroidInitV2(char *pFileData, UDWORD filesize,UDWORD quantity)
 
 		if(psTemplate==NULL)
 		{
-
 			debug( LOG_NEVER, "loadSaveUnitInitV2:\nUnable to find template for %s player %d", pDroidInit->name,pDroidInit->player );
-
-#ifdef DEBUG
-//			DumpDroidTemplates();
-#endif
-
 		}
 		else
 		{
@@ -5319,11 +5232,6 @@ BOOL loadSaveDroidInitV2(char *pFileData, UDWORD filesize,UDWORD quantity)
 		}
 		pDroidInit++;
 	}
-
-//	powerCalculated = TRUE;
-
-
-
 	if(NumberOfSkippedDroids) {
 		debug( LOG_ERROR, "unitLoad: Bad Player number in %d unit(s)... assigned to the last player!\n", NumberOfSkippedDroids );
 		abort();
@@ -5338,19 +5246,6 @@ DROID_TEMPLATE *FindDroidTemplate(char *name,UDWORD player)
 	UDWORD			TempPlayer;
 	DROID_TEMPLATE *Template;
 	UDWORD			id;
-
-/*#ifdef RESOURCE_NAMES
-
-	//get the name from the resource associated with it
-	if (!strresGetIDNum(psStringRes, name, &id))
-	{
-		DBERROR(("Cannot find resource for template - %s", name));
-		return NULL;
-	}
-	//get the string from the id
-	name = strresGetString(psStringRes, id);
-
-#endif*/
 
 	//get the name from the resource associated with it
 	if (!strresGetIDNum(psStringRes, name, &id))
@@ -5369,7 +5264,6 @@ DROID_TEMPLATE *FindDroidTemplate(char *name,UDWORD player)
 
 			//if(strcmp(name,Template->pName)==0) {
 			if(strcmp(name,Template->aName)==0) {
-//				DBPRINTF(("%s %d , %d\n",name,player,TempPlayer));
 				return Template;
 			}
 			Template = Template->psNext;
@@ -5464,8 +5358,7 @@ static DROID* buildDroidFromSaveDroidV11(SAVE_DROID_V11* psSaveDroid)
 	//set up the template
 	//copy the values across
 
-	strncpy(psTemplate->aName, psSaveDroid->name, DROID_MAXNAME);
-	psTemplate->aName[DROID_MAXNAME-1]=0;
+	strlcpy(psTemplate->aName, psSaveDroid->name, sizeof(psTemplate->aName));
 	//ignore the first comp - COMP_UNKNOWN
 	found = TRUE;
 	for (i=1; i < DROID_MAXCOMP; i++)
@@ -5572,8 +5465,7 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 	//set up the template
 	//copy the values across
 
-	strncpy(psTemplate->aName, psSaveDroid->name, DROID_MAXNAME);
-	psTemplate->aName[DROID_MAXNAME-1]=0;
+	strlcpy(psTemplate->aName, psSaveDroid->name, sizeof(psTemplate->aName));
 
 	//ignore the first comp - COMP_UNKNOWN
 	found = TRUE;
@@ -5722,19 +5614,19 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 		psSaveDroidV14 = (SAVE_DROID_V14*)psSaveDroid;
 		if (psSaveDroidV14->tarStatName[0] == 0)
 		{
-			psDroid->psTarStats[0] = NULL;
+			psDroid->psTarStats = NULL;
 		}
 		else
 	 	{
 			id = getStructStatFromName(psSaveDroidV14->tarStatName);
 			if (id != (UDWORD)-1)
 			{
-				psDroid->psTarStats[0] = (BASE_STATS*)&asStructureStats[id];
+				psDroid->psTarStats = (BASE_STATS*)&asStructureStats[id];
 			}
 			else
 			{
 				ASSERT( FALSE,"loadUnit TargetStat not found" );
-				psDroid->psTarStats[0] = NULL;
+				psDroid->psTarStats = NULL;
                 orderDroid(psDroid, DORDER_STOP);
 			}
 		}
@@ -5758,19 +5650,19 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 
 		if (psSaveDroid->tarStatName[0] == 0)
 		{
-			psDroid->psTarStats[0] = NULL;
+			psDroid->psTarStats = NULL;
 		}
 		else
 		{
 			id = getStructStatFromName(psSaveDroid->tarStatName);
 			if (id != (UDWORD)-1)
 			{
-				psDroid->psTarStats[0] = (BASE_STATS*)&asStructureStats[id];
+				psDroid->psTarStats = (BASE_STATS*)&asStructureStats[id];
 			}
 			else
 			{
 				ASSERT( FALSE,"loadUnit TargetStat not found" );
-				psDroid->psTarStats[0] = NULL;
+				psDroid->psTarStats = NULL;
 			}
 		}
 		//rebuild the object pointer from the ID
@@ -5809,8 +5701,7 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 	//set up the template
 	//copy the values across
 
-	strncpy(psTemplate->aName, psSaveDroid->name, DROID_MAXNAME);
-	psTemplate->aName[DROID_MAXNAME-1]=0;
+	strlcpy(psTemplate->aName, psSaveDroid->name, sizeof(psTemplate->aName));
 	//ignore the first comp - COMP_UNKNOWN
 	found = TRUE;
 	for (i=1; i < DROID_MAXCOMP; i++)
@@ -5959,7 +5850,7 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 	psDroid->orderY2				= psSaveDroid->orderY2;
 	psDroid->timeLastHit			= psSaveDroid->timeLastHit;
 	//rebuild the object pointer from the ID
-	FIXME_CAST_ASSIGN(UDWORD, psDroid->psTarget[0], psSaveDroid->targetID);
+	FIXME_CAST_ASSIGN(UDWORD, psDroid->psTarget, psSaveDroid->targetID);
 	psDroid->secondaryOrder		= psSaveDroid->secondaryOrder;
 	psDroid->action				= psSaveDroid->action;
 	psDroid->actionX				= psSaveDroid->actionX;
@@ -5975,19 +5866,19 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 	//version 18
 	if (psSaveDroid->tarStatName[0] == 0)
 	{
-		psDroid->psTarStats[0] = NULL;
+		psDroid->psTarStats = NULL;
 	}
 	else
 	{
 		id = getStructStatFromName(psSaveDroid->tarStatName);
 		if (id != (UDWORD)-1)
 		{
-			psDroid->psTarStats[0] = (BASE_STATS*)&asStructureStats[id];
+			psDroid->psTarStats = (BASE_STATS*)&asStructureStats[id];
 		}
 		else
 		{
 			ASSERT( FALSE,"loadUnit TargetStat not found" );
-			psDroid->psTarStats[0] = NULL;
+			psDroid->psTarStats = NULL;
 		}
 	}
 	//rebuild the object pointer from the ID
@@ -6075,19 +5966,19 @@ static BOOL loadDroidSetPointers(void)
 			while (psDroid)
 			{
 				//Target rebuild the object pointer from the ID
-				id = (UDWORD)(psDroid->psTarget[0]);
+				id = (UDWORD)psDroid->psTarget;
 				if (id != UDWORD_MAX)
 				{
-					setSaveDroidTarget(psDroid, getBaseObjFromId(id), 0);
-					ASSERT( psDroid->psTarget[0] != NULL,"Saved Droid psTarget getBaseObjFromId() failed" );
-					if (psDroid->psTarget[0] == NULL)
+					setSaveDroidTarget(psDroid, getBaseObjFromId(id));
+					ASSERT(psDroid->psTarget != NULL, "Saved Droid psTarget getBaseObjFromId() failed");
+					if (psDroid->psTarget == NULL)
 					{
 						psDroid->order = DORDER_NONE;
 					}
 				}
 				else
 				{
-					setSaveDroidTarget(psDroid, NULL, 0);
+					setSaveDroidTarget(psDroid, NULL);
 				}
 				//ActionTarget rebuild the object pointer from the ID
 				id = (UDWORD)(psDroid->psActionTarget[0]);
@@ -6160,9 +6051,9 @@ static BOOL loadDroidSetPointers(void)
 						UDWORD i;
 
 						psTemp = psCargo->psGrpNext;
+						setSaveDroidTarget(psCargo, NULL);
 						for (i = 0; i < DROID_MAXWEAPS; i++)
 						{
-							setSaveDroidTarget(psCargo, NULL, i);
 							setSaveDroidActionTarget(psCargo, NULL, i);
 						}
 						setSaveDroidBase(psCargo, NULL);
@@ -6259,9 +6150,9 @@ BOOL loadSaveDroidV11(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
 		else if (psSaveDroid->saveType == DROID_ON_TRANSPORT)
 		{
    			//add the droid to the list
+			setSaveDroidTarget(psDroid, NULL);
 			for (i = 0; i < DROID_MAXWEAPS; i++)
 			{
-				setSaveDroidTarget(psDroid, NULL, i);
 				setSaveDroidActionTarget(psDroid, NULL, i);
 			}
 			setSaveDroidBase(psDroid, NULL);
@@ -6413,9 +6304,9 @@ BOOL loadSaveDroidV19(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
   			//add the droid to the list
 			psDroid->order = DORDER_NONE;
 			psDroid->action = DACTION_NONE;
+			setSaveDroidTarget(psDroid, NULL);
 			for (i = 0; i < DROID_MAXWEAPS; i++)
 			{
-				setSaveDroidTarget(psDroid, NULL, i);
 				setSaveDroidActionTarget(psDroid, NULL, i);
 			}
 			setSaveDroidBase(psDroid, NULL);
@@ -6608,9 +6499,9 @@ BOOL loadSaveDroidV(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD v
   			//add the droid to the list
 			psDroid->order = DORDER_NONE;
 			psDroid->action = DACTION_NONE;
+			setSaveDroidTarget(psDroid, NULL);
 			for (i = 0; i < DROID_MAXWEAPS; i++)
 			{
-				setSaveDroidTarget(psDroid, NULL, i);
 				setSaveDroidActionTarget(psDroid, NULL, i);
 			}
 			setSaveDroidBase(psDroid, NULL);
@@ -6656,10 +6547,6 @@ BOOL loadSaveDroidV(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD v
 static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROID_SAVE_TYPE saveType)
 {
 	UDWORD				i;
-
-#ifdef ALLOWSAVE
-
-//			strcpy(psSaveDroid->name, psCurr->pName);
 
 			/*want to store the resource ID string for compatibilty with
 			different versions of save game - NOT HAPPENING - the name saved is
@@ -6720,11 +6607,11 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			psSaveDroid->orderX2		= psCurr->orderX2;
 			psSaveDroid->orderY2		= psCurr->orderY2;
 			psSaveDroid->timeLastHit	= psCurr->timeLastHit;
-			if (psCurr->psTarget[0] != NULL)
+			if (psCurr->psTarget != NULL)
 			{
-				if (psCurr->psTarget[0]->died <= 1)
+				if (psCurr->psTarget->died <= 1)
 				{
-					psSaveDroid->targetID		= psCurr->psTarget[0]->id;
+					psSaveDroid->targetID		= psCurr->psTarget->id;
 					if	(!checkValidId(psSaveDroid->targetID))
 					{
 						psSaveDroid->targetID		= UDWORD_MAX;
@@ -6768,10 +6655,10 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			psSaveDroid->actionHeight	= psCurr->powerAccrued;
 
 			//version 14
-			if (psCurr->psTarStats[0] != NULL)
+			if (psCurr->psTarStats != NULL)
 			{
-				ASSERT( strlen(psCurr->psTarStats[0]->pName) < MAX_NAME_SIZE,"writeUnitFile; psTarStat pName Error" );
-				strcpy(psSaveDroid->tarStatName,psCurr->psTarStats[0]->pName);
+				ASSERT( strlen(psCurr->psTarStats->pName) < MAX_NAME_SIZE,"writeUnitFile; psTarStat pName Error" );
+				strcpy(psSaveDroid->tarStatName,psCurr->psTarStats->pName);
 			}
 			else
 			{
@@ -6848,53 +6735,6 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 				psSaveDroid->formationY		= 0;
 			}
 
-			/*psSaveDroid->activeProg = psCurr->activeProg;
-			psSaveDroid->numProgs = psCurr->numProgs;
-			for (i=0; i < psCurr->numProgs; i++)
-			{
-				if (!getNameFromComp(COMP_PROGRAM, psSaveDroid->asProgs[i], psCurr->asProgs[i].psStats - asProgramStats))
-				{
-					//ignore this record
-					continue;
-				}
-			}*/
-
-//			psSaveDroid->sMove = psCurr->sMove;
-//			psSaveDroid->sDisplay = psCurr->sDisplay;
-
-			/* psSaveDroid->aiState = psCurr->sAI.state;
-			if (psCurr->sAI.psTarget)
-			{
-				psSaveDroid->subjectID = psCurr->sAI.psTarget->id;
-				psSaveDroid->subjectType = psCurr->sAI.psTarget->type;
-				psSaveDroid->subjectPlayer = psCurr->sAI.psTarget->player;
-			}
-			else
-			{
-				psSaveDroid->subjectID = -1;
-				psSaveDroid->subjectType = 0;
-				psSaveDroid->subjectPlayer = 0;
-			}
-			if (psCurr->sAI.psSelectedWeapon)
-			{
-				psSaveDroid->weaponInc = psCurr->sAI.psSelectedWeapon->psStats->ref - REF_WEAPON_START;
-			}
-			else
-			{
-				psSaveDroid->weaponInc = 0;
-			}
-			if(psCurr->sAI.psStructToBuild)
-			{
-				psSaveDroid->structureInc = psCurr->sAI.psStructToBuild - asStructureStats;
-			}
-			else
-			{
-				psSaveDroid->structureInc = -1;
-			}
-			psSaveDroid->timeStarted = psCurr->sAI.timeStarted;
-			psSaveDroid->pointsToAdd = psCurr->sAI.pointsToAdd; */
-
-#endif
 			psSaveDroid->id = psCurr->id;
 			psSaveDroid->x = psCurr->x;
 			psSaveDroid->y = psCurr->y;
@@ -8333,7 +8173,6 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 }
 
 // -----------------------------------------------------------------------------------------
-#ifdef ALLOWSAVE
 /*
 Writes the linked list of structure for each player to a file
 */
@@ -8433,7 +8272,7 @@ BOOL writeStructFile(char *pFileName)
 			// no need to check power at max because it would be being built
 			psSaveStruct->currentPowerAccrued = psCurr->currentPowerAccrued;
 
-			psSaveStruct->armour = psCurr->armour;
+			psSaveStruct->armour = psCurr->armour[0][0]; // advanced armour not supported yet
 			psSaveStruct->resistance = psCurr->resistance;
 			psSaveStruct->subjectInc = UDWORD_MAX;
 			psSaveStruct->timeStarted = 0;
@@ -8718,8 +8557,6 @@ BOOL loadStructSetPointers(void)
 	}
 	return TRUE;
 }
-
-#endif
 
 // -----------------------------------------------------------------------------------------
 BOOL loadSaveFeature(char *pFileData, UDWORD filesize)
@@ -9198,8 +9035,7 @@ BOOL loadSaveTemplateV7(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		//copy the values across
 
 		psTemplate->pName = NULL;
-		strncpy(psTemplate->aName, psSaveTemplate->name, DROID_MAXNAME);
-		psTemplate->aName[DROID_MAXNAME-1]=0;
+		strlcpy(psTemplate->aName, psSaveTemplate->name, sizeof(psTemplate->aName));
 
 		psTemplate->ref = psSaveTemplate->ref;
 		psTemplate->droidType = psSaveTemplate->droidType;
@@ -9331,9 +9167,7 @@ BOOL loadSaveTemplateV14(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		//copy the values across
 
 		psTemplate->pName = NULL;
-		strncpy(psTemplate->aName, psSaveTemplate->name, DROID_MAXNAME);
-		psTemplate->aName[DROID_MAXNAME-1]=0;
-
+		strlcpy(psTemplate->aName, psSaveTemplate->name, sizeof(psTemplate->aName));
 
 		psTemplate->ref = psSaveTemplate->ref;
 		psTemplate->droidType = psSaveTemplate->droidType;
@@ -9399,13 +9233,6 @@ BOOL loadSaveTemplateV14(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		//calculate the total build points
 		psTemplate->buildPoints = calcTemplateBuild(psTemplate);
 		psTemplate->powerPoints = calcTemplatePower(psTemplate);
-
-#ifdef NEW_SAVE_V14
-//		if (psSaveTemplate->player == 0)
-//		{
-//			DBPRINTF(("building from save %s %d\n",psTemplate->aName,psTemplate->multiPlayerID));
-//		}
-#endif
 
 		//store it in the apropriate player' list
 		//if a template with the same multiplayerID exists overwrite it
@@ -9495,9 +9322,7 @@ BOOL loadSaveTemplateV(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		//copy the values across
 
 		psTemplate->pName = NULL;
-		strncpy(psTemplate->aName, psSaveTemplate->name, DROID_MAXNAME);
-		psTemplate->aName[DROID_MAXNAME-1]=0;
-
+		strlcpy(psTemplate->aName, psSaveTemplate->name, sizeof(psTemplate->aName));
 
 		psTemplate->ref = psSaveTemplate->ref;
 		psTemplate->droidType = psSaveTemplate->droidType;
@@ -9582,13 +9407,6 @@ BOOL loadSaveTemplateV(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		//calculate the total build points
 		psTemplate->buildPoints = calcTemplateBuild(psTemplate);
 		psTemplate->powerPoints = calcTemplatePower(psTemplate);
-
-#ifdef NEW_SAVE_V14
-//		if (psSaveTemplate->player == 0)
-//		{
-//			DBPRINTF(("building from save %s %d\n",psTemplate->aName,psTemplate->multiPlayerID));
-//		}
-#endif
 
 		//store it in the apropriate player' list
 		//if a template with the same multiplayerID exists overwrite it
@@ -9677,24 +9495,14 @@ BOOL writeTemplateFile(char *pFileName)
 	{
 		for(psCurr = apsDroidTemplates[player]; psCurr != NULL; psCurr = psCurr->psNext)
 		{
-
-
-
-
-			//strcpy(psSaveTemplate->name, psCurr->pName);
 			strcpy(psSaveTemplate->name, psCurr->aName);
 
 			psSaveTemplate->ref = psCurr->ref;
 			psSaveTemplate->player = player;
 			psSaveTemplate->droidType = (UBYTE)psCurr->droidType;
 			psSaveTemplate->multiPlayerID = psCurr->multiPlayerID;
-#ifdef NEW_SAVE_V14
-//			if (player == 0)
-//			{
-//				DBPRINTF(("saving %s %d \n",psCurr->aName,psCurr->multiPlayerID));
-//			}
-#endif
-			//for (i=0; i < DROID_MAXCOMP; i++) not interested in first comp - COMP_UNKNOWN
+
+			// not interested in first comp - COMP_UNKNOWN
 			for (i=1; i < DROID_MAXCOMP; i++)
 			{
 
@@ -9743,14 +9551,7 @@ BOOL writeTemplateFile(char *pFileName)
 	return FALSE;
 }
 
-
-
-
-
-
-
 // -----------------------------------------------------------------------------------------
-
 // load up a terrain tile type map file
 BOOL loadTerrainTypeMap(const char *pFileData, UDWORD filesize)
 {
@@ -9778,13 +9579,6 @@ BOOL loadTerrainTypeMap(const char *pFileData, UDWORD filesize)
 	/* TILETYPE_SAVEHEADER */
 	endian_udword(&psHeader->version);
 	endian_udword(&psHeader->quantity);
-
-/*	Version doesn't matter for now
-	if (psHeader->version != VERSION_2)
-	{
-		DBERROR(("loadTerrainTypeMap: Incorrect file version"));
-		return FALSE;
-	}*/
 
 	// reset the terrain table
 	memset(terrainTypes, 0, sizeof(terrainTypes));
@@ -9992,8 +9786,6 @@ BOOL loadSaveCompListV(char *pFileData, UDWORD filesize, UDWORD numRecords, UDWO
 	SAVE_COMPLIST		*psSaveCompList;
 	UDWORD				i;
 	SDWORD				compInc;
-
-//	version;
 
 	if ((sizeof(SAVE_COMPLIST) * numRecords + COMPLIST_HEADER_SIZE) >
 		filesize)
@@ -10697,7 +10489,6 @@ static BOOL writeResearchFile(char *pFileName)
 
 
 // -----------------------------------------------------------------------------------------
-//#ifdef NEW_SAVE //V11 Save
 // load up saved message file
 BOOL loadSaveMessage(char *pFileData, UDWORD filesize, SWORD levelType)
 {
@@ -10840,6 +10631,7 @@ BOOL loadSaveMessageV(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWO
 
 	return TRUE;
 }
+
 // -----------------------------------------------------------------------------------------
 // Write out the current messages per player
 static BOOL writeMessageFile(char *pFileName)
@@ -10953,191 +10745,8 @@ static BOOL writeMessageFile(char *pFileName)
 
 	return TRUE;
 }
-//#endif
 
 // -----------------------------------------------------------------------------------------
-#ifdef SAVE_PROXIMITY_STUFF//V14 Save this is not done because all messages are rebuilt
-// load up saved proximity file
-BOOL loadSaveProximity(char *pFileData, UDWORD filesize)
-{
-	PROXIMITY_SAVEHEADER		*psHeader;
-
-	/* Check the file type */
-	psHeader = (PROXIMITY_SAVEHEADER*)pFileData;
-	if (psHeader->aFileType[0] != 'm' || psHeader->aFileType[1] != 'e' ||
-		psHeader->aFileType[2] != 's' || psHeader->aFileType[3] != 's')
-	{
-		debug( LOG_ERROR, "loadSaveProximity: Incorrect file type" );
-		abort();
-		return FALSE;
-	}
-
-	/* PROXIMITY_SAVEHEADER */
-	endian_udword(&psHeader->version);
-	endian_udword(&psHeader->quantity);
-
-	//increment to the start of the data
-	pFileData += PROXIMITY_HEADER_SIZE;
-
-	/* Check the file version */
-	if (!loadSaveProximityV(pFileData, filesize, psHeader->quantity, psHeader->version))
-	{
-		return FALSE;
-	}
-	return TRUE;
-}
-
-// -----------------------------------------------------------------------------------------
-BOOL loadSaveProximityV(char *pFileData, UDWORD filesize, UDWORD numProximitys, UDWORD version)
-{
-	SAVE_PROXIMITY	*psSaveProximity;
-	PROXIMITY_DISPLAY	*psProximity;
-	UDWORD i;
-
-	//clear any proximitys put in during level loads
-	freeProximitys();
-
-	//check file
-	if ((sizeof(SAVE_PROXIMITY) * numProximitys + PROXIMITY_HEADER_SIZE) >
-		filesize)
-	{
-		debug( LOG_ERROR, "loadSaveProximity: unexpected end of file" );
-		abort();
-		return FALSE;
-	}
-
-	// Load the data
-	for (i = 0; i < numProximitys; i++, pFileData += sizeof(SAVE_PROXIMITY))
-	{
-		psSaveProximity = (SAVE_PROXIMITY *) pFileData;
-
-		/* SAVE_PROXIMITY */
-		endian_sdword(&psSaveProximity->type);
-		endian_udword(&psSaveProximity->frameNumber);
-		endian_udword(&psSaveProximity->screenX);
-		endian_udword(&psSaveProximity->screenY);
-		endian_udword(&psSaveProximity->screenR);
-		endian_udword(&psSaveProximity->objId);
-		endian_udword(&psSaveProximity->radarX);
-		endian_udword(&psSaveProximity->radarY);
-		endian_udword(&psSaveProximity->timeLastDrawn);
-		endian_udword(&psSaveProximity->strobe);
-		endian_udword(&psSaveProximity->buttonID);
-
-		if (psSaveProximity->type == MSG_PROXIMITY)
-		{
-//			addProximity(psSaveProximity->type, psSaveProximity->proxPos, psSaveProximity->player);
-		}
-		else
-		{
-//			psProximity = addProximity(psSaveProximity->type, FALSE, psSaveProximity->player);
-			if (psProximity)
-			{
-	//			psProximity->pViewData = getViewData(psSaveProximity->name);
-			}
-		}
-	}
-
-	return TRUE;
-}
-// -----------------------------------------------------------------------------------------
-// Write out the current proximitys per player
-static BOOL writeProximityFile(char *pFileName)
-{
-	PROXIMITY_SAVEHEADER		*psHeader;
-	SAVE_PROXIMITY			*psSaveProximity;
-	char *pFileData;
-	UDWORD					fileSize, player;
-	PROXIMITY_DISPLAY		*psProximity;
-	UDWORD					numProximitys = 0;
-	VIEWDATA				*pViewData;
-
-	// Calculate the file size
-	for (player = 0; player < MAX_PLAYERS; player++)
-	{
-		for(psProximity = apsProxDisp[player]; psProximity != NULL;psProximity = psProximity->psNext)
-		{
-			numProximitys++;
-		}
-
-	}
-
-	fileSize = PROXIMITY_HEADER_SIZE + (sizeof(SAVE_PROXIMITY) *
-		numProximitys);
-
-
-	//allocate the buffer space
-	pFileData = (char*)malloc(fileSize);
-	if (!pFileData)
-	{
-		debug( LOG_ERROR, "writeProximityFile: Out of memory" );
-		abort();
-		return FALSE;
-	}
-
-	// Put the file header on the file
-	psHeader = (PROXIMITY_SAVEHEADER *)pFileData;
-	psHeader->aFileType[0] = 'm';
-	psHeader->aFileType[1] = 'e';
-	psHeader->aFileType[2] = 's';
-	psHeader->aFileType[3] = 's';
-	psHeader->version = CURRENT_VERSION_NUM;
-	psHeader->quantity = numProximitys;
-
-	psSaveProximity = (SAVE_PROXIMITY *) (pFileData + PROXIMITY_HEADER_SIZE);
-	//save each type of reesearch
-	for (player = 0; player < MAX_PLAYERS; player++)
-	{
-		psProximity = apsProxDisp[player];
-		for(psProximity = apsProxDisp[player]; psProximity != NULL;psProximity = psProximity->psNext)
-		{
-			psSaveProximity->type		 = psProximity->type;	//The type of proximity
-			psSaveProximity->frameNumber = psProximity->frameNumber;
-			psSaveProximity->screenX	 = psProximity->screenX;
-			psSaveProximity->screenY	 = psProximity->screenY;
-			psSaveProximity->screenR	 = psProximity->screenR;
-			psSaveProximity->player		 = psProximity->player;
-			psSaveProximity->selected	 = psProximity->selected;
-			psSaveProximity->objId		 = psProximity->psMessage->id;
-			psSaveProximity->radarX		 = psProximity->radarX;
-			psSaveProximity->radarY		 = psProximity->radarY;
-			psSaveProximity->timeLastDrawn = psProximity->timeLastDrawn;
-			psSaveProximity->strobe		 = psProximity->strobe;
-			psSaveProximity->buttonID	 = psProximity->buttonID;
-			psSaveProximity->player		 = psProximity->player;
-			/* SAVE_PROXIMITY */
-			endian_sdword(&psSaveProximity->type);
-			endian_udword(&psSaveProximity->frameNumber);
-			endian_udword(&psSaveProximity->screenX);
-			endian_udword(&psSaveProximity->screenY);
-			endian_udword(&psSaveProximity->screenR);
-			endian_udword(&psSaveProximity->objId);
-			endian_udword(&psSaveProximity->radarX);
-			endian_udword(&psSaveProximity->radarY);
-			endian_udword(&psSaveProximity->timeLastDrawn);
-			endian_udword(&psSaveProximity->strobe);
-			endian_udword(&psSaveProximity->buttonID);
-
-			psSaveProximity = (SAVE_PROXIMITY *)((char *)psSaveProximity + sizeof(SAVE_PROXIMITY));
-		}
-	}
-
-	/* PROXIMITY_SAVEHEADER */
-	endian_udword(&psSaveHeader->version);
-	endian_udword(&psSaveHeader->quantity);
-
-	if (!saveFile(pFileName, pFileData, fileSize))
-	{
-		return FALSE;
-	}
-	free(pFileData);
-
-	return TRUE;
-}
-#endif
-
-// -----------------------------------------------------------------------------------------
-//#ifdef NEW_SAVE //V11 Save
 // load up saved flag file
 BOOL loadSaveFlag(char *pFileData, UDWORD filesize)
 {
@@ -11177,7 +10786,6 @@ BOOL loadSaveFlagV(char *pFileData, UDWORD filesize, UDWORD numflags, UDWORD ver
 	STRUCTURE*		psStruct;
 	UDWORD			factoryToFind = 0;
 	UDWORD			sizeOfSaveFlag;
-//	version;//unreferenced
 
 	//clear any flags put in during level loads
 	freeAllFlagPositions();
@@ -11492,10 +11100,8 @@ static BOOL writeFlagFile(char *pFileName)
 
 	return TRUE;
 }
-//#endif
 
 // -----------------------------------------------------------------------------------------
-//#ifdef PRODUCTION
 BOOL loadSaveProduction(char *pFileData, UDWORD filesize)
 {
 	PRODUCTION_SAVEHEADER		*psHeader;
@@ -11530,8 +11136,6 @@ BOOL loadSaveProductionV(char *pFileData, UDWORD filesize, UDWORD version)
 	SAVE_PRODUCTION	*psSaveProduction;
 	PRODUCTION_RUN	*psCurrentProd;
 	UDWORD			factoryType,factoryNum,runNum;
-//	version;//unreferenced
-
 
 	//check file
 	if ((sizeof(SAVE_PRODUCTION) * NUM_FACTORY_TYPES * MAX_FACTORY * MAX_PROD_RUN + PRODUCTION_HEADER_SIZE) >
@@ -11584,12 +11188,8 @@ static BOOL writeProductionFile(char *pFileName)
 	PRODUCTION_RUN	*psCurrentProd;
 	UDWORD				factoryType,factoryNum,runNum;
 
-//PRODUCTION_RUN		asProductionRun[NUM_FACTORY_TYPES][MAX_FACTORY][MAX_PROD_RUN];
-
-
 	fileSize = PRODUCTION_HEADER_SIZE + (sizeof(SAVE_PRODUCTION) *
 		NUM_FACTORY_TYPES * MAX_FACTORY * MAX_PROD_RUN);
-
 
 	//allocate the buffer space
 	pFileData = (char*)malloc(fileSize);
@@ -11644,14 +11244,10 @@ static BOOL writeProductionFile(char *pFileName)
 
 	return TRUE;
 }
-//#endif
-
-
 
 // -----------------------------------------------------------------------------------------
 BOOL loadSaveStructLimits(char *pFileData, UDWORD filesize)
 {
-#ifdef ALLOWSAVE
 	STRUCTLIMITS_SAVEHEADER		*psHeader;
 
 	// Check the file type
@@ -11687,7 +11283,6 @@ BOOL loadSaveStructLimits(char *pFileData, UDWORD filesize)
 		}
 	}
 	else
-#endif
 	{
 		debug( LOG_ERROR, "loadSaveStructLimits: Incorrect file format version" );
 		abort();
@@ -11697,7 +11292,6 @@ BOOL loadSaveStructLimits(char *pFileData, UDWORD filesize)
 }
 
 // -----------------------------------------------------------------------------------------
-#ifdef ALLOWSAVE	  // !?**@?!
 /* code specific to version 2 of saveStructLimits */
 BOOL loadSaveStructLimitsV19(char *pFileData, UDWORD filesize, UDWORD numLimits)
 {
@@ -11839,6 +11433,7 @@ BOOL loadSaveStructLimitsV(char *pFileData, UDWORD filesize, UDWORD numLimits)
 	free(psSaveLimits);
 	return TRUE;
 }
+
 // -----------------------------------------------------------------------------------------
 /*
 Writes the list of structure limits to a file
@@ -11972,6 +11567,7 @@ BOOL loadSaveCommandListsV(char *pFileData, UDWORD filesize, UDWORD numDroids)
 
 	return TRUE;
 }
+
 // -----------------------------------------------------------------------------------------
 /*
 Writes the command lists to a file
@@ -12058,8 +11654,6 @@ BOOL writeCommandLists(char *pFileName)
 	return FALSE;
 }
 
-
-
 // -----------------------------------------------------------------------------------------
 // write the event state to a file on disk
 static BOOL	writeScriptState(char *pFileName)
@@ -12079,8 +11673,6 @@ static BOOL	writeScriptState(char *pFileName)
 	free(pBuffer);
 	return TRUE;
 }
-
-#endif
 
 // -----------------------------------------------------------------------------------------
 // load the script state given a .gam name
@@ -12365,6 +11957,7 @@ BOOL plotStructurePreview(iTexture *backDropSprite, UBYTE scale, UDWORD offX, UD
 	return TRUE;
 
 }
+
 //======================================================
 //draws stuff into our newer bitmap.
 BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWORD offY)

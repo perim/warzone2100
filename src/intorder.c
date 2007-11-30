@@ -42,7 +42,6 @@
 #include "intimage.h"
 #include "intdisplay.h"
 #include "intorder.h"
-#include "text.h"
 
 #include "scriptextern.h"
 
@@ -661,7 +660,7 @@ BOOL intAddOrder(BASE_OBJECT *psObj)
 	sButInit.pTip = _("Close");
 	sButInit.FontID = font_regular;
 	sButInit.pDisplay = intDisplayImageHilight;
-	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
+	sButInit.UserData = PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -796,9 +795,11 @@ BOOL intAddOrder(BASE_OBJECT *psObj)
 			sButInit.pTip = getDORDDescription(OrderButtons[OrdIndex].ButTips[i]);
 			sButInit.width = (UWORD)GetImageWidth(IntImages,OrderButtons[OrdIndex].ButImageID[i]);
 			sButInit.height = (UWORD)GetImageHeight(IntImages,OrderButtons[OrdIndex].ButImageID[i]);
-			sButInit.pUserData = (void*)PACKDWORD_TRI(OrderButtons[OrdIndex].ButGreyID[i],
-														OrderButtons[OrdIndex].ButHilightID[i],
-														OrderButtons[OrdIndex].ButImageID[i]);
+			sButInit.UserData = PACKDWORD_TRI(
+										OrderButtons[OrdIndex].ButGreyID[i],
+										OrderButtons[OrdIndex].ButHilightID[i],
+										OrderButtons[OrdIndex].ButImageID[i]
+											 );
 			if(!widgAddButton(psWScreen, &sButInit))
 			{
 				return FALSE;
@@ -1123,7 +1124,7 @@ void intRemoveOrder(void)
 	Form = (W_TABFORM*)widgGetFromID(psWScreen,IDORDER_FORM);
 	if(Form) {
 		Form->display = intClosePlainForm;
-		Form->pUserData = (void*)0;	// Used to signal when the close anim has finished.
+		Form->pUserData = NULL; // Used to signal when the close anim has finished.
 		Form->disableChildren = TRUE;
 		ClosingOrder = TRUE;
 		OrderUp = FALSE;

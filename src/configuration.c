@@ -32,10 +32,8 @@
 #include "display.h"	// gammaValue
 #include "lib/sound/sound.h"		// audio
 #include "lib/ivis_common/piestate.h"	// setgamma.
-#include "lib/ivis_common/textdraw.h" // text-antialiassing
 #include "warzoneconfig.h"	// renderMode
 #include "component.h"
-#include "text.h"
 #include "seqdisp.h"
 #include "difficulty.h"
 #include "lib/netplay/netplay.h"
@@ -353,7 +351,7 @@ BOOL loadConfig(void)
 	// game name
 	if (getWarzoneKeyString("gameName", sBuf))
 	{
-		strcpy(game.name, sBuf);
+		strlcpy(game.name, sBuf, sizeof(game.name));
 	}
 	else
 	{
@@ -365,22 +363,22 @@ BOOL loadConfig(void)
 	if (getWarzoneKeyString("playerName", sBuf)
 	 && *sBuf != '\0')
 	{
-		strcpy((char*)sPlayer, sBuf);
+		strlcpy(sPlayer, sBuf, sizeof(sPlayer));
 	}
 	else
 	{
 		setWarzoneKeyString("playerName", _("Player"));
-		strcpy((char*)sPlayer, _("Player"));
+		strlcpy(sPlayer, _("Player"), sizeof(sPlayer));
 	}
 
 	// map name
 	if(getWarzoneKeyString("mapName", sBuf))
 	{
-		strcpy(game.map, sBuf);
+		strlcpy(game.map, sBuf, sizeof(game.map));
 	}
 	else
 	{
-		strcpy(game.map, DEFAULTMAPNAME);
+		strlcpy(game.map, DEFAULTMAPNAME, sizeof(game.map));
 		setWarzoneKeyString("mapName", game.map);
 	}
 
@@ -464,11 +462,11 @@ BOOL loadConfig(void)
 	// force name
 	if(getWarzoneKeyString("forceName", sBuf))
 	{
-		strcpy(sForceName, sBuf);
+		strlcpy(sForceName, sBuf, sizeof(sForceName));
 	}
 	else
 	{
-		strcpy(sForceName, "Default");
+		strlcpy(sForceName, "Default", sizeof(sForceName));
 		setWarzoneKeyString("forceName", sForceName);
 	}
 
@@ -515,16 +513,6 @@ BOOL loadConfig(void)
 		setWarzoneKeyNumeric("radarTerrainMode", radarDrawMode);
 	}
 
-	if (getWarzoneKeyNumeric("text-antialiassing", &val))
-	{
-		iV_SetTextAntialias(val);
-	}
-	else
-	{
-		iV_SetTextAntialias(true);
-		setWarzoneKeyNumeric("text-antialiassing", true);
-	}
-
 	return closeWarzoneKey();
 }
 
@@ -542,6 +530,15 @@ BOOL loadRenderMode(void)
 		// If no setting is found go to fullscreen by default
 		setWarzoneKeyNumeric("fullscreen", TRUE);
 		war_setFullscreen(TRUE);
+	}
+
+	if (getWarzoneKeyNumeric("trapCursor", &val))
+	{
+		war_SetTrapCursor(val);
+	}
+	else
+	{
+		war_SetTrapCursor(FALSE);
 	}
 
 	// now load the desired res..
@@ -598,10 +595,9 @@ BOOL saveConfig(void)
 	setWarzoneKeyNumeric("sequences",(SDWORD)(war_GetSeqMode()));		// sequences
 	setWarzoneKeyNumeric("subtitles",(SDWORD)(seq_GetSubtitles()));		// subtitles
 	setWarzoneKeyNumeric("reopenBuild",(SDWORD)(intGetReopenBuild()));	// build menu
-//	setWarzoneKeyNumeric("maxRoute",(SDWORD)(fpathGetMaxRoute()));			// maximum routing
-
 	setWarzoneKeyNumeric("radarObjectMode",(SDWORD)bEnemyAllyRadarColor);    // enemy/allies radar view
 	setWarzoneKeyNumeric("radarTerrainMode",(SDWORD)radarDrawMode);
+	setWarzoneKeyNumeric("trapCursor", war_GetTrapCursor());
 
 	if(!bMultiPlayer)
 	{
@@ -630,8 +626,6 @@ BOOL saveConfig(void)
 		setWarzoneKeyString("phrase3", ingame.phrases[3]);
 		setWarzoneKeyString("phrase4", ingame.phrases[4]);
 	}
-
-	setWarzoneKeyNumeric("text-antialiassing", iV_TextAntialiased());
 
 	return closeWarzoneKey();
 }

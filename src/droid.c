@@ -152,7 +152,7 @@ BOOL droidInit(void)
  *
  * NOTE: This function will damage but _never_ destroy transports when in single player (campaign) mode
  */
-SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD weaponSubClass, DROID_HIT_SIDE impactSide)
+SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD weaponSubClass, HIT_SIDE impactSide)
 {
 	// Do at least one point of damage
 	unsigned int actualDamage = 1, armour;
@@ -283,6 +283,56 @@ SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass, UDWORD wea
 
 	// Return the amount of damage done as an SDWORD between 0 and 99
 	return (SDWORD) ((float) actualDamage / originalBody * 100);
+}
+
+// Check that psVictimDroid is not referred to by any other object in the game
+BOOL droidCheckReferences(DROID *psVictimDroid)
+{
+	int plr, i;
+
+	for (plr = 0; plr < MAX_PLAYERS; plr++)
+	{
+		STRUCTURE *psStruct;
+		DROID *psDroid;
+
+		for (psStruct = apsStructLists[plr]; psStruct != NULL; psStruct = psStruct->psNext)
+		{
+			for (i = 0; i < psStruct->numWeaps; i++)
+			{
+				if ((DROID *)psStruct->psTarget[i] == psVictimDroid)
+				{
+#ifdef DEBUG
+					ASSERT(!"Illegal reference to droid", "Illegal reference to droid from %s line %d",
+					       psStruct->targetFunc[i], psStruct->targetLine[i]);
+#endif
+					return FALSE;
+				}
+			}
+		}
+		for (psDroid = apsDroidLists[plr]; psDroid != NULL; psDroid = psDroid->psNext)
+		{
+			if ((DROID *)psDroid->psTarget == psVictimDroid && psVictimDroid != psDroid)
+			{
+#ifdef DEBUG
+				ASSERT(!"Illegal reference to droid", "Illegal reference to droid from %s line %d",
+				       psDroid->targetFunc, psDroid->targetLine);
+#endif
+				return FALSE;
+			}
+			for (i = 0; i < psDroid->numWeaps; i++)
+			{
+				if ((DROID *)psDroid->psActionTarget[i] == psVictimDroid && psVictimDroid != psDroid)
+				{
+#ifdef DEBUG
+					ASSERT(!"Illegal reference to droid", "Illegal action reference to droid from %s line %d",
+					       psDroid->actionTargetFunc[i], psDroid->actionTargetLine[i]);
+#endif
+					return FALSE;
+				}
+			}
+		}
+	}
+	return TRUE;
 }
 
 /* droidRelease: release all resources associated with a droid -
@@ -474,36 +524,17 @@ void	removeDroidBase(DROID *psDel)
 		psDel->psGroup = NULL;
 	}
 
-    //PUT THIS IN removeDroidFX()
-	//once a droid is destroyed - it leaves a wrecked droid FEATURE in its place
-//	buildFeature((asFeatureStats + droidFeature), psDel->x, psDel->y);
-	//if( (psDel->droidType == DROID_PERSON || psDel->droidType == DROID_CYBORG) &&
-	//	(psDel->order != DORDER_RUNBURN) )
-	//{
-	//	/* blow person up into blood and guts */
-	//	compPersonToBits(psDel);
-	//}
-
 	/* Put Deliv. Pts back into world when a command droid dies */
 	if(psDel->droidType == DROID_COMMAND)
 	{
-
 		for (psStruct = apsStructLists[psDel->player]; psStruct; psStruct=psStruct->psNext)
 		{
-/* Replace the delivery points for the factories assigned to this command droid */
-//			if ( psStruct->pStructureType->type == REF_FACTORY )	/* Is it a factory? */
-//			{
-//				assignFactoryCommandDroid(psStruct, NULL);	/* Return d. pt. */
-//			}
-
 			// alexl's stab at a right answer.
 			if (StructIsFactory(psStruct)
 			 && psStruct->pFunctionality->factory.psCommander == psDel)
 			{
 				assignFactoryCommandDroid(psStruct, NULL);
 			}
-
-
 		}
 	}
 
@@ -608,10 +639,9 @@ static void removeDroidFX(DROID *psDel)
 
 void destroyDroid(DROID *psDel)
 {
-
 	if(psDel->lastHitWeapon==WSC_LAS_SAT)		// darken tile if lassat.
 	{
-		UDWORD width,breadth;
+		UDWORD width, breadth, mapX, mapY;
 		MAPTILE	*psTile;
 
 		mapX = map_coord(psDel->x);
@@ -1072,7 +1102,6 @@ void droidUpdate(DROID *psDroid)
 		}
 	}
 	// -----------------
-//	visTilesUpdate((BASE_OBJECT *)psDroid);
 
 	/* Update the fire damage data */
 	if (psDroid->inFire & IN_FIRE)
@@ -1233,12 +1262,12 @@ BOOL droidStartBuild(DROID *psDroid)
 	CHECK_DROID(psDroid);
 
 	/* See if we are starting a new structure */
-	if ((psDroid->psTarget[0] == NULL) &&
+	if ((psDroid->psTarget == NULL) &&
 		(psDroid->order == DORDER_BUILD ||
 		 psDroid->order == DORDER_LINEBUILD))
 	{
 		//need to check structLimits have not been exceeded
-		psStructStat = (STRUCTURE_STATS *)psDroid->psTarStats[0];
+		psStructStat = (STRUCTURE_STATS *)psDroid->psTarStats;
 		if (asStructLimits[psDroid->player][psStructStat - asStructureStats].
 			currentQuantity >= asStructLimits[psDroid->player][psStructStat -
 			asStructureStats].limit)
@@ -1275,7 +1304,7 @@ BOOL droidStartBuild(DROID *psDroid)
 	else
 	{
 		/* Check the structure is still there to build (joining a partially built struct) */
-		psStruct = (STRUCTURE *)psDroid->psTarget[0];
+		psStruct = (STRUCTURE *)psDroid->psTarget;
 		if (!droidNextToStruct(psDroid,  (BASE_OBJECT *)psStruct))
 		{
 			/* Nope - stop building */
@@ -1288,7 +1317,7 @@ BOOL droidStartBuild(DROID *psDroid)
 	{
 		psDroid->actionStarted = gameTime;
 		psDroid->actionPoints = 0;
-		setDroidTarget(psDroid, (BASE_OBJECT *)psStruct, 0);
+		setDroidTarget(psDroid, (BASE_OBJECT *)psStruct);
 		setDroidActionTarget(psDroid, (BASE_OBJECT *)psStruct, 0);
 	}
 
@@ -1350,7 +1379,7 @@ BOOL droidUpdateBuild(DROID *psDroid)
 
 	ASSERT( psDroid->action == DACTION_BUILD,
 		"unitUpdateBuild: unit is not building" );
-	psStruct = (STRUCTURE *)psDroid->psTarget[0];
+	psStruct = (STRUCTURE *)psDroid->psTarget;
 	ASSERT( psStruct->type == OBJ_STRUCTURE,
 		"unitUpdateBuild: target is not a structure" );
 	ASSERT( psDroid->asBits[COMP_CONSTRUCT].nStat < numConstructStats,
@@ -1565,7 +1594,7 @@ BOOL droidStartDemolishing( DROID *psDroid )
 
 	ASSERT( psDroid->order == DORDER_DEMOLISH,
 		"unitStartDemolishing: unit is not demolishing" );
-	psStruct = (STRUCTURE *)psDroid->psTarget[0];
+	psStruct = (STRUCTURE *)psDroid->psTarget;
 	ASSERT( psStruct->type == OBJ_STRUCTURE,
 		"unitStartDemolishing: target is not a structure" );
 
@@ -1600,7 +1629,7 @@ BOOL droidUpdateDemolishing( DROID *psDroid )
 
 	ASSERT( psDroid->action == DACTION_DEMOLISH,
 		"unitUpdateDemolishing: unit is not demolishing" );
-	psStruct = (STRUCTURE *)psDroid->psTarget[0];
+	psStruct = (STRUCTURE *)psDroid->psTarget;
 	ASSERT( psStruct->type == OBJ_STRUCTURE,
 		"unitUpdateDemolishing: target is not a structure" );
 
@@ -1701,7 +1730,7 @@ BOOL droidUpdateDemolishing( DROID *psDroid )
 		removeStruct( psStruct, TRUE );
 
 		/* reset target stats*/
-	    psDroid->psTarStats[0] = NULL;
+	    psDroid->psTarStats = NULL;
 
 		return FALSE;
 	}
@@ -1724,7 +1753,7 @@ BOOL droidStartClearing( DROID *psDroid )
 
 	ASSERT( psDroid->order == DORDER_CLEARWRECK,
 		"unitStartClearing: unit is not clearing wreckage" );
-	psFeature = (FEATURE *)psDroid->psTarget[0];
+	psFeature = (FEATURE *)psDroid->psTarget;
 	ASSERT( psFeature->type == OBJ_FEATURE,
 		"unitStartClearing: target is not a feature" );
 	ASSERT( psFeature->psStats->subType == FEAT_BUILD_WRECK,
@@ -1749,7 +1778,7 @@ BOOL droidUpdateClearing( DROID *psDroid )
 
 	ASSERT( psDroid->action == DACTION_CLEARWRECK,
 		"unitUpdateClearing: unit is not clearing wreckage" );
-	psFeature = (FEATURE *)psDroid->psTarget[0];
+	psFeature = (FEATURE *)psDroid->psTarget;
 	ASSERT( psFeature->type == OBJ_FEATURE,
 		"unitStartClearing: target is not a feature" );
 	ASSERT( psFeature->psStats->subType == FEAT_BUILD_WRECK,
@@ -1776,7 +1805,7 @@ BOOL droidUpdateClearing( DROID *psDroid )
 		removeFeature(psFeature);
 
 		/* reset target stats */
-		psDroid->psTarStats[0] = NULL;
+		psDroid->psTarStats = NULL;
 
 		CHECK_DROID(psDroid);
 
@@ -1858,7 +1887,7 @@ BOOL droidStartRestore( DROID *psDroid )
 
 	ASSERT( psDroid->order == DORDER_RESTORE,
 		"unitStartRestore: unit is not restoring" );
-	psStruct = (STRUCTURE *)psDroid->psTarget[0];
+	psStruct = (STRUCTURE *)psDroid->psTarget;
 	ASSERT( psStruct->type == OBJ_STRUCTURE,
 		"unitStartRestore: target is not a structure" );
 
@@ -1881,7 +1910,7 @@ BOOL droidUpdateRestore( DROID *psDroid )
 
 	ASSERT( psDroid->action == DACTION_RESTORE,
 		"unitUpdateRestore: unit is not restoring" );
-	psStruct = (STRUCTURE *)psDroid->psTarget[0];
+	psStruct = (STRUCTURE *)psDroid->psTarget;
 	ASSERT( psStruct->type == OBJ_STRUCTURE,
 		"unitUpdateRestore: target is not a structure" );
 	ASSERT( psStruct->pStructureType->resistance != 0,
@@ -2244,8 +2273,7 @@ BOOL loadDroidTemplates(const char *pDroidData, UDWORD bufferSize)
 		}
 
 		//get the string from the id and copy into the Name space
-		strcpy(pDroidDesign->aName,strresGetString(psStringRes, id));
-		pDroidDesign->aName[DROID_MAXNAME-1] = 0;
+		strlcpy(pDroidDesign->aName, strresGetString(psStringRes, id), sizeof(pDroidDesign->aName));
 
 		//store the unique template id
 		pDroidDesign->multiPlayerID = templateID;
@@ -2927,11 +2955,9 @@ UDWORD calcDroidWeight(DROID_TEMPLATE *psTemplate)
 	weight =
 		(asBodyStats + psTemplate->asParts[COMP_BODY])->weight +
 		(asBrainStats + psTemplate->asParts[COMP_BRAIN])->weight +
-		//(asPowerStats + psTemplate->asParts[COMP_POWERPLANT])->weight +
 		//(asPropulsionStats + psTemplate->asParts[COMP_PROPULSION])->weight +
 		(asSensorStats + psTemplate->asParts[COMP_SENSOR])->weight +
 		(asECMStats + psTemplate->asParts[COMP_ECM])->weight +
-		//(asArmourStats + psTemplate->asParts[COMP_ARMOUR])->weight +
 		(asRepairStats + psTemplate->asParts[COMP_REPAIRUNIT])->weight +
 		(asConstructStats + psTemplate->asParts[COMP_CONSTRUCT])->weight;
 
@@ -3195,7 +3221,7 @@ DROID* buildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD player,
 	UDWORD			inc;
 	UDWORD			numKills;
 	SDWORD			i, experienceLoc;
-	DROID_HIT_SIDE	impact_side;
+	HIT_SIDE		impact_side;
 
 	// Don't use this assertion in single player, since droids can finish building while on an away mission
 	ASSERT(!bMultiPlayer || worldOnMap(x,y), "the build locations are not on the map");
@@ -3253,11 +3279,11 @@ DROID* buildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD player,
 	psDroid->action = DACTION_NONE;
 	psDroid->actionX = 0;
 	psDroid->actionY = 0;
+	psDroid->psTarStats = NULL;
+	psDroid->psTarget = NULL;
 
 	for(i = 0;i < DROID_MAXWEAPS;i++)
 	{
-		psDroid->psTarStats[i] = NULL;
-		psDroid->psTarget[i] = NULL;
 		psDroid->psActionTarget[i] = NULL;
 		psDroid->asWeaps[i].lastFired = 0;
 		psDroid->asWeaps[i].nStat = 0;
@@ -3396,7 +3422,7 @@ DROID* buildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD player,
 		{
 			updateDroidOrientation(psDroid);
 		}
-		visTilesUpdate((BASE_OBJECT *)psDroid,FALSE);
+		visTilesUpdate((BASE_OBJECT *)psDroid);
 		gridAddObject((BASE_OBJECT *)psDroid);
  		clustNewDroid(psDroid);
 	}
@@ -3505,9 +3531,6 @@ void droidSetBits(DROID_TEMPLATE *pTemplate,DROID *psDroid)
 //	psDroid->asBits[COMP_BRAIN].hitPoints =
 //		(asBrainStats + pTemplate->asParts[COMP_BRAIN])->hitPoints;
 
-	/*psDroid->asBits[COMP_POWERPLANT].hitPoints =
-		(asPowerStats + pTemplate->asParts[COMP_POWERPLANT])->hitPoints;*/
-
 	psDroid->asBits[COMP_PROPULSION].nStat = (UBYTE)pTemplate->asParts[COMP_PROPULSION];
 	//psDroid->asBits[COMP_PROPULSION].hitPoints =
 	//	(asPropulsionStats + pTemplate->asParts[COMP_PROPULSION])->hitPoints;
@@ -3519,9 +3542,6 @@ void droidSetBits(DROID_TEMPLATE *pTemplate,DROID *psDroid)
 	psDroid->asBits[COMP_ECM].nStat = (UBYTE)pTemplate->asParts[COMP_ECM];
 	//psDroid->asBits[COMP_ECM].hitPoints =
 	//	(asECMStats + pTemplate->asParts[COMP_ECM])->hitPoints;
-
-	/*psDroid->asBits[COMP_ARMOUR].hitPoints =
-		(asArmourStats + pTemplate->asParts[COMP_ARMOUR])->hitPoints; */
 
 	psDroid->asBits[COMP_REPAIRUNIT].nStat = (UBYTE)pTemplate->asParts[COMP_REPAIRUNIT];
 	//psDroid->asBits[COMP_REPAIRUNIT].hitPoints =
@@ -3822,7 +3842,9 @@ void	groupConsoleInformOfSelection( UDWORD groupNumber )
 char	groupInfo[255];
 //	if(!getWarCamStatus())
 //	{
-		sprintf(groupInfo,_("Group %d Selected - %d Unit(s)"),groupNumber,selNumSelected(selectedPlayer));
+		unsigned int num_selected = selNumSelected(selectedPlayer);
+
+		snprintf(groupInfo, sizeof(groupInfo), ngettext("Group %u selected - %u Unit", "Group %u selected - %u Units", num_selected), groupNumber, num_selected);
 		addConsoleMessage(groupInfo,RIGHT_JUSTIFY);
 //	}
 
@@ -3834,7 +3856,9 @@ void	groupConsoleInformOfCreation( UDWORD groupNumber )
 char	groupInfo[255];
 	if(!getWarCamStatus())
 	{
-		sprintf(groupInfo,_("%d Unit(s) Assigned to Group %d"),selNumSelected(selectedPlayer),groupNumber);
+		unsigned int num_selected = selNumSelected(selectedPlayer);
+
+		snprintf(groupInfo, sizeof(groupInfo), ngettext("%u unit assigned to Group %u", "%u units assigned to Group %u", num_selected), num_selected, groupNumber);
 		addConsoleMessage(groupInfo,RIGHT_JUSTIFY);
 	}
 
@@ -3842,15 +3866,16 @@ char	groupInfo[255];
 
 void	groupConsoleInformOfCentering( UDWORD groupNumber )
 {
+	char	groupInfo[255];
+	unsigned int num_selected = selNumSelected(selectedPlayer);
 
-char	groupInfo[255];
 	if(!getWarCamStatus())
 	{
-		sprintf(groupInfo,_("Centered on Group %d - %d Unit(s)"),groupNumber,selNumSelected(selectedPlayer));
+		snprintf(groupInfo, sizeof(groupInfo), ngettext("Centered on Group %u - %u Unit", "Centered on Group %u - %u Units", num_selected), groupNumber, num_selected);
 	}
 	else
 	{
-		sprintf(groupInfo,_("Aligning with Group %d - %d Unit(s)"),groupNumber,selNumSelected(selectedPlayer));
+		snprintf(groupInfo, sizeof(groupInfo), ngettext("Aligning with Group %u - %u Unit", "Aligning with Group %u - %u Units", num_selected), groupNumber, num_selected);
 	}
 		addConsoleMessage(groupInfo,RIGHT_JUSTIFY);
 
@@ -4279,8 +4304,7 @@ char *droidGetName(DROID *psDroid)
 //
 void droidSetName(DROID *psDroid,const char *pName)
 {
-	strncpy(psDroid->aName,pName, DROID_MAXNAME);
-	psDroid->aName[DROID_MAXNAME-1] = 0;
+	strlcpy(psDroid->aName, pName, sizeof(psDroid->aName));
 }
 
 
@@ -4849,7 +4873,7 @@ void setUpBuildModule(DROID *psDroid)
 		{
 			//set up the help build scenario
 			psDroid->order = DORDER_HELPBUILD;
-			setDroidTarget(psDroid, (BASE_OBJECT *)psStruct, 0);
+			setDroidTarget(psDroid, (BASE_OBJECT *)psStruct);
 			if (droidStartBuild(psDroid))
 			{
 				psDroid->action = DACTION_BUILD;
@@ -5013,7 +5037,7 @@ BOOL droidUnderRepair(DROID *psDroid)
 			//if (psCurr->droidType == DROID_REPAIR && psCurr->action ==
             if ((psCurr->droidType == DROID_REPAIR || psCurr->droidType ==
                 DROID_CYBORG_REPAIR) && psCurr->action ==
-				DACTION_DROIDREPAIR && psCurr->psTarget[0] == (BASE_OBJECT *)psDroid)
+				DACTION_DROIDREPAIR && psCurr->psTarget == (BASE_OBJECT *)psDroid)
 			{
 				return TRUE;
 			}
@@ -5202,7 +5226,7 @@ BOOL allVtolsRearmed(DROID *psDroid)
 	{
 		if (vtolRearming(psCurr) &&
 			psCurr->order == psDroid->order &&
-			psCurr->psTarget[0] == psDroid->psTarget[0])
+			psCurr->psTarget == psDroid->psTarget)
 		{
 			stillRearming = TRUE;
 			break;
@@ -5456,18 +5480,9 @@ DROID * giftSingleDroid(DROID *psD, UDWORD to)
     DROID               *psNewDroid, *psCurr;
     STRUCTURE           *psStruct;
     UDWORD              body, armourK[NUM_HIT_SIDES], armourH[NUM_HIT_SIDES];
-	DROID_HIT_SIDE		impact_side;
+	HIT_SIDE		impact_side;
 
 	CHECK_DROID(psD);
-
-    //leave any group it belongs to  - this gets called in droidRemove()
-	/*if(psD->psGroup)
-	{
-		grpLeave( psD->psGroup, psD);
-		psD->psGroup = NULL;
-	}*/
-	// remove the droid from the cluster systerm - this gets called in droidRemove()
-	//clustRemoveObject((BASE_OBJECT *)psD);
 
 	if(psD->player == to)
 	{
@@ -5525,7 +5540,7 @@ DROID * giftSingleDroid(DROID *psD, UDWORD to)
         //check through the 'to' players list of droids to see if any are targetting it
         for (psCurr = apsDroidLists[to]; psCurr != NULL; psCurr = psCurr->psNext)
         {
-            if (psCurr->psTarget[0] == (BASE_OBJECT *)psD ||
+            if (psCurr->psTarget == (BASE_OBJECT *)psD ||
                 psCurr->psActionTarget[0] == (BASE_OBJECT *)psD)
             {
                 orderDroid(psCurr, DORDER_STOP);
@@ -5572,16 +5587,16 @@ DROID * giftSingleDroid(DROID *psD, UDWORD to)
         templateSetParts(psD, &sTemplate);
 
         //copy the name across
-        strcpy(sTemplate.aName, psD->aName);
+        strlcpy(sTemplate.aName, psD->aName, sizeof(sTemplate.aName));
 
         x = psD->x;
         y = psD->y;
         body = psD->body;
-		for (impact_side = 0;impact_side < NUM_HIT_SIDES;impact_side=impact_side+1)
-		{
-			armourK[impact_side] = psD->armour[impact_side][WC_KINETIC];
-			armourH[impact_side] = psD->armour[impact_side][WC_HEAT];
-		}
+	for (impact_side = 0;impact_side < NUM_HIT_SIDES;impact_side=impact_side+1)
+	{
+		armourK[impact_side] = psD->armour[impact_side][WC_KINETIC];
+		armourH[impact_side] = psD->armour[impact_side][WC_HEAT];
+	}
         numKills = psD->numKills;
         direction = psD->direction;
         //only play the sound if unit being taken over is selectedPlayer's but not going to the selectedPlayer

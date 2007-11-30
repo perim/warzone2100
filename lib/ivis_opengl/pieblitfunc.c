@@ -29,7 +29,7 @@
 #include "lib/framework/frame.h"
 
 #include <time.h>
-#include <SDL/SDL_opengl.h>
+#include <SDL_opengl.h>
 
 #include "lib/ivis_common/pieblitfunc.h"
 #include "lib/ivis_common/piedef.h"
@@ -38,54 +38,38 @@
 #include "lib/ivis_common/rendmode.h"
 #include "lib/ivis_common/pieclip.h"
 #include "lib/ivis_common/piefunc.h"
+#include "lib/ivis_common/piepalette.h"
 #include "piematrix.h"
 #include "screen.h"
 
-extern BOOL dtm_LoadRadarSurface(UBYTE* radarBuffer);
-extern SDWORD dtm_GetRadarTexImageSize(void);
-
-/***************************************************************************/
-/*
- *	Local Definitions
- */
-/***************************************************************************/
-SDWORD gSurfaceOffsetX;
-SDWORD gSurfaceOffsetY;
-UWORD* pgSrcData = NULL;
-SDWORD gSrcWidth;
-SDWORD gSrcHeight;
-SDWORD gSrcStride;
-
-#define COLOURINTENSITY 0xffffffff
 /***************************************************************************/
 /*
  *	Local Variables
  */
 /***************************************************************************/
 
-PIESTYLE rendStyle;
-Vector2i rectVerts[4];
+#define RADARX 128
+#define RADARY 128
 
-/***************************************************************************/
-/*
- *	Local ProtoTypes
- */
-/***************************************************************************/
+static PIESTYLE rendStyle;
+static UDWORD radarTexture;
+static unsigned char radarBitmap[RADARX * RADARY * 4];
 
 /***************************************************************************/
 /*
  *	Source
  */
 /***************************************************************************/
-void pie_Line(int x0, int y0, int x1, int y1, Uint32 colour)
+void pie_Line(int x0, int y0, int x1, int y1, Uint32 col)
 {
-//	PIELIGHT light;
+	PIELIGHT colour;
 
+	colour.argb = col;
 	pie_SetRendMode(REND_FLAT);
-	pie_SetColour(colour);
 	pie_SetTexturePage(-1);
 	pie_SetColourKeyedBlack(FALSE);
 
+	glColor4ub(colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a);
 	glBegin(GL_LINE_STRIP);
 	glVertex2f(x0, y0);
 	glVertex2f(x1, y1);
@@ -93,19 +77,20 @@ void pie_Line(int x0, int y0, int x1, int y1, Uint32 colour)
 }
 /***************************************************************************/
 
-void pie_Box(int x0,int y0, int x1, int y1, Uint32 colour)
+void pie_Box(int x0,int y0, int x1, int y1, Uint32 col)
 {
-//	PIELIGHT light;
-//	iColour* psPalette;
+	PIELIGHT colour;
 
+	colour.argb = col;
 	pie_SetRendMode(REND_FLAT);
-	pie_SetColour(colour);
 	pie_SetTexturePage(-1);
 	pie_SetColourKeyedBlack(FALSE);
 
 	if (x0>psRendSurface->clip.right || x1<psRendSurface->clip.left ||
 		y0>psRendSurface->clip.bottom || y1<psRendSurface->clip.top)
-	return;
+	{
+		return;
+	}
 
 	if (x0<psRendSurface->clip.left)
 		x0 = psRendSurface->clip.left;
@@ -116,6 +101,7 @@ void pie_Box(int x0,int y0, int x1, int y1, Uint32 colour)
 	if (y1>psRendSurface->clip.bottom)
 		y1 = psRendSurface->clip.bottom;
 
+	glColor4ub(colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a);
 	glBegin(GL_LINE_STRIP);
 	glVertex2f(x0, y0);
 	glVertex2f(x1, y0);
@@ -129,15 +115,16 @@ void pie_Box(int x0,int y0, int x1, int y1, Uint32 colour)
 
 void pie_BoxFillIndex(int x0,int y0, int x1, int y1, UBYTE colour)
 {
-	PIELIGHT light;
-	iColour* psPalette;
+	PIELIGHT light, *psPalette;
 
 	pie_SetRendMode(REND_FLAT);
 	pie_SetTexturePage(-1);
 
 	if (x0>psRendSurface->clip.right || x1<psRendSurface->clip.left ||
 		y0>psRendSurface->clip.bottom || y1<psRendSurface->clip.top)
-	return;
+	{
+		return;
+	}
 
 	if (x0<psRendSurface->clip.left)
 		x0 = psRendSurface->clip.left;
@@ -149,21 +136,21 @@ void pie_BoxFillIndex(int x0,int y0, int x1, int y1, UBYTE colour)
 		y1 = psRendSurface->clip.bottom;
 
 	psPalette = pie_GetGamePal();
-	light.byte.r = psPalette[colour].r;
-	light.byte.g = psPalette[colour].g;
-	light.byte.b = psPalette[colour].b;
+	light.argb = psPalette[colour].argb;
 	light.byte.a = MAX_UB_LIGHT;
-	pie_DrawRect( x0, y0, x1, y1, light.argb );
+	pie_DrawRect( x0, y0, x1, y1, light );
 }
 
-void pie_BoxFill(int x0,int y0, int x1, int y1, Uint32 colour)
+void pie_BoxFill(int x0,int y0, int x1, int y1, PIELIGHT colour)
 {
 	pie_SetRendMode(REND_FLAT);
 	pie_SetTexturePage(-1);
 
 	if (x0>psRendSurface->clip.right || x1<psRendSurface->clip.left ||
 		y0>psRendSurface->clip.bottom || y1<psRendSurface->clip.top)
-	return;
+	{
+		return;
+	}
 
 	if (x0<psRendSurface->clip.left)
 		x0 = psRendSurface->clip.left;
@@ -174,28 +161,30 @@ void pie_BoxFill(int x0,int y0, int x1, int y1, Uint32 colour)
 	if (y1>psRendSurface->clip.bottom)
 		y1 = psRendSurface->clip.bottom;
 
-	pie_DrawRect( x0, y0, x1, y1, colour );
+	pie_DrawRect(x0, y0, x1, y1, colour);
 
 }
 /***************************************************************************/
 
 void pie_TransBoxFill(SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1)
 {
-	UDWORD rgb;
-	UDWORD transparency;
-	rgb = (pie_FILLRED<<16) | (pie_FILLGREEN<<8) | pie_FILLBLUE;//blue
-	transparency = pie_FILLTRANS;
-	pie_UniTransBoxFill(x0, y0, x1, y1, rgb, transparency);
+	PIELIGHT light;
+
+	light.byte.r = pie_FILLRED;
+	light.byte.g = pie_FILLGREEN;
+	light.byte.b = pie_FILLBLUE;
+	light.byte.a = pie_FILLTRANS;
+	pie_UniTransBoxFill(x0, y0, x1, y1, light);
 }
 
 /***************************************************************************/
-void pie_UniTransBoxFill(SDWORD x0,SDWORD y0, SDWORD x1, SDWORD y1, UDWORD rgb, UDWORD transparency)
+void pie_UniTransBoxFill(SDWORD x0,SDWORD y0, SDWORD x1, SDWORD y1, PIELIGHT light)
 {
-	UDWORD light;
-
 	if (x0>psRendSurface->clip.right || x1<psRendSurface->clip.left ||
 		y0>psRendSurface->clip.bottom || y1<psRendSurface->clip.top)
-	return;
+	{
+		return;
+	}
 
 	if (x0<psRendSurface->clip.left)
 		x0 = psRendSurface->clip.left;
@@ -206,13 +195,9 @@ void pie_UniTransBoxFill(SDWORD x0,SDWORD y0, SDWORD x1, SDWORD y1, UDWORD rgb, 
 	if (y1>psRendSurface->clip.bottom)
 		y1 = psRendSurface->clip.bottom;
 
-	if (transparency == 0 ) {
-		transparency = 127;
-	}
 	pie_SetTexturePage(-1);
 	pie_SetRendMode(REND_ALPHA_FLAT);
-	light = (rgb & 0x00ffffff) + (transparency << 24);
-	pie_DrawRect( x0, y0, x1, y1, light );
+	pie_DrawRect(x0, y0, x1, y1, light);
 }
 
 /***************************************************************************/
@@ -238,21 +223,6 @@ void pie_DrawImageFileID(IMAGEFILE *ImageFile, UWORD ID, int x, int y)
 	pie_DrawImage(&pieImage, &dest, &rendStyle);
 }
 
-BOOL	bAddSprites = FALSE;
-UDWORD	addSpriteLevel;
-
-void	pie_SetAdditiveSprites(BOOL val) {
-	bAddSprites = val;
-}
-
-void	pie_SetAdditiveSpriteLevel(UDWORD val) {
-	addSpriteLevel = val;
-}
-
-static BOOL pie_GetAdditiveSprites( void ) {
-	return bAddSprites;
-}
-
 void pie_ImageFileID(IMAGEFILE *ImageFile, UWORD ID, int x, int y)
 {
 	IMAGEDEF *Image;
@@ -262,16 +232,7 @@ void pie_ImageFileID(IMAGEFILE *ImageFile, UWORD ID, int x, int y)
 	assert(ID < ImageFile->Header.NumImages);
 	Image = &ImageFile->ImageDefs[ID];
 
-   	if(pie_GetAdditiveSprites()) {
-		pie_SetBilinear(TRUE);
-		pie_SetRendMode(REND_ALPHA_TEX);
-		pie_SetColour(addSpriteLevel);
-
-	} else {
-		pie_SetBilinear(FALSE);
-		pie_SetRendMode(REND_GOURAUD_TEX);
-		pie_SetColour(COLOURINTENSITY);
-	}
+	pie_SetRendMode(REND_GOURAUD_TEX);
 	pie_SetColourKeyedBlack(TRUE);
 
 	pieImage.texPage = ImageFile->TPageIDs[Image->TPageID];
@@ -286,9 +247,6 @@ void pie_ImageFileID(IMAGEFILE *ImageFile, UWORD ID, int x, int y)
 	pie_DrawImage(&pieImage, &dest, &rendStyle);
 }
 
-
-/***************************************************************************/
-
 void pie_ImageFileIDTile(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Width, int Height)
 {
 	IMAGEDEF *Image;
@@ -300,9 +258,7 @@ void pie_ImageFileIDTile(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Width
 
 	Image = &ImageFile->ImageDefs[ID];
 
-	pie_SetBilinear(FALSE);
 	pie_SetRendMode(REND_GOURAUD_TEX);
-	pie_SetColour(COLOURINTENSITY);
 	pie_SetColourKeyedBlack(TRUE);
 
 	pieImage.texPage = ImageFile->TPageIDs[Image->TPageID];
@@ -369,42 +325,12 @@ void pie_ImageFileIDTile(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Width
 	}
 }
 
-void pie_ImageFileIDStretch(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Width, int Height)
-{
-	IMAGEDEF *Image;
-	PIEIMAGE pieImage;
-	PIERECT dest;
-	assert(ID < ImageFile->Header.NumImages);
-
-	Image = &ImageFile->ImageDefs[ID];
-
-	pie_SetBilinear(FALSE);
-	pie_SetRendMode(REND_GOURAUD_TEX);
-	pie_SetColour(COLOURINTENSITY);
-	pie_SetColourKeyedBlack(TRUE);
-
-	pieImage.texPage = ImageFile->TPageIDs[Image->TPageID];
-	pieImage.tu = Image->Tu;
-	pieImage.tv = Image->Tv;
-	pieImage.tw = Image->Width;
-	pieImage.th = Image->Height;
-
-	dest.x = x + Image->XOffset;
-	dest.y = y + Image->YOffset;
-	dest.w = Width;
-	dest.h = Height;
-	pie_DrawImage(&pieImage, &dest, &rendStyle);
-}
-
 /* FIXME: WTF is this supposed to do? Looks like some other functionality
  * was retrofitted onto something else. - Per */
 void pie_UploadDisplayBuffer()
 {
 	screen_Upload(NULL);
 }
-
-UDWORD radarTexture;
-unsigned char radarBitmap[128*128*4];
 
 BOOL pie_InitRadar(void)
 {
@@ -418,16 +344,16 @@ BOOL pie_ShutdownRadar(void)
 	return TRUE;
 }
 
-
 void pie_DownLoadRadar( unsigned char *buffer )
 {
 	unsigned int i, j;
-	iColour* psPalette = pie_GetGamePal();
+	PIELIGHT *psPalette = pie_GetGamePal();
 
-	for (i = 0, j = 0; i < 128*128; ++i) {
-		radarBitmap[j++] = psPalette[buffer[i]].r;
-		radarBitmap[j++] = psPalette[buffer[i]].g;
-		radarBitmap[j++] = psPalette[buffer[i]].b;
+	for (i = 0, j = 0; i < RADARX * RADARY; ++i)
+	{
+		radarBitmap[j++] = psPalette[buffer[i]].byte.r;
+		radarBitmap[j++] = psPalette[buffer[i]].byte.g;
+		radarBitmap[j++] = psPalette[buffer[i]].byte.b;
 		if (buffer[i] == 0) {
 			radarBitmap[j++] = 0;
 		} else {
@@ -435,7 +361,7 @@ void pie_DownLoadRadar( unsigned char *buffer )
 		}
 	}
 	pie_SetTexturePage(radarTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, wz_texture_compression, 128, 128, 0,
+	glTexImage2D(GL_TEXTURE_2D, 0, wz_texture_compression, RADARX, RADARY, 0,
 		     GL_RGBA, GL_UNSIGNED_BYTE, radarBitmap);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -449,9 +375,7 @@ void pie_RenderRadar( int x, int y )
 	PIEIMAGE pieImage;
 	PIERECT dest;
 
-	pie_SetBilinear(TRUE);
 	pie_SetRendMode(REND_GOURAUD_TEX);
-	pie_SetColour(COLOURINTENSITY);
 	pie_SetColourKeyedBlack(TRUE);
 	//special case function because texture is held outside of texture list
 	pieImage.texPage = radarTexture;
@@ -461,8 +385,8 @@ void pie_RenderRadar( int x, int y )
 	pieImage.th = 256;
 	dest.x = x;
 	dest.y = y;
-	dest.w = 128;
-	dest.h = 128;
+	dest.w = RADARX;
+	dest.h = RADARY;
 	pie_DrawImage(&pieImage, &dest, &rendStyle);
 }
 
@@ -477,19 +401,22 @@ void pie_LoadBackDrop(SCREENTYPE screenType)
 	{
 	case SCREEN_RANDOMBDROP:
 		if ( rand()%2 == 0 )
-			sprintf(backd,"texpages/bdrops/0%i-bdrop.png", rand()%7); // Range: 0-6
+			snprintf(backd, sizeof(backd), "texpages/bdrops/0%i-bdrop.png", rand()%7); // Range: 0-6
 		else
-			sprintf(backd,"texpages/bdrops/wzlogo_%i.png", rand()%5); // Range: 0-4
+			snprintf(backd, sizeof(backd), "texpages/bdrops/wzlogo_%i.png", rand()%5); // Range: 0-4
 		break;
 	case SCREEN_MISSIONEND:
-		sprintf(backd,"texpages/bdrops/missionend.png");
+		snprintf(backd, sizeof(backd), "texpages/bdrops/missionend.png");
 		break;
 
 	case SCREEN_CREDITS:
 	default:
-		sprintf(backd,"texpages/bdrops/credits.png");
+		snprintf(backd, sizeof(backd), "texpages/bdrops/credits.png");
 		break;
 	}
+
+	// Guarantee to nul-terminate
+	backd[sizeof(backd) - 1] = '\0';
 
 	screen_SetBackDropFromFile(backd);
 }

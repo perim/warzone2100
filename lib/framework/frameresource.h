@@ -24,6 +24,8 @@
 #ifndef _resource_h
 #define _resource_h
 
+#include "lib/framework/frame.h"
+
 /* Maximum number of characters in a resource type */
 #define RESTYPE_MAXCHAR		20
 
@@ -44,13 +46,15 @@ typedef void (*RESLOAD_CALLBACK)(void);
 
 typedef struct res_data
 {
-	const char	*aID;				// ID of the resource - filename from the .wrf - e.g. "TRON.PIE"
 	void		*pData;				// pointer to the acutal data
 	SDWORD		blockID;			// which of the blocks is it in (so we can clear some of them...)
 
 	UDWORD	HashedID;				// hashed version of the name of the id
 	struct	res_data *psNext;		// next entry - most likely to be following on!
 	UDWORD		usage; // Reference count
+
+	// ID of the resource - filename from the .wrf - e.g. "TRON.PIE"
+	const char* aID;
 } RES_DATA;
 
 
@@ -83,7 +87,7 @@ extern BOOL resInitialise(void);
 extern void resShutDown(void);
 
 // set the base resource directory
-extern void resSetBaseDir(char *pResDir);
+extern void resSetBaseDir(const char* pResDir);
 
 /* Parse the res file */
 BOOL resLoad(const char *pResFile, SDWORD blockID,

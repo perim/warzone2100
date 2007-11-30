@@ -26,7 +26,7 @@
 // ////////////////////////////////////////////////////////////////////////////
 // includes
 #include <string.h>
-#include <SDL/SDL.h>
+#include <SDL.h>
 #include <physfs.h>
 
 #include "lib/framework/frame.h"
@@ -37,8 +37,8 @@
 #include "lib/widget/widget.h"
 #include "frontend.h"
 #include "frend.h"
-#include "text.h"
 #include "lib/ivis_common/textdraw.h"
+#include "lib/ivis_common/piepalette.h"
 #include "hci.h"
 #include "init.h"
 #include "loadsave.h"
@@ -199,7 +199,7 @@ static BOOL pushedKeyCombo(KEY_CODE subkey)
 //	function = selectedKeyMap->function;
 //	action = selectedKeyMap->action;
 //	status = selectedKeyMap->status;
-//	strcpy(name,selectedKeyMap->pName);
+//	strlcpy(name, selectedKeyMap->pName, sizeof(name));
 //	keyRemoveMappingPt(selectedKeyMap);
 
 	keyAddMapping(status,metakey,subkey,action,function,name);
@@ -387,7 +387,7 @@ BOOL startKeyMapEditor(BOOL first)
 
 
 	/* Better be none that come after this...! */
-	strcpy(test,"zzzzzzzzzzzzzzzzzzzzz");
+	strlcpy(test, "zzzzzzzzzzzzzzzzzzzzz", sizeof(test));
 	psMapping = NULL;
 
 	//count mappings required.
@@ -399,7 +399,7 @@ BOOL startKeyMapEditor(BOOL first)
 			if(strcmp(psMapping->pName,test) < 0)
 			{
 				/* Best one found so far */
-				strcpy(test,psMapping->pName);
+				strlcpy(test, psMapping->pName, sizeof(test));
 				psPresent = psMapping;
 			}
 		}
@@ -422,7 +422,7 @@ BOOL startKeyMapEditor(BOOL first)
 	sFormInit.tabVertOffset		= (OBJ_TABHEIGHT/2);
 	sFormInit.tabMajorThickness 	= OBJ_TABHEIGHT;
 	sFormInit.pFormDisplay		= intDisplayObjectForm;
-	sFormInit.pUserData		= (void*)&StandardTab;
+	sFormInit.pUserData		= &StandardTab;
 	sFormInit.pTabDisplay		= intDisplayTab;
 	for (i=0; i< sFormInit.numMajor; i++)
 	{
@@ -443,7 +443,7 @@ BOOL startKeyMapEditor(BOOL first)
 
 
 	/* Add our first mapping to the form */
-	sButInit.pUserData= (void*)psPresent;
+	sButInit.pUserData= psPresent;
 	widgAddButton(psWScreen, &sButInit);
 	sButInit.id++;
 	sButInit.y +=  KM_ENTRYH +3;
@@ -455,7 +455,7 @@ BOOL startKeyMapEditor(BOOL first)
 	while(bubbleCount<mapcount-1 && !bAtEnd)
 	{
 		/* Same test as before for upper limit */
-	 	strcpy(test,"zzzzzzzzzzzzzzzzzzzzz");
+	 	strlcpy(test, "zzzzzzzzzzzzzzzzzzzzz", sizeof(test));
 		for(psMapping = keyMappings,psNext = NULL,bGotOne = FALSE; psMapping; psMapping = psMapping->psNext)
 		{
 			/* Only certain mappings get displayed */
@@ -465,7 +465,7 @@ BOOL startKeyMapEditor(BOOL first)
 				if(strcmp(psMapping->pName,test) < 0 && strcmp(psMapping->pName,psPresent->pName) > 0)
 				{
 					/* Keep a record of it */
-					strcpy(test,psMapping->pName);
+					strlcpy(test, psMapping->pName, sizeof(test));
 				   	psNext = psMapping;
 					bGotOne = TRUE;
 				}
@@ -476,7 +476,7 @@ BOOL startKeyMapEditor(BOOL first)
 		{
 			psPresent = psNext;
 			bubbleCount++;
-			sButInit.pUserData= (void*)psNext;
+			sButInit.pUserData= psNext;
 	 		widgAddButton(psWScreen, &sButInit);
 			 					// move on..
 	 		sButInit.id++;
@@ -544,7 +544,7 @@ BOOL saveKeyMap(void)
 	{
 		// save this map.
 		// name
-		strcpy(name,psMapping->pName);
+		strlcpy(name, psMapping->pName, sizeof(name));
 		WRITE(&name, 128);
 
 		WRITE(&psMapping->status, sizeof(KEY_STATUS));	// status

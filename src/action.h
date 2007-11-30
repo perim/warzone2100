@@ -78,14 +78,8 @@ typedef enum _droid_action
 	DACTION_CLEARREARMPAD,			// (37) a VTOL droid being told to get off a rearm pad
 	DACTION_RETURNTOPOS,			// (38) used by scout/patrol order when returning to route
 	DACTION_FIRESUPPORT_RETREAT,	// (39) used by firesupport order when sensor retreats
-	DACTION_ATTACK_M,				// (40) attack with multiple weapons
-	DACTION_CIRCLE,					// (41) circling while engaging
+	DACTION_CIRCLE = 41,				// (41) circling while engaging
 } DROID_ACTION;
-
-//Watermelon:a simple struct to avoid passing struct array pointer to functions
-typedef struct _droid_oaction_info {
-	BASE_OBJECT *objects[STRUCT_MAXWEAPS];
-} DROID_OACTION_INFO;
 
 // after failing a route ... this is the amount of time that the droid goes all defensive untill it can start going aggressive
 #define MIN_SULK_TIME (1500)		// 1.5 sec
@@ -104,7 +98,7 @@ extern void actionDroid(DROID *psDroid, DROID_ACTION action);
 extern void actionDroidLoc(DROID *psDroid, DROID_ACTION action, UDWORD x, UDWORD y);
 
 /* Give a droid an action with an object target */
-extern void actionDroidObj(DROID *psDroid, DROID_ACTION action, DROID_OACTION_INFO *psObj);
+extern void actionDroidObj(DROID *psDroid, DROID_ACTION action, BASE_OBJECT *psObj);
 
 /* Give a droid an action with an object target and a location */
 void actionDroidObjLoc(DROID *psDroid, DROID_ACTION action,

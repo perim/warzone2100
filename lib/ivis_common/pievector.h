@@ -1,3 +1,33 @@
+/*
+	This file is part of Warzone 2100.
+	Copyright (C) 2007  Warzone Resurrection Project
+
+	Warzone 2100 is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 2 of the License, or
+	(at your option) any later version.
+
+	Warzone 2100 is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with Warzone 2100; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+*/
+
+#ifndef __INCLUDED_LIB_IVIS_PIEVECTOR_H__
+#define __INCLUDED_LIB_IVIS_PIEVECTOR_H__
+
+#include "lib/framework/wzglobal.h"
+
+#if defined(WZ_CC_MSVC)
+// Prevent nasty "nonstandard extension used : non-constant aggregate initializer" warning when using MSVC
+#pragma warning(disable:4204)
+#endif
+
+
 typedef struct { int x, y; } Vector2i;
 typedef struct { float x, y; } Vector2f;
 typedef struct { int x, y, z; } Vector3i;
@@ -169,13 +199,22 @@ static inline WZ_DECL_CONST float Vector2f_Length(const Vector2f v)
 /*!
  * Normalise a Vector
  * \param v Vector
- * \return Normalised vector
+ * \return Normalised vector, nullvector when input was nullvector or very small
  */
 static inline WZ_DECL_CONST Vector2f Vector2f_Normalise(const Vector2f v)
 {
 	float length = Vector2f_Length(v);
-	Vector2f dest = {v.x / length, v.y / length};
-	return dest;
+
+	if (length == 0.0f)
+	{
+		Vector2f dest = { 0.0f, 0.0f };
+		return dest;
+	}
+	else
+	{
+		Vector2f dest = { v.x / length, v.y / length };
+		return dest;
+	}
 }
 
 
@@ -284,3 +323,4 @@ static inline WZ_DECL_CONST BOOL Vector3i_InSphere (const Vector3i v, const Vect
 	return (delta.x * delta.x) + (delta.y * delta.y) + (delta.z * delta.z) < (r * r);
 }
 
+#endif // __INCLUDED_LIB_IVIS_PIEVECTOR_H__

@@ -32,6 +32,7 @@
 #include "lib/ivis_common/piedef.h"
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/rendmode.h"
+#include "lib/ivis_common/piepalette.h"
 
 #include "display3d.h"
 #include "resource.h"
@@ -45,7 +46,6 @@
 #include "intelmap.h"
 #include "mapdisplay.h"
 #include "lib/sound/sound.h"
-#include "text.h"
 #include "console.h"
 #include "research.h"
 #include "lib/gamelib/gtime.h"
@@ -54,6 +54,7 @@
 #include "scripttabs.h"
 
 #include "seqdisp.h"
+#include "mission.h"
 
 #include "multiplay.h"
 
@@ -345,7 +346,7 @@ static BOOL intAddMessageForm(BOOL playCurrent)
 	}
 
 	sFormInit.pFormDisplay = intDisplayObjectForm;
-	sFormInit.pUserData = (void*)&StandardTab;
+	sFormInit.pUserData = &StandardTab;
 	sFormInit.pTabDisplay = intDisplayTab;
 
 	if (!widgAddForm(psWScreen, &sFormInit))
@@ -413,7 +414,7 @@ static BOOL intAddMessageForm(BOOL playCurrent)
 		ASSERT( BufferID >= 0,"Unable to acquire object buffer." );
 		RENDERBUTTON_INUSE(&ObjectBuffers[BufferID]);
 		ObjectBuffers[BufferID].Data = (void*)psMessage;
-		sBFormInit.pUserData = (void*)&ObjectBuffers[BufferID];
+		sBFormInit.pUserData = &ObjectBuffers[BufferID];
 		sBFormInit.pDisplay = intDisplayMessageButton;
 
 		if (!widgAddForm(psWScreen, &sBFormInit))
@@ -524,7 +525,7 @@ BOOL intAddMessageView(MESSAGE * psMessage)
 	sButInit.height = CLOSE_SIZE;
 	sButInit.pTip = _("Close");
 	sButInit.pDisplay = intDisplayImageHilight;
-	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
+	sButInit.UserData = PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -569,7 +570,7 @@ BOOL intAddMessageView(MESSAGE * psMessage)
 						  FALSE, &cur_seq, &cur_seqpage));
 
 		sFormInit.pFormDisplay = intDisplayObjectForm;
-		sFormInit.pUserData = (void*)&StandardTab;
+		sFormInit.pUserData = &StandardTab;
 		sFormInit.pTabDisplay = intDisplayTab;
 
 		if (!widgAddForm(psWScreen, &sFormInit))
@@ -640,7 +641,7 @@ BOOL intAddMessageView(MESSAGE * psMessage)
 	sFormInit.width = INTMAP_PIEWIDTH;
 	sFormInit.height = INTMAP_PIEHEIGHT;
 	sFormInit.pDisplay = intDisplayPIEView;
-	sFormInit.pUserData = (void *)psMessage;
+	sFormInit.pUserData = psMessage;
 	if (!widgAddForm(psWScreen, &sFormInit))
 	{
 		return FALSE;
@@ -657,7 +658,7 @@ BOOL intAddMessageView(MESSAGE * psMessage)
 	sFormInit.width = INTMAP_FLICWIDTH;
 	sFormInit.height = INTMAP_FLICHEIGHT;
 	sFormInit.pDisplay = intDisplayFLICView;
-	sFormInit.pUserData = (void *)psMessage;
+	sFormInit.pUserData = psMessage;
 	if (!widgAddForm(psWScreen, &sFormInit))
 	{
 		return FALSE;
@@ -676,7 +677,7 @@ BOOL intAddMessageView(MESSAGE * psMessage)
 	sFormInit.width = INTMAP_TEXTWIDTH;
 	sFormInit.height = INTMAP_TEXTHEIGHT;
 	sFormInit.pDisplay = intDisplayTEXTView;
-	sFormInit.pUserData = (void *)psMessage;
+	sFormInit.pUserData = psMessage;
 	if (!widgAddForm(psWScreen, &sFormInit))
 	{
 		return FALSE;
@@ -1039,7 +1040,7 @@ void intRemoveIntelMap(void)
 	{
 		Form->display = intClosePlainForm;
 		Form->disableChildren = TRUE;
-		Form->pUserData = (void*)0;	// Used to signal when the close anim has finished.
+		Form->pUserData = NULL; // Used to signal when the close anim has finished.
 	}
 	ClosingIntelMap = TRUE;
 	//remove the text label
@@ -1093,7 +1094,7 @@ void intRemoveMessageView(BOOL animated)
 			// Start the window close animation.
 			Form->display = intClosePlainForm;
 			Form->disableChildren = TRUE;
-			Form->pUserData = (void*)0;	// Used to signal when the close anim has finished.
+			Form->pUserData = NULL; // Used to signal when the close anim has finished.
 			ClosingMessageView = TRUE;
 		}
 		else
@@ -1141,7 +1142,7 @@ void intDisplayMessageButton(WIDGET *psWidget, UDWORD xOffset,
 		pResearch = getResearchForMsg((VIEWDATA *)psMsg->pViewData);
 		//IMDType = IMDTYPE_RESEARCH;
         	//set the IMDType depending on what stat is associated with the research
-        	if (pResearch->psStat)
+		if (pResearch && pResearch->psStat)
         	{
 			//we have a Stat associated with this research topic
 			if  (StatIsStructure(pResearch->psStat))
@@ -1435,6 +1436,8 @@ void setIntelligencePauseState(void)
 {
 	if (!bMultiPlayer)
 	{
+		//need to clear mission widgets from being shown on intel screen
+		clearMissionWidgets();
 		gameTimeStop();
 		setGameUpdatePause(TRUE);
 		if(!bInTutorial)
@@ -1450,9 +1453,12 @@ void setIntelligencePauseState(void)
 void resetIntelligencePauseState(void)
 {
 	if (!bMultiPlayer)
-	{
+	{	
+		//put any widgets back on for the missions
+		resetMissionWidgets();
 		setGameUpdatePause(FALSE);
-		if(!bInTutorial) {
+		if(!bInTutorial)
+		{
 			setScriptPause(FALSE);
 		}
 		setScrollPause(FALSE);

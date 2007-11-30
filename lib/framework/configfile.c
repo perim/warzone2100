@@ -260,10 +260,7 @@ static BOOL registry_save( const char *filename )
 
 void setRegistryFilePath(const char* fileName)
 {
-	strncpy(RegFilePath, fileName, sizeof(RegFilePath) - 1);
-
-	// Guarantee to terminate string with a NUL char
-	RegFilePath[sizeof(RegFilePath) - 1] = '\0';
+	strlcpy(RegFilePath, fileName, sizeof(RegFilePath));
 }
 
 ///
@@ -349,7 +346,10 @@ BOOL setWarzoneKeyNumeric( const char *pName, SDWORD val )
 	char	buf[32];
 	//~~~~~~~~~~~~
 
-	sprintf( buf, "%i", val );
+	snprintf(buf, sizeof(buf), "%i", val);
+	// Guarantee to nul-terminate
+	buf[sizeof(buf) - 1] = '\0';
+
 	registry_set_key( pName, buf );
 	return TRUE;
 }

@@ -68,6 +68,19 @@ typedef enum _terrain_type
 
 #define TILE_NUMMASK	0x01ff
 
+
+static inline unsigned short TileNumber_tile(unsigned short tilenumber)
+{
+	return tilenumber & TILE_NUMMASK;
+}
+
+
+static inline unsigned short TileNumber_texture(unsigned short tilenumber)
+{
+	return tilenumber & ~TILE_NUMMASK;
+}
+
+
 #define BITS_NODRAWTILE	0x4
 #define BITS_FPATHBLOCK	0x10		// bit set temporarily by find path to mark a blocking tile
 #define BITS_GATEWAY	0x40		// bit set to show a gateway on the tile
@@ -111,10 +124,6 @@ typedef enum _terrain_type
 /* Arbitrary maximum number of terrain textures - used in look up table for terrain type */
 #define MAX_TILE_TEXTURES	255
 
-extern UBYTE terrainTypes[MAX_TILE_TEXTURES];
-
-#define TERRAIN_TYPE(x) terrainTypes[(x)->texture & TILE_NUMMASK]
-
 /* Information stored with each tile */
 typedef struct _maptile
 {
@@ -131,6 +140,13 @@ typedef struct _maptile
 //	TYPE_OF_TERRAIN	type;			// The terrain type for the tile
 } MAPTILE;
 
+
+extern UBYTE terrainTypes[MAX_TILE_TEXTURES];
+
+static inline unsigned char terrainType(MAPTILE * tile)
+{
+	return terrainTypes[TileNumber_tile(tile->texture)];
+}
 
 
 /* The maximum map size */
@@ -201,6 +217,9 @@ extern BOOL mapLoad(char *pFileData, UDWORD fileSize);
 /* Save the map data */
 extern BOOL mapSave(char **ppFileData, UDWORD *pFileSize);
 
+/* New savegame format */
+BOOL mapSaveTagged(char *pFileName);
+BOOL mapLoadTagged(char *pFileName);
 
 /* Return a pointer to the tile structure at x,y */
 static inline WZ_DECL_PURE MAPTILE *mapTile(UDWORD x, UDWORD y)

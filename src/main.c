@@ -25,7 +25,7 @@
 // Get platform defines before checking for them!
 #include "lib/framework/frame.h"
 
-#include <SDL/SDL.h>
+#include <SDL.h>
 #include <physfs.h>
 
 /* For SHGetFolderPath */
@@ -39,10 +39,12 @@
 #include "lib/framework/configfile.h"
 #include "lib/framework/input.h"
 #include "lib/framework/SDL_framerate.h"
+#include "lib/framework/tagfile.h"
 
 #include "lib/gamelib/gtime.h"
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/rendmode.h"
+#include "lib/ivis_common/piepalette.h"
 #include "lib/ivis_opengl/screen.h"
 #include "lib/netplay/netplay.h"
 #include "lib/script/script.h"
@@ -66,19 +68,20 @@
 #include "warzoneconfig.h"
 #include "main.h"
 #include "wrappers.h"
+#include "version.h"
 
 #ifndef DATADIR
 # define DATADIR "/usr/share/warzone2100/"
 #endif
 
 #if defined(WZ_OS_WIN)
-# define WZ_WRITEDIR "Warzone 2100"
+# define WZ_WRITEDIR "Warzone 2100 2.1"
 #elif defined(WZ_OS_MAC)
 # include <CoreServices/CoreServices.h>
 # include <unistd.h>
-# define WZ_WRITEDIR "Warzone 2100"
+# define WZ_WRITEDIR "Warzone 2100 2.1"
 #else
-# define WZ_WRITEDIR ".warzone2100"
+# define WZ_WRITEDIR ".warzone2100-2.1"
 #endif
 
 char datadir[PATH_MAX] = "\0"; // Global that src/clparse.c:ParseCommandLine can write to, so it can override the default datadir on runtime. Needs to be \0 on startup for ParseCommandLine to work!
@@ -155,10 +158,10 @@ void addSubdirs( const char * basedir, const char * subdir, const BOOL appendToP
 #endif // DEBUG
 		if( !checkList || inList( checkList, *i ) )
 		{
-			strcpy( tmpstr, basedir );
-			strcat( tmpstr, subdir );
-			strcat( tmpstr, PHYSFS_getDirSeparator() );
-			strcat( tmpstr, *i );
+			strlcpy(tmpstr, basedir, sizeof(tmpstr));
+			strlcat(tmpstr, subdir, sizeof(tmpstr));
+			strlcat(tmpstr, PHYSFS_getDirSeparator(), sizeof(tmpstr));
+			strlcat(tmpstr, *i, sizeof(tmpstr));
 #ifdef DEBUG
 			debug( LOG_NEVER, "addSubdirs: Adding [%s] to search path", tmpstr );
 #endif // DEBUG
@@ -181,10 +184,10 @@ void removeSubdirs( const char * basedir, const char * subdir, char * checkList[
 #endif // DEBUG
 		if( !checkList || inList( checkList, *i ) )
 		{
-			strcpy( tmpstr, basedir );
-			strcat( tmpstr, subdir );
-			strcat( tmpstr, PHYSFS_getDirSeparator() );
-			strcat( tmpstr, *i );
+			strlcpy(tmpstr, basedir, sizeof(tmpstr));
+			strlcat(tmpstr, subdir, sizeof(tmpstr));
+			strlcat(tmpstr, PHYSFS_getDirSeparator(), sizeof(tmpstr));
+			strlcat(tmpstr, *i, sizeof(tmpstr));
 #ifdef DEBUG
 			debug( LOG_NEVER, "removeSubdirs: Removing [%s] from search path", tmpstr );
 #endif // DEBUG
@@ -237,11 +240,13 @@ static void getPlatformUserDir(char * tmpstr)
 /***************************************************************************
 	Initialize the PhysicsFS library.
 ***************************************************************************/
-static void initialize_PhysicsFS(void)
+static void initialize_PhysicsFS(const char* argv_0)
 {
 	PHYSFS_Version compiled;
 	PHYSFS_Version linked;
 	char tmpstr[PATH_MAX] = { '\0' };
+
+	PHYSFS_init(argv_0);
 
 	PHYSFS_VERSION(&compiled);
 	PHYSFS_getLinkedVersion(&linked);
@@ -268,8 +273,8 @@ static void initialize_PhysicsFS(void)
 	}
 
 	// Append the Warzone subdir
-	strcat( tmpstr, WZ_WRITEDIR );
-	strcat( tmpstr, PHYSFS_getDirSeparator() );
+	strlcat(tmpstr, WZ_WRITEDIR, sizeof(tmpstr));
+	strlcat(tmpstr, PHYSFS_getDirSeparator(), sizeof(tmpstr));
 
 	if ( !PHYSFS_setWriteDir( tmpstr ) ) {
 		debug( LOG_ERROR, "Error setting write directory to \"%s\": %s",
@@ -302,14 +307,23 @@ static void initialize_PhysicsFS(void)
  */
 static void scanDataDirs( void )
 {
-	char tmpstr[PATH_MAX] = {'\0'}, prefix[PATH_MAX] = {'\0'};
+	char tmpstr[PATH_MAX], prefix[PATH_MAX];
+	char* separator;
 
 	// Find out which PREFIX we are in...
-	strcpy( tmpstr, PHYSFS_getBaseDir() );
-	*strrchr( tmpstr, *PHYSFS_getDirSeparator() ) = '\0'; // Trim ending '/', which getBaseDir always provides
+	strlcpy(prefix, PHYSFS_getBaseDir(), sizeof(prefix));
 
-	strncpy( prefix, PHYSFS_getBaseDir(), // Skip the last dir from base dir
-		strrchr( tmpstr, *PHYSFS_getDirSeparator() ) - tmpstr );
+	separator = strrchr(prefix, *PHYSFS_getDirSeparator());
+	if (separator)
+	{
+		*separator = '\0'; // Trim ending '/', which getBaseDir always provides
+
+		separator = strrchr(prefix, *PHYSFS_getDirSeparator());
+		if (separator)
+		{
+			*separator = '\0'; // Skip the last dir from base dir
+		}
+	}
 
 	atexit( cleanSearchPath );
 
@@ -324,16 +338,16 @@ static void scanDataDirs( void )
 	if( !PHYSFS_exists("gamedesc.lev") )
 	{
 		// Data in SVN dir
-		strcpy( tmpstr, prefix );
-		strcat( tmpstr, "/data/" );
+		strlcpy(tmpstr, prefix, sizeof(tmpstr));
+		strlcat(tmpstr, "/data/", sizeof(tmpstr));
 		registerSearchPath( tmpstr, 3 );
 		rebuildSearchPath( mod_multiplay, TRUE );
 
 		if( !PHYSFS_exists("gamedesc.lev") )
 		{
 			// Relocation for AutoPackage
-			strcpy( tmpstr, prefix );
-			strcat( tmpstr, "/share/warzone2100/" );
+			strlcpy(tmpstr, prefix, sizeof(tmpstr));
+			strlcat(tmpstr, "/share/warzone2100/", sizeof(tmpstr));
 			registerSearchPath( tmpstr, 4 );
 			rebuildSearchPath( mod_multiplay, TRUE );
 
@@ -451,7 +465,7 @@ static void startGameLoop(void)
 {
 	SetGameMode(GS_NORMAL);
 
-	if (!levLoadData(pLevelName, NULL, 0))
+	if (!levLoadData(aLevelName, NULL, 0))
 	{
 		debug( LOG_ERROR, "Shutting down after failure" );
 		exit(EXIT_FAILURE);
@@ -472,6 +486,12 @@ static void startGameLoop(void)
 	}
 
 	screen_StopBackDrop();
+
+	// Trap the cursor if cursor snapping is enabled
+	if (war_GetTrapCursor())
+	{
+		SDL_WM_GrabInput(SDL_GRAB_ON);
+	}
 
 	// set a flag for the trigger/event system to indicate initialisation is complete
 	gameInitialised = TRUE;
@@ -494,6 +514,13 @@ static void stopGameLoop(void)
 			levReleaseAll();
 		}
 	}
+	
+	// Disable cursor trapping
+	if (war_GetTrapCursor())
+	{
+		SDL_WM_GrabInput(SDL_GRAB_OFF);
+	}
+	
 	gameInitialised = FALSE;
 }
 
@@ -707,7 +734,7 @@ static void mainLoop(void)
 
 int main(int argc, char *argv[])
 {
-	iColour* psPaletteBuffer = NULL;
+	PIELIGHT *psPaletteBuffer = NULL;
 	UDWORD pSize = 0;
 
 	/*** Initialize the debug subsystem ***/
@@ -729,37 +756,13 @@ int main(int argc, char *argv[])
 	debug_init();
 	atexit( debug_exit );
 
-#ifdef DEBUG
-	debug( LOG_WZ, "Warzone 2100 - Version %s - Built %s - DEBUG", VERSION, __DATE__ );
-#else
-	debug( LOG_WZ, "Warzone 2100 - Version %s - Built %s", VERSION, __DATE__ );
-#endif
-
 	debug_register_callback( debug_callback_stderr, NULL, NULL, NULL );
 #if defined(WZ_OS_WIN) && defined(DEBUG_INSANE)
 	debug_register_callback( debug_callback_win32debug, NULL, NULL, NULL );
 #endif // WZ_OS_WIN && DEBUG_INSANE
 
-	// find early boot info
-	if ( !ParseCommandLineEarly(argc, argv) ) {
-		return -1;
-	}
-
 	/*** Initialize PhysicsFS ***/
-	PHYSFS_init(argv[0]);
-	initialize_PhysicsFS();
-
-	make_dir(ScreenDumpPath, "screendumps", NULL);
-	make_dir(SaveGamePath, "savegame", NULL);
-	make_dir(MultiPlayersPath, "multiplay", NULL);
-	make_dir(MultiPlayersPath, "multiplay", "players");
-	make_dir(MultiForcesPath, "multiplay", "forces");
-	make_dir(MultiCustomMapsPath, "multiplay", "custommaps");
-
-	/* Put these files in the writedir root */
-	setRegistryFilePath("config");
-	strcpy(KeyMapPath, "keymap.map");
-	strcpy(UserMusicPath, "music");
+	initialize_PhysicsFS(argv[0]);
 
 	/*** Initialize translations ***/
 	setlocale(LC_MESSAGES, "");
@@ -768,10 +771,8 @@ int main(int argc, char *argv[])
 	{
 		// Retrieve an absolute path to the locale directory
 		char localeDir[PATH_MAX];
-		snprintf(localeDir, PATH_MAX, "%s\\" LOCALEDIR, PHYSFS_getBaseDir());
-
-		// Guarantee to NUL-terminate
-		localeDir[sizeof(localeDir) - 1] = '\0';
+		strlcpy(localeDir, PHYSFS_getBaseDir(), sizeof(localeDir));
+		strlcat(localeDir, "\\" LOCALEDIR, sizeof(localeDir));
 
 		// Set locale directory and translation domain name
 		(void)bindtextdomain(PACKAGE, localeDir);
@@ -781,6 +782,27 @@ int main(int argc, char *argv[])
 #endif
 	(void)textdomain(PACKAGE);
 
+	// find early boot info
+	if ( !ParseCommandLineEarly(argc, (const char**)argv) ) {
+		return -1;
+	}
+
+	debug(LOG_WZ, "Warzone 2100 - %s", version_getFormattedVersionString());
+
+	/*** Initialize directory structure ***/
+	make_dir(ScreenDumpPath, "screendumps", NULL);
+	make_dir(SaveGamePath, "savegame", NULL);
+	make_dir(MultiPlayersPath, "multiplay", NULL);
+	make_dir(MultiPlayersPath, "multiplay", "players");
+	make_dir(MultiForcesPath, "multiplay", "forces");
+	make_dir(MultiCustomMapsPath, "multiplay", "custommaps");
+
+	/* Put these files in the writedir root */
+	setRegistryFilePath("config");
+	strlcpy(KeyMapPath, "keymap.map", sizeof(KeyMapPath));
+	strlcpy(UserMusicPath, "music", sizeof(UserMusicPath));
+
+	/* Initialize framerate handler */
 	SDL_initFramerate( &wzFPSmanager );
 
 	// initialise all the command line states
@@ -793,7 +815,7 @@ int main(int argc, char *argv[])
 	loadRenderMode(); //get the registry entry for clRendMode
 
 	// parse the command line
-	if (!ParseCommandLine(argc, argv)) {
+	if (!ParseCommandLine(argc, (const char**)argv)) {
 		return -1;
 	}
 
@@ -802,6 +824,12 @@ int main(int argc, char *argv[])
 
 	// Find out where to find the data
 	scanDataDirs();
+
+#ifdef DEBUG
+	/* Runtime unit testing */
+	NETtest();
+	tagTest();
+#endif
 
 	// find out if the lobby stuff has been disabled
 	if (!bDisableLobby && !lobbyInitialise()) // ajl. Init net stuff. Lobby can modify startup conditions like commandline.
@@ -819,13 +847,13 @@ int main(int argc, char *argv[])
 	pie_ScreenFlip(CLEAR_BLACK);
 
 	//load palette
-	psPaletteBuffer = (iColour*)malloc(256 * sizeof(iColour)+1);
+	psPaletteBuffer = malloc(256 * sizeof(PIELIGHT) + 1);
 	if (psPaletteBuffer == NULL)
 	{
 		debug( LOG_ERROR, "Out of memory" );
 		return -1;
 	}
-	if ( !loadFileToBuffer("palette.bin", (char*)psPaletteBuffer, ( 256 * sizeof(iColour) + 1 ), &pSize) )
+	if ( !loadFileToBuffer("palette.bin", (char*)psPaletteBuffer, ( 256 * sizeof(PIELIGHT) + 1 ), &pSize) )
 	{
 		debug( LOG_ERROR, "Couldn't load palette data" );
 		return -1;

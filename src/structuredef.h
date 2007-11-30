@@ -91,11 +91,6 @@ typedef struct _flag_position
 {
 	POSITION_OBJ;
 	Vector3i		coords;							//the world coords of the Position
-	//UDWORD		frameNumber;					//when the Position was last drawn
-	//UDWORD		screenX, screenY, screenR;		//screen coords and radius of Position imd
-	//UDWORD		player;							//which player the Position belongs to
-	//BOOL		selected;						//flag to indicate whether the
-												//Position is to be highlighted
 	UBYTE		factoryInc;						//indicates whether the first, second etc factory
 	UBYTE		factoryType;					//indicates whether standard, cyborg or vtol factory
 //	UBYTE		factorySub;						//sub value. needed to order production points.
@@ -213,7 +208,6 @@ typedef struct _factory
 	UDWORD				timeToBuild;		/* Time taken to build one droid */
 	UDWORD				timeStartHold;		/* The time the factory was put on hold*/
 	FLAG_POSITION		*psAssemblyPoint;	/* Place for the new droids to assemble at */
-	struct _formation	*psFormation;		// formation for the droids that are produced
 	struct _droid		*psCommander;	    // command droid to produce droids for (if any)
     UDWORD              secondaryOrder;     // secondary order state for all units coming out of the factory
                                             // added AB 22/04/99
@@ -286,29 +280,17 @@ typedef struct _structure
 	/* The common structure elements for all objects */
 	BASE_ELEMENTS(struct _structure);
 
-//	UDWORD		ref;
 	STRUCTURE_STATS*	pStructureType;		/* pointer to the structure stats for this
 											   type of building */
 	UBYTE		status;						/* defines whether the structure is being
 											   built, doing nothing or performing a function*/
-	//SDWORD		currentBuildPts;			/* the build points currently assigned to this
     SWORD		currentBuildPts;			/* the build points currently assigned to this
 											   structure */
     SWORD       currentPowerAccrued;        /* the power accrued for building this structure*/
 	UWORD		body;						/* current body points */
-	//UDWORD		body;						/* current body points */
-	//UDWORD		baseBodyPoints;				/* undamaged body points */
-	UWORD		armour;						/* current armour points */
-	//UDWORD		armour;						/* current armour points */
-	//SDWORD		resistance;					/* current resistance points
 	SWORD		resistance;					/* current resistance points
 											   0 = cannot be attacked electrically*/
 	UDWORD		lastResistance;				/* time the resistance was last increased*/
-	//UDWORD		repair;						/* current repair points */
-
-// repair doesn't seem to be used anywhere ... I'll take it out for the mo. and remove it from the new savegame stuff
-// talk to me if you are having problems with this
-//	UWORD		repair;						/* current repair points */
 
 	/* The other structure data.  These are all derived from the functions
 	 * but stored here for easy access - will need to add more for variable stuff!
@@ -317,28 +299,28 @@ typedef struct _structure
 	UWORD		sensorRange;
 	UWORD		sensorPower;
 	UWORD		turretRotation[STRUCT_MAXWEAPS];				// weapon, ECM and sensor direction and pitch
-	//UWORD		turretRotRate;				// weapon, ECM and sensor direction and pitch - THIS IS A CONSTANT
 	UWORD		turretPitch[STRUCT_MAXWEAPS];				// weapon, ECM and sensor direction and pitch
 
 	UDWORD		timeLastHit;				//the time the structure was last attacked
 
 	UDWORD		lastHitWeapon;
 
-	UWORD		radarX;
-	UWORD		radarY;
 	//the ecm power needs to be stored since the actual ecm stat can change with research
 	UWORD		ecmPower;
-	//FRACT		heightScale;
 
 	FUNCTIONALITY	*pFunctionality;		/* pointer to structure that contains fields
 											   necessary for functionality */
 	/* The weapons on the structure */
-	//Watermelon:re-enabled again...
 	UWORD		numWeaps;
 	UBYTE		targetted;
 	WEAPON		asWeaps[STRUCT_MAXWEAPS];
-	//Watermelon:more targets
 	BASE_OBJECT	*psTarget[STRUCT_MAXWEAPS];
+
+#ifdef DEBUG
+	// these are to help tracking down dangling pointers
+	char				targetFunc[STRUCT_MAXWEAPS][MAX_EVENT_NAME_LEN];
+	int				targetLine[STRUCT_MAXWEAPS];
+#endif
 
 	/* anim data */
 	ANIM_OBJECT	*psCurAnim;

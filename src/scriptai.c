@@ -245,7 +245,7 @@ BOOL scrIdleGroup(void)
 	for(psDroid = psGroup->psList;psDroid; psDroid = psDroid->psGrpNext)
 	{
 		if(  psDroid->order == DORDER_NONE
-		  || (psDroid->order == DORDER_GUARD && psDroid->psTarget[0] == NULL))
+		  || (psDroid->order == DORDER_GUARD && psDroid->psTarget == NULL))
 		{
 			count++;
 		}
@@ -469,7 +469,6 @@ BOOL scrOrderGroupObj(void)
 		order != DORDER_OBSERVE &&
 		order != DORDER_EMBARK &&
 		order != DORDER_FIRESUPPORT &&
-		order != DORDER_ATTACK_M &&
 		order != DORDER_DROIDREPAIR)
 	{
 		ASSERT( FALSE,
@@ -569,7 +568,6 @@ BOOL scrOrderDroidObj(void)
 	DROID			*psDroid;
 	DROID_ORDER		order;
 	BASE_OBJECT		*psObj;
-	DROID_OACTION_INFO oaInfo = {{NULL}};
 
 	if (!stackPopParams(3, ST_DROID, &psDroid, VAL_INT, &order, ST_BASEOBJECT, &psObj))
 	{
@@ -592,16 +590,14 @@ BOOL scrOrderDroidObj(void)
 		order != DORDER_OBSERVE &&
 		order != DORDER_EMBARK &&
 		order != DORDER_FIRESUPPORT &&
-		order != DORDER_DROIDREPAIR &&
-		order != DORDER_ATTACK_M)
+		order != DORDER_DROIDREPAIR)
 	{
 		ASSERT( FALSE,
 			"scrOrderUnitObj: Invalid order" );
 		return FALSE;
 	}
 
-	oaInfo.objects[0] = (BASE_OBJECT *)psObj;
-	orderDroidObj(psDroid, order, &oaInfo);
+	orderDroidObj(psDroid, order, psObj);
 
 	return TRUE;
 }
@@ -1888,7 +1884,7 @@ static BOOL defenseLocation(BOOL variantB)
 				{
 					count++;
 				}
-				if(TERRAIN_TYPE(mapTile(gX,gY)) == TER_WATER)
+				if (terrainType(mapTile(gX,gY)) == TER_WATER)
 				{
 					noWater = FALSE;
 				}
@@ -1908,7 +1904,7 @@ static BOOL defenseLocation(BOOL variantB)
 				{
 					count++;
 				}
-				if(TERRAIN_TYPE(mapTile(gX,gY)) == TER_WATER)
+				if (terrainType(mapTile(gX,gY)) == TER_WATER)
 				{
 					noWater = FALSE;
 				}
@@ -2087,7 +2083,6 @@ BOOL scrActionDroidObj(void)
 	DROID			*psDroid;
 	DROID_ACTION		action;
 	BASE_OBJECT		*psObj;
-	DROID_OACTION_INFO oaInfo = {{NULL}};
 
 	if (!stackPopParams(3, ST_DROID, &psDroid, VAL_INT, &action, ST_BASEOBJECT, &psObj))
 	{
@@ -2111,8 +2106,7 @@ BOOL scrActionDroidObj(void)
 		return FALSE;
 	}
 
-	oaInfo.objects[0] = (BASE_OBJECT *)psObj;
-	actionDroidObj(psDroid, action, &oaInfo);
+	actionDroidObj(psDroid, action, (BASE_OBJECT *)psObj);
 
 	return TRUE;
 }

@@ -34,7 +34,6 @@
 #include "map.h"
 #include "mapgrid.h"
 #include "multiplay.h"
-#include "player.h"
 #include "projectile.h"
 #include "visibility.h"
 
@@ -74,19 +73,12 @@ BOOL aiInitialise(void)
 		}
 	}
 
-	if (!playerInitialise())
-	{
-		return FALSE;
-	}
-
 	return TRUE;
 }
 
 /* Shutdown the AI system */
 BOOL aiShutdown(void)
 {
-	playerShutDown();
-
 	return TRUE;
 }
 
@@ -255,6 +247,7 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 
 	if (bestTarget)
 	{
+		ASSERT(!bestTarget->died, "aiBestNearestTarget: AI gave us a target that is already dead.");
 		/* See if target is blocked by a wall; only affects direct weapons */
 		if(proj_Direct( asWeaponStats +  psDroid->asWeaps[weapon_slot].nStat) && visGetBlockingWall((BASE_OBJECT *)psDroid, bestTarget, &targetStructure) )
 		{
@@ -317,10 +310,7 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 					weaponSlot < ((DROID *)psTarget)->numWeaps; weaponSlot++)
 				{
 					//see if this weapon is targeting our commander
-					if( ( psDroid->psActionTarget[weaponSlot] ==
-						(BASE_OBJECT *)psAttackerDroid->psGroup->psCommander) ||
-						( psDroid->psTarget[weaponSlot] ==
-						(BASE_OBJECT *)psAttackerDroid->psGroup->psCommander) )
+					if (psDroid->psActionTarget[weaponSlot] == (BASE_OBJECT *)psAttackerDroid->psGroup->psCommander)
 					{
 						bTargetingCmd = TRUE;
 					}
@@ -504,7 +494,7 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 			for(weaponSlot = 0; weaponSlot < psGroupDroid->numWeaps; weaponSlot++)
 			{
 				//see if this droid is currently targeting current target
-				if(psGroupDroid->psTarget[weaponSlot] == psTarget ||
+				if(psGroupDroid->psTarget == psTarget ||
 				   psGroupDroid->psActionTarget[weaponSlot] == psTarget)
 				{
 					//we prefer targets that are already targeted and hence will be destroyed faster
@@ -795,7 +785,7 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 
 		if (psTarget)
 		{
-			ASSERT(!isDead(psTarget), "aiChooseTarget: Structure found a dead target!");
+			ASSERT(!psTarget->died, "aiChooseTarget: Structure found a dead target!");
 			*ppsTarget = psTarget;
 			return TRUE;
 		}
@@ -888,6 +878,7 @@ BOOL aiChooseSensorTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget)
 
 		if (psTemp)
 		{
+			ASSERT(!psTemp->died, "aiChooseSensorTarget gave us a dead target");
 			*ppsTarget = psTemp;
 			return TRUE;
 		}
@@ -899,12 +890,9 @@ BOOL aiChooseSensorTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget)
 /* Do the AI for a droid */
 void aiUpdateDroid(DROID *psDroid)
 {
-	//static oaInfo Array
-	BASE_OBJECT		*psTargets[DROID_MAXWEAPS];
-	DROID_OACTION_INFO	oaInfo;
-	SECONDARY_STATE		state;
+	BASE_OBJECT	*psTarget;
+	SECONDARY_STATE	state;
 	BOOL		lookForTarget,updateTarget;
-	UBYTE		i,targetResult = 1;
 
 	ASSERT( psDroid != NULL,
 		"updateUnitAI: invalid Unit pointer" );
@@ -927,7 +915,6 @@ void aiUpdateDroid(DROID *psDroid)
 
 	/* Only try to update target if already have some target */
 	if (psDroid->action != DACTION_ATTACK &&
-		psDroid->action != DACTION_ATTACK_M &&
 		psDroid->action != DACTION_MOVEFIRE &&
 		psDroid->action != DACTION_MOVETOATTACK &&
 		psDroid->action != DACTION_ROTATETOATTACK)
@@ -937,8 +924,7 @@ void aiUpdateDroid(DROID *psDroid)
 
 	/* Don't update target if we are sent to attack and reached
 		attack destination (attacking our target) */
-	if((orderState(psDroid, DORDER_ATTACK) || orderState(psDroid, DORDER_ATTACK_M))
-		&& (psDroid->psActionTarget[0] == psDroid->psTarget[0]))
+	if (orderState(psDroid, DORDER_ATTACK) && psDroid->psActionTarget[0] == psDroid->psTarget)
 	{
 		updateTarget = FALSE;
 	}
@@ -1022,6 +1008,8 @@ void aiUpdateDroid(DROID *psDroid)
 			if((psDroid->id % TARGET_UPD_SKIP_FRAMES) ==
 				(frameGetFrameNumber() % TARGET_UPD_SKIP_FRAMES))
 			{
+				int i;
+
 				(void)updateAttackTarget((BASE_OBJECT*)psDroid, 0); // this function always has to be called on weapon-slot 0 (even if ->numWeaps == 0)
 
 				//updates all targets
@@ -1041,35 +1029,16 @@ void aiUpdateDroid(DROID *psDroid)
 		if (psDroid->droidType == DROID_SENSOR)
 		{
 			//Watermelon:only 1 target for sensor droid
-			if ( aiChooseTarget((BASE_OBJECT *)psDroid, &psTargets[0], 0, TRUE) )
+			if ( aiChooseTarget((BASE_OBJECT *)psDroid, &psTarget, 0, TRUE) )
 			{
-				oaInfo.objects[0] = psTargets[0];
-				orderDroidObj(psDroid, DORDER_OBSERVE, &oaInfo);
+				orderDroidObj(psDroid, DORDER_OBSERVE, psTarget);
 			}
 		}
 		else
 		{
-			for (i = 0;i < psDroid->numWeaps;i++)
+			if (aiChooseTarget((BASE_OBJECT *)psDroid, &psTarget, 0, TRUE))
 			{
-				if (aiChooseTarget((BASE_OBJECT *)psDroid, &psTargets[i], i, TRUE))
-				{
-					oaInfo.objects[i] = psTargets[i];
-					targetResult |= (1 << (i+1));
-				}
-			}
-
-			//This is a must,because the first target cannot be NULL
-			if (targetResult & 2)
-			{
-				//The droid has at least 2 targets.
-				if (targetResult > 3)
-				{
-					orderDroidObj(psDroid, DORDER_ATTACKTARGET_M, &oaInfo);
-				}
-				else
-				{
-					orderDroidObj(psDroid, DORDER_ATTACKTARGET, &oaInfo);
-				}
+				orderDroidObj(psDroid, DORDER_ATTACKTARGET, psTarget);
 			}
 		}
 		turnOffMultiMsg(FALSE);
@@ -1083,6 +1052,11 @@ BOOL validTarget(BASE_OBJECT *psObject, BASE_OBJECT *psTarget, int weapon_slot)
 {
 	BOOL	bTargetInAir, bValidTarget = FALSE;
 	UBYTE	surfaceToAir;
+
+	if (!psTarget)
+	{
+		return FALSE;
+	}
 
 	//need to check propulsion type of target
 	switch (psTarget->type)
@@ -1196,8 +1170,7 @@ BOOL updateAttackTarget(BASE_OBJECT * psAttacker, SDWORD weapon_slot)
 				orderState(psDroid, DORDER_ATTACKTARGET)) &&
 				weapon_slot == 0)	//Watermelon:only primary slot(0) updates affect order
 			{
-				DROID_OACTION_INFO oaInfo = {{psBetterTarget}};
-				orderDroidObj((DROID *)psAttacker, DORDER_ATTACKTARGET, &oaInfo);
+				orderDroidObj((DROID *)psAttacker, DORDER_ATTACKTARGET, psBetterTarget);
 			}
 			else	//can't override current order
 			{

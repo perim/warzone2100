@@ -40,13 +40,19 @@ static LONG WINAPI windowsExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 
 	// Write to temp dir, to support unprivileged users
 	if (!GetTempPathA( PATH_MAX, miniDumpPath ))
-		strcpy( miniDumpPath, "c:\\temp\\" );
-	strcat( miniDumpPath, "warzone2100.mdmp" );
+	{
+		strlcpy(miniDumpPath, "c:\\temp\\", sizeof(miniDumpPath));
+	}
+
+	// Append the filename
+	strlcat(miniDumpPath, "warzone2100.mdmp", sizeof(miniDumpPath));
 
 	/*
 	Alternative:
 	GetModuleFileName( NULL, miniDumpPath, MAX_PATH );
-	strcat( miniDumpPath, ".mdmp" );
+
+	// Append extension
+	strlcat(miniDumpPath, ".mdmp", sizeof(miniDumpPath));
 	*/
 
 	if ( MessageBoxA( NULL, "Warzone crashed unexpectedly, would you like to save a diagnostic file?", applicationName, MB_YESNO ) == IDYES )
@@ -68,21 +74,24 @@ static LONG WINAPI windowsExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 					&uInfo,
 					NULL ) )
 			{
-				sprintf( resultMessage, "Saved dump file to '%s'", miniDumpPath );
-				MessageBoxA( NULL, resultMessage, applicationName, MB_OK );
+				snprintf(resultMessage, sizeof(resultMessage), "Saved dump file to '%s'", miniDumpPath);
 			}
 			else
 			{
-				sprintf( resultMessage, "Failed to save dump file to '%s' (error %d)", miniDumpPath, (int)GetLastError() );
-				MessageBoxA( NULL, resultMessage, applicationName, MB_OK );
+				snprintf(resultMessage, sizeof(resultMessage), "Failed to save dump file to '%s' (error %d)", miniDumpPath, (int)GetLastError());
 			}
+
 			CloseHandle(miniDumpFile);
 		}
 		else
 		{
-			sprintf( resultMessage, "Failed to create dump file '%s' (error %d)", miniDumpPath, (int)GetLastError() );
-			MessageBoxA( NULL, resultMessage, applicationName, MB_OK );
+			snprintf(resultMessage, sizeof(resultMessage), "Failed to create dump file '%s' (error %d)", miniDumpPath, (int)GetLastError());
 		}
+
+		// Guarantee to nul-terminate
+		resultMessage[sizeof(resultMessage) - 1] = '\0';
+
+		MessageBoxA( NULL, resultMessage, applicationName, MB_OK );
 	}
 
 	return EXCEPTION_CONTINUE_SEARCH;
@@ -416,6 +425,17 @@ static void posixExceptionHandler(int signum, siginfo_t * siginfo, WZ_DECL_UNUSE
 	write(dumpFile, __DATE__, strlen(__DATE__));
 	write(dumpFile, "\n", 1);
 
+	write(dumpFile, "Compiled by: ", strlen("Compiled by: "));
+# if defined(WZ_CC_GNU) && !defined(WZ_CC_INTEL)
+	write(dumpFile, "GCC " __VERSION__, strlen("GCC " __VERSION__));
+# elif defined(WZ_CC_INTEL)
+	// Intel includes the compiler name within the version string
+	write(dumpFile, __VERSION__, strlen(__VERSION__));
+# else
+	write(dumpFile, "UNKNOWN", strlen("UNKNOWN"));
+# endif
+	write(dumpFile, "\n", 1);
+
 	write(dumpFile, "Executed on: ", strlen("Executed on: "));
 	write(dumpFile, executionDate, strlen(executionDate));
 	write(dumpFile, "\n\n", 2);
@@ -601,9 +621,9 @@ void setupExceptionHandler(const char * programCommand)
 	sysInfoValid = (uname(&sysInfo) == 0);
 
 	time_t currentTime = time(NULL);
-	strncpy( executionDate, ctime(&currentTime), MAX_DATE_STRING );
+	strlcpy(executionDate, ctime(&currentTime), sizeof(executionDate));
 
-	snprintf( programPID, MAX_PID_STRING, "%i", getpid() );
+	snprintf(programPID, sizeof(programPID), "%i", getpid());
 
 	setFatalSignalHandler(posixExceptionHandler);
 #endif // WZ_OS_*

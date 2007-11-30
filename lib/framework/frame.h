@@ -31,6 +31,9 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+// Provides the safer functions strlcpy and strlcat
+#include "strlfuncs.h"
+
 #include "gettext.h"
 
 #if !defined(LC_MESSAGES)
@@ -53,6 +56,7 @@
 #include "debug.h"
 
 #include "treap.h"
+#include "printf_ext.h"
 
 #include "fractions.h"
 #include "trig.h"

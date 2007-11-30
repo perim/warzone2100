@@ -29,18 +29,12 @@
 #include "lib/framework/frameresource.h"
 #include "lib/framework/strres.h"
 
-#include "lib/ivis_common/ivisdef.h" //ivis palette code
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/textdraw.h" //ivis text code
 // FIXME Direct iVis implementation include!
 #include "lib/ivis_opengl/screen.h"
-
-
 #include "lib/ivis_common/piemode.h"
-// FIXME Direct iVis implementation include!
-#include "lib/ivis_opengl/piematrix.h"
 #include "lib/ivis_common/piefunc.h"
-
 
 #include "hci.h"		// access to widget screen.
 #include "lib/widget/widget.h"
@@ -53,16 +47,12 @@
 #include "frend.h"		// display logo.
 #include "console.h"
 #include "intimage.h"
-#include "text.h"
 #include "intdisplay.h"	//for shutdown
 #include "lib/sound/sound.h"
 #include "lib/gamelib/gtime.h"
 #include "ingameop.h"
 #include "keymap.h"
 #include "mission.h"
-
-
-
 #include "keyedit.h"
 #include "seqdisp.h"
 // FIXME Direct iVis implementation include!
@@ -80,17 +70,8 @@ typedef struct _star
 	SDWORD	speed;
 } STAR;
 
-
-STAR	stars[30];	// quick hack for loading stuff
-
-
-
-#define LOADBARY	460		// position of load bar.
-#define LOADBARY2	470
-#define LOAD_BOX_SHADES	6
-
-
-extern BOOL bLoadSaveUp;
+#define MAX_STARS 20
+static STAR	stars[MAX_STARS];	// quick hack for loading stuff
 
 static BOOL		firstcall = FALSE;
 static UDWORD	loadScreenCallNo=0;
@@ -98,17 +79,18 @@ static BOOL		bPlayerHasLost = FALSE;
 static BOOL		bPlayerHasWon = FALSE;
 static UBYTE    scriptWinLoseVideo = PLAY_NONE;
 
-
 void	startCreditsScreen	( void );
 void	runCreditsScreen	( void );
-UDWORD	lastTick=0;
+
+static	UDWORD	lastTick = 0;
+static	UDWORD	lastChange = 0;
 
 
-
-void	initStars( void )
+static void initStars(void)
 {
-UDWORD	i;
-	for(i=0; i<20; i++)
+	unsigned int i;
+
+	for(i = 0; i < MAX_STARS; ++i)
 	{
 		stars[i].xPos = (UWORD)(rand()%598);		// scatter them
 		stars[i].speed = rand()%10+2;	// always move
@@ -277,10 +259,10 @@ TITLECODE titleLoop(void)
 //loadbar update
 void loadingScreenCallback(void)
 {
-	UDWORD			i;
+	unsigned int i;
 	UDWORD			topX,topY,botX,botY;
 	UDWORD			currTick;
-
+	PIELIGHT		colour;
 
 	if(SDL_GetTicks()-lastTick < 16) {
 		return;
@@ -292,17 +274,21 @@ void loadingScreenCallback(void)
 		debug( LOG_NEVER, "loadingScreenCallback: pause %d\n", currTick );
 	}
 	lastTick = SDL_GetTicks();
-	pie_UniTransBoxFill(1, 1, 2, 2, 0x00010101, 32);
+	colour.byte.r = 1;
+	colour.byte.g = 1;
+	colour.byte.b = 1;
+	colour.byte.a = 32;
+	pie_UniTransBoxFill(1, 1, 2, 2, colour);
 	/* Draw the black rectangle at the bottom */
 
 	topX = 10+D_W;
 	topY = 450+D_H-1;
 	botX = 630+D_W;
 	botY = 470+D_H+1;
-//	pie_BoxFillIndex(10+D_W,450+D_H-1,630+D_W,470+D_H+1,COL_BLACK);
-	pie_UniTransBoxFill(topX,topY,botX,botY,0x00010101, 24);
+	colour.byte.a = 24;
+	pie_UniTransBoxFill(topX, topY, botX, botY, colour);
 
-	for(i=1; i<19; i++)
+	for(i = 1; i < MAX_STARS; ++i)
 	{
 	   	if(stars[i].xPos + stars[i].speed >=598)
 		{
@@ -312,8 +298,12 @@ void loadingScreenCallback(void)
 		{
 			stars[i].xPos = (UWORD)(stars[i].xPos + stars[i].speed);
 		}
-		pie_UniTransBoxFill(10+stars[i].xPos+D_W,450+i+D_H,10+stars[i].xPos+(2*stars[i].speed)+D_W,450+i+2+D_H,0x00ffffff, 255);
 
+		colour.byte.r = 200;
+		colour.byte.g = 200;
+		colour.byte.b = 200;
+		colour.byte.a = 255;
+		pie_UniTransBoxFill(10 + stars[i].xPos+D_W, 450 + i + D_H, 10 + stars[i].xPos + (2 * stars[i].speed) + D_W, 450 + i + 2 + D_H, colour);
    	}
 
 	pie_ScreenFlip(CLEAR_OFF_AND_NO_BUFFER_DOWNLOAD);//loading callback		// dont clear.
@@ -347,7 +337,6 @@ void initLoadingScreen( BOOL drawbdrop )
 	screen_StopBackDrop();
 }
 
-UDWORD lastChange = 0;
 
 // fill buffers with the static screen
 void startCreditsScreen(void)
@@ -393,8 +382,6 @@ void closeLoadingScreen(void)
 
 BOOL displayGameOver(BOOL bDidit)
 {
-
-
 // AlexL says take this out......
 //	setConsolePermanence(TRUE,TRUE);
 //	flushConsoleMessages( );
@@ -403,50 +390,27 @@ BOOL displayGameOver(BOOL bDidit)
 //	addConsoleMessage(_("Game Over"), CENTRE_JUSTIFY );
 //	addConsoleMessage(" ", CENTRE_JUSTIFY );
 
-    //set this for debug mode too - what gets displayed then depends on whether we
-    //have won or lost and if we are in debug mode
-
-	// this bit decides whether to auto quit to front end.
-	//if(!getDebugMappingStatus())
-	if(!bMultiPlayer)
+	if(bDidit)
 	{
-		if(bDidit)
-		{
-			setPlayerHasWon(TRUE);	// quit to frontend..
-		}
-		else
-		{
-			setPlayerHasLost(TRUE);
-		}
-	}
-
-	if(bMultiPlayer)
-	{
-		if(bDidit)
+		setPlayerHasWon(TRUE);
+		multiplayerWinSequence(TRUE);
+		if(bMultiPlayer)
 		{
 			updateMultiStatsWins();
-			multiplayerWinSequence(TRUE);
 		}
-		else
+	}
+	else
+	{
+		setPlayerHasLost(TRUE);
+		if(bMultiPlayer)
 		{
 			updateMultiStatsLoses();
-			clearMissionWidgets();
-			intAddMissionResult(bDidit, TRUE);
 		}
 	}
 
-//	if(getDebugMappingStatus())
-//	{
-//		intAddInGameOptions();
-//	}
-	else
-
-	{
-
-        //clear out any mission widgets - timers etc that may be on the screen
-        clearMissionWidgets();
-		intAddMissionResult(bDidit, TRUE);
-    }
+	//clear out any mission widgets - timers etc that may be on the screen
+	clearMissionWidgets();
+	intAddMissionResult(bDidit, TRUE);
 
 	return TRUE;
 }

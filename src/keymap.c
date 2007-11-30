@@ -33,7 +33,6 @@
 #include "lib/framework/input.h"
 #include "lib/framework/strres.h"
 #include "lib/gamelib/gtime.h"
-#include "text.h"
 #include "keymap.h"
 #include "console.h"
 #include "keybind.h"
@@ -90,6 +89,8 @@ UDWORD	numActiveMappings;
 /* Last meta and sub key that were recorded */
 static KEY_CODE	lastMetaKey,lastSubKey;
 static BOOL	bKeyProcessing = TRUE;
+
+static void kf_NOOP(void) {}
 
 // ----------------------------------------------------------------------------------
 // Adding a mapped function ? add a save pointer! Thank AlexL.
@@ -223,8 +224,11 @@ _keymapsave keyMapSaveTable[] =
 	kf_TogglePower,
 	kf_ToggleWeather,
 	kf_SelectPlayer,
-	kf_ToggleMistFog,
-	kf_ToggleFogColour,
+	kf_AssignGrouping_0,
+	kf_SelectGrouping_0,
+	kf_SelectCommander_0,
+	kf_NOOP, // unused
+	kf_NOOP, // unused
 	kf_AddMissionOffWorld,
 	kf_KillSelected,
 	kf_ShowMappings,
@@ -240,8 +244,6 @@ _keymapsave keyMapSaveTable[] =
 	kf_RaiseTile,
 	kf_ToggleOutline,
 	kf_TriFlip,
-	kf_UpDroidScale,
-	kf_DownDroidScale,
 	kf_RaiseGamma,
 	kf_LowerGamma,
 	kf_ToggleWatchWindow,
@@ -300,6 +302,7 @@ void	keyInitMappings( BOOL bForceDefaults )
 	//                                **********************************
 	//                                **********************************
 	//										ASSIGN GROUPS
+	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_LCTRL,KEY_0,KEYMAP_PRESSED,kf_AssignGrouping_0,				_("Assign Group 0"));
 	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_LCTRL,KEY_1,KEYMAP_PRESSED,kf_AssignGrouping_1,				_("Assign Group 1"));
 	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_LCTRL,KEY_2,KEYMAP_PRESSED,kf_AssignGrouping_2,				_("Assign Group 2"));
 	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_LCTRL,KEY_3,KEYMAP_PRESSED,kf_AssignGrouping_3,				_("Assign Group 3"));
@@ -312,6 +315,7 @@ void	keyInitMappings( BOOL bForceDefaults )
 	//                                **********************************
 	//                                **********************************
 	//	SELECT GROUPS - Will jump to the group as well as select if group is ALREADY selected
+	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_IGNORE,KEY_0,KEYMAP_PRESSED,kf_SelectGrouping_0,				_("Select Group 0"));
 	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_IGNORE,KEY_1,KEYMAP_PRESSED,kf_SelectGrouping_1,				_("Select Group 1"));
 	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_IGNORE,KEY_2,KEYMAP_PRESSED,kf_SelectGrouping_2,				_("Select Group 2"));
 	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_IGNORE,KEY_3,KEYMAP_PRESSED,kf_SelectGrouping_3,				_("Select Group 3"));
@@ -324,6 +328,7 @@ void	keyInitMappings( BOOL bForceDefaults )
 	//                                **********************************
 	//                                **********************************
 	//	SELECT COMMANDER - Will jump to the group as well as select if group is ALREADY selected
+	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_LALT,KEY_0,KEYMAP_PRESSED,kf_SelectCommander_0,				_("Select Commander 0"));
 	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_LALT,KEY_1,KEYMAP_PRESSED,kf_SelectCommander_1,				_("Select Commander 1"));
 	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_LALT,KEY_2,KEYMAP_PRESSED,kf_SelectCommander_2,				_("Select Commander 2"));
 	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_LALT,KEY_3,KEYMAP_PRESSED,kf_SelectCommander_3,				_("Select Commander 3"));
@@ -425,7 +430,7 @@ void	keyInitMappings( BOOL bForceDefaults )
 	keyAddMapping(KEYMAP_ASSIGNABLE,KEY_IGNORE,(KEY_CODE)KEY_MAXSCAN,KEYMAP_PRESSED,kf_ToggleReopenBuildMenu,_("Toggle reopening the build menu"));
 
 	// NOTE THIS!!!!!!!
-	// available: ctrl+e, ctrl+m
+	// available: ctrl+e, ctrl+m, ctrl+k, ctrl+l
 	keyAddMapping(KEYMAP___HIDE,KEY_LSHIFT,KEY_BACKSPACE,KEYMAP_PRESSED,kf_ToggleDebugMappings,			"TOGGLE Debug Mappings");
 	keyAddMapping(KEYMAP__DEBUG,KEY_IGNORE,KEY_M,KEYMAP_PRESSED,kf_ShowMappings,				"Show all keyboard mappings - use pause!");
 	keyAddMapping(KEYMAP__DEBUG,KEY_IGNORE,KEY_V,KEYMAP_PRESSED,kf_ToggleVisibility,			"Toggle visibility");
@@ -434,29 +439,24 @@ void	keyInitMappings( BOOL bForceDefaults )
 	keyAddMapping(KEYMAP__DEBUG,KEY_IGNORE,KEY_Y,KEYMAP_PRESSED,kf_ToggleDemoMode,				"Toggles on/off DEMO Mode");
 	keyAddMapping(KEYMAP__DEBUG,KEY_LCTRL,KEY_B,KEYMAP_PRESSED,kf_EndMissionOffWorld,			"End Mission");
 	keyAddMapping(KEYMAP__DEBUG,KEY_LCTRL,KEY_J,KEYMAP_PRESSED,kf_ToggleFog,					"Toggles All fog");
-	keyAddMapping(KEYMAP__DEBUG,KEY_LCTRL,KEY_K,KEYMAP_PRESSED,kf_ToggleMistFog,				"Toggle Mist Fog");
-	keyAddMapping(KEYMAP__DEBUG,KEY_LCTRL,KEY_L,KEYMAP_PRESSED,kf_ToggleFogColour,				"Toggle Fog Colour Fog");
 	keyAddMapping(KEYMAP__DEBUG,KEY_LCTRL,KEY_Q,KEYMAP_PRESSED,kf_ToggleWeather,				"Trigger some weather");
 	keyAddMapping(KEYMAP__DEBUG,KEY_IGNORE,KEY_K,KEYMAP_PRESSED,kf_TriFlip,					"Flip terrain triangle");
 
 	//These ones are necessary for debugging
-	keyAddMapping(KEYMAP__DEBUG,KEY_LALT,KEY_A,KEYMAP_PRESSED,kf_AllAvailable,						"Make all items available");	
+	keyAddMapping(KEYMAP__DEBUG,KEY_LALT,KEY_A,KEYMAP_PRESSED,kf_AllAvailable,						"Make all items available");
 	keyAddMapping(KEYMAP__DEBUG,KEY_LALT,KEY_K,KEYMAP_PRESSED,kf_KillSelected,						"Kill Selected Unit(s)");
 	keyAddMapping(KEYMAP__DEBUG,KEY_LCTRL,KEY_G,KEYMAP_PRESSED,kf_ToggleGodMode,				"Toggle god Mode Status");
 	keyAddMapping(KEYMAP__DEBUG,KEY_LCTRL,KEY_O,KEYMAP_PRESSED,kf_ChooseOptions,				"Display Options Screen");
 	keyAddMapping(KEYMAP__DEBUG,KEY_LCTRL,KEY_X,KEYMAP_PRESSED,kf_FinishResearch,				"Complete current research");
-	keyAddMapping(KEYMAP__DEBUG,KEY_LALT,KEY_SPACE,KEYMAP_PRESSED,kf_ToggleWatchWindow,			"Toggle watch window");
+	keyAddMapping(KEYMAP__DEBUG,KEY_LSHIFT,KEY_W,KEYMAP_PRESSED,kf_ToggleWatchWindow,			"Toggle watch window");
 
 	saveKeyMap();	// save out the default key mappings.
 
 //  ------------------------ OLD STUFF - Store here!
 	/*
+	keyAddMapping(KEYMAP__DEBUG,KEY_LSHIFT,KEY_D,KEYMAP_PRESSED,kf_ToggleDrivingMode, 			"Toggle Driving Mode");
 	keyAddMapping(KEYMAP__DEBUG,KEY_IGNORE,KEY_F6,KEYMAP_DOWN,kf_UpGeoOffset,"Raise the geometric offset");
 	keyAddMapping(KEYMAP__DEBUG,KEY_IGNORE,KEY_F7,KEYMAP_DOWN,kf_DownGeoOffset,"Lower the geometric offset");
-	keyAddMapping(KEYMAP__DEBUG,KEY_IGNORE,KEY_F8,KEYMAP_DOWN,kf_UpDroidScale,"Increase droid Scaling");
-	keyAddMapping(KEYMAP__DEBUG,KEY_IGNORE,KEY_F9,KEYMAP_DOWN,kf_DownDroidScale,"Decrease droid Scaling");
-	keyAddMapping(KEYMAP__DEBUG,KEY_IGNORE,KEY_C,KEYMAP_PRESSED,kf_SimCloseDown,"Simulate Screen Close Down");
-	keyAddMapping(KEYMAP_ALWAYS,KEY_IGNORE,KEY_D,KEYMAP_PRESSED,kf_ToggleDrivingMode,"Toggle Driving Mode");
 	keyAddMapping(KEYMAP__DEBUG,KEY_IGNORE,KEY_E,KEYMAP_PRESSED,kf_ToggleDroidInfo,"Display droid info whilst tracking");
 	keyAddMapping(KEYMAP__DEBUG,KEY_IGNORE,KEY_I,KEYMAP_PRESSED,kf_ToggleWidgets,"Toggle Widgets");
 	keyAddMapping(KEYMAP__DEBUG,KEY_IGNORE,KEY_J,KEYMAP_PRESSED,kf_ToggleRadarAllign,"Toggles Radar allignment");
@@ -505,15 +505,21 @@ KEY_MAPPING	*newMapping;
 
 	/* Get some memory for our binding */
 	newMapping = (KEY_MAPPING*)malloc(sizeof(KEY_MAPPING));
-
-	ASSERT( newMapping != NULL, "Couldn't allocate memory for a key mapping" );
-
-	/* Plus one for the terminator */
-	newMapping->pName = (char*)malloc(strlen(name)+1);
-	ASSERT( newMapping->pName != NULL, "Couldn't allocate the memory for the string in a mapping" );
+	if (newMapping == NULL)
+	{
+		debug(LOG_ERROR, "keyAddMapping: Out of memory!");
+		abort();
+		return NULL;
+	}
 
 	/* Copy over the name */
-	strcpy(newMapping->pName,name);
+	newMapping->pName = strdup(name);
+	if (newMapping->pName == NULL)
+	{
+		debug(LOG_ERROR, "keyAddMapping: Out of memory!");
+		abort();
+		return NULL;
+	}
 
 	/* Fill up our entries, first the ones that activate it */
 	newMapping->metaKeyCode	= metaCode;
@@ -524,7 +530,6 @@ KEY_MAPPING	*newMapping;
 	newMapping->lastCalled	= gameTime;
 
 	/* And what gets called when it's activated */
-	//newMapping->function	= function;
 	newMapping->function	= pKeyMapFunc;
 
 	/* Is it functional on the key being down or just pressed */
@@ -698,11 +703,8 @@ SDWORD		i;
 		return;
 	}
 
-
-
 	/* Jump out if we've got a new mapping */
   	(void) checkQwertyKeys();
-
 
 	/* Check for the meta keys */
 	if(keyDown(KEY_LCTRL) || keyDown(KEY_RCTRL) || keyDown(KEY_LALT)
@@ -736,9 +738,13 @@ SDWORD		i;
 			continue;
 		}
 
+		if (keyToProcess->function == NULL)
+		{
+			continue;
+		}
 
 		if(keyToProcess->metaKeyCode==KEY_IGNORE && !bMetaKeyDown &&
-			!(keyToProcess->status==KEYMAP__DEBUG && bDoingDebugMappings == FALSE) )
+			!(keyToProcess->status==KEYMAP__DEBUG && !getDebugMappingStatus()) )
  		{
 			switch(keyToProcess->action)
  			{
@@ -783,17 +789,17 @@ SDWORD		i;
  		}
 		/* Process the combi ones */
  		if( (keyToProcess->metaKeyCode!=KEY_IGNORE && bMetaKeyDown) &&
-			!(keyToProcess->status==KEYMAP__DEBUG && bDoingDebugMappings == FALSE))
+			!(keyToProcess->status==KEYMAP__DEBUG && !getDebugMappingStatus()))
  		{
  			/* It's a combo keypress - one held down and the other pressed */
- 			if(keyDown(keyToProcess->metaKeyCode) && keyPressed(keyToProcess->subKeyCode) )
+ 			if (keyDown(keyToProcess->metaKeyCode) && keyPressed(keyToProcess->subKeyCode))
  			{
  				lastMetaKey = keyToProcess->metaKeyCode;
  				lastSubKey = keyToProcess->subKeyCode;
  				keyToProcess->function();
 				bKeyProcessed = TRUE;
  			}
-			else if(keyToProcess->altMetaKeyCode!=KEY_IGNORE)
+			else if (keyToProcess->altMetaKeyCode != KEY_IGNORE)
 			{
 				if(keyDown(keyToProcess->altMetaKeyCode) && keyPressed(keyToProcess->subKeyCode))
 				{
@@ -804,14 +810,6 @@ SDWORD		i;
 				}
 			}
  		}
-		if(bKeyProcessed)
-		{
-			if(keyToProcess->status==KEYMAP__DEBUG && bDoingDebugMappings)
-			{
-				// this got really annoying. what purpose? - Per
-				// CONPRINTF(ConsoleString,(ConsoleString,"DEBUG MAPPING : %s",keyToProcess->pName));
-			}
-		}
 	}
 
 	/* Script callback - find out what meta key was pressed */
@@ -844,7 +842,7 @@ SDWORD		i;
 			case KEY_LSHIFT:
 			case KEY_RSHIFT:
 				continue;
-			break;	
+			break;
 		}
 
 		/* Let scripts process this key if it's pressed */
@@ -1067,37 +1065,6 @@ BOOL		bFound;
 	return(bFound);
 }
 
-/*
-BOOL	keyReAssignMappingName(char *pName, KEY_CODE newMetaCode, KEY_CODE newSubCode)
-							   )
-{
-KEY_MAPPING	*psMapping;
-KEY_CODE	origMetaCode,origSubCode;
-BOOL	bReplaced;
-
-  	for(psMapping = keyMappings,bReplaced = FALSE; psMapping && !bReplaced;
-		psMapping = psMapping->psNext)
-	{
-		if(strcmp(psMapping->pName,pName) == FALSE)	//negative
-		{
-			if(psMapping->status==KEYMAP_ASSIGNABLE)
-			{
-				(void)keyAddMapping(psMapping->status,newMetaCode,
-					newSubCode, psMapping->action,psMapping->function,psMapping->pName);
-				bReplaced = TRUE;
-				origMetaCode = psMapping->metaKeyCode;
-				origSubCode = psMapping->subKeyCode;
-			}
-		}
-	}
-
-	if(bReplaced)
-	{
-		keyRemoveMapping(origMetaCode, origSubCode);
-	}
-	return(bReplaced);
-}
-*/
 // ----------------------------------------------------------------------------------
 KEY_MAPPING	*getKeyMapFromName(char *pName)
 {
@@ -1111,6 +1078,7 @@ KEY_MAPPING	*psMapping;
 		}
 	return(NULL);
 }
+
 // ----------------------------------------------------------------------------------
 BOOL	keyReAssignMappingName(char *pName,KEY_CODE newMetaCode, KEY_CODE newSubCode)
 {

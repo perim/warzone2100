@@ -27,14 +27,13 @@
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/tex.h"
 #include "lib/ivis_common/piepalette.h"
-#include "lib/ivis_opengl/pietexture.h"
 #include "lib/ivis_opengl/screen.h"
 #include "display3ddef.h"
 #include "texture.h"
 #include "radar.h"
 
 #include <physfs.h>
-#include <SDL/SDL_opengl.h>
+#include <SDL_opengl.h>
 #ifdef __APPLE__
 #include <opengl/glu.h>
 #else
@@ -67,7 +66,7 @@ static int newPage(const char *name, int level, int width, int height, int count
 	ASSERT(_TEX_INDEX > texPage, "newPage: Index too low (%d > %d)", _TEX_INDEX, texPage);
 	ASSERT(_TEX_INDEX < iV_TEX_MAX, "Too many texture pages used");
 
-	strncpy(_TEX_PAGE[texPage].name, name, iV_TEXNAME_MAX);
+	strlcpy(_TEX_PAGE[texPage].name, name, sizeof(_TEX_PAGE[texPage].name));
 
 	pie_SetTexturePage(texPage);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);

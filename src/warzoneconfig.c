@@ -48,12 +48,12 @@ typedef struct _warzoneGlobals
 {
 	SEQ_MODE	seqMode;
 	BOOL		bFog;
-	BOOL		bTranslucent;
 	SWORD		effectsLevel;
 	BOOL		allowSubtitles;
 	BOOL		playAudioCDs;
 	BOOL		Fullscreen;
 	BOOL		soundEnabled;
+	BOOL		trapCursor;
 } WARZONE_GLOBALS;
 
 /***************************************************************************/
@@ -80,10 +80,7 @@ void war_SetDefaultStates(void)//Sets all states
 	//set those here and reset in clParse or loadConfig
 	pie_SetFogCap(FOG_CAP_UNDEFINED);
 	war_SetFog(FALSE);
-	war_SetTranslucent(TRUE);
-
 	war_SetPlayAudioCDs(TRUE);
-
 	war_setSoundEnabled( TRUE );
 }
 
@@ -111,6 +108,16 @@ BOOL war_getFullscreen(void) {
 	return warGlobs.Fullscreen;
 }
 
+void war_SetTrapCursor(BOOL b)
+{
+	warGlobs.trapCursor = b;
+}
+
+BOOL war_GetTrapCursor(void)
+{
+	return warGlobs.trapCursor;
+}
+
 /***************************************************************************/
 /***************************************************************************/
 void war_SetFog(BOOL val)
@@ -126,29 +133,18 @@ void war_SetFog(BOOL val)
 	}
 	else
 	{
+		PIELIGHT black;
+
 		setRevealStatus(TRUE);
-		pie_SetFogColour(0);
+		black.argb = 0;
+		black.byte.a = 255;
+		pie_SetFogColour(black);
 	}
 }
 
 BOOL war_GetFog(void)
 {
 	return  warGlobs.bFog;
-}
-
-/***************************************************************************/
-/***************************************************************************/
-void war_SetTranslucent(BOOL val)
-{
-	if (warGlobs.bTranslucent != val)
-	{
-		warGlobs.bTranslucent = val;
-	}
-}
-
-BOOL war_GetTranslucent(void)
-{
-	return  warGlobs.bTranslucent;
 }
 
 /***************************************************************************/

@@ -27,6 +27,8 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
+				Description="Generates the autorevison.h file"
+				CommandLine="$(SolutionDir)..\autorevision  +cstr -v $(ProjectDir)..\  $(ProjectDir)..\src\autorevision.h&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="FlexGenerator"
@@ -50,7 +52,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)\..&quot;;&quot;__DEVPKG__\include&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)\..&quot;;&quot;__DEVPKG__\include&quot;;&quot;__DEVPKG__\include\SDL&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;YY_NO_UNISTD_H;VERSION=\&quot;TRUNK\&quot;;PACKAGE=\&quot;warzone2100\&quot;;LOCALEDIR=\&quot;\&quot;"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -71,7 +73,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="SDL.lib SDLmain.lib SDL_net.lib png.lib zlib.lib ogg.lib vorbis.lib vorbisfile.lib physfs.lib OpenAL32.lib glc32.lib OpenGL32.lib GLU32.lib shfolder.lib winmm.lib wsock32.lib dbghelp.lib"
+				AdditionalDependencies="SDL.lib SDLmain.lib SDL_net.lib png.lib zlib.lib ogg.lib vorbis.lib vorbisfile.lib physfs.lib OpenAL32.lib glc32.lib OpenGL32.lib GLU32.lib shfolder.lib winmm.lib wsock32.lib dbghelp.lib libpopt.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-Dbg.exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;__DEVPKG__\lib&quot;"
@@ -137,7 +139,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)\..&quot;;&quot;__DEVPKG__\include&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)\..&quot;;&quot;__DEVPKG__\include&quot;;&quot;__DEVPKG__\include\SDL&quot;"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;YY_NO_UNISTD_H;VERSION=\&quot;TRUNK\&quot;;PACKAGE=\&quot;warzone2100\&quot;;LOCALEDIR=\&quot;\&quot;"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
@@ -228,6 +230,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\lib\framework\printf_ext.c"
+					>
+				</File>
+				<File
 					RelativePath=".\resource_lexer.lex.c"
 					>
 				</File>
@@ -253,6 +259,10 @@
 				</File>
 				<File
 					RelativePath=".\strres_parser.tab.c"
+					>
+				</File>
+				<File
+					RelativePath="..\lib\framework\tagfile.c"
 					>
 				</File>
 				<File
@@ -372,10 +382,6 @@
 							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 						/>
 					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="..\lib\ivis_opengl\pietexture.c"
-					>
 				</File>
 				<File
 					RelativePath="..\lib\ivis_opengl\rendmode.c"
@@ -638,10 +644,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\src\findpath.c"
-					>
-				</File>
-				<File
 					RelativePath="..\src\formation.c"
 					>
 				</File>
@@ -842,10 +844,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\src\player.c"
-					>
-				</File>
-				<File
 					RelativePath="..\src\power.c"
 					>
 				</File>
@@ -935,6 +933,10 @@
 				</File>
 				<File
 					RelativePath="..\src\transporter.c"
+					>
+				</File>
+				<File
+					RelativePath="..\src\version.c"
 					>
 				</File>
 				<File
@@ -1058,6 +1060,10 @@
 			</File>
 			<File
 				RelativePath=".\audp_parser.tab.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\autorevision.h"
 				>
 			</File>
 			<File
@@ -1245,10 +1251,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\findpath.h"
-				>
-			</File>
-			<File
 				RelativePath="..\lib\widget\form.h"
 				>
 			</File>
@@ -1278,10 +1280,6 @@
 			</File>
 			<File
 				RelativePath="..\lib\framework\frameresource.h"
-				>
-			</File>
-			<File
-				RelativePath="..\lib\framework\strnlen1.h"
 				>
 			</File>
 			<File
@@ -1445,10 +1443,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\lib\gamelib\maxpidef.h"
-				>
-			</File>
-			<File
 				RelativePath="..\src\mechanics.h"
 				>
 			</File>
@@ -1605,10 +1599,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\lib\ivis_opengl\pietexture.h"
-				>
-			</File>
-			<File
 				RelativePath="..\lib\ivis_common\pietypes.h"
 				>
 			</File>
@@ -1621,10 +1611,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\player.h"
-				>
-			</File>
-			<File
 				RelativePath="..\lib\sound\playlist.h"
 				>
 			</File>
@@ -1634,6 +1620,10 @@
 			</File>
 			<File
 				RelativePath="..\src\power.h"
+				>
+			</File>
+			<File
+				RelativePath="..\lib\framework\printf_ext.h"
 				>
 			</File>
 			<File
@@ -1765,6 +1755,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\lib\framework\strlfuncs.h"
+				>
+			</File>
+			<File
+				RelativePath="..\lib\framework\strnlen1.h"
+				>
+			</File>
+			<File
 				RelativePath="..\lib\framework\strres.h"
 				>
 			</File>
@@ -1782,6 +1780,10 @@
 			</File>
 			<File
 				RelativePath="..\src\structuredef.h"
+				>
+			</File>
+			<File
+				RelativePath="..\lib\framework\tagfile.h"
 				>
 			</File>
 			<File
@@ -1834,6 +1836,10 @@
 			</File>
 			<File
 				RelativePath="..\lib\framework\types.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\version.h"
 				>
 			</File>
 			<File

@@ -28,12 +28,13 @@
 
 #include "lib/framework/frame.h"
 
-#include <SDL/SDL.h>
-#include <SDL/SDL_opengl.h>
+#include <SDL.h>
+#include <SDL_opengl.h>
 
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/piedef.h"
 #include "lib/ivis_common/tex.h"
+#include "lib/ivis_common/piepalette.h"
 
 /***************************************************************************/
 /*
@@ -104,7 +105,6 @@ void pie_UpdateFogDistance(float begin, float end)
 
 void pie_SetFogStatus(BOOL val)
 {
-	PIELIGHT fog;
 	float fog_colour[4];
 
 	if (rendStates.fogEnabled)
@@ -114,7 +114,8 @@ void pie_SetFogStatus(BOOL val)
 		{
 			rendStates.fog = val;
 			if (rendStates.fog) {
-				fog.argb = pie_GetFogColour();
+				PIELIGHT fog = pie_GetFogColour();
+
 				fog_colour[0] = fog.byte.r/255.0f;
 				fog_colour[1] = fog.byte.g/255.0f;
 				fog_colour[2] = fog.byte.b/255.0f;
@@ -214,22 +215,6 @@ void pie_SetTranslucencyMode(TRANSLUCENCY_MODE transMode)
 				glDisable(GL_BLEND);
 				break;
 		}
-	}
-}
-
-/***************************************************************************/
-// set the constant colour used in text and flat render modes
-/***************************************************************************/
-void pie_SetColour(UDWORD colour)
-{
-	if (colour != rendStates.colour) {
-		PIELIGHT c;
-
-		rendStates.colour = colour;
-		pieStateCount++;
-
-		c.argb = colour;
-		glColor4ub(c.byte.r, c.byte.g, c.byte.b, c.byte.a);
 	}
 }
 

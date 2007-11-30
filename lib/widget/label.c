@@ -79,10 +79,7 @@ BOOL labelCreate(W_LABEL **ppsWidget, W_LABINIT *psInit)
 
 	if (psInit->pText)
 	{
-		strncpy((*ppsWidget)->aText, psInit->pText, sizeof((*ppsWidget)->aText));
-
-		// Terminate the string with a NUL character
-		(*ppsWidget)->aText[sizeof((*ppsWidget)->aText) - 1] = '\0';
+		strlcpy((*ppsWidget)->aText, psInit->pText, sizeof((*ppsWidget)->aText));
 	}
 	else
 	{
@@ -114,7 +111,7 @@ void labelDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pCol
 	FontID = psLabel->FontID;
 
 	iV_SetFont(FontID);
-	iV_SetTextColour((UWORD)*(pColours + WCOL_TEXT));
+	iV_SetTextColour((UWORD)pColours[WCOL_TEXT]);
 	if (psLabel->style & WLAB_ALIGNCENTRE)
 	{
   		fw = iV_GetTextWidth(psLabel->aText);

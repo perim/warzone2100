@@ -4,6 +4,8 @@ lib/framework/configfile.c
 lib/framework/SDL_framerate.c
 lib/framework/frameresource.c
 lib/framework/frame.c
+lib/framework/strnlen1.c
+lib/framework/tagfile.c
 lib/framework/treap.c
 lib/framework/exceptionhandler.c
 lib/framework/trig.c
@@ -29,6 +31,7 @@ lib/gamelib/animobj.c
 lib/netplay/netplay.c
 lib/netplay/netjoin_stub.c
 lib/netplay/netlog.c
+lib/netplay/nettypes.c
 lib/ivis_opengl/piepalette.c
 lib/ivis_opengl/textdraw.c
 lib/ivis_opengl/ivi.c
@@ -36,7 +39,6 @@ lib/ivis_opengl/tex.c
 lib/ivis_opengl/rendmode.c
 lib/ivis_opengl/screen.c
 lib/ivis_opengl/piematrix.c
-lib/ivis_opengl/pietexture.c
 lib/ivis_opengl/piedraw.c
 lib/ivis_opengl/piefunc.c
 lib/ivis_opengl/pieblitfunc.c
@@ -118,7 +120,6 @@ src/intimage.c
 src/lighting.c
 src/warcam.c
 src/init.c
-src/findpath.c
 src/main.c
 src/loop.c
 src/move.c
@@ -141,7 +142,6 @@ src/scriptcb.c
 src/objmem.c
 src/loadsave.c
 src/target.c
-src/player.c
 src/bucket3d.c
 src/e3demo.c
 src/arrow.c
@@ -164,6 +164,7 @@ src/cheat.c
 src/power.c
 src/keymap.c
 src/cdspan.c
+src/version.c
 src/warzoneconfig.c
 src/multijoin.c
 src/environ.c

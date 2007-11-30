@@ -25,8 +25,8 @@
 #include <limits.h>
 #include <string.h>
 
-#include <SDL/SDL.h>
-#include <SDL/SDL_syswm.h>
+#include <SDL.h>
+#include <SDL_syswm.h>
 
 #include "lib/framework/frame.h"
 #include "scrap.h"
@@ -35,52 +35,39 @@
 #define PUBLIC
 #define PRIVATE	static
 
-/* Determine what type of clipboard we are using */
-#if defined(__unix__) && !defined(__QNXNTO__)
-	#define X11_SCRAP
-#elif defined(__WIN32__)
-	#define WIN_SCRAP
-#elif defined(__QNXNTO__)
-	#define QNX_SCRAP
-#elif defined(__APPLE__)
-	#define MACOS_SCRAP
-#else
-	#error Unknown window manager for clipboard handling
-#endif /* scrap type */
-
 /* System dependent data types */
-#if defined(X11_SCRAP)
+#if defined(WZ_WS_X11)
 /* * */
 typedef Atom scrap_type;
 
-#elif defined(WIN_SCRAP)
+#elif defined(WZ_WS_WIN)
 /* * */
 typedef UDWORD scrap_type;
 
-#elif defined(QNX_SCRAP)
+#elif defined(WZ_WS_QNX)
 /* * */
 typedef uint32_t scrap_type;
 #define Ph_CL_TEXT T('T', 'E', 'X', 'T')
 
-#elif defined(MACOS_SCRAP)
+#elif defined(WZ_WS_MAC)
 /* * */
 typedef uint32_t scrap_type;	/* FIXME */
 
 #endif /* scrap type */
 
 /* System dependent variables */
-#if defined(X11_SCRAP)
+#if defined(WZ_WS_X11)
 /* * */
 static Display *SDL_Display;
 static Window SDL_Window;
 static void (*Lock_Display)(void);
 static void (*Unlock_Display)(void);
 
-#elif defined(WIN_SCRAP)
+#elif defined(WZ_WS_WIN)
 /* * */
 static HWND SDL_Window;
 
-#elif defined(QNX_SCRAP)
+#elif defined(WZ_WS_QNX)
 /* * */
 static unsigned short InputGroup;
 
@@ -95,15 +82,15 @@ switch (type)
 	{
 
 	case T('T', 'E', 'X', 'T'):
-#if defined(X11_SCRAP)
+#if defined(WZ_WS_X11)
 /* * */
 	return XA_STRING;
 
-#elif defined(WIN_SCRAP)
+#elif defined(WZ_WS_WIN)
 /* * */
 	return CF_TEXT;
 
-#elif defined(QNX_SCRAP)
+#elif defined(WZ_WS_QNX)
 /* * */
 	return Ph_CL_TEXT;
 
@@ -113,13 +100,15 @@ switch (type)
 	{
 		char format[sizeof(FORMAT_PREFIX)+8+1];
 
-		sprintf(format, "%s%08lx", FORMAT_PREFIX, (unsigned long)type);
+		snprintf(format, sizeof(format), "%s%08lx", FORMAT_PREFIX, (unsigned long)type);
+		// Guarantee to nul-terminate
+		format[sizeof(format) - 1] = '\0';
 
-#if defined(X11_SCRAP)
+#if defined(WZ_WS_X11)
 /* * */
 		return XInternAtom(SDL_Display, format, False);
 
-#elif defined(WIN_SCRAP)
+#elif defined(WZ_WS_WIN)
 /* * */
 		return RegisterClipboardFormatA(format);
 
@@ -276,7 +265,7 @@ switch (type)
 return dstlen;
 }
 
-#if defined(X11_SCRAP)
+#if defined(WZ_WS_X11)
 /* The system message filter function -- handle clipboard messages */
 PRIVATE int clipboard_filter(const SDL_Event *event);
 #endif
@@ -295,7 +284,7 @@ SDL_VERSION(&info.version);
 if ( SDL_GetWMInfo(&info) )
 	{
 	/* Save the information for later use */
-#if defined(X11_SCRAP)
+#if defined(WZ_WS_X11)
 /* * */
 	if ( info.subsystem == SDL_SYSWM_X11 )
 		{
@@ -315,12 +304,12 @@ if ( SDL_GetWMInfo(&info) )
 		SDL_SetError("SDL is not running on X11");
 		}
 
-#elif defined(WIN_SCRAP)
+#elif defined(WZ_WS_WIN)
 /* * */
 	SDL_Window = info.window;
 	retval = 0;
 
-#elif defined(QNX_SCRAP)
+#elif defined(WZ_WS_QNX)
 /* * */
 	InputGroup=PhInputGroup(NULL);
 	retval = 0;
@@ -335,17 +324,17 @@ lost_scrap(void)
 {
 int retval;
 
-#if defined(X11_SCRAP)
+#if defined(WZ_WS_X11)
 /* * */
 Lock_Display();
 retval = ( XGetSelectionOwner(SDL_Display, XA_PRIMARY) != SDL_Window );
 Unlock_Display();
 
-#elif defined(WIN_SCRAP)
+#elif defined(WZ_WS_WIN)
 /* * */
 retval = ( GetClipboardOwner() != SDL_Window );
 
-#elif defined(QNX_SCRAP)
+#elif defined(WZ_WS_QNX)
 /* * */
 retval = ( PhInputGroup(NULL) != InputGroup );
 
@@ -364,7 +353,7 @@ char *dst;
 format = convert_format(type);
 dstlen = convert_data(type, NULL, src, srclen);
 
-#if defined(X11_SCRAP)
+#if defined(WZ_WS_X11)
 /* * */
 dst = (char *)malloc(dstlen);
 if ( dst != NULL )
@@ -379,7 +368,7 @@ if ( dst != NULL )
 	Unlock_Display();
 	}
 
-#elif defined(WIN_SCRAP)
+#elif defined(WZ_WS_WIN)
 /* * */
 if ( OpenClipboard(SDL_Window) )
 	{
@@ -397,7 +386,7 @@ if ( OpenClipboard(SDL_Window) )
 	CloseClipboard();
 	}
 
-#elif defined(QNX_SCRAP)
+#elif defined(WZ_WS_QNX)
 /* * */
 #if (_NTO_VERSION < 620) /* before 6.2.0 releases */
 {
@@ -462,7 +451,7 @@ get_scrap(int type, int *dstlen, char **dst)
 	*dstlen = 0;
 	format = convert_format(type);
 
-#if defined(X11_SCRAP)
+#if defined(WZ_WS_X11)
 /* * */
 {
 	Window owner;
@@ -524,7 +513,7 @@ get_scrap(int type, int *dstlen, char **dst)
 	Unlock_Display();
 }
 
-#elif defined(WIN_SCRAP)
+#elif defined(WZ_WS_WIN)
 /* * */
 	if ( IsClipboardFormatAvailable(format) && OpenClipboard(SDL_Window) )
 	{
@@ -545,7 +534,7 @@ get_scrap(int type, int *dstlen, char **dst)
 		}
 	CloseClipboard();
 	}
-#elif defined(QNX_SCRAP)
+#elif defined(WZ_WS_QNX)
 /* * */
 #if (_NTO_VERSION < 620) /* before 6.2.0 releases */
 {
@@ -606,7 +595,7 @@ get_scrap(int type, int *dstlen, char **dst)
 #endif /* scrap type */
 }
 
-#if defined(X11_SCRAP)
+#if defined(WZ_WS_X11)
 PRIVATE int clipboard_filter(const SDL_Event *event)
 {
 /* Post all non-window manager specific events */
@@ -661,4 +650,4 @@ switch (event->syswm.msg->event.xevent.type) {
 /* Post the event for X11 clipboard reading above */
 return(1);
 }
-#endif /* X11_SCRAP */
+#endif /* WZ_WS_X11 */

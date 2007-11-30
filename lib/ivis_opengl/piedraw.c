@@ -27,8 +27,8 @@
 /***************************************************************************/
 
 #include <string.h>
-#include <SDL/SDL_opengl.h>
-#include <SDL/SDL_video.h>
+#include <SDL_opengl.h>
+#include <SDL_video.h>
 
 #include "lib/framework/frame.h"
 #include "lib/ivis_common/ivisdef.h"
@@ -40,7 +40,6 @@
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/pieclip.h"
 #include "piematrix.h"
-#include "pietexture.h"
 
 extern BOOL drawing_interface;
 
@@ -64,13 +63,10 @@ BOOL check_extension(const char* extension_name)
 
 		if (   extension_name_length == first_extension_length
 		    && strncmp(extension_name, tmp, first_extension_length) == 0) {
-			debug( LOG_3D, "%s is supported.\n", extension_name );
 			return TRUE;
 		}
 		tmp += first_extension_length + 1;
 	}
-
-	debug( LOG_3D, "%s is not supported.\n", extension_name );
 
 	return FALSE;
 }
@@ -126,7 +122,7 @@ static BOOL stencil_one_pass(void)
  */
 /***************************************************************************/
 
-static PIEVERTEXF pieVrts[pie_MAX_VERTICES_PER_POLYGON];
+static TERRAIN_VERTEXF pieVrts[pie_MAX_VERTICES_PER_POLYGON];
 static unsigned int pieCount = 0;
 static unsigned int tileCount = 0;
 static unsigned int polyCount = 0;
@@ -156,7 +152,7 @@ void pie_BeginLighting(const Vector3f * light)
 	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
 	glEnable(GL_LIGHT0);
 
-	lighting = TRUE;
+//	lighting = TRUE;
 	shadows = TRUE;
 }
 
@@ -167,7 +163,7 @@ void pie_EndLighting(void)
 }
 
 
-static inline void pie_Polygon(const SDWORD numVerts, const PIEVERTEXF* pVrts, const BOOL light)
+static inline void pie_Polygon(const SDWORD numVerts, const TERRAIN_VERTEXF* pVrts, const BOOL light)
 {
 	unsigned int i = 0;
 
@@ -228,7 +224,11 @@ static inline void pie_Polygon(const SDWORD numVerts, const PIEVERTEXF* pVrts, c
 
 	glEnd();
 
-	glDisable(GL_LIGHTING);
+	if (light)
+	{
+		glDisable(GL_LIGHTING);
+		glDisable(GL_NORMALIZE);
+	}
 }
 
 
@@ -346,7 +346,6 @@ static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELI
 		pie_SetFogStatus(FALSE);
 		pie_SetRendMode(REND_ADDITIVE_TEX);
 		colour.byte.a = (UBYTE)pieFlagData;
-		pie_SetBilinear(TRUE);
 		light = FALSE;
 	}
 	else if (pieFlag & pie_TRANSLUCENT)
@@ -354,7 +353,6 @@ static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELI
 		pie_SetFogStatus(FALSE);
 		pie_SetRendMode(REND_ALPHA_TEX);
 		colour.byte.a = (UBYTE)pieFlagData;
-		pie_SetBilinear(FALSE);//never bilinear with constant alpha, gives black edges
 		light = FALSE;
 	}
 	else
@@ -369,15 +367,6 @@ static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELI
 			pie_SetFogStatus(TRUE);
 		}
 		pie_SetRendMode(REND_GOURAUD_TEX);
-		//if hardware fog then alpha is set else unused in decal mode
-		if (pieFlag & pie_NO_BILINEAR)
-		{
-			pie_SetBilinear(FALSE);
-		}
-		else
-		{
-			pie_SetBilinear(TRUE);
-		}
 	}
 
 	if (pieFlag & pie_RAISE)
@@ -537,7 +526,6 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 	int edge_count = 0;
 	static EDGE *edgelist = NULL;
 	static int edgelistsize = 256;
-
 	EDGE *drawlist = NULL;
 
 	if(!edgelist)
@@ -605,7 +593,7 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 			edge_count = j;
 			// then store it in the imd
 			shape->nShadowEdges = edge_count;
-			shape->shadowEdgeList = malloc(sizeof(EDGE) * shape->nShadowEdges);
+			shape->shadowEdgeList = realloc(shape->shadowEdgeList, sizeof(EDGE) * shape->nShadowEdges);
 			memcpy(shape->shadowEdgeList, edgelist, sizeof(EDGE) * shape->nShadowEdges);
 		}
 	}
@@ -927,7 +915,7 @@ void pie_DrawImage(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style)
 
 	pie_SetTexturePage(image->texPage);
 
-	style->colour.argb = pie_GetColour();
+	style->colour.argb = 0xffffffff; // draw solid
 	style->specular.argb = 0x00000000;
 
 	glColor4ub(style->colour.byte.r, style->colour.byte.g, style->colour.byte.b, style->colour.byte.a);
@@ -957,15 +945,13 @@ void pie_DrawImage(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style)
  *
  ***************************************************************************/
 
-void pie_DrawRect( SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1, UDWORD colour )
+void pie_DrawRect(SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1, PIELIGHT colour)
 {
-	PIELIGHT c;
 	polyCount++;
 
-	c.argb = colour;
 	pie_SetColourKeyedBlack(FALSE);
 
-	glColor4ub(c.byte.r, c.byte.g, c.byte.b, c.byte.a);
+	glColor4ub(colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a);
 	glBegin(GL_TRIANGLE_STRIP);
 		glVertex2i(x0, y0);
 		glVertex2i(x1, y0);
@@ -980,38 +966,21 @@ void pie_DrawRect( SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1, UDWORD colour )
  *
  ***************************************************************************/
 
-void pie_DrawTexTriangle(const PIEVERTEX *aVrts, const void* psEffects)
+void pie_DrawTerrainTriangle(const TERRAIN_VERTEX *aVrts, float offset)
 {
-	GLfloat offset = 0.0f;
 	unsigned int i = 0;
 
 	/* Since this is only used from within source for the terrain draw - we can backface cull the polygons. */
 	tileCount++;
-	pie_SetFogStatus(TRUE);
-	if (psEffects != NULL)
-	{
-		/* Translucent water with animation */
-		pie_SetRendMode(REND_ALPHA_TEX);
-		pie_SetColourKeyedBlack(FALSE);
-		offset = *((GLfloat*)psEffects);
-	}
-	pie_SetBilinear(TRUE);
 
 	glBegin(GL_TRIANGLE_FAN);
 		for ( i = 0; i < 3; i++ )
 		{
 			glColor4ub( aVrts[i].light.byte.r, aVrts[i].light.byte.g, aVrts[i].light.byte.b, aVrts[i].light.byte.a );
 			glTexCoord2f( aVrts[i].u, aVrts[i].v + offset );
-			glVertex3f( aVrts[i].x, aVrts[i].y, aVrts[i].z );
+			glVertex3f( aVrts[i].pos.x, aVrts[i].pos.y, aVrts[i].pos.z );
 		}
 	glEnd();
-
-	if (psEffects != NULL)
-	{
-		/* Solid terrain */
-		pie_SetRendMode(REND_GOURAUD_TEX);
-		pie_SetColourKeyedBlack(TRUE);
-	}
 }
 
 void pie_GetResetCounts(unsigned int* pPieCount, unsigned int* pTileCount, unsigned int* pPolyCount, unsigned int* pStateCount)

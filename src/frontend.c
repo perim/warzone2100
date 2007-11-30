@@ -56,15 +56,15 @@
 #include "multilimit.h"
 #include "multiplay.h"
 #include "seqdisp.h"
-#include "text.h"
 #include "warzoneconfig.h"
 #include "main.h"
 #include "wrappers.h"
+#include "version.h"
 
 static int StartWithGame = 1; // New game starts in Cam 1.
 
 tMode titleMode; // the global case
-char			pLevelName[MAX_LEVEL_NAME_SIZE+1];	//256];			// vital! the wrf file to use.
+char			aLevelName[MAX_LEVEL_NAME_SIZE+1];	//256];			// vital! the wrf file to use.
 
 BOOL			bForceEditorLoaded = FALSE;
 BOOL			bUsingKeyboard = FALSE;		// to disable mouse pointer when using keys.
@@ -294,13 +294,13 @@ BOOL runTutorialMenu(void)
 	switch(id)
 	{
 		case FRONTEND_TUTORIAL:
-			strcpy(pLevelName,TUTORIAL_LEVEL);
+			strlcpy(aLevelName, TUTORIAL_LEVEL, sizeof(aLevelName));
 			changeTitleMode(STARTGAME);
 
 			break;
 
 		case FRONTEND_FASTPLAY:
-			strcpy(pLevelName,"FASTPLAY");
+			strlcpy(aLevelName, "FASTPLAY", sizeof(aLevelName));
 			changeTitleMode(STARTGAME);
 
 			break;
@@ -344,7 +344,7 @@ static void frontEndNewGame( void )
 {
 	switch(StartWithGame) {
 		case 1:
-			strcpy(pLevelName,DEFAULT_LEVEL);
+			strlcpy(aLevelName, DEFAULT_LEVEL, sizeof(aLevelName));
 			seq_ClearSeqList();
 
 			seq_AddSeqToList("cam1/c001.rpl",NULL,"cam1/c001.txa",FALSE);
@@ -353,11 +353,11 @@ static void frontEndNewGame( void )
             break;
 
 		case 2:
-			strcpy(pLevelName,"CAM_2A");
+			strlcpy(aLevelName, "CAM_2A", sizeof(aLevelName));
 			break;
 
 		case 3:
-			strcpy(pLevelName,"CAM_3A");
+			strlcpy(aLevelName, "CAM_3A", sizeof(aLevelName));
 			break;
 	}
 
@@ -368,7 +368,7 @@ void loadOK( void )
 {
 	if(strlen(sRequestResult))
 	{
-		strcpy(saveGameName,sRequestResult);
+		strlcpy(saveGameName, sRequestResult, sizeof(saveGameName));
 		changeTitleMode(LOADSAVEGAME);
 	}
 }
@@ -396,7 +396,7 @@ BOOL runSinglePlayerMenu(void)
 				break;
 
 			case FRONTEND_LOADCAM2:
-				strcpy(pLevelName,"CAM_2A");
+				strlcpy(aLevelName, "CAM_2A", sizeof(aLevelName));
 				changeTitleMode(STARTGAME);
  #ifdef LOADINGBACKDROPS
 				AddLoadingBackdrop(TRUE);
@@ -406,7 +406,7 @@ BOOL runSinglePlayerMenu(void)
 				break;
 
 			case FRONTEND_LOADCAM3:
-				strcpy(pLevelName,"CAM_3A");
+				strlcpy(aLevelName, "CAM_3A", sizeof(aLevelName));
 				changeTitleMode(STARTGAME);
  #ifdef LOADINGBACKDROPS
 				AddLoadingBackdrop(TRUE);
@@ -1184,7 +1184,6 @@ void addTextButton(UDWORD id,  UDWORD PosX, UDWORD PosY, const char *txt,BOOL bA
 		sButInit.width = (short)(iV_GetTextWidth(txt)+10);//FRONTEND_BUTWIDTH;
 
 		sButInit.x+=35;
-
 	}
 	else
 	{
@@ -1192,8 +1191,7 @@ void addTextButton(UDWORD id,  UDWORD PosX, UDWORD PosY, const char *txt,BOOL bA
 		sButInit.width = FRONTEND_BUTWIDTH;
 	}
 
-
-	sButInit.pUserData = (void*)bGrey;				// store disable state
+	sButInit.UserData = bGrey; // store disable state
 
 	sButInit.height = FRONTEND_BUTHEIGHT;
 	sButInit.pDisplay = displayTextOption;
@@ -1282,16 +1280,10 @@ void addText(int FontID,UDWORD FormID,UDWORD id,  UDWORD PosX, UDWORD PosY, char
 // show a background piccy
 static void displayTitleBitmap(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
 {
-	static const char versionString[] = "Version " VERSION " - Built " __DATE__
-#ifdef DEBUG
-	                                                                            " - DEBUG"
-#endif
-	;
-
 	iV_SetFont(font_regular);
 	iV_SetTextColour(PIE_TEXT_WHITE);
 
-	iV_DrawTextRotated(versionString, pie_GetVideoBufferWidth() - 10, pie_GetVideoBufferHeight() - 15, 270.f);
+	iV_DrawTextRotated(version_getFormattedVersionString(), pie_GetVideoBufferWidth() - 10, pie_GetVideoBufferHeight() - 15, 270.f);
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -1311,7 +1303,7 @@ void displayTextOption(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD 
 	SDWORD			fx,fy, fw;
 	W_BUTTON		*psBut;
 	BOOL			hilight = FALSE;
-	BOOL			greyOut = (BOOL) psWidget->pUserData;			// if option is unavailable.
+	BOOL			greyOut = psWidget->UserData; // if option is unavailable.
 
 	psBut = (W_BUTTON *)psWidget;
 	iV_SetFont(psBut->FontID);

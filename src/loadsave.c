@@ -51,7 +51,6 @@
 #include "lib/netplay/netplay.h"
 #include "loop.h"
 #include "intdisplay.h"
-#include "text.h"
 #include "mission.h"
 #include "lib/gamelib/gtime.h"
 //======================================================================================
@@ -103,10 +102,9 @@ static	W_SCREEN	*psRequestScreen;					// Widget screen for requester
 static	BOOL		mode;
 static	UDWORD		chosenSlotId;
 
-BOOL				bLoadSaveUp = FALSE;						// true when interface is up and should be run.
-char				saveGameName[256];			//the name of the save game to load from the front end
-char				sRequestResult[255];						// filename returned;
-char				sDelete[MAX_STR_LENGTH];
+BOOL				bLoadSaveUp = FALSE;        // true when interface is up and should be run.
+char				saveGameName[256];          //the name of the save game to load from the front end
+char				sRequestResult[PATH_MAX];   // filename returned;
 BOOL				bRequestLoad = FALSE;
 LOADSAVE_MODE		bLoadSaveMode;
 
@@ -227,7 +225,7 @@ static BOOL _addLoadSave(BOOL bLoad, const char *sSearchPath, const char *sExten
 	sFormInit.height = LOADSAVE_BANNER_DEPTH;
 	sFormInit.disableChildren = FALSE;
 	sFormInit.pDisplay = displayLoadBanner;
-	sFormInit.pUserData = (void *)bLoad;
+	sFormInit.UserData = bLoad;
 	widgAddForm(psRequestScreen, &sFormInit);
 
 
@@ -252,7 +250,7 @@ static BOOL _addLoadSave(BOOL bLoad, const char *sSearchPath, const char *sExten
 	sButInit.y = 8;
 	sButInit.width		= iV_GetImageWidth(IntImages,IMAGE_NRUTER);
 	sButInit.height		= iV_GetImageHeight(IntImages,IMAGE_NRUTER);
-	sButInit.pUserData	= (void*)PACKDWORD_TRI(0,IMAGE_NRUTER , IMAGE_NRUTER);
+	sButInit.UserData	= PACKDWORD_TRI(0,IMAGE_NRUTER , IMAGE_NRUTER);
 
 	sButInit.id = LOADSAVE_CANCEL;
 	sButInit.style = WBUT_PLAIN;
@@ -292,8 +290,8 @@ static BOOL _addLoadSave(BOOL bLoad, const char *sSearchPath, const char *sExten
 	// fill slots.
 	slotCount = 0;
 
-	strcpy(sPath,sSearchPath);							// setup locals.
-	strcpy(sExt,sExtension);
+	strlcpy(sPath, sSearchPath, sizeof(sPath));  // setup locals.
+	strlcpy(sExt, sExtension, sizeof(sExt));
 
 	debug(LOG_WZ, "_addLoadSave: Searching \"%s\" for savegames", sSearchPath);
 
@@ -310,7 +308,7 @@ static BOOL _addLoadSave(BOOL bLoad, const char *sSearchPath, const char *sExten
 		debug(LOG_WZ, "_addLoadSave: We found [%s]", *i);
 		/* Set the tip and add the button */
 		(*i)[strlen(*i) - 4] = '\0'; // remove .gam extension
-		strcpy(sSlots[slotCount], *i);		//store it!
+		strlcpy(sSlots[slotCount], *i, sizeof(sSlots[slotCount]));  //store it!
 		button->pTip = sSlots[slotCount];
 		button->pText = sSlots[slotCount];
 		slotCount++;		// goto next but...
@@ -379,12 +377,29 @@ void deleteSaveGame(char* saveGameName)
 
 	// check for a directory and remove that too.
 	files = PHYSFS_enumerateFiles(saveGameName);
-	for (i = files; *i != NULL; i++) {
-		debug(LOG_WZ, "Deleting [%s].", *i);
-		PHYSFS_delete(*i);
+	for (i = files; *i != NULL; ++i)
+	{
+		char del_file[PATH_MAX];
+
+		// Construct the full path to the file by appending the
+		// filename to the directory it is in.
+		snprintf(del_file, sizeof(del_file), "%s/%s", saveGameName, *i);
+
+		debug(LOG_WZ, "Deleting [%s].", del_file);
+
+		// Delete the file
+		if (!PHYSFS_delete(del_file))
+		{
+			debug(LOG_ERROR, "Warning [%s] could not be deleted due to PhysicsFS error: %s", del_file, PHYSFS_getLastError());
+		}
 	}
 	PHYSFS_freeList(files);
-	PHYSFS_delete(saveGameName);	// now empty directory
+
+	if (!PHYSFS_delete(saveGameName))		// now (should be)empty directory
+	{
+		debug(LOG_ERROR, "Warning directory[%s] could not be deleted because %s", saveGameName,PHYSFS_getLastError());
+	}
+	
 	return;
 }
 
@@ -397,13 +412,13 @@ static BOOL _runLoadSave(BOOL bResetMissionWidgets)
 {
 	UDWORD		id=0;
 	W_EDBINIT	sEdInit;
-	char		sTemp[MAX_STR_LENGTH];
+	static char     sDelete[PATH_MAX];
 	UDWORD		i;
 	W_CONTEXT		context;
 
 	id = widgRunScreen(psRequestScreen);
 
-	strcpy(sRequestResult,"");					// set returned filename to null;
+	strlcpy(sRequestResult, "", sizeof(sRequestResult));					// set returned filename to null;
 
 	// cancel this operation...
 	if(id == LOADSAVE_CANCEL || CancelPressed() )
@@ -451,16 +466,20 @@ static BOOL _runLoadSave(BOOL bResetMissionWidgets)
 				sEdInit.pBoxDisplay = displayLoadSaveEdit;
 				widgAddEditBox(psRequestScreen, &sEdInit);
 
-				sprintf(sTemp,"%s%s.%s",
-						sPath,
-						((W_BUTTON *)widgGetFromID(psRequestScreen,id))->pText ,
-						sExt);
+				if (((W_BUTTON *)widgGetFromID(psRequestScreen,id))->pText != NULL)
+				{
+					snprintf(sDelete, sizeof(sDelete), "%s%s.%s",
+					         sPath,
+					         ((W_BUTTON *)widgGetFromID(psRequestScreen,id))->pText ,
+					         sExt);
+				}
+				else
+				{
+					strlcpy(sDelete, "", sizeof(sDelete));
+				}
 
 				widgHide(psRequestScreen,id);		// hide the old button
 				chosenSlotId = id;
-
-				strcpy(sDelete,sTemp);				// prepare the savegame name.
-				sTemp[strlen(sTemp)-4] = '\0';		// strip extension
 
 				// auto click in the edit box we just made.
 				context.psScreen	= psRequestScreen;
@@ -481,6 +500,8 @@ static BOOL _runLoadSave(BOOL bResetMissionWidgets)
 	// finished entering a name.
 	if( id == SAVEENTRY_EDIT)
 	{
+		char sTemp[MAX_STR_LENGTH];
+
 		if(!keyPressed(KEY_RETURN))						// enter was not pushed, so not a vaild entry.
 		{
 			widgDelete(psRequestScreen,SAVEENTRY_EDIT);	//unselect this box, and go back ..
@@ -491,7 +512,7 @@ static BOOL _runLoadSave(BOOL bResetMissionWidgets)
 
 		// scan to see if that game exists in another slot, if
 		// so then fail.
-		strcpy(sTemp,((W_EDITBOX *)widgGetFromID(psRequestScreen,id))->aText);
+		strlcpy(sTemp, ((W_EDITBOX *)widgGetFromID(psRequestScreen,id))->aText, sizeof(sTemp));
 
 		for(i=LOADENTRY_START;i<LOADENTRY_END;i++)
 		{
@@ -515,13 +536,13 @@ static BOOL _runLoadSave(BOOL bResetMissionWidgets)
 		// return with this name, as we've edited it.
 		if (strlen(((W_EDITBOX *)widgGetFromID(psRequestScreen,id))->aText))
 		{
-			strcpy(sTemp,((W_EDITBOX *)widgGetFromID(psRequestScreen,id))->aText);
+			strlcpy(sTemp, ((W_EDITBOX *)widgGetFromID(psRequestScreen,id))->aText, sizeof(sTemp));
 			removeWildcards(sTemp);
-			sprintf(sRequestResult,"%s%s.%s",
-					sPath,
-	  				sTemp,
-					sExt);
-			deleteSaveGame(sDelete);	//only delete game if a new game fills the slot
+			snprintf(sRequestResult, sizeof(sRequestResult), "%s%s.%s", sPath, sTemp, sExt);
+			if (strlen(sDelete) != 0)
+			{
+				deleteSaveGame(sDelete);	//only delete game if a new game fills the slot
+			}
 		}
 		else
 		{
@@ -614,40 +635,36 @@ void removeWildcards(char *pStr)
 
 static void displayLoadBanner(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
 {
-	//UDWORD col;
-    UBYTE   col;
+	PIELIGHT col;
 	UDWORD	x = xOffset+psWidget->x;
 	UDWORD	y = yOffset+psWidget->y;
 
 	if(psWidget->pUserData)
 	{
-		col = COL_GREEN;
+		col = WZCOL_GREEN;
 	}
 	else
 	{
-		col = COL_RED;
+		col = WZCOL_MENU_LOAD_BORDER;
 	}
 
-	iV_BoxFill(x,y,x+psWidget->width,y+psWidget->height,col);
-	iV_BoxFill(x+2,y+2,x+psWidget->width-2,y+psWidget->height-2,COL_BLUE);
-
-
+	pie_BoxFill(x, y, x + psWidget->width, y + psWidget->height, col);
+	pie_BoxFill(x + 2,y + 2, x + psWidget->width - 2, y + psWidget->height - 2, WZCOL_MENU_BACKGROUND);
 }
+
 // ////////////////////////////////////////////////////////////////////////////
 static void displayLoadSlot(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
 {
 
 	UDWORD	x = xOffset+psWidget->x;
 	UDWORD	y = yOffset+psWidget->y;
-//	UWORD	im = (UWORD)UNPACKDWORD_TRI_B((UDWORD)psWidget->pUserData);
-//	UWORD	im2= (UWORD)(UNPACKDWORD_TRI_C((UDWORD)psWidget->pUserData));
 	char  butString[64];
 
 	drawBlueBox(x,y,psWidget->width,psWidget->height);	//draw box
 
 	if(((W_BUTTON *)psWidget)->pTip )
 	{
-		strcpy(butString,((W_BUTTON *)psWidget)->pTip);
+		strlcpy(butString, ((W_BUTTON *)psWidget)->pTip, sizeof(butString));
 
 		iV_SetFont(font_regular);									// font
 		iV_SetTextColour(-1);								//colour
@@ -659,11 +676,9 @@ static void displayLoadSlot(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UD
 
 		//draw text
 		iV_DrawText( butString, x+4, y+17);
-
-
 	}
-
 }
+
 // ////////////////////////////////////////////////////////////////////////////
 static void displayLoadSaveEdit(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
 {
@@ -672,21 +687,13 @@ static void displayLoadSaveEdit(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset
 	UDWORD	w = psWidget->width;
 	UDWORD  h = psWidget->height;
 
-	iV_BoxFill(x,y,x+w,y+h,COL_RED);
-	iV_BoxFill(x+1,y+1,x+w-1,y+h-1,COL_BLUE);
+	pie_BoxFill(x, y, x + w, y + h, WZCOL_MENU_LOAD_BORDER);
+	pie_BoxFill(x + 1, y + 1, x + w - 1, y + h - 1, WZCOL_MENU_BACKGROUND);
 }
 
 // ////////////////////////////////////////////////////////////////////////////
 void drawBlueBox(UDWORD x,UDWORD y, UDWORD w, UDWORD h)
 {
-    UBYTE       dark = COL_BLUE;
-    UBYTE       light = COL_LIGHTBLUE;
-
-	// box
-	pie_BoxFillIndex(x-1,y-1,x+w+1,y+h+1,light);
-	pie_BoxFillIndex(x,y,x+w,y+h,dark);
+	pie_BoxFill(x - 1, y - 1, x + w + 1, y + h + 1, WZCOL_MENU_BORDER);
+	pie_BoxFill(x, y , x + w, y + h, WZCOL_MENU_BACKGROUND);
 }
-
-
-
-

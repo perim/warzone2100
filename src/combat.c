@@ -33,7 +33,6 @@
 #include "lib/gamelib/gtime.h"
 #include "map.h"
 #include "move.h"
-#include "findpath.h"
 #include "messagedef.h"
 #include "miscimd.h"
 #include "projectile.h"
@@ -469,8 +468,7 @@ void counterBatteryFire(BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget)
 				//inform viewer of target
 				if (psViewer->type == OBJ_DROID)
 				{
-					DROID_OACTION_INFO oaInfo = {{psAttacker}};
-					orderDroidObj((DROID *)psViewer, DORDER_OBSERVE, &oaInfo);
+					orderDroidObj((DROID *)psViewer, DORDER_OBSERVE, psAttacker);
 				}
 				else if (psViewer->type == OBJ_STRUCTURE)
 				{

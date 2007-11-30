@@ -36,12 +36,12 @@
 #include "lib/ivis_common/piemode.h"
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/rendmode.h"
+#include "lib/ivis_common/piepalette.h"
 #include "objects.h"
 #include "droiddef.h"
 #include "basedef.h"
 #include "statsdef.h"
 #include "hci.h"
-#include "text.h"
 #include "miscimd.h"
 #include "lib/ivis_opengl/piematrix.h"
 #include "display3d.h"
@@ -93,24 +93,24 @@ const char *getDescription(int id)
 {
 	switch ( id )
 	{
-		case STR_MR_UNITS_LOST   : return _("Own Units: %d");
-		case STR_MR_UNITS_KILLED : return _("Enemy Units: %d");
-		case STR_MR_STR_LOST     : return _("Own Structures: %d");
-		case STR_MR_STR_BLOWN_UP : return _("Enemy Structures: %d");
-		case STR_MR_UNITS_BUILT  : return _("Units Manufactured: %d");
-		case STR_MR_UNITS_NOW    : return _("Total Units: %d");
-		case STR_MR_STR_BUILT    : return _("Structures Built: %d");
-		case STR_MR_STR_NOW      : return _("Total Structures: %d");
+		case STR_MR_UNITS_LOST   : return _("Own Units: %u");
+		case STR_MR_UNITS_KILLED : return _("Enemy Units: %u");
+		case STR_MR_STR_LOST     : return _("Own Structures: %u");
+		case STR_MR_STR_BLOWN_UP : return _("Enemy Structures: %u");
+		case STR_MR_UNITS_BUILT  : return _("Units Manufactured: %u");
+		case STR_MR_UNITS_NOW    : return _("Total Units: %u");
+		case STR_MR_STR_BUILT    : return _("Structures Built: %u");
+		case STR_MR_STR_NOW      : return _("Total Structures: %u");
 
-		case STR_MR_LEVEL_ROOKIE : return _("Rookie: %d");
-		case STR_MR_LEVEL_GREEN  : return _("Green: %d");
-		case STR_MR_LEVEL_TRAINED: return _("Trained: %d");
-		case STR_MR_LEVEL_REGULAR: return _("Regular: %d");
-		case STR_MR_LEVEL_VETERAN: return _("Professional: %d");
-		case STR_MR_LEVEL_CRACK  : return _("Veteran: %d");
-		case STR_MR_LEVEL_ELITE  : return _("Elite: %d");
-		case STR_MR_LEVEL_SPECIAL: return _("Special: %d");
-		case STR_MR_LEVEL_ACE    : return _("Hero: %d");
+		case STR_MR_LEVEL_ROOKIE : return _("Rookie: %u");
+		case STR_MR_LEVEL_GREEN  : return _("Green: %u");
+		case STR_MR_LEVEL_TRAINED: return _("Trained: %u");
+		case STR_MR_LEVEL_REGULAR: return _("Regular: %u");
+		case STR_MR_LEVEL_VETERAN: return _("Professional: %u");
+		case STR_MR_LEVEL_CRACK  : return _("Veteran: %u");
+		case STR_MR_LEVEL_ELITE  : return _("Elite: %u");
+		case STR_MR_LEVEL_SPECIAL: return _("Special: %u");
+		case STR_MR_LEVEL_ACE    : return _("Hero: %u");
 
 		default: return "";  // make compiler shut up
 	}
@@ -304,6 +304,7 @@ UDWORD	width,height;
 float	length;
 float	mul;
 UDWORD	div;
+	PIELIGHT colour;
 
 	if(!bDispStarted)
 	{
@@ -314,13 +315,16 @@ UDWORD	div;
 
 	fillUpStats();
 
-	pie_UniTransBoxFill( 16 + D_W, MT_Y_POS - 16, pie_GetVideoBufferWidth() - D_W - 16, MT_Y_POS + 256, 0x00000088, 128 );
+	colour.byte.r = 0;
+	colour.byte.b = 0;
+	colour.byte.b = 88;
+	colour.byte.a = 128;
+	pie_UniTransBoxFill( 16 + D_W, MT_Y_POS - 16, pie_GetVideoBufferWidth() - D_W - 16, MT_Y_POS + 256, colour );
 	iV_Box( 16 + D_W, MT_Y_POS - 16, pie_GetVideoBufferWidth() - D_W - 16, MT_Y_POS + 256, 1);
 
 	iV_DrawText( _("Unit Losses"), LC_X + D_W, 80 + 16 + D_H );
 	iV_DrawText( _("Structure Losses"), LC_X + D_W, 140 + 16 + D_H );
 	iV_DrawText( _("Force Information"), LC_X + D_W, 200 + 16 + D_H );
-
 
 	index = 0;
 	bMoreBars = TRUE;
@@ -346,12 +350,10 @@ UDWORD	div;
 			iV_Box(x,y,x+width,y+height,0);
 
 			/* Draw the background border box */
-		 //	pie_UniTransBoxFill(x-1,y-1,x+width+1,y+height+1,0x00010101,255);
-			iV_BoxFill(x-1,y-1,x+width+1,y+height+1,1);
+			pie_BoxFill(x - 1, y - 1, x + width + 1, y + height + 1, WZCOL_MENU_BACKGROUND);
 
 			/* Draw the interior grey */
-		  //	pie_UniTransBoxFill(x,y,x+width,y+height,0x00888888,96);
-			iV_BoxFill(x,y,x+width,y+height,222);
+			pie_BoxFill(x, y, x + width, y + height, WZCOL_MENU_SCORES_INTERIOR);
 
 			if( ((gameTime2 - dispST) > infoBars[index].queTime) )
 			{
@@ -366,11 +368,9 @@ UDWORD	div;
 				{
 
 					/* Black shadow */
-	//				pie_UniTransBoxFill(x+1,y+3,x+MAKEINT(length)-1,y+height-1,0x00010101,255);
-					iV_BoxFill(x+1,y+3,x+MAKEINT(length)-1,y+height-1,1);
+					pie_BoxFill(x + 1, y + 3, x + MAKEINT(length) - 1, y + height - 1, WZCOL_MENU_BACKGROUND);
 					/* Solid coloured bit */
-	//				pie_UniTransBoxFill(x+1,y+2,x+MAKEINT(length)-3,y+height-3,0x00ffff00,255);
-					iV_BoxFill(x+1,y+2,x+MAKEINT(length)-4,y+height-4,(UBYTE)infoBars[index].colour);
+					pie_BoxFillIndex(x + 1, y + 2, x + MAKEINT(length) - 4, y + height - 4, (UBYTE)infoBars[index].colour);
 				}
 			}
 			/* Now render the text by the bar */

@@ -23,7 +23,7 @@
 //
 
 #include <stdio.h>
-#include <assert.h>
+
 #include "lib/framework/frame.h"
 #include "lib/gamelib/gtime.h"
 #include "lib/gamelib/animobj.h"
@@ -38,10 +38,9 @@
 #include "objectdef.h"
 #include "droid.h"
 
-#include "lib/ivis_opengl/piematrix.h"
-#include "lib/ivis_common/imd.h"
 // FIXME Direct iVis implementation include!
 #include "lib/ivis_common/rendmode.h"
+#include "lib/ivis_common/piepalette.h"
 
 #include "target.h"
 

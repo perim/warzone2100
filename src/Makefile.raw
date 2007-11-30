@@ -26,7 +26,6 @@ SRC=ai.c \
 	environ.c \
 	fpath.c \
 	feature.c \
-	findpath.c \
 	formation.c \
 	frontend.c \
 	gateway.c \
@@ -63,7 +62,6 @@ SRC=ai.c \
 	objects.c \
 	optimisepath.c \
 	order.c \
-	player.c \
 	radar.c \
 	raycast.c \
 	research.c \
@@ -110,6 +108,7 @@ SRC=ai.c \
 	seqdisp.c \
 	structure.c \
 	target.c \
+	version.c \
 	warzoneconfig.c
 
 LIBS=../lib/libgamelib.a \

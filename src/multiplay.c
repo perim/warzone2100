@@ -40,7 +40,6 @@
 #include "display3d.h"								// for changing the viewpoint
 #include "console.h"								// for screen messages
 #include "power.h"
-#include "text.h"
 #include "cmddroid.h"								//  for commanddroidupdatekills
 #include "wrappers.h"								// for game over
 #include "component.h"
@@ -1198,10 +1197,10 @@ BOOL recvTextMessage(NETMSG *pMsg)
 	ASSERT(player != MAX_PLAYERS, "recvTextMessage: failed to find owner of dpid %d", dpid);
 
 	//sprintf(msg, "%d", i);
-	strcpy(msg,NetPlay.players[i].name);
-	strcat(msg," : ");								// seperator
-	//strcat(msg, &(pMsg->body[4]));					// add message
-	strncat(msg, &(pMsg->body[4]), MAX_CONSOLE_STRING_LENGTH);					// add message
+	strlcpy(msg, NetPlay.players[i].name, sizeof(msg));
+	strlcat(msg, " : ", sizeof(msg));                    // seperator
+	//strlcat(msg, &(pMsg->body[4]), sizeof(msg));         // add message
+	strlcat(msg, &(pMsg->body[4]), sizeof(msg));         // add message
 	addConsoleMessage((char *)&msg,DEFAULT_JUSTIFY);
 
 	//multiplayer message callback
@@ -1210,7 +1209,7 @@ BOOL recvTextMessage(NETMSG *pMsg)
 	MultiMsgPlayerFrom = player;
 	MultiMsgPlayerTo = selectedPlayer;
 
-	strcpy(MultiplayMsg,&(pMsg->body[4]));
+	strlcpy(MultiplayMsg, &(pMsg->body[4]), sizeof(MultiplayMsg));
 	eventFireCallbackTrigger((TRIGGER_TYPE)CALL_AI_MSG);
 
 	// make some noise!
@@ -1236,9 +1235,9 @@ BOOL recvTextMessageAI(NETMSG *pMsg)
 	NetGet(pMsg,0,sender);			//in-game player index ('normal' one)
 	NetGet(pMsg,4,receiver);		//in-game player index
 
-	//strcpy(msg,getPlayerName(sender));		// name
-	//strcat(msg," : ");								// seperator
-	strcpy(msg, &(pMsg->body[8]));
+	//strlcpy(msg, getPlayerName(sender), sizeof(msg));  // name
+	//strlcat(msg, " : ", sizeof(msg));                  // seperator
+	strlcpy(msg, &(pMsg->body[8]), sizeof(msg));
 
 	//Display the message and make the script callback
 	displayAIMessage(msg, sender, receiver);
@@ -1550,21 +1549,20 @@ BOOL recvMapFileRequested(NETMSG *pMsg)
 		addConsoleMessage("SENDING MAP!",DEFAULT_JUSTIFY);
 		addConsoleMessage("FIX FOR LINUX!",DEFAULT_JUSTIFY);
 
-		strcpy(mapName,game.map);
+		strlcpy(mapName, game.map, sizeof(mapName));
 		// chop off the -T1
 		mapName[strlen(game.map)-3] = 0;		// chop off the -T1 etc..
 
 		// chop off the sk- if required.
 		if(strncmp(mapName,"Sk-",3) == 0)
 		{
-			strcpy(mapStr,&(mapName[3]));
-			strcpy(mapName,mapStr);
+			strlcpy(mapStr, &(mapName[3]), sizeof(mapStr));
+			strlcpy(mapName, mapStr, sizeof(mapName));
 		}
 
-		sprintf(mapStr,"%dc-%s",game.maxPlayers,mapName);
-		strcat(mapStr,".wz");//.wdg
-		sprintf(fixedname,"maps/%s",mapStr);		//We know maps are in /maps dir...now. fix for linux -Q
-		memcpy(mapStr,fixedname,256);
+		snprintf(mapStr, sizeof(mapStr), "%dc-%s.wz", game.maxPlayers, mapName);
+		snprintf(fixedname, sizeof(fixedname), "maps/%s", mapStr);		//We know maps are in /maps dir...now. fix for linux -Q
+		strlcpy(mapStr, fixedname, sizeof(mapStr));
 		NETsendFile(TRUE,mapStr,0);
 	}
 

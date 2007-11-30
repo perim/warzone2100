@@ -17,21 +17,28 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/***************************************************************************/
-/*
- * Definitions exported to anim.h
+
+#ifndef _LIBIVIS_COMMON_PNG_H_
+#define _LIBIVIS_COMMON_PNG_H_
+
+#include "pie_types.h"
+
+/*!
+ * Load a PNG from file into image
+ *
+ * \param fileName input file to load from
+ * \param image Sprite to read into
+ * \return true on success, false otherwise
  */
-/***************************************************************************/
+bool iV_loadImage_PNG(const char *fileName, iV_Image *image);
 
-#ifndef _MAXPIDEF_H_
-#define _MAXPIDEF_H_
+/*!
+ * Save a PNG from image into file
+ *
+ * \param fileName output file to save to
+ * \param image Texture to read from
+ * \return true on success, false otherwise
+ */
+void iV_saveImage_PNG(const char *fileName, const iV_Image *image);
 
-/***************************************************************************/
-
-#define	INT_SCALE	1000
-
-/***************************************************************************/
-
-#endif	// _MAXPIDEF_H_
-
-/***************************************************************************/
+#endif // _LIBIVIS_COMMON_PNG_H_

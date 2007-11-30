@@ -80,7 +80,7 @@ typedef struct _feature_stats
 										   the start of the mission */
 	BOOL			damageable;			// Whether the feature can be blown up
 	UDWORD			body;				// Number of body points
-	UDWORD			armour;				// Feature armour
+	UDWORD			armourValue;			// Feature armour
 } FEATURE_STATS;
 
 typedef struct _feature
@@ -91,11 +91,8 @@ typedef struct _feature
 	UDWORD			startTime;		/*time the feature was created - valid for 
 									  wrecked droids and structures */
 	UDWORD			body;			/* current body points */
-	UWORD			gfxScaling;			// how much to scale the graphic by - for variation - spice of life 'n all that
-
 	UDWORD			timeLastHit;
 	BOOL			bTargetted;
-
 } FEATURE;
 
 #endif

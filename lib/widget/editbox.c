@@ -43,7 +43,7 @@
 #define WEDB_CURSORSIZE		8
 
 /* Whether the cursor blinks or not */
-#define CURSOR_BLINK		0
+#define CURSOR_BLINK		1
 
 /* The time the cursor blinks for */
 #define WEDB_BLINKRATE		800
@@ -101,10 +101,7 @@ BOOL editBoxCreate(W_EDITBOX **ppsWidget, W_EDBINIT *psInit)
 
 	if (psInit->pText)
 	{
-		strncpy((*ppsWidget)->aText, psInit->pText, sizeof((*ppsWidget)->aText));
-
-		// Terminate the string with a NUL character
-		(*ppsWidget)->aText[sizeof((*ppsWidget)->aText) - 1] = '\0';
+		strlcpy((*ppsWidget)->aText, psInit->pText, sizeof((*ppsWidget)->aText));
 	}
 	else
 	{
@@ -218,8 +215,7 @@ static void putSelection(char *pBuffer, UDWORD *pPos)
 	get_scrap(T('T','E','X','T'), &scraplen, &scrap);
 	if (scraplen > 0 && scraplen < WIDG_MAXSTR-2)
 	{
-		strncpy(pBuffer, scrap, scraplen);
-		pBuffer[scraplen] = '\0';
+		strlcpy(pBuffer, scrap, scraplen);
 		*pPos = scraplen;
 	}
 }
@@ -577,9 +573,7 @@ void editBoxSetString(W_EDITBOX *psWidget, const char *pText)
 	ASSERT( psWidget != NULL,
 		"editBoxSetString: Invalid edit box pointer" );
 
-	strncpy(psWidget->aText, pText, sizeof(psWidget->aText));
-	// Terminate the string with a NUL character
-	psWidget->aText[sizeof(psWidget->aText) - 1] = '\0';
+	strlcpy(psWidget->aText, pText, sizeof(psWidget->aText));
 
 	psWidget->state = WEDBS_FIXED;
 	psWidget->printStart = 0;
@@ -705,16 +699,16 @@ void editBoxDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pC
 	} else {
 		pie_BoxFillIndex(x0,y0,x1,y1,WCOL_BKGRND);
 
-		iV_Line(x0,y0, x1,y0,*(pColours + WCOL_DARK));
-		iV_Line(x0,y0, x0,y1,*(pColours + WCOL_DARK));
-		iV_Line(x0,y1, x1,y1,*(pColours + WCOL_LIGHT));
-		iV_Line(x1,y1, x1,y0,*(pColours + WCOL_LIGHT));
+		iV_Line(x0,y0, x1,y0, pColours[WCOL_DARK]);
+		iV_Line(x0,y0, x0,y1, pColours[WCOL_DARK]);
+		iV_Line(x0,y1, x1,y1, pColours[WCOL_LIGHT]);
+		iV_Line(x1,y1, x1,y0, pColours[WCOL_LIGHT]);
 	}
 
 	fx = x0 + WEDB_XGAP;// + (psEdBox->width - fw) / 2;
 
 	iV_SetFont(CurrFontID);
-	iV_SetTextColour((UBYTE)*(pColours + WCOL_TEXT));
+	iV_SetTextColour((UBYTE)pColours[WCOL_TEXT]);
 
   	fy = y0 + (psEdBox->height - iV_GetTextLineSize())/2 - iV_GetTextAboveBase();
 
@@ -746,9 +740,10 @@ void editBoxDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pC
 		ch = *pInsPoint;
 		*pInsPoint = '\0';
 		cx = x0 + WEDB_XGAP + iV_GetTextWidth(psEdBox->aText + psEdBox->printStart);
+		cx += iV_GetTextWidth("-");
 		*pInsPoint = ch;
 		cy = fy;
-		iV_Line(cx,cy+iV_GetTextAboveBase(), cx,cy+iV_GetTextBelowBase(),*(pColours + WCOL_CURSOR));
+		iV_Line(cx, cy + iV_GetTextAboveBase(), cx, cy - iV_GetTextBelowBase(), 0xffffff); //pColours[WCOL_CURSOR]);
 	}
 #if CURSOR_BLINK
 	else if ((psEdBox->state & WEDBS_MASK) == WEDBS_OVER && blink)
@@ -762,7 +757,7 @@ void editBoxDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pC
 		cx = x0 + WEDB_XGAP + iV_GetTextWidth(psEdBox->aText + psEdBox->printStart);
 		*pInsPoint = ch;
 	  	cy = fy;
-		iV_Line(cx,cy, cx + WEDB_CURSORSIZE,cy,*(pColours + WCOL_CURSOR));
+		iV_Line(cx, cy, cx + WEDB_CURSORSIZE, cy, 0xffffff); //pColours[WCOL_CURSOR]);
 	}
 
 
@@ -770,10 +765,10 @@ void editBoxDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pC
 		if (psEdBox->state & WEDBS_HILITE)
 		{
 			/* Display the button hilite */
-			iV_Line(x0-2,y0-2, x1+2,y0-2,*(pColours + WCOL_HILITE));
-			iV_Line(x0-2,y0-2, x0-2,y1+2,*(pColours + WCOL_HILITE));
-			iV_Line(x0-2,y1+2, x1+2,y1+2,*(pColours + WCOL_HILITE));
-			iV_Line(x1+2,y1+2, x1+2,y0-2,*(pColours + WCOL_HILITE));
+			iV_Line(x0-2,y0-2, x1+2,y0-2, pColours[WCOL_HILITE]);
+			iV_Line(x0-2,y0-2, x0-2,y1+2, pColours[WCOL_HILITE]);
+			iV_Line(x0-2,y1+2, x1+2,y1+2, pColours[WCOL_HILITE]);
+			iV_Line(x1+2,y1+2, x1+2,y0-2, pColours[WCOL_HILITE]);
 		}
 	}
 }

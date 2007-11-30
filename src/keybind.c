@@ -84,7 +84,6 @@
 #include "mapgrid.h"
 #include "order.h"
 #include "drive.h"
-#include "text.h"
 #include "selection.h"
 #include "difficulty.h"
 #include "scriptcb.h"		/* for console callback */
@@ -328,31 +327,9 @@ void	kf_FrameRate( void )
 // display the total number of objects in the world
 void kf_ShowNumObjects( void )
 {
-	SDWORD		i, droids, structures, features;
-	DROID		*psDroid;
-	STRUCTURE	*psStruct;
-	FEATURE		*psFeat;
+	int droids, structures, features;
 
-	droids = 0;
-	structures = 0;
-	features = 0;
-	for (i=0; i<MAX_PLAYERS; i++)
-	{
-		for(psDroid = apsDroidLists[i]; psDroid; psDroid = psDroid->psNext)
-		{
-			droids += 1;
-		}
-
-		for(psStruct = apsStructLists[i]; psStruct; psStruct = psStruct->psNext)
-		{
-			structures += 1;
-		}
-	}
-
-	for(psFeat=apsFeatureLists[0]; psFeat; psFeat = psFeat->psNext)
-	{
-		features += 1;
-	}
+	objCount(&droids, &structures, &features);
 
 	CONPRINTF(ConsoleString,(ConsoleString, "Num Droids: %d  Num Structures: %d  Num Features: %d",
 				droids, structures, features));
@@ -478,7 +455,7 @@ void	kf_TileInfo(void)
 	MAPTILE	*psTile = mapTile(mouseTileX, mouseTileY);
 
 	debug(LOG_ERROR, "Tile position=(%d, %d) Terrain=%hhu Texture=%u Height=%hhu Illumination=%hhu",
-	      mouseTileX, mouseTileY, TERRAIN_TYPE(psTile), psTile->texture & TILE_NUMMASK, psTile->height,
+	      mouseTileX, mouseTileY, terrainType(psTile), TileNumber_tile(psTile->texture), psTile->height,
 	      psTile->illumination);
 	addConsoleMessage("Tile info dumped into log", DEFAULT_JUSTIFY);
 }
@@ -538,65 +515,8 @@ extern void	kf_ToggleDistanceFog( void )
 
 }
 
-void	kf_ToggleMistFog( void )
-{
-
-	static BOOL bEnabled  = TRUE;//start in nicks mode
-
-		if (bEnabled)//true, so go to false
-		{
-			bEnabled = FALSE;
-			fogStatus &= FOG_FLAGS-FOG_GROUND;//clear highest bit of 3
-			if (fogStatus == 0)
-			{
-				pie_SetFogStatus(FALSE);
-				pie_EnableFog(FALSE);
-			}
-		}
-		else
-		{
-			bEnabled = TRUE;
-			if (fogStatus == 0)
-			{
-				pie_EnableFog(TRUE);
-			}
-			fogStatus |= FOG_GROUND;//set highest bit of 3
-		}
-
-}
-
-void	kf_ToggleFogColour( void )
-{
-
-	fogCol++;
-	if (fogCol>4)
-		fogCol = 0;
-	switch(fogCol)
-	{
-	case 1:
-			pie_SetFogColour(0x00c9920f);//nicks colour Urban
-			break;
-	case 2:
-			pie_SetFogColour(0x00b6e1ec);//nicks colour Rockies 182,225,236
-			  break;
-	case 3:
-			pie_SetFogColour(0x00101040);//haze
-			  break;
-	case 4:
-			pie_SetFogColour(0x00000000);//black
-			  break;
-	case 0:
-	default:
-			pie_SetFogColour(0x00B08f5f);//nicks colour Arizona
-			//pie_SetFogColour(0x0078684f);//(nicks colour + 404040)/2
-		break;
-	}
-
-}
-
 void	kf_ToggleFog( void )
 {
-
 	static BOOL fogEnabled = FALSE;
 
 		if (fogEnabled)
@@ -604,15 +524,14 @@ void	kf_ToggleFog( void )
 			fogEnabled = FALSE;
 			pie_SetFogStatus(FALSE);
 			pie_EnableFog(fogEnabled);
-//			addConsoleMessage("Fog Off",DEFAULT_JUSTIFY);
+			addConsoleMessage("Fog Off", DEFAULT_JUSTIFY);
 		}
 		else
 		{
 			fogEnabled = TRUE;
 			pie_EnableFog(fogEnabled);
-//			addConsoleMessage("Fog On",DEFAULT_JUSTIFY);
+			addConsoleMessage("Fog On", DEFAULT_JUSTIFY);
 		}
-
 }
 
 // --------------------------------------------------------------------------
@@ -620,7 +539,6 @@ void	kf_ToggleFog( void )
 /* Toggles fog on/off */
 void	kf_ToggleWidgets( void )
 {
-//	 	widgetsOn = !widgetsOn;
 	if(getWidgetsStatus())
 	{
 		setWidgetsStatus(FALSE);
@@ -647,25 +565,10 @@ void	kf_ToggleCamera( void )
 /* Toggle 'watch' window on/off */
 void kf_ToggleWatchWindow( void )
 {
+	addConsoleMessage("WATCH WINDOW!", LEFT_JUSTIFY); // what is this? - per
 	(void)addDebugMenu(!DebugMenuUp);
 }
 
-// --------------------------------------------------------------------------
-
-/* Simulates a close down */
-/*
-void	kf_SimCloseDown( void )
-{
-  		bScreenClose = TRUE;
-		audio_PlayTrack( ID_SOUND_THX_SHUTDOWN );
-
-		closingTimeStart = gameTime;
-//		widgetsOn = FALSE;
-		spinScene = TRUE;
-		radarOnScreen = FALSE;
-		screenCloseState = SC_CLOSING_DOWN;
-}
-*/
 // --------------------------------------------------------------------------
 
 /* Raises the tile under the mouse */
@@ -1000,6 +903,7 @@ void	kf_SelectGrouping( UDWORD	groupNumber)
 		selCommander(x); \
 	}
 
+DEFINE_NUMED_KF(0)
 DEFINE_NUMED_KF(1)
 DEFINE_NUMED_KF(2)
 DEFINE_NUMED_KF(3)
@@ -1137,21 +1041,7 @@ void	kf_DownGeoOffset( void )
 	geoOffset--;
 
 }
-// --------------------------------------------------------------------------
-/* Ups the droid scale */
-void	kf_UpDroidScale( void )
-{
-	droidScale++;
-}
-// --------------------------------------------------------------------------
-/* Lowers the droid scale */
-void	kf_DownDroidScale( void )
-{
-	if(droidScale>2)
-	{
-		droidScale--;
-	}
-}
+
 // --------------------------------------------------------------------------
 /* Toggles the power bar display on and off*/
 void	kf_TogglePowerBar( void )
@@ -1251,6 +1141,13 @@ void	kf_TogglePauseMode( void )
 		setConsolePause(TRUE);
 		setScriptPause(TRUE);
 		setAudioPause(TRUE);
+		
+		// If cursor trapping is enabled allow the cursor to leave the window
+		if (war_GetTrapCursor())
+		{
+			SDL_WM_GrabInput(SDL_GRAB_OFF);
+		}
+		
 		/* And stop the clock */
 		gameTimeStop();
 		addConsoleMessage(_("PAUSED"),CENTRE_JUSTIFY);
@@ -1263,6 +1160,13 @@ void	kf_TogglePauseMode( void )
 		setConsolePause(FALSE);
 		setScriptPause(FALSE);
 		setAudioPause(FALSE);
+		
+		// Re-enable cursor trapping if it is enabled
+		if (war_GetTrapCursor())
+		{
+			SDL_WM_GrabInput(SDL_GRAB_ON);
+		}
+				
 		/* And start the clock again */
 		gameTimeStart();
 	}
@@ -1353,7 +1257,6 @@ void	kf_ToggleDemoMode( void )
 // --------------------------------------------------------------------------
 void	kf_ChooseOptions( void )
 {
-//	if(!widgetsOn) widgetsOn = TRUE;
 	intResetScreen(TRUE);
 	setWidgetsStatus(TRUE);
 	intAddOptions();
@@ -1379,8 +1282,8 @@ SDWORD	xJump,yJump;
 	psStruct = getRExtractor(psOldRE);
 	if(psStruct)
 	{
-		xJump = (psStruct->x - ((visibleXTiles/2)*TILE_UNITS));
-		yJump = (psStruct->y - ((visibleYTiles/2)*TILE_UNITS));
+		xJump = (psStruct->x - ((visibleTiles.x/2)*TILE_UNITS));
+		yJump = (psStruct->y - ((visibleTiles.y/2)*TILE_UNITS));
 		player.p.x = xJump;
 		player.p.z = yJump;
 		player.r.y = 0; // face north
@@ -1429,7 +1332,6 @@ void	kf_JumpToUnassignedUnits( void )
 void	kf_ToggleOverlays( void )
 {
 		/* Make sure they're both the same */
-//		radarOnScreen = widgetsOn;
 		/* Flip their states */
 //		radarOnScreen = !radarOnScreen;
 
@@ -1531,22 +1433,25 @@ void	kf_ChooseCancel( void )
 // --------------------------------------------------------------------------
 void	kf_ToggleDrivingMode( void )
 {
+	addConsoleMessage("Toggle driver mode", LEFT_JUSTIFY); // what does this do? - per
+
 	/* No point unless we're tracking */
 	if(getWarCamStatus())
 	{
 		if(getDrivingStatus())
 		{
 			StopDriverMode();
+			addConsoleMessage("DriverMode off", LEFT_JUSTIFY);
 		}
 		else
 		{
 			if(	(driveModeActive() == FALSE) &&	(demoGetStatus() == FALSE) && !bMultiPlayer)
 			{
 				StartDriverMode( NULL );
+				addConsoleMessage("DriverMode on", LEFT_JUSTIFY);
 			}
 		}
 	}
-
 }
 
 BOOL	bMovePause = FALSE;
@@ -1746,8 +1651,8 @@ void kf_SendTextMessage(void)
 	if(bAllowOtherKeyPresses)									// just starting.
 	{
 		bAllowOtherKeyPresses = FALSE;
-		strcpy(sTextToSend,"");
-		strcpy(sCurrentConsoleText,"");							//for beacons
+		strlcpy(sTextToSend, "", sizeof(sTextToSend));
+		strlcpy(sCurrentConsoleText, "", sizeof(sTextToSend));							//for beacons
 		inputClearBuffer();
 	}
 
@@ -1762,7 +1667,7 @@ void kf_SendTextMessage(void)
 			bAllowOtherKeyPresses = TRUE;
 		 //	flushConsoleMessages();
 
-			strcpy(sCurrentConsoleText,"");		//reset beacon msg, since console is empty now
+			strlcpy(sCurrentConsoleText, "", sizeof(sCurrentConsoleText));		//reset beacon msg, since console is empty now
 
 			// don't send empty lines to other players
 			if(!strcmp(sTextToSend, ""))
@@ -1780,7 +1685,7 @@ void kf_SendTextMessage(void)
 			//console callback message
 			//--------------------------
 			ConsolePlayer = selectedPlayer;
-			strcpy(ConsoleMsg,sTextToSend);
+			strlcpy(ConsoleMsg, sTextToSend, sizeof(ConsoleMsg));
 			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_CONSOLE);
 
 
@@ -1793,9 +1698,9 @@ void kf_SendTextMessage(void)
 				//show the message we sent on our local console as well (even in skirmish, to see console commands)
 				//sprintf(tmp,"%d",selectedPlayer);
 
-				sprintf(tmp,"%s",getPlayerName(selectedPlayer));
-				strcat(tmp," : ");											// seperator
-				strcat(tmp,sTextToSend);											// add message
+				strlcpy(tmp, getPlayerName(selectedPlayer), sizeof(tmp));
+				strlcat(tmp, " : ", sizeof(tmp));        // seperator
+				strlcat(tmp, sTextToSend, sizeof(tmp));  // add message
 				addConsoleMessage(tmp,DEFAULT_JUSTIFY);
 
 				//in skirmish send directly to AIs, for command and chat procesing
@@ -1819,20 +1724,23 @@ void kf_SendTextMessage(void)
 			if(sTextToSend[0] != '\0')							// cant delete nothing!
 			{
 				sTextToSend[strlen(sTextToSend)-1]= '\0';
-				strcpy(sCurrentConsoleText,sTextToSend);		//beacons
+				strlcpy(sCurrentConsoleText, sTextToSend, sizeof(sCurrentConsoleText));		//beacons
 			}
 		}
 		else if(ch == INPBUF_ESC)								//abort.
 		{
 			bAllowOtherKeyPresses = TRUE;
-			strcpy(sCurrentConsoleText,"");
+			strlcpy(sCurrentConsoleText, "", sizeof(sCurrentConsoleText));
 		 //	flushConsoleMessages();
 			return;
 		}
 		else							 						// display
 		{
-			sprintf(sTextToSend,"%s%c",sTextToSend,inputGetCharKey());
-			strcpy(sCurrentConsoleText,sTextToSend);
+			const char input_char[2] = { inputGetCharKey(), '\0' };
+
+			strlcat(sTextToSend, input_char, sizeof(sTextToSend));
+
+			strlcpy(sCurrentConsoleText, sTextToSend, sizeof(sCurrentConsoleText));
 		}
 
 		ch = (char)inputGetKey();
@@ -1843,11 +1751,11 @@ void kf_SendTextMessage(void)
 	{
 		if(keyDown(KEY_LCTRL))
 		{
-			strcpy(ingame.phrases[0],sTextToSend );
+			strlcpy(ingame.phrases[0], sTextToSend, sizeof(ingame.phrases[0]));
 		}
 		else
 		{
-			strcpy(sTextToSend,ingame.phrases[0]);
+			strlcpy(sTextToSend, ingame.phrases[0], sizeof(sTextToSend));
 			bAllowOtherKeyPresses = TRUE;
 		 //	flushConsoleMessages();
 			sendTextMessage(sTextToSend,FALSE);
@@ -1858,11 +1766,11 @@ void kf_SendTextMessage(void)
 	{
 		if(keyDown(KEY_LCTRL))
 		{
-			strcpy(ingame.phrases[1],sTextToSend );
+			strlcpy(ingame.phrases[1], sTextToSend, sizeof(ingame.phrases[1]));
 		}
 		else
 		{
-			strcpy(sTextToSend,ingame.phrases[1]);
+			strlcpy(sTextToSend, ingame.phrases[1], sizeof(sTextToSend));
 			bAllowOtherKeyPresses = TRUE;
 		//	flushConsoleMessages();
 			sendTextMessage(sTextToSend,FALSE);
@@ -1873,11 +1781,11 @@ void kf_SendTextMessage(void)
 	{
 		if(keyDown(KEY_LCTRL))
 		{
-			strcpy(ingame.phrases[2],sTextToSend );
+			strlcpy(ingame.phrases[2], sTextToSend, sizeof(ingame.phrases[2]));
 		}
 		else
 		{
-			strcpy(sTextToSend,ingame.phrases[2]);
+			strlcpy(sTextToSend, ingame.phrases[2], sizeof(sTextToSend));
 			bAllowOtherKeyPresses = TRUE;
 		//	flushConsoleMessages();
 			sendTextMessage(sTextToSend,FALSE);
@@ -1888,11 +1796,11 @@ void kf_SendTextMessage(void)
 	{
 		if(keyDown(KEY_LCTRL))
 		{
-			strcpy(ingame.phrases[3],sTextToSend );
+			strlcpy(ingame.phrases[3], sTextToSend, sizeof(ingame.phrases[3]));
 		}
 		else
 		{
-			strcpy(sTextToSend,ingame.phrases[3]);
+			strlcpy(sTextToSend, ingame.phrases[3], sizeof(sTextToSend));
 			bAllowOtherKeyPresses = TRUE;
 		//	flushConsoleMessages();
 			sendTextMessage(sTextToSend,FALSE);
@@ -1903,11 +1811,11 @@ void kf_SendTextMessage(void)
 	{
 		if(keyDown(KEY_LCTRL))
 		{
-			strcpy(ingame.phrases[4],sTextToSend );
+			strlcpy(ingame.phrases[4], sTextToSend, sizeof(ingame.phrases[4]));
 		}
 		else
 		{
-			strcpy(sTextToSend,ingame.phrases[4]);
+			strlcpy(sTextToSend, ingame.phrases[4], sizeof(sTextToSend));
 			bAllowOtherKeyPresses = TRUE;
 		 //	flushConsoleMessages();
 			sendTextMessage(sTextToSend,FALSE);
@@ -2252,8 +2160,8 @@ UDWORD		xJump = 0, yJump = 0;
 		if(psStruct->pStructureType->type == REF_HQ)
 		{
 			bGotHQ = TRUE;
-			xJump = (psStruct->x - ((visibleXTiles/2)*TILE_UNITS));
-			yJump = (psStruct->y - ((visibleYTiles/2)*TILE_UNITS));
+			xJump = (psStruct->x - ((visibleTiles.x/2)*TILE_UNITS));
+			yJump = (psStruct->y - ((visibleTiles.y/2)*TILE_UNITS));
 		}
 	}
 
@@ -2622,16 +2530,16 @@ void	kf_AddHelpBlip( void )
 	//if chat message is empty, just send player name
 	//if(!strcmp(sCurrentConsoleText, ""))
 	//{
-		sprintf(tempStr,"%s",getPlayerName(selectedPlayer));		//temporary solution
+		strlcpy(tempStr, getPlayerName(selectedPlayer), sizeof(tempStr));		//temporary solution
 	//}
 	//else
 	//{
-	//	strcpy(tempStr,sCurrentConsoleText);
+	//	strlcpy(tempStr, sCurrentConsoleText, sizeof(tempStr));
 	//}
 
 
 	/* add beacon for the sender */
-	strcpy(beaconMsg[selectedPlayer], tempStr);
+	strlcpy(beaconMsg[selectedPlayer], tempStr, sizeof(beaconMsg[selectedPlayer]));
 	sendBeaconToPlayer(worldX, worldY, selectedPlayer, selectedPlayer, beaconMsg[selectedPlayer]);
 
 	/* send beacon to other players */
@@ -2639,7 +2547,7 @@ void	kf_AddHelpBlip( void )
 	{
 		if(openchannels[i] && (i != selectedPlayer))
 		{
-			strcpy(beaconMsg[i], tempStr);
+			strlcpy(beaconMsg[i], tempStr, sizeof(beaconMsg[i]));
 			sendBeaconToPlayer(worldX, worldY, i, selectedPlayer, beaconMsg[i]);
 		}
 	}

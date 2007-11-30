@@ -37,7 +37,6 @@
 #include "message.h"
 #include "research.h"
 #include "hci.h"
-#include "player.h"
 #include "order.h"
 #include "action.h"
 #include "display3d.h"
@@ -47,7 +46,6 @@
 #include "resource.h"		// for mousecursors
 #include "transporter.h"
 #include "group.h"
-#include "text.h"
 #include "frontend.h"		// for displaytextoption.
 #include "intdisplay.h"
 #include "main.h"
@@ -2214,24 +2212,6 @@ void aiUpdateMissionStructure(STRUCTURE *psStructure)
 						intRefreshScreen();	// update the interface.
 					}
 
-                    //store the factory as the droid's baseStructure instead
-					//add it to the factory group
-					/*if (!psFactory->psGroup)
-					{
-						//create the factory group
-						if (!grpCreate(&psFactory->psGroup))
-						{
-							DBPRINTF(("missionUpdateStructure: unable to create group\n"));
-						}
-						else
-						{
-							grpJoin(psFactory->psGroup, psNewDroid);
-						}
-					}
-					else
-					{
-						grpJoin(psFactory->psGroup, psNewDroid);
-					}*/
 					setDroidBase(psNewDroid, psStructure);
 
 					//reset the start time
@@ -2271,7 +2251,6 @@ void aiUpdateMissionStructure(STRUCTURE *psStructure)
 						{
 							// Manufacture another.
 							structSetManufacture(psStructure, (DROID_TEMPLATE*)pSubject,Quantity);
-							//playerNewDroid(psNewDroid);
 							return;
 						}
 						else
@@ -2567,7 +2546,7 @@ void missionResetDroids(void)
 				    {
 					    updateDroidOrientation(psDroid);
 				    }
-				    visTilesUpdate((BASE_OBJECT *)psDroid,FALSE);
+				    visTilesUpdate((BASE_OBJECT *)psDroid);
 				    //reset the selected flag
 				    psDroid->selected = FALSE;
                 //}
@@ -2589,7 +2568,7 @@ void unloadTransporter(DROID *psTransporter, UDWORD x, UDWORD y, BOOL goingHome)
 	DROID		*psDroid, *psNext;
 	DROID		**ppCurrentList, **ppStoredList;
 	UDWORD		droidX, droidY;
-	UWORD		iX, iY;
+	UDWORD		iX, iY;
 	DROID_GROUP	*psGroup;
 
 	if (goingHome)
@@ -2810,7 +2789,7 @@ BOOL intAddMissionTimer(void)
 	sFormInit.height = iV_GetImageHeight(IntImages,IMAGE_MISSION_CLOCK);//TIMER_HEIGHT;
 	sFormInit.x = (SWORD)(RADTLX + RADWIDTH - sFormInit.width);
 	sFormInit.y = (SWORD)TIMER_Y;
-	sFormInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_MISSION_CLOCK,IMAGE_MISSION_CLOCK_UP);;
+	sFormInit.UserData = PACKDWORD_TRI(0,IMAGE_MISSION_CLOCK,IMAGE_MISSION_CLOCK_UP);;
 	sFormInit.pDisplay = intDisplayMissionClock;
 
 
@@ -2870,7 +2849,7 @@ BOOL intAddTransporterTimer(void)
 	sFormInit.height = iV_GetImageHeight(IntImages,IMAGE_TRANSETA_UP);
 	sFormInit.pTip = _("Load Transport");
 	sFormInit.pDisplay = intDisplayImageHilight;
-	sFormInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_TRANSETA_DOWN,
+	sFormInit.UserData = PACKDWORD_TRI(0,IMAGE_TRANSETA_DOWN,
 		IMAGE_TRANSETA_UP);
 
 	if (!widgAddForm(psWScreen, &sFormInit))
@@ -4036,12 +4015,12 @@ void missionGetTransporterEntry( SDWORD iPlayer, UWORD *iX, UWORD *iY )
 	*iY = (UWORD) world_coord(mission.iTranspEntryTileY[iPlayer]);
 }
 
-void missionGetTransporterExit( SDWORD iPlayer, UWORD *iX, UWORD *iY )
+void missionGetTransporterExit( SDWORD iPlayer, UDWORD *iX, UDWORD *iY )
 {
 	ASSERT( iPlayer<MAX_PLAYERS, "missionGetTransporterExit: player %i too high", iPlayer );
 
-	*iX = (UWORD) world_coord(mission.iTranspExitTileX[iPlayer]);
-	*iY = (UWORD) world_coord(mission.iTranspExitTileY[iPlayer]);
+	*iX = world_coord(mission.iTranspExitTileX[iPlayer]);
+	*iY = world_coord(mission.iTranspExitTileY[iPlayer]);
 }
 
 /*update routine for mission details */

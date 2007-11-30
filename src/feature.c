@@ -59,17 +59,11 @@
 #include "gateway.h"
 
 
-
 /* The statistics for the features */
 FEATURE_STATS	*asFeatureStats;
 UDWORD			numFeatureStats;
 
-#define	DRIVE_OVER_RUBBLE_TILE		54
-#define NO_DRIVE_OVER_RUBBLE_TILE	67
-
 //Value is stored for easy access to this feature in destroyDroid()/destroyStruct()
-//UDWORD			droidFeature;
-UDWORD			structFeature;
 UDWORD			oilResFeature;
 
 /* other house droid to add */
@@ -86,8 +80,6 @@ void featureInitVars(void)
 {
 	asFeatureStats = NULL;
 	numFeatureStats = 0;
-	//droidFeature = 0;
-	structFeature = 0;
 	oilResFeature = 0;
 }
 
@@ -191,7 +183,7 @@ BOOL loadFeatureStats(const char *pFeatureData, UDWORD bufferSize)
 		//read the data into the storage - the data is delimeted using comma's
 		sscanf(pFeatureData,"%[^','],%d,%d,%d,%d,%d,%[^','],%[^','],%d,%d,%d",
 			featureName, &Width, &Breadth,
-			&psFeature->damageable, &psFeature->armour, &psFeature->body,
+			&psFeature->damageable, &psFeature->armourValue, &psFeature->body,
 			GfxFile, type, &psFeature->tileDraw, &psFeature->allowLOS,
 			&psFeature->visibleAtStart);
 
@@ -207,14 +199,8 @@ BOOL loadFeatureStats(const char *pFeatureData, UDWORD bufferSize)
 		//determine the feature type
 		featureType(psFeature, type);
 
-		//need to know which is the wrecked droid and wrecked structure for later use
-		//the last stat of each type is used
-		if (psFeature->subType == FEAT_BUILD_WRECK)
-		{
-			structFeature = i;
-		}
 		//and the oil resource - assumes only one!
-		else if (psFeature->subType == FEAT_OIL_RESOURCE)
+		if (psFeature->subType == FEAT_OIL_RESOURCE)
 		{
 			oilResFeature = i;
 		}
@@ -265,7 +251,7 @@ void featureStatsShutDown(void)
  * \param weaponSubClass the subclass of the weapon that deals the damage
  * \return TRUE when the dealt damage destroys the feature, FALSE when the feature survives
  */
-SDWORD featureDamage(FEATURE *psFeature, UDWORD damage, UDWORD weaponSubClass)
+SDWORD featureDamage(FEATURE *psFeature, UDWORD damage, UDWORD weaponClass, UDWORD weaponSubClass, HIT_SIDE impactSide)
 {
 	// Do at least one point of damage
 	unsigned int actualDamage = 1;
@@ -276,7 +262,7 @@ SDWORD featureDamage(FEATURE *psFeature, UDWORD damage, UDWORD weaponSubClass)
 		"featureDamage: Invalid feature pointer" );
 
 	debug( LOG_ATTACK, "featureDamage(%d): body %d armour %d damage: %d\n",
-		psFeature->id, psFeature->body, psFeature->psStats->armour, damage);
+		psFeature->id, psFeature->body, psFeature->armour[impactSide][weaponClass], damage);
 
 	// EMP cannons do not work on Features
 	if (weaponSubClass == WSC_EMP)
@@ -284,10 +270,10 @@ SDWORD featureDamage(FEATURE *psFeature, UDWORD damage, UDWORD weaponSubClass)
 		return 0;
 	}
 
-	if (damage > psFeature->psStats->armour)
+	if (damage > psFeature->armour[impactSide][weaponClass])
 	{
 		// Damage has penetrated - reduce body points
-		actualDamage = damage - psFeature->psStats->armour;
+		actualDamage = damage - psFeature->armour[impactSide][weaponClass];
 		debug( LOG_ATTACK, "        penetrated: %d\n", actualDamage);
 	}
 
@@ -391,17 +377,14 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,BOOL FromSave)
 	if(psStats->subType == FEAT_BUILD_WRECK)
 	{
 		psFeature->direction = rand() % 360;
-		psFeature->gfxScaling = (UWORD)(80 + (10 - rand()%20)); // put into define
 	}
 	else if(psStats->subType == FEAT_TREE)
 	{
 		psFeature->direction = rand() % 360;
-		psFeature->gfxScaling = (UWORD) (100 + (14-rand()%28));
 	}
 	else
 	{
 		psFeature->direction = 0;
-   		psFeature->gfxScaling = 100;	// but irrelevant anyway, cos it's not scaled
 	}
 	//psFeature->damage = featureDamage;
 	psFeature->selected = FALSE;
@@ -430,6 +413,17 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,BOOL FromSave)
 		else
 		{
 			vis = 0;
+		}
+	}
+
+	// note that the advanced armour system current unused for features
+	for (i = 0; i < NUM_HIT_SIDES; i++)
+	{
+		int j;
+
+		for (j = 0; j < NUM_WEAPON_CLASS; j++)
+		{
+			psFeature->armour[i][j] = psFeature->psStats->armourValue;
 		}
 	}
 
@@ -493,11 +487,7 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,BOOL FromSave)
 			if( (!psStats->tileDraw) && (FromSave == FALSE) )
 			{
 				psTile->height = (UBYTE)(height / ELEVATION_SCALE);
-				// This sets the gourad shading to give 'as the artist drew it' levels
-
-//				psTile->illumination = ILLUMINATION_NONE;		// set the tile so that there is no illumination connecting to feature ...
 			}
-
 		}
 	}
 	psFeature->z = map_TileHeight(mapX,mapY);//jps 18july97
@@ -625,27 +615,6 @@ void removeFeature(FEATURE *psDel)
 	gridRemoveObject((BASE_OBJECT *)psDel);
 
 	killFeature(psDel);
-
-
-	//once a feature of type FEAT_BUILDING is destroyed - it leaves a wrecked
-	//struct FEATURE in its place - ?!
-	if (psDel->psStats->subType == FEAT_BUILDING)
-	{
-		mapX = map_coord(psDel->x - psDel->psStats->baseWidth * TILE_UNITS / 2);
-		mapY = map_coord(psDel->y - psDel->psStats->baseBreadth * TILE_UNITS / 2);
-		/*for (width = 0; width < psDel->psStats->baseWidth; width++)
-		{
-			for (breadth = 0; breadth < psDel->psStats->baseBreadth; breadth++)
-			{
-				buildFeature((asFeatureStats + structFeature),
-						world_coord(mapX + width), world_coord(mapY + breadth), FALSE);
-			}
-		}*/
-
-//		buildFeature((asFeatureStats + structFeature), world_coord(mapX),
-//			world_coord(mapY), FALSE);
-	}
-
 }
 
 /* Remove a Feature and free it's memory */
@@ -712,22 +681,20 @@ void destroyFeature(FEATURE *psDel)
 					{
 						MAPTILE *psTile = mapTile(mapX+width,mapY+breadth);
 						// stops water texture chnaging for underwateer festures
-					 	if(TERRAIN_TYPE(psTile) != TER_WATER)
+					 	if (terrainType(psTile) != TER_WATER)
 						{
-							if(TERRAIN_TYPE(psTile) != TER_CLIFFFACE)
+							if (terrainType(psTile) != TER_CLIFFFACE)
 							{
 						   		/* Clear feature bits */
 								psTile->psObject = NULL;
-								texture = (psTile->texture & (~TILE_NUMMASK));
-								texture |= DRIVE_OVER_RUBBLE_TILE;//getRubbleTileNum();
+								texture = TileNumber_texture(psTile->texture) | RUBBLE_TILE;
 								psTile->texture = (UWORD)texture;
 							}
 							else
 							{
 							   /* This remains a blocking tile */
 								psTile->psObject = NULL;
-								texture = (psTile->texture & (~TILE_NUMMASK));
-								texture |= NO_DRIVE_OVER_RUBBLE_TILE;//getRubbleTileNum();
+								texture = TileNumber_texture(psTile->texture) | BLOCKING_RUBBLE_TILE;
 								psTile->texture = (UWORD)texture;
 
 							}

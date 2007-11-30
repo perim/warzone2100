@@ -64,11 +64,11 @@ void pie_Set2DClip(int x0, int y0, int x1, int y1)
 	psRendSurface->clip.bottom = y1;
 }
 
-static void pie_ClipUV(PIEVERTEX *s1, PIEVERTEX *s2, PIEVERTEX *clip, Sint32 t)
+static void pie_ClipUV(TERRAIN_VERTEX *s1, TERRAIN_VERTEX *s2, TERRAIN_VERTEX *clip, Sint32 t)
 {
 	clip->u = s1->u + ((t * (s2->u - s1->u)) >> iV_DIVSHIFT);
 	clip->v = s1->v + ((t * (s2->v - s1->v)) >> iV_DIVSHIFT);
-	clip->z = s1->z + ((t * (s2->z - s1->z)) >> iV_DIVSHIFT);
+	clip->pos.z = s1->pos.z + ((t * (s2->pos.z - s1->pos.z)) >> iV_DIVSHIFT);
 
 	clip->light.byte.r = s1->light.byte.r + ((t * (s2->light.byte.r - s1->light.byte.r)) >> iV_DIVSHIFT);
 	clip->light.byte.g = s1->light.byte.g + ((t * (s2->light.byte.g - s1->light.byte.g)) >> iV_DIVSHIFT);
@@ -76,33 +76,35 @@ static void pie_ClipUV(PIEVERTEX *s1, PIEVERTEX *s2, PIEVERTEX *clip, Sint32 t)
 	clip->light.byte.a = s1->light.byte.a + ((t * (s2->light.byte.a - s1->light.byte.a)) >> iV_DIVSHIFT);
 }
 
-static int pie_ClipXT(PIEVERTEX *s1, PIEVERTEX *s2, PIEVERTEX *clip)
+static int pie_ClipXT(TERRAIN_VERTEX *s1, TERRAIN_VERTEX *s2, TERRAIN_VERTEX *clip)
 {
 	int n = 1, dx;
 	Sint32 t;
 
-	if (s2->x >= s1->x)
+	if (s2->pos.x >= s1->pos.x)
 	{
-		if (s1->x < psRendSurface->clip.left)
+		if (s1->pos.x < psRendSurface->clip.left)
 		{
-			if (s2->x <= psRendSurface->clip.left)
+			if (s2->pos.x <= psRendSurface->clip.left)
+			{
 				return 0;
+			}
 
-			dx = s2->x - s1->x;
+			dx = s2->pos.x - s1->pos.x;
 
 			if (dx != 0)
 			{
-				clip->y = s1->y + (s2->y - s1->y) * (psRendSurface->clip.left - s1->x) / dx;
+				clip->pos.y = s1->pos.y + (s2->pos.y - s1->pos.y) * (psRendSurface->clip.left - s1->pos.x) / dx;
 			}
 			else
 			{
-				clip->y = s1->y;
+				clip->pos.y = s1->pos.y;
 			}
 
-			clip->x = psRendSurface->clip.left;
+			clip->pos.x = psRendSurface->clip.left;
 
 			// clip uv
-			t = ((clip->x - s1->x) << iV_DIVSHIFT) / dx;
+			t = ((clip->pos.x - s1->pos.x) << iV_DIVSHIFT) / dx;
 			pie_ClipUV(s1, s2, clip, t);
 		}
 		else
@@ -110,27 +112,29 @@ static int pie_ClipXT(PIEVERTEX *s1, PIEVERTEX *s2, PIEVERTEX *clip)
 			*clip = *s1;
 		}
 
-		if (s2->x > psRendSurface->clip.right)
+		if (s2->pos.x > psRendSurface->clip.right)
 		{
-			if (s1->x > psRendSurface->clip.right)
+			if (s1->pos.x > psRendSurface->clip.right)
+			{
 				return 0;
+			}
 
 			clip++;
-			dx = s2->x - s1->x;
+			dx = s2->pos.x - s1->pos.x;
 
 			if (dx != 0)
 			{
-				clip->y = s2->y - (s2->y - s1->y) * (s2->x - psRendSurface->clip.right) / dx;
+				clip->pos.y = s2->pos.y - (s2->pos.y - s1->pos.y) * (s2->pos.x - psRendSurface->clip.right) / dx;
 			}
 			else
 			{
-				clip->y = s2->y;
+				clip->pos.y = s2->pos.y;
 			}
 
-			clip->x = psRendSurface->clip.right;
+			clip->pos.x = psRendSurface->clip.right;
 
 			// clip uv
-			t = ((clip->x - s1->x) << iV_DIVSHIFT) / dx;
+			t = ((clip->pos.x - s1->pos.x) << iV_DIVSHIFT) / dx;
 			pie_ClipUV(s1, s2, clip, t);
 
 			n = 2;
@@ -140,26 +144,28 @@ static int pie_ClipXT(PIEVERTEX *s1, PIEVERTEX *s2, PIEVERTEX *clip)
 	}
 	else
 	{
-		if (s1->x > psRendSurface->clip.right)
+		if (s1->pos.x > psRendSurface->clip.right)
 		{
-			if (s2->x >= psRendSurface->clip.right)
+			if (s2->pos.x >= psRendSurface->clip.right)
+			{
 				return 0;
+			}
 
-			dx = s1->x - s2->x;
+			dx = s1->pos.x - s2->pos.x;
 
 			if (dx != 0)
 			{
-				clip->y = s1->y - (s1->y - s2->y) * (s1->x - psRendSurface->clip.right) / dx;
+				clip->pos.y = s1->pos.y - (s1->pos.y - s2->pos.y) * (s1->pos.x - psRendSurface->clip.right) / dx;
 			}
 			else
 			{
-				clip->y = s1->y;
+				clip->pos.y = s1->pos.y;
 			}
 
-			clip->x = psRendSurface->clip.right;
+			clip->pos.x = psRendSurface->clip.right;
 
 			// clip uv
-			t = ((clip->x - s1->x) << iV_DIVSHIFT) / dx;
+			t = ((clip->pos.x - s1->pos.x) << iV_DIVSHIFT) / dx;
 			pie_ClipUV(s1, s2, clip, t);
 		}
 		else
@@ -167,27 +173,29 @@ static int pie_ClipXT(PIEVERTEX *s1, PIEVERTEX *s2, PIEVERTEX *clip)
 			*clip = *s1;
 		}
 
-		if (s2->x < psRendSurface->clip.left)
+		if (s2->pos.x < psRendSurface->clip.left)
 		{
-			if (s1->x < psRendSurface->clip.left)
+			if (s1->pos.x < psRendSurface->clip.left)
+			{
 				return 0;
+			}
 
 			clip++;
-			dx = s1->x - s2->x;
+			dx = s1->pos.x - s2->pos.x;
 
 			if (dx != 0)
 			{
-				clip->y = s2->y + (s1->y - s2->y) * (psRendSurface->clip.left - s2->x) / dx;
+				clip->pos.y = s2->pos.y + (s1->pos.y - s2->pos.y) * (psRendSurface->clip.left - s2->pos.x) / dx;
 			}
 			else
 			{
-				clip->y = s2->y;
+				clip->pos.y = s2->pos.y;
 			}
 
-			clip->x = psRendSurface->clip.left;
+			clip->pos.x = psRendSurface->clip.left;
 
 			// clip uv
-			t = ((clip->x - s1->x)<<iV_DIVSHIFT) / dx;
+			t = ((clip->pos.x - s1->pos.x)<<iV_DIVSHIFT) / dx;
 			pie_ClipUV(s1, s2, clip, t);
 
 			n = 2;
@@ -197,33 +205,35 @@ static int pie_ClipXT(PIEVERTEX *s1, PIEVERTEX *s2, PIEVERTEX *clip)
 	}
 }
 
-static int pie_ClipYT(PIEVERTEX *s1, PIEVERTEX *s2, PIEVERTEX *clip)
+static int pie_ClipYT(TERRAIN_VERTEX *s1, TERRAIN_VERTEX *s2, TERRAIN_VERTEX *clip)
 {
 	int n = 1, dy;
 	Sint32 t;
 
-	if (s2->y >= s1->y)
+	if (s2->pos.y >= s1->pos.y)
 	{
-		if (s1->y < psRendSurface->clip.top)
+		if (s1->pos.y < psRendSurface->clip.top)
 		{
-			if (s2->y <= psRendSurface->clip.top)
+			if (s2->pos.y <= psRendSurface->clip.top)
+			{
 				return 0;
+			}
 
-			dy = s2->y - s1->y;
+			dy = s2->pos.y - s1->pos.y;
 
 			if (dy != 0)
 			{
-				clip->x = s1->x + (s2->x - s1->x) * (psRendSurface->clip.top - s1->y) / dy;
+				clip->pos.x = s1->pos.x + (s2->pos.x - s1->pos.x) * (psRendSurface->clip.top - s1->pos.y) / dy;
 			}
 			else
 			{
-				clip->x = s1->x;
+				clip->pos.x = s1->pos.x;
 			}
 
-			clip->y = psRendSurface->clip.top;
+			clip->pos.y = psRendSurface->clip.top;
 
 			// clip uv
-			t = ((clip->y - s1->y) << iV_DIVSHIFT) / dy;
+			t = ((clip->pos.y - s1->pos.y) << iV_DIVSHIFT) / dy;
 			pie_ClipUV(s1, s2, clip, t);
 		}
 		else
@@ -231,29 +241,29 @@ static int pie_ClipYT(PIEVERTEX *s1, PIEVERTEX *s2, PIEVERTEX *clip)
 			*clip = *s1;
 		}
 
-		if (s2->y > psRendSurface->clip.bottom)
+		if (s2->pos.y > psRendSurface->clip.bottom)
 		{
-			if (s1->y > psRendSurface->clip.bottom)
+			if (s1->pos.y > psRendSurface->clip.bottom)
 			{
 				return 0;
 			}
 
 			clip++;
 
-			dy = s2->y - s1->y;
+			dy = s2->pos.y - s1->pos.y;
 
 			if (dy != 0)
 			{
-				clip->x = s2->x - (s2->x - s1->x) * (s2->y - psRendSurface->clip.bottom) / dy;
+				clip->pos.x = s2->pos.x - (s2->pos.x - s1->pos.x) * (s2->pos.y - psRendSurface->clip.bottom) / dy;
 			}
 			else
 			{
-				clip->x = s2->x;
+				clip->pos.x = s2->pos.x;
 			}
 
-			clip->y = psRendSurface->clip.bottom;
+			clip->pos.y = psRendSurface->clip.bottom;
 
-			t = ((clip->y - s1->y) << iV_DIVSHIFT) / dy;
+			t = ((clip->pos.y - s1->pos.y) << iV_DIVSHIFT) / dy;
 			pie_ClipUV(s1, s2, clip, t);
 
 			n = 2;
@@ -264,26 +274,28 @@ static int pie_ClipYT(PIEVERTEX *s1, PIEVERTEX *s2, PIEVERTEX *clip)
 	}
 	else
 	{
-		if (s1->y > psRendSurface->clip.bottom)
+		if (s1->pos.y > psRendSurface->clip.bottom)
 		{
-			if (s2->y >= psRendSurface->clip.bottom)
+			if (s2->pos.y >= psRendSurface->clip.bottom)
+			{
 				return 0;
+			}
 
-			dy = s1->y - s2->y;
+			dy = s1->pos.y - s2->pos.y;
 
 			if (dy != 0)
 			{
-				clip->x = s1->x - (s1->x - s2->x) * (s1->y - psRendSurface->clip.bottom) / dy;
+				clip->pos.x = s1->pos.x - (s1->pos.x - s2->pos.x) * (s1->pos.y - psRendSurface->clip.bottom) / dy;
 			}
 			else
 			{
-				clip->x = s1->x;
+				clip->pos.x = s1->pos.x;
 			}
 
-			clip->y = psRendSurface->clip.bottom;
+			clip->pos.y = psRendSurface->clip.bottom;
 
 			// clip uv
-			t = ((clip->y - s1->y) << iV_DIVSHIFT) / dy;
+			t = ((clip->pos.y - s1->pos.y) << iV_DIVSHIFT) / dy;
 			pie_ClipUV(s1, s2, clip, t);
 
 		}
@@ -292,29 +304,29 @@ static int pie_ClipYT(PIEVERTEX *s1, PIEVERTEX *s2, PIEVERTEX *clip)
 			*clip = *s1;
 		}
 
-		if (s2->y < psRendSurface->clip.top)
+		if (s2->pos.y < psRendSurface->clip.top)
 		{
-			if (s1->y < psRendSurface->clip.top)
+			if (s1->pos.y < psRendSurface->clip.top)
 			{
 				return 0;
 			}
 
 			clip++;
 
-			dy = s1->y - s2->y;
+			dy = s1->pos.y - s2->pos.y;
 
 			if (dy != 0)
 			{
-				clip->x = s2->x + (s1->x - s2->x) * (psRendSurface->clip.top - s2->y) / dy;
+				clip->pos.x = s2->pos.x + (s1->pos.x - s2->pos.x) * (psRendSurface->clip.top - s2->pos.y) / dy;
 			}
 			else
 			{
-				clip->x = s2->x;
+				clip->pos.x = s2->pos.x;
 			}
 
-			clip->y = psRendSurface->clip.top;
+			clip->pos.y = psRendSurface->clip.top;
 
-			t = ((clip->y - s1->y) << iV_DIVSHIFT) / dy;
+			t = ((clip->pos.y - s1->pos.y) << iV_DIVSHIFT) / dy;
 			pie_ClipUV(s1, s2, clip, t);
 
 			n = 2;
@@ -324,10 +336,10 @@ static int pie_ClipYT(PIEVERTEX *s1, PIEVERTEX *s2, PIEVERTEX *clip)
 	}
 }
 
-int pie_ClipTextured(int npoints, PIEVERTEX *points, PIEVERTEX *clip)
+int pie_ClipTextured(int npoints, TERRAIN_VERTEX *points, TERRAIN_VERTEX *clip)
 {
-	static PIEVERTEX xclip[iV_POLY_MAX_POINTS+4];
-	PIEVERTEX *p0, *p1;
+	static TERRAIN_VERTEX xclip[iV_POLY_MAX_POINTS+4];
+	TERRAIN_VERTEX *p0, *p1;
 	int n1, n, i;
 
 	p0 = &points[0];
@@ -336,11 +348,15 @@ int pie_ClipTextured(int npoints, PIEVERTEX *points, PIEVERTEX *clip)
 	for (i = 0, n1 = 0; i < npoints; i++, p0++, p1++)
 	{
 		if (i == (npoints-1))
+		{
 			p1 = &points[0];
+		}
 
 		// FIXME MAGIC
-		if ((p0->x == 1<<15) || (p0->y == -1<<15))//check for invalid points jps19aug97
+		if ((p0->pos.x == 1<<15) || (p0->pos.y == -1<<15))//check for invalid points jps19aug97
+		{
 			return 0;
+		}
 
 		n1 += pie_ClipXT(p0, p1, &xclip[n1]);
 	}
@@ -351,58 +367,11 @@ int pie_ClipTextured(int npoints, PIEVERTEX *points, PIEVERTEX *clip)
 	for (i = 0, n = 0; i < n1; p0++, p1++, i++)
 	{
 		if (i == (n1-1))
+		{
 			p1 = &xclip[0];
+		}
 		n += pie_ClipYT(p0, p1, &clip[n]);
 	}
 
 	return n;
 }
-
-#ifdef NEVER_USED_ANYWHERE
-// I leave this around just for potential inspirational purposes. - Per
-
-//*************************************************************************
-/* Alex - much faster tri clipper - won't clip owt else tho' */
-int	pie_ClipTexturedTriangleFast(PIEVERTEX *v1, PIEVERTEX *v2, PIEVERTEX *v3, PIEVERTEX *clipped)
-{
-	static	PIEVERTEX	xClip[iV_POLY_MAX_POINTS+4];	// plus 4 hopefully is limit?
-	static	PIEVERTEX	*p0,*p1;
-	UDWORD	numPreY,numAll;
-	UDWORD	i;
-
-	numPreY = 0;
-	if( (v1->x > LONG_TEST) || (v1->y > LONG_TEST) )
-	{
-		/* bomb out for out of range points */
-		return(0);
-	}
-	numPreY += pie_ClipXT(v1, v2, &xClip[numPreY]);
-
-	if( (v2->x > LONG_TEST) || (v2->y > LONG_TEST) )
-	{
-		/* bomb out for out of range points */
-		return(0);
-	}
-	numPreY += pie_ClipXT(v2, v3, &xClip[numPreY]);
-
-	if( (v3->x > LONG_TEST) || (v3->y > LONG_TEST) )
-	{
-		/* bomb out for out of range points */
-		return(0);
-	}
-	numPreY += pie_ClipXT(v3, v1, &xClip[numPreY]);
-
-	/* We've now clipped against x axis - now for Y */
-
-	p0 = &xClip[0];
-	p1 = &xClip[1];
-
-	for (i = 0, numAll = 0; i <n umPreY; p0++, p1++, i++) {
-		if (i == (numPreY-1))
-			p1 = &xClip[0];
-		numAll += pie_ClipYT(p0, p1, &clipped[numAll]);
-	}
-
-	return numAll;
-}
-#endif

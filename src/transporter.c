@@ -35,7 +35,6 @@
 #include "objmem.h"
 #include "transporter.h"
 #include "group.h"
-#include "text.h"
 #include "display3d.h"
 #include "mission.h"
 #include "objects.h"
@@ -133,12 +132,10 @@
 
 #define MAX_DROIDS					80
 
-
 /* the widget screen */
 extern W_SCREEN		*psWScreen;
 
 /* Static variables */
-//static	UDWORD			transID;
 static	DROID			*psCurrTransporter;
 static	DROID			*g_psCurScriptTransporter = NULL;
 static	BOOL			onMission;
@@ -148,16 +145,10 @@ static  BOOL            bFirstTransporter;
 //the tab positions of the DroidsAvail window
 static  UWORD           objMajor = 0, objMinor = 0;
 
-
-/**********TEST************/
-//static  UDWORD      addCount = 0;
-//static  UDWORD      removeCount = 0;
-
 /*functions */
 static BOOL intAddTransporterContents(void);
 static void transporterRemoveDroid(UDWORD id);
 static void setCurrentTransporter(UDWORD id);
-//static void intUpdateTransCapacity(struct _widget *psWidget, W_CONTEXT *psContext);
 static void intRemoveTransContentNoAnim(void);
 static BOOL intAddTransButtonForm(void);
 static BOOL intAddTransContentsForm(void);
@@ -168,7 +159,6 @@ static DROID* transInterfaceDroidList(void);
 static void intTransporterAddDroid(UDWORD id);
 static void intRemoveTransDroidsAvail(void);
 static void intRemoveTransDroidsAvailNoAnim(void);
-
 static BOOL _intRefreshTransporter(void);
 static BOOL _intAddTransporter(DROID *psSelected, BOOL offWorld);
 static void _intProcessTransporter(UDWORD id);
@@ -293,7 +283,7 @@ static BOOL _intAddTransporter(DROID *psSelected, BOOL offWorld)
 	sButInit.pTip = _("Close");
 	sButInit.FontID = font_regular;
 	sButInit.pDisplay = intDisplayImageHilight;
-	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
+	sButInit.UserData = PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -382,7 +372,7 @@ BOOL intAddTransporterContents(void)
 	sButInit.pTip = _("Close");
 	sButInit.FontID = font_regular;
 	sButInit.pDisplay = intDisplayImageHilight;
-	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
+	sButInit.UserData = PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -434,7 +424,7 @@ BOOL intAddTransporterContents(void)
 //		sButFInit.FontID = font_regular;
 		sButFInit.pDisplay = intDisplayImageHilight;
 
-		sButFInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_LAUNCHDOWN,IMAGE_LAUNCHUP);
+		sButFInit.UserData = PACKDWORD_TRI(0,IMAGE_LAUNCHDOWN,IMAGE_LAUNCHUP);
 
 		if (!widgAddForm(psWScreen, &sButFInit))
 		{
@@ -485,7 +475,7 @@ BOOL intAddTransporterLaunch(DROID *psDroid)
 	sButInit.height = iV_GetImageHeight(IntImages,IMAGE_LAUNCHUP);
 	sButInit.pTip = _("Launch Transport");
 	sButInit.pDisplay = intDisplayImageHilight;
-	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_LAUNCHDOWN,IMAGE_LAUNCHUP);
+	sButInit.UserData = PACKDWORD_TRI(0,IMAGE_LAUNCHDOWN,IMAGE_LAUNCHUP);
 	if (!widgAddForm(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -596,7 +586,7 @@ BOOL intAddTransButtonForm(void)
 	}
 
 	sFormInit.pFormDisplay = intDisplayObjectForm;
-	sFormInit.pUserData = (void*)&StandardTab;
+	sFormInit.pUserData = &StandardTab;
 	sFormInit.pTabDisplay = intDisplayTab;
 
 	if (!widgAddForm(psWScreen, &sFormInit))
@@ -626,7 +616,6 @@ BOOL intAddTransButtonForm(void)
 	ClearTopicBuffers();
 
 	//add each button
-	//transID = 0;
 	for(psDroid = transInterfaceDroidList(); psDroid; psDroid = psDroid->psNext)
 	{
 		if ( psDroid->droidType == DROID_TRANSPORTER &&
@@ -642,7 +631,7 @@ BOOL intAddTransButtonForm(void)
 			ClearTopicButtonBuffer(BufferID);
 			RENDERBUTTON_INUSE(&TopicBuffers[BufferID]);
 			TopicBuffers[BufferID].Data = (void*)psDroid;
-			sBFormInit.pUserData = (void*)&TopicBuffers[BufferID];
+			sBFormInit.pUserData = &TopicBuffers[BufferID];
 			sBFormInit.pDisplay = intDisplayObjectButton;
 
 
@@ -654,8 +643,6 @@ BOOL intAddTransButtonForm(void)
 			/* if the current droid matches psCurrTransporter lock the button */
 			if (psDroid == psCurrTransporter)
 			{
-				//transID = sBFormInit.id;
-				//widgSetButtonState(psWScreen, transID, WBUT_LOCK);
 				widgSetButtonState(psWScreen, sBFormInit.id, WBUT_LOCK);
 				widgSetTabs(psWScreen, IDTRANS_TABFORM, sBFormInit.majorID, 0);
 			}
@@ -667,7 +654,7 @@ BOOL intAddTransButtonForm(void)
 			ASSERT( BufferID < NUM_OBJECTBUFFERS,"BufferID > NUM_OBJECTBUFFERS" );
 			ClearObjectButtonBuffer(BufferID);
 			RENDERBUTTON_INUSE(&ObjectBuffers[BufferID]);
-			sBFormInit2.pUserData = (void*)&ObjectBuffers[BufferID];
+			sBFormInit2.pUserData = &ObjectBuffers[BufferID];
 			sBFormInit2.pDisplay = intDisplayStatusButton;
 
 
@@ -741,7 +728,7 @@ BOOL intAddTransContentsForm(void)
 	}
 
 	sFormInit.pFormDisplay = intDisplayObjectForm;
-	sFormInit.pUserData = (void*)&StandardTab;
+	sFormInit.pUserData = &StandardTab;
 	sFormInit.pTabDisplay = intDisplayTab;
 
 	if (!widgAddForm(psWScreen, &sFormInit))
@@ -766,7 +753,6 @@ BOOL intAddTransContentsForm(void)
 	ClearStatBuffers();
 
 	//add each button
-	//transID = 0;
 	if (psCurrTransporter != NULL)
 	{
 		for (psDroid = psCurrTransporter->psGroup->psList; psDroid != NULL && psDroid !=
@@ -780,7 +766,7 @@ BOOL intAddTransContentsForm(void)
 			ASSERT( BufferID >= 0,"Unable to acquire stat buffer." );
 			RENDERBUTTON_INUSE(&StatBuffers[BufferID]);
 			StatBuffers[BufferID].Data = (void*)psDroid;
-			sBFormInit.pUserData = (void*)&StatBuffers[BufferID];
+			sBFormInit.pUserData = &StatBuffers[BufferID];
 			sBFormInit.pDisplay = intDisplayTransportButton;
 
 			if (!widgAddForm(psWScreen, &sBFormInit))
@@ -879,7 +865,7 @@ BOOL intAddDroidsAvailForm(void)
 	sButInit.pTip = _("Close");
 	sButInit.FontID = font_regular;
 	sButInit.pDisplay = intDisplayImageHilight;
-	sButInit.pUserData = (void*)PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
+	sButInit.UserData = PACKDWORD_TRI(0,IMAGE_CLOSEHILIGHT , IMAGE_CLOSE);
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -939,7 +925,7 @@ BOOL intAddDroidsAvailForm(void)
 
 	sFormInit.pFormDisplay = intDisplayObjectForm;
 
-	sFormInit.pUserData = (void*)&SmallTab;
+	sFormInit.pUserData = &SmallTab;
 
 	sFormInit.pTabDisplay = intDisplayTab;
 
@@ -1040,7 +1026,7 @@ BOOL intAddDroidsAvailForm(void)
 			ASSERT( BufferID >= 0,"Unable to acquire stat buffer." );
 			RENDERBUTTON_INUSE(&System0Buffers[BufferID]);
 			System0Buffers[BufferID].Data = (void*)psDroid;
-			sBFormInit.pUserData = (void*)&System0Buffers[BufferID];
+			sBFormInit.pUserData = &System0Buffers[BufferID];
 			sBFormInit.pDisplay = intDisplayTransportButton;
 
 			if (!widgAddForm(psWScreen, &sBFormInit))
@@ -1156,9 +1142,7 @@ BOOL OrderDroidsToEmbark(void)
 		{
 			if( psDroid->selected  && (psDroid->droidType != DROID_TRANSPORTER) )
 			{
-				DROID_OACTION_INFO oaInfo = {{(BASE_OBJECT *)psTransporters[CurrentTransporter]}};
-				orderDroidObj(psDroid, DORDER_EMBARK,
-					&oaInfo);
+				orderDroidObj(psDroid, DORDER_EMBARK, (BASE_OBJECT *)psTransporters[CurrentTransporter]);
 
 				// Step through the available transporters.
 				CurrentTransporter++;
@@ -1183,9 +1167,9 @@ BOOL OrderDroidToEmbark(DROID *psDroid)
 
 	psTransporter = FindATransporter();
 
-	if(psTransporter != NULL) {
-		DROID_OACTION_INFO oaInfo = {{(BASE_OBJECT *)psTransporter}};
-		orderDroidObj(psDroid, DORDER_EMBARK, &oaInfo);
+	if(psTransporter != NULL)
+	{
+		orderDroidObj(psDroid, DORDER_EMBARK, (BASE_OBJECT *)psTransporter);
 		return TRUE;
 	}
 
@@ -1368,7 +1352,7 @@ void intRemoveTrans(void)
 	Form = (W_TABFORM*)widgGetFromID(psWScreen,IDTRANS_FORM);
 	Form->display = intClosePlainForm;
 	Form->disableChildren = TRUE;
-	Form->pUserData = (void*)0;	// Used to signal when the close anim has finished.
+	Form->pUserData = NULL; // Used to signal when the close anim has finished.
 	ClosingTrans = TRUE;
 
 	intRemoveTransContent();
@@ -1399,7 +1383,7 @@ void intRemoveTransContent(void)
 	{
 		Form->display = intClosePlainForm;
 		Form->disableChildren = TRUE;
-		Form->pUserData = (void*)0;	// Used to signal when the close anim has finished.
+		Form->pUserData = NULL; // Used to signal when the close anim has finished.
 		ClosingTransCont = TRUE;
 	}
 
@@ -1424,7 +1408,7 @@ void intRemoveTransDroidsAvail(void)
 	{
 		Form->display = intClosePlainForm;
 		Form->disableChildren = TRUE;
-		Form->pUserData = (void*)0;	// Used to signal when the close anim has finished.
+		Form->pUserData = NULL; // Used to signal when the close anim has finished.
 		ClosingTransDroids = TRUE;
         //remember which tab we were on
         widgGetTabs(psWScreen, IDTRANS_DROIDTAB, &objMajor, &objMinor);
@@ -1719,7 +1703,7 @@ void transporterSetLaunchTime(UDWORD time)
 /*launches the defined transporter to the offworld map*/
 BOOL launchTransporter(DROID *psTransporter)
 {
-	UWORD	iX, iY;
+	UDWORD	iX, iY;
 
 	//close the interface
 	intResetScreen(TRUE);
@@ -1829,8 +1813,8 @@ BOOL updateTransporter(DROID *psTransporter)
 
 			// clear order
 			psTransporter->order = DORDER_NONE;
-			setDroidTarget(psTransporter, NULL, 0);
-			psTransporter->psTarStats[0] = NULL;
+			setDroidTarget(psTransporter, NULL);
+			psTransporter->psTarStats = NULL;
 
     		return TRUE;
         }
@@ -1956,10 +1940,10 @@ void flashMissionButton(UDWORD buttonID)
         switch (buttonID)
         {
         case IDTRANS_LAUNCH:
-    		psForm->pUserData = (void*)PACKDWORD_TRI(1,IMAGE_LAUNCHDOWN,IMAGE_LAUNCHUP);
+    		psForm->UserData = PACKDWORD_TRI(1,IMAGE_LAUNCHDOWN,IMAGE_LAUNCHUP);
             break;
         case IDTIMER_FORM:
-    		psForm->pUserData = (void*)PACKDWORD_TRI(1,IMAGE_MISSION_CLOCK,IMAGE_MISSION_CLOCK_UP);
+    		psForm->UserData = PACKDWORD_TRI(1,IMAGE_MISSION_CLOCK,IMAGE_MISSION_CLOCK_UP);
             break;
         default:
             //do nothing other than in debug
@@ -1983,10 +1967,10 @@ void stopMissionButtonFlash(UDWORD buttonID)
         switch (buttonID)
         {
         case IDTRANS_LAUNCH:
-    		psForm->pUserData = (void*)PACKDWORD_TRI(0,IMAGE_LAUNCHDOWN,IMAGE_LAUNCHUP);
+    		psForm->UserData = PACKDWORD_TRI(0,IMAGE_LAUNCHDOWN,IMAGE_LAUNCHUP);
             break;
         case IDTIMER_FORM:
-    		psForm->pUserData = (void*)PACKDWORD_TRI(0,IMAGE_MISSION_CLOCK,IMAGE_MISSION_CLOCK_UP);
+    		psForm->UserData = PACKDWORD_TRI(0,IMAGE_MISSION_CLOCK,IMAGE_MISSION_CLOCK_UP);
             break;
         default:
             //do nothing other than in debug

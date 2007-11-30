@@ -25,21 +25,27 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <physfs.h>
 
 /* map line printf's */
 #include <assert.h>
 #include "lib/framework/frame.h"
 #include "lib/framework/frameint.h"
+#include "lib/framework/tagfile.h"
 #include "map.h"
 #include "lib/gamelib/gtime.h"
+#include "lib/ivis_common/tex.h"
 #include "hci.h"
 #include "projectile.h"
 #include "display3d.h"
 #include "lighting.h"
 #include "game.h"
-
+#include "texture.h"
 #include "environ.h"
 #include "advvis.h"
+#include "research.h"
+#include "mission.h"
+#include "formationdef.h"
 
 #include "gateway.h"
 #include "wrappers.h"
@@ -495,6 +501,721 @@ BOOL mapLoad(char *pFileData, UDWORD fileSize)
 	return TRUE;
 }
 
+// Object macro group
+static void objectSaveTagged(BASE_OBJECT *psObj)
+{
+	uint16_t v[MAX_PLAYERS], i;
+
+	// not written: sDisplay
+
+	tagWriteEnter(0x01, 1);
+	tagWrite(0x01, psObj->type);
+	tagWrite(0x02, psObj->id);
+	v[0] = psObj->x;
+	v[1] = psObj->y;
+	v[2] = psObj->z;
+	tagWrite16v(0x03, 3, v);
+	tagWritef(0x04, psObj->direction);
+	tagWrites(0x05, psObj->pitch);
+	tagWrites(0x06, psObj->roll);
+	tagWrite(0x07, psObj->player);
+	tagWrite(0x08, psObj->group);
+	tagWrite(0x09, psObj->selected);
+	tagWrite(0x0a, psObj->cluster);
+	for (i = 0; i < MAX_PLAYERS; i++)
+	{
+		v[i] = psObj->visible[i];
+	}
+	tagWrite16v(0x0b, MAX_PLAYERS, v);
+	tagWrite(0x0c, psObj->died);
+	tagWrite(0x0d, psObj->lastEmission);
+	tagWriteBool(0x0e, psObj->inFire);
+	tagWrite(0x0f, psObj->burnStart);
+	tagWrite(0x10, psObj->burnDamage);
+	tagWriteLeave(0x01);
+}
+
+static void objectSensorTagged(int sensorRange, int sensorPower, int ecmRange, int ecmPower)
+{
+	tagWriteEnter(0x02, 1);
+	tagWrite(0x01, sensorRange);
+	tagWrite(0x02, sensorPower);
+	tagWrite(0x03, ecmRange);
+	tagWrite(0x04, ecmPower);
+	tagWriteLeave(0x02);
+}
+
+static void objectStatTagged(BASE_OBJECT *psObj, int body, int resistance)
+{
+	int i;
+
+	tagWriteEnter(0x03, 1);
+	tagWrite(0x01, body);
+	tagWrite(0x02, NUM_WEAPON_CLASS);
+	tagWriteEnter(0x03, NUM_HIT_SIDES);
+	for (i = 0; i < NUM_HIT_SIDES; i++)
+	{
+		tagWrite(0x01, psObj->armour[i][WC_KINETIC]);
+		tagWrite(0x02, psObj->armour[i][WC_HEAT]);
+		tagWriteSeparator();
+	}
+	tagWriteLeave(0x03);
+	tagWrite(0x04, resistance);
+	tagWriteLeave(0x03);
+}
+
+static void objectWeaponTagged(int num, UWORD *rotation, UWORD *pitch, WEAPON *asWeaps, BASE_OBJECT **psTargets)
+{
+	int i;
+
+	tagWriteEnter(0x04, num);
+	for (i = 0; i < num; i++)
+	{
+		tagWrite(0x01, asWeaps[i].nStat);
+		tagWrite(0x02, rotation[i]);
+		tagWrite(0x03, pitch[i]);
+		tagWrite(0x04, asWeaps[i].hitPoints);
+		tagWrite(0x05, asWeaps[i].ammo);
+		tagWrite(0x06, asWeaps[i].lastFired);
+		tagWrite(0x07, asWeaps[i].recoilValue);
+		if (psTargets[i] != NULL)
+		{
+			tagWrites(0x08, psTargets[i]->id); // else default -1
+		}
+		tagWriteSeparator();
+	}
+	tagWriteLeave(0x04);
+}
+
+static void droidSaveTagged(DROID *psDroid)
+{
+	int plr = psDroid->player;
+	uint16_t v[DROID_MAXCOMP], i, order[4], ammo[VTOL_MAXWEAPS];
+	int32_t sv[2];
+	float fv[3];
+
+	/* common groups */
+
+	objectSaveTagged((BASE_OBJECT *)psDroid); /* 0x01 */
+	objectSensorTagged(psDroid->sensorRange, psDroid->sensorPower, 0, psDroid->ECMMod); /* 0x02 */
+	objectStatTagged((BASE_OBJECT *)psDroid, psDroid->originalBody, psDroid->resistance); /* 0x03 */
+	objectWeaponTagged(psDroid->numWeaps, psDroid->turretRotation, psDroid->turretPitch, psDroid->asWeaps, psDroid->psActionTarget);
+
+	/* DROID GROUP */
+
+	tagWriteEnter(0x0a, 1);
+	tagWrite(0x01, psDroid->droidType);
+	for (i = 0; i < DROID_MAXCOMP; i++)
+	{
+		v[i] = psDroid->asBits[i].nStat;
+	}
+	tagWrite16v(0x02, DROID_MAXCOMP, v);
+	// transporter droid in the mission list
+	if (psDroid->droidType == DROID_TRANSPORTER && apsDroidLists[plr] == mission.apsDroidLists[plr])
+	{
+		tagWriteBool(0x03, true);
+	}
+	tagWrite(0x07, psDroid->weight);
+	tagWrite(0x08, psDroid->baseSpeed);
+	tagWriteString(0x09, psDroid->aName);
+	tagWrite(0x0a, psDroid->body);
+	tagWrite(0x0b, psDroid->numKills);
+	tagWrite(0x0c, psDroid->NameVersion);
+	if (psDroid->psTarget)
+	{
+		tagWrites(0x0e, psDroid->psTarget->id); // else -1
+	}
+	if (psDroid->psTarStats)
+	{
+		tagWrites(0x0f, psDroid->psTarStats->ref); // else -1
+	}
+	if (psDroid->psBaseStruct)
+	{
+		tagWrites(0x10, psDroid->psBaseStruct->id); // else -1
+	}
+	// current order
+	tagWrite(0x11, psDroid->order);
+	order[0] = psDroid->orderX;
+	order[1] = psDroid->orderY;
+	order[2] = psDroid->orderX2;
+	order[3] = psDroid->orderX2;
+	tagWrite16v(0x12, 4, order);
+	// queued orders
+	tagWriteEnter(0x13, psDroid->listSize);
+	for (i = 0; i < psDroid->listSize; i++)
+	{
+		tagWrite(0x01, psDroid->asOrderList[i].order);
+		order[0] = psDroid->asOrderList[i].x;
+		order[1] = psDroid->asOrderList[i].y;
+		order[2] = psDroid->asOrderList[i].x2;
+		order[3] = psDroid->asOrderList[i].y2;
+		tagWrite16v(0x02, 4, order);
+		tagWriteSeparator();
+	}
+	tagWriteLeave(0x13);
+	if (psDroid->sMove.psFormation != NULL)
+	{
+		tagWrites(0x14, psDroid->sMove.psFormation->dir);
+		tagWrites(0x15, psDroid->sMove.psFormation->x);
+		tagWrites(0x16, psDroid->sMove.psFormation->y);
+	} // else these are zero as by default
+	// vtol ammo
+	for (i = 0; i < VTOL_MAXWEAPS; i++)
+	{
+		ammo[i] = psDroid->sMove.iAttackRuns[i];
+	}
+	tagWrite16v(0x17, VTOL_MAXWEAPS, ammo);
+	// other movement related stuff
+	sv[0] = psDroid->sMove.DestinationX;
+	sv[1] = psDroid->sMove.DestinationY;
+	tagWrites32v(0x18, 2, sv);
+	sv[0] = psDroid->sMove.srcX;
+	sv[1] = psDroid->sMove.srcY;
+	tagWrites32v(0x19, 2, sv);
+	sv[0] = psDroid->sMove.targetX;
+	sv[1] = psDroid->sMove.targetY;
+	tagWrites32v(0x1a, 2, sv);
+	fv[0] = psDroid->sMove.fx;
+	fv[1] = psDroid->sMove.fy;
+	fv[2] = psDroid->sMove.fz;
+	tagWritefv(0x1b, 3, fv);
+	tagWritef(0x1c, psDroid->sMove.speed);
+	sv[0] = psDroid->sMove.boundX;
+	sv[1] = psDroid->sMove.boundY;
+	tagWrites32v(0x1d, 2, sv);
+	v[0] = psDroid->sMove.bumpX;
+	v[1] = psDroid->sMove.bumpY;
+	tagWrite16v(0x1e, 2, v);
+	tagWrites(0x1f, psDroid->sMove.moveDir);
+	tagWrites(0x20, psDroid->sMove.bumpDir);
+	tagWrite(0x21, psDroid->sMove.bumpTime);
+	tagWrite(0x22, psDroid->sMove.lastBump);
+	tagWrite(0x23, psDroid->sMove.pauseTime);
+	tagWrite(0x24, psDroid->sMove.iVertSpeed);
+	tagWriteEnter(0x25, psDroid->sMove.numPoints);
+	for (i = 0; i < psDroid->sMove.numPoints; i++)
+	{
+		v[0] = psDroid->sMove.asPath[i].x;
+		v[1] = psDroid->sMove.asPath[i].y;
+		tagWrite16v(0x01, 2, v);
+		tagWriteSeparator();
+	}
+	tagWriteLeave(0x25);
+	tagWrite(0x26, psDroid->sMove.Status);
+	tagWrite(0x27, psDroid->sMove.Position);
+	
+	tagWriteLeave(0x0a);
+}
+
+static void structureSaveTagged(STRUCTURE *psStruct)
+{
+	int stype = NUM_DIFF_BUILDINGS;
+
+	if (psStruct->pFunctionality)
+	{
+		stype = psStruct->pStructureType->type;
+	}
+
+	/* common groups */
+
+	objectSaveTagged((BASE_OBJECT *)psStruct); /* 0x01 */
+	objectSensorTagged(psStruct->sensorRange, psStruct->sensorPower, 0, psStruct->ecmPower); /* 0x02 */
+	objectStatTagged((BASE_OBJECT *)psStruct, psStruct->pStructureType->bodyPoints, psStruct->resistance); /* 0x03 */
+	objectWeaponTagged(psStruct->numWeaps, psStruct->turretRotation, psStruct->turretPitch, psStruct->asWeaps, psStruct->psTarget);
+
+	/* STRUCTURE GROUP */
+
+	tagWriteEnter(0x0b, 1);
+	tagWrite(0x01, psStruct->pStructureType->type);
+	tagWrites(0x02, psStruct->currentPowerAccrued);
+	tagWrite(0x03, psStruct->lastResistance);
+	tagWrite(0x04, psStruct->targetted);
+	tagWrite(0x05, psStruct->timeLastHit);
+	tagWrite(0x06, psStruct->lastHitWeapon);
+	tagWrite(0x07, psStruct->status);
+	tagWrites(0x08, psStruct->currentBuildPts);
+	tagWriteLeave(0x0b);
+
+	/* Functionality groups */
+
+	switch (psStruct->pStructureType->type)
+	{
+		case REF_FACTORY:
+		case REF_CYBORG_FACTORY:
+		case REF_VTOL_FACTORY:
+		{
+			FACTORY *psFactory = (FACTORY *)psStruct->pFunctionality;
+
+			tagWriteEnter(0x0d, 1); // FACTORY GROUP
+			tagWrite(0x01, psFactory->capacity);
+			tagWrite(0x02, psFactory->quantity);
+			tagWrite(0x03, psFactory->loopsPerformed);
+			//tagWrite(0x04, psFactory->productionOutput); // not used in original code, recalculated instead
+			tagWrite(0x05, psFactory->powerAccrued);
+			if (psFactory->psSubject)
+			{
+				tagWrites(0x06, ((DROID_TEMPLATE *)psFactory->psSubject)->multiPlayerID);
+			}
+			tagWrite(0x07, psFactory->timeStarted);
+			tagWrite(0x08, psFactory->timeToBuild);
+			tagWrite(0x09, psFactory->timeStartHold);
+			tagWrite(0x0a, psFactory->secondaryOrder);
+			if (psFactory->psAssemblyPoint)
+			{
+				// since we save our type, the combination of type and number is enough
+				// to find our flag back on load
+				tagWrites(0x0b, psFactory->psAssemblyPoint->factoryInc);
+			}
+			if (psFactory->psCommander)
+			{
+				tagWrites(0x0c, psFactory->psCommander->id);
+			}
+			tagWriteLeave(0x0d);
+		} break;
+		case REF_RESEARCH:
+		{
+			RESEARCH_FACILITY *psResearch = (RESEARCH_FACILITY *)psStruct->pFunctionality;
+
+			tagWriteEnter(0x0e, 1);
+			tagWrite(0x01, psResearch->capacity); // number of upgrades it has
+			tagWrite(0x02, psResearch->powerAccrued);
+			tagWrite(0x03, psResearch->timeStartHold);
+			if (psResearch->psSubject)
+			{
+				tagWrite(0x04, psResearch->psSubject->ref - REF_RESEARCH_START);
+				tagWrite(0x05, psResearch->timeStarted);
+			}
+			tagWriteLeave(0x0e);
+		} break;
+		case REF_RESOURCE_EXTRACTOR:
+		{
+			RES_EXTRACTOR *psExtractor = (RES_EXTRACTOR *)psStruct->pFunctionality;
+
+			tagWriteEnter(0x0f, 1);
+			tagWrite(0x01, psExtractor->power);
+			if (psExtractor->psPowerGen)
+			{
+				tagWrites(0x02, psExtractor->psPowerGen->id);
+			}
+			tagWriteLeave(0x0f);
+		} break;
+		case REF_POWER_GEN:
+		{
+			POWER_GEN *psPower = (POWER_GEN *)psStruct->pFunctionality;
+
+			tagWriteEnter(0x10, 1);
+			tagWrite(0x01, psPower->capacity); // number of upgrades
+			tagWriteLeave(0x10);
+		} break;
+		case REF_REPAIR_FACILITY:
+		{
+			REPAIR_FACILITY *psRepair = (REPAIR_FACILITY *)psStruct->pFunctionality;
+			FLAG_POSITION *psFlag = psRepair->psDeliveryPoint;
+
+			tagWriteEnter(0x11, 1);
+			tagWrite(0x01, psRepair->timeStarted);
+			tagWrite(0x02, psRepair->powerAccrued);
+			if (psRepair->psObj)
+			{
+				tagWrites(0x03, psRepair->psObj->id);
+			}
+			if (psFlag)
+			{
+				tagWrites(0x04, psFlag->factoryInc);
+			}
+			tagWriteLeave(0x11);
+		} break;
+		case REF_REARM_PAD:
+		{
+			REARM_PAD *psRearm = (REARM_PAD *)psStruct->pFunctionality;
+
+			tagWriteEnter(0x12, 1);
+			tagWrite(0x01, psRearm->reArmPoints);
+			tagWrite(0x02, psRearm->timeStarted);
+			tagWrite(0x03, psRearm->currentPtsAdded);
+			if (psRearm->psObj)
+			{
+				tagWrites(0x04, psRearm->psObj->id);
+			}
+			tagWriteLeave(0x12);
+		} break;
+		case REF_HQ:
+		case REF_FACTORY_MODULE:
+		case REF_POWER_MODULE:
+		case REF_DEFENSE:
+		case REF_WALL:
+		case REF_WALLCORNER:
+		case REF_BLASTDOOR:
+		case REF_RESEARCH_MODULE:
+		case REF_COMMAND_CONTROL:
+		case REF_BRIDGE:
+		case REF_DEMOLISH:
+		case REF_LAB:
+		case REF_MISSILE_SILO:
+		case REF_SAT_UPLINK:
+		case NUM_DIFF_BUILDINGS:
+		{
+			// nothing
+		} break;
+	}
+}
+
+static void featureSaveTagged(FEATURE *psFeat)
+{
+	/* common groups */
+
+	objectSaveTagged((BASE_OBJECT *)psFeat); /* 0x01 */
+	objectStatTagged((BASE_OBJECT *)psFeat, psFeat->psStats->body, 0); /* 0x03 */
+
+	/* FEATURE GROUP */
+
+	tagWriteEnter(0x0c, 1);
+	tagWrite(0x01, psFeat->startTime);
+	tagWriteLeave(0x0c);
+}
+
+BOOL mapSaveTagged(char *pFileName)
+{
+	MAPTILE *psTile;
+	GATEWAY *psCurrGate;
+	int numGateways = 0, i = 0, x = 0, y = 0, plr, droids, structures, features;
+	float cam[3];
+	const char *definition = "testdata/tagfile_map.def";
+	DROID *psDroid;
+	FEATURE *psFeat;
+	STRUCTURE *psStruct;
+
+	// find the number of non water gateways
+	for (psCurrGate = gwGetGateways(); psCurrGate; psCurrGate = psCurrGate->psNext)
+	{
+		if (!(psCurrGate->flags & GWR_WATERLINK))
+		{
+			numGateways += 1;
+		}
+	}
+
+	if (!tagOpenWrite(definition, pFileName))
+	{
+		debug(LOG_ERROR, "mapSaveTagged: Failed to create savegame %s", pFileName);
+		return FALSE;
+	}
+	debug(LOG_MAP, "Creating tagged savegame %s with definition %s:", pFileName, definition);
+
+	tagWriteEnter(0x03, 1); // map info group
+	tagWrite(0x01, mapWidth);
+	tagWrite(0x02, mapHeight);
+	tagWriteLeave(0x03);
+
+	tagWriteEnter(0x04, 1); // camera info group
+	cam[0] = player.p.x;
+	cam[1] = player.p.y;
+	cam[2] = player.p.z; /* Transform position to float */
+	tagWritefv(0x01, 3, cam);
+	cam[0] = player.r.x;
+	cam[1] = player.r.y;
+	cam[2] = player.r.z; /* Transform rotation to float */
+	tagWritefv(0x02, 3, cam);
+	debug(LOG_MAP, " * Writing player position(%d, %d, %d) and rotation(%d, %d, %d)",
+	      (int)player.p.x, (int)player.p.y, (int)player.p.z, (int)player.r.x,
+	      (int)player.r.y, (int)player.r.z);
+	tagWriteLeave(0x04);
+
+	tagWriteEnter(0x05, _TEX_INDEX - 1); // texture group
+	for (i = 0; i < _TEX_INDEX - 1; i++)
+	{
+		tagWriteString(0x01, _TEX_PAGE[i].name);
+		tagWriteSeparator(); // add repeating group separator
+	}
+	debug(LOG_MAP, " * Writing info about %d texture pages", (int)_TEX_INDEX - 1);
+	tagWriteLeave(0x05);
+
+	tagWriteEnter(0x0a, mapWidth * mapHeight); // tile group
+	psTile = GetCurrentMap();
+	for (i = 0, x = 0, y = 0; i < mapWidth * mapHeight; i++)
+	{
+		tagWrite(0x01, terrainType(psTile));
+		tagWrite(0x02, TileNumber_tile(psTile->texture));
+		tagWrite(0x03, TRI_FLIPPED(psTile));
+		tagWrite(0x04, psTile->texture & TILE_XFLIP);
+		tagWrite(0x05, psTile->texture & TILE_YFLIP);
+		tagWrite(0x06, TILE_IS_NOTBLOCKING(psTile));
+		tagWrite(0x07, !TILE_DRAW(psTile));
+		tagWrite(0x08, psTile->height); // should multiply by ELEVATION_SCALE? If so, use map_TileHeight()
+
+		psTile++;
+		x++;
+		if (x == mapWidth)
+		{
+			x = 0; y++;
+		}
+		tagWriteSeparator();
+	}
+	debug(LOG_MAP, " * Writing info about %d tiles", (int)mapWidth * mapHeight);
+	tagWriteLeave(0x0a);
+
+	tagWriteEnter(0x0b, numGateways); // gateway group
+	for (psCurrGate = gwGetGateways(); psCurrGate; psCurrGate = psCurrGate->psNext)
+	{
+		if (!(psCurrGate->flags & GWR_WATERLINK))
+		{
+			uint16_t p[4];
+
+			p[0] = psCurrGate->x1;
+			p[1] = psCurrGate->y1;
+			p[2] = psCurrGate->x2;
+			p[3] = psCurrGate->y2;
+			tagWrite16v(0x01, 4, p);
+			tagWriteSeparator();
+		}
+	}
+	debug(LOG_MAP, " * Writing info about %d gateways", (int)numGateways);
+	tagWriteLeave(0x0b);
+
+	tagWriteEnter(0x0c, MAX_TILE_TEXTURES); // terrain type <=> texture mapping group
+	for (i = 0; i < MAX_TILE_TEXTURES; i++)
+        {
+                tagWrite(0x01, terrainTypes[i]);
+		tagWriteSeparator();
+        }
+	debug(LOG_MAP, " * Writing info about %d textures' type", (int)MAX_TILE_TEXTURES);
+	tagWriteLeave(0x0c);
+
+	tagWriteEnter(0x0d, MAX_PLAYERS); // player info group
+	for (plr = 0; plr < MAX_PLAYERS; plr++)
+	{
+		RESEARCH *psResearch = asResearch;
+		STRUCTURE_STATS *psStructStats = asStructureStats;
+		FLAG_POSITION *psFlag;
+		FLAG_POSITION *flagList[NUM_FLAG_TYPES * MAX_FACTORY];
+		MESSAGE *psMessage;
+
+		tagWriteEnter(0x01, numResearch); // research group
+		for (i = 0; i < numResearch; i++, psResearch++)
+		{
+			tagWrite(0x01, IsResearchPossible(&asPlayerResList[plr][i]));
+			tagWrite(0x02, asPlayerResList[plr][i].ResearchStatus & RESBITS);
+			tagWrite(0x03, asPlayerResList[plr][i].currentPoints);
+			tagWriteSeparator();
+		}
+		tagWriteLeave(0x01);
+
+		tagWriteEnter(0x02, numStructureStats); // structure limits group
+		for (i = 0; i < numStructureStats; i++, psStructStats++)
+		{
+			tagWriteString(0x01, psStructStats->pName);
+			tagWrite(0x02, asStructLimits[plr][i].limit);
+			tagWriteSeparator();
+		}
+		tagWriteLeave(0x02);
+
+		// count and list flags in list
+		for (i = 0, psFlag = apsFlagPosLists[plr]; psFlag != NULL; psFlag = psFlag->psNext)
+		{
+			flagList[i] = psFlag;
+			i++;
+		}
+		y = i; // remember separation point between registered and unregistered flags
+		// count flags not in list (commanders)
+		for (psStruct = apsStructLists[plr]; psStruct != NULL; psStruct = psStruct->psNext)
+		{
+			if (psStruct->pFunctionality
+			    && (psStruct->pStructureType->type == REF_FACTORY
+			        || psStruct->pStructureType->type == REF_CYBORG_FACTORY
+			        || psStruct->pStructureType->type == REF_VTOL_FACTORY))
+			{
+				FACTORY *psFactory = ((FACTORY *)psStruct->pFunctionality);
+
+				if (psFactory->psCommander && psFactory->psAssemblyPoint != NULL)
+				{
+					flagList[i] = psFactory->psAssemblyPoint;
+					i++;
+				}
+			}
+		}
+		tagWriteEnter(0x03, i); // flag group
+		for (x = 0; x < i; x++)
+		{
+			uint16_t p[3];
+
+			tagWrite(0x01, flagList[x]->type);
+			tagWrite(0x02, flagList[x]->frameNumber);
+			p[0] = flagList[x]->screenX;
+			p[1] = flagList[x]->screenY;
+			p[2] = flagList[x]->screenR;
+			tagWrite16v(0x03, 3, p);
+			tagWrite(0x04, flagList[x]->player);
+			tagWriteBool(0x05, flagList[x]->selected);
+			p[0] = flagList[x]->coords.x;
+			p[1] = flagList[x]->coords.y;
+			p[2] = flagList[x]->coords.z;
+			tagWrite16v(0x06, 3, p);
+			tagWrite(0x07, flagList[x]->factoryInc);
+			tagWrite(0x08, flagList[x]->factoryType);
+			if (flagList[x]->factoryType == REPAIR_FLAG)
+			{
+				tagWrite(0x09, getRepairIdFromFlag(flagList[x]));
+			}
+			if (x >= y)
+			{
+				tagWriteBool(0x0a, 1); // do not register this flag in flag list
+			}
+			tagWriteSeparator();
+		}
+		tagWriteLeave(0x03);
+
+		// FIXME: Structured after old savegame logic, but surely it must be possible
+		// to simplify the mess below. It refers to non-saved file containing messages.
+		for (psMessage = apsMessages[plr], i = 0; psMessage != NULL; psMessage = psMessage->psNext, i++);
+		tagWriteEnter(0x04, i); // message group
+		for (psMessage = apsMessages[plr]; psMessage != NULL; psMessage = psMessage->psNext)
+		{
+			if (psMessage->type == MSG_PROXIMITY)
+			{
+				PROXIMITY_DISPLAY *psProx = apsProxDisp[plr];
+
+				// find the matching proximity message
+				for (; psProx != NULL && psProx->psMessage != psMessage; psProx = psProx->psNext);
+
+				ASSERT(psProx != NULL, "Save message; proximity display not found for message");
+				if (psProx->type == POS_PROXDATA)
+				{
+					// message has viewdata so store the name
+					VIEWDATA *pViewData = (VIEWDATA*)psMessage->pViewData;
+
+					tagWriteString(0x02, pViewData->pName);
+				}
+				else
+				{
+					BASE_OBJECT *psObj = (BASE_OBJECT*)psMessage->pViewData;
+
+					tagWrites(0x01, psObj->id);
+				}
+			}
+			else
+			{
+				VIEWDATA *pViewData = (VIEWDATA*)psMessage->pViewData;
+
+				tagWriteString(0x2, pViewData->pName);
+			}
+			tagWriteBool(0x3, psMessage->read);
+			tagWriteSeparator();
+		}
+		tagWriteLeave(0x04);
+
+		tagWriteSeparator();
+	}
+	debug(LOG_MAP, " * Writing info about %d players", (int)MAX_PLAYERS);
+	tagWriteLeave(0x0d);
+
+	tagWriteEnter(0x0e, NUM_FACTORY_TYPES); // production runs group
+	for (i = 0; i < NUM_FACTORY_TYPES; i++)
+	{
+		int factoryNum, runNum;
+
+		tagWriteEnter(0x01, MAX_FACTORY);
+		for (factoryNum = 0; factoryNum < MAX_FACTORY; factoryNum++)
+		{
+			tagWriteEnter(0x01, MAX_PROD_RUN);
+			for (runNum = 0; runNum < MAX_PROD_RUN; runNum++)
+			{
+				PRODUCTION_RUN *psCurrentProd = &asProductionRun[i][factoryNum][runNum];
+
+				tagWrite(0x01, psCurrentProd->quantity);
+				tagWrite(0x02, psCurrentProd->built);
+				if (psCurrentProd->psTemplate != NULL)
+                                {
+					tagWrites(0x03, psCurrentProd->psTemplate->multiPlayerID); // -1 if none
+                                }
+				tagWriteSeparator();
+			}
+			tagWriteLeave(0x01);
+			tagWriteSeparator();
+		}
+		tagWriteLeave(0x01);
+		tagWriteSeparator();
+	}
+	tagWriteLeave(0x0e);
+
+	objCount(&droids, &structures, &features);
+	tagWriteEnter(0x0f, droids + structures + features); // object group
+	for (plr = 0; plr < MAX_PLAYERS; plr++)
+	{
+		for (psDroid = apsDroidLists[plr]; psDroid != NULL; psDroid = psDroid->psNext)
+		{
+			droidSaveTagged(psDroid);
+			tagWriteSeparator();
+			if (psDroid->droidType == DROID_TRANSPORTER)
+			{
+				DROID *psTrans = psDroid->psGroup->psList;
+				for(psTrans = psTrans->psGrpNext; psTrans != NULL; psTrans = psTrans->psGrpNext)
+				{
+					droidSaveTagged(psTrans);
+					tagWriteSeparator();
+				}
+			}
+		}
+		for (psStruct = apsStructLists[plr]; psStruct; psStruct = psStruct->psNext)
+		{
+			structureSaveTagged(psStruct);
+			tagWriteSeparator();
+		}
+	}
+	for (psFeat = apsFeatureLists[0]; psFeat; psFeat = psFeat->psNext)
+	{
+		featureSaveTagged(psFeat);
+		tagWriteSeparator();
+	}
+	tagWriteLeave(0x0f);
+
+	// REMAINS TO BE DONE?
+	// * writeCompListFile
+	// * writeStructTypeListFile
+	// * writeProductionFile
+	// * writeCommandLists
+	// * writeScriptState
+
+	tagClose();
+	return TRUE;
+}
+
+BOOL mapLoadTagged(char *pFileName)
+{
+	int count, i, mapx, mapy;
+	float cam[3];
+	const char *definition = "testdata/tagfile_map.def";
+
+	if (!tagOpenRead(definition, pFileName))
+	{
+		debug(LOG_ERROR, "mapLoadTagged: Failed to open savegame %s", pFileName);
+		return FALSE;
+	}
+	debug(LOG_MAP, "Reading tagged savegame %s with definition %s:", pFileName, definition);
+
+	tagReadEnter(0x03); // map info group
+	mapx = tagRead(0x01);
+	mapy = tagRead(0x02);
+	debug(LOG_MAP, " * Map size: %d, %d", (int)mapx, (int)mapy);
+	tagReadLeave(0x03);
+
+	tagReadEnter(0x04); // camera info group
+	tagReadfv(0x01, 3, cam); debug(LOG_MAP, " * Camera position: %f, %f, %f", cam[0], cam[1], cam[2]);
+	tagReadfv(0x02, 3, cam); debug(LOG_MAP, " * Camera rotation: %f, %f, %f", cam[0], cam[1], cam[2]);
+	tagReadLeave(0x04);
+
+	count = tagReadEnter(0x05); // texture group
+	for (i = 0; i < count; i++)
+	{
+		char mybuf[200];
+
+		tagReadString(0x01, 200, mybuf);
+		debug(LOG_MAP, " * Texture[%d]: %s", i, mybuf);
+		tagReadNext();
+	}
+	tagReadLeave(0x05);
+
+	tagClose();
+	return TRUE;
+}
 
 /* Save the map data */
 BOOL mapSave(char **ppFileData, UDWORD *pFileSize)
@@ -640,7 +1361,7 @@ BOOL mapSave(char **ppFileData, UDWORD *pFileSize)
 		}
 	}
 
-	ASSERT( ( ((UDWORD)psLastZone) - ((UDWORD)*ppFileData) ) < *pFileSize,"Buffer overflow saving map" );
+	ASSERT( (intptr_t)psLastZone - (intptr_t)*ppFileData < (intptr_t)*pFileSize, "Buffer overflow saving map" );
 
 	return TRUE;
 }
@@ -665,15 +1386,18 @@ extern SWORD map_Height(UDWORD x, UDWORD y)
 	UDWORD tileX, tileY, tileYOffset;
 	UDWORD tileX2, tileY2Offset;
 	SDWORD h0, hx, hy, hxy, wTL = 0, wTR = 0, wBL = 0, wBR = 0;
-	//SDWORD	lowerHeightOffset,upperHeightOffset;
 	SDWORD dx, dy, ox, oy;
 	BOOL	bWaterTile = FALSE;
 
 	// Print out a debug message when we get SDWORDs passed as if they're UDWORDs
 	if (x > SDWORD_MAX)
-		debug(LOG_ERROR, "map_Height: x coordinate is a negative SDWORD passed as an UDWORD: %d", (SDWORD)x);
+	{
+		debug(LOG_ERROR, "map_Height: x coordinate is a negative SDWORD passed as an UDWORD: %d", (int)x);
+	}
 	if (y > SDWORD_MAX)
-		debug(LOG_ERROR, "map_Height: y coordinate is a negative SDWORD passed as an UDWORD: %d", (SDWORD)y);
+	{
+		debug(LOG_ERROR, "map_Height: y coordinate is a negative SDWORD passed as an UDWORD: %d", (int)y);
+	}
 
 	x = x > SDWORD_MAX ? 0 : x;//negative SDWORD passed as UDWORD
 	x = x >= world_coord(mapWidth) ? world_coord(mapWidth - 1) : x;
@@ -688,7 +1412,7 @@ extern SWORD map_Height(UDWORD x, UDWORD y)
 	ox = map_round(x);
 	oy = map_round(y);
 
-	if(TERRAIN_TYPE(mapTile(tileX,tileY)) == TER_WATER)
+	if (terrainType(mapTile(tileX,tileY)) == TER_WATER)
 	{
 		bWaterTile = TRUE;
 		wTL = environGetValue(tileX,tileY)/2;
@@ -936,6 +1660,7 @@ bool writeVisibilityData(const char* fileName)
 	}
 
 	// Everything is just fine!
+	PHYSFS_close(fileHandle);
 	return true;
 }
 

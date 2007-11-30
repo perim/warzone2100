@@ -34,7 +34,6 @@
 #include "group.h"
 #include "anim_id.h"
 #include "hci.h"
-#include "text.h"
 #include "scriptfuncs.h"		// for objectinrange.
 #include "lib/gamelib/gtime.h"
 #include "effects.h"
@@ -436,26 +435,23 @@ void formAlliance(UBYTE p1, UBYTE p2,BOOL prop,BOOL allowAudio,BOOL allowNotific
 	turnOffMultiMsg(TRUE);
 	for(psDroid= apsDroidLists[p1];psDroid;psDroid=psDroid->psNext)	// from -> to
 	{
-		if((psDroid->order == DORDER_ATTACK ||
-			psDroid->order == DORDER_ATTACK_M)
-			&& psDroid->psTarget[0]
-			&& psDroid->psTarget[0]->player == p2)
+		if (psDroid->order == DORDER_ATTACK
+			&& psDroid->psTarget
+			&& psDroid->psTarget->player == p2)
 		{
 			orderDroid(psDroid,DORDER_STOP);
 		}
 	}
 	for(psDroid= apsDroidLists[p2];psDroid;psDroid=psDroid->psNext)	// to -> from
 	{
-		if((psDroid->order == DORDER_ATTACK ||
-			psDroid->order == DORDER_ATTACK_M)
-			&& psDroid->psTarget[0]
- 			&& psDroid->psTarget[0]->player == p1)
+		if (psDroid->order == DORDER_ATTACK
+			&& psDroid->psTarget
+ 			&& psDroid->psTarget->player == p1)
 		{
 			orderDroid(psDroid,DORDER_STOP);
 		}
 	}
 	turnOffMultiMsg(FALSE);
-
 }
 
 

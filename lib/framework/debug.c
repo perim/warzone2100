@@ -61,6 +61,8 @@ static const char *code_part_names[] = {
 	"fog",
 	"sensor",
 	"gui",
+	"map",
+	"savegame",
 	"last"
 };
 
@@ -110,10 +112,12 @@ void debug_callback_win32debug( void ** data, const char * outputBuffer )
 {
 	char tmpStr[MAX_LEN_LOG_LINE];
 
-	strcpy( tmpStr, outputBuffer );
-	if ( !strchr( tmpStr, '\n' ) ) {
-		strcat( tmpStr, "\n" );
+	strlcpy(tmpStr, outputBuffer, sizeof(tmpStr));
+	if (!strchr(tmpStr, '\n'))
+	{
+		strlcat(tmpStr, "\n", sizeof(tmpStr));
 	}
+
 	OutputDebugStringA( tmpStr );
 }
 #endif // WIN32
@@ -271,8 +275,10 @@ void _debug( code_part part, const char *str, ... )
 	static unsigned int prev = 0;     /* total on last update */
 
 	va_start(ap, str);
-	vsnprintf( useInputBuffer1 ? inputBuffer[1] : inputBuffer[0], MAX_LEN_LOG_LINE, str, ap );
+	vsnprintf(inputBuffer[useInputBuffer1 ? 1 : 0], MAX_LEN_LOG_LINE, str, ap);
 	va_end(ap);
+	// Guarantee to nul-terminate
+	inputBuffer[useInputBuffer1 ? 1 : 0][MAX_LEN_LOG_LINE - 1] = '\0';
 
 	if ( strncmp( inputBuffer[0], inputBuffer[1], MAX_LEN_LOG_LINE - 1 ) == 0 ) {
 		// Received again the same line

@@ -27,6 +27,7 @@
 #define _feature_h
 
 #include "objectdef.h"
+
 #define ONEMIN			(1000 * 60)
 #define WRECK_LIFETIME	(0)	//they're just not there anymore!!!!! Ye ha!
 
@@ -35,8 +36,6 @@ extern FEATURE_STATS	*asFeatureStats;
 extern UDWORD			numFeatureStats;
 
 //Value is stored for easy access to this feature in destroyDroid()/destroyStruct()
-//extern UDWORD			droidFeature;
-extern UDWORD			structFeature;
 extern UDWORD			oilResFeature;
 
 /* Load the feature stats */
@@ -70,7 +69,7 @@ extern SDWORD getFeatureStatFromName(const char *pName);
 wreckage to clear*/
 extern FEATURE	* checkForWreckage(DROID *psDroid);
 
-extern SDWORD featureDamage(FEATURE *psFeature, UDWORD damage, UDWORD weaponSubClass);
+extern SDWORD featureDamage(FEATURE *psFeature, UDWORD damage, UDWORD weaponClass, UDWORD weaponSubClass, HIT_SIDE impactSide);
 
 #endif
 

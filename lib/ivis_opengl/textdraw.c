@@ -18,8 +18,10 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
+#include "lib/framework/frame.h"
 #include <stdlib.h>
 #include <string.h>
+#include "lib/framework/strnlen1.h"
 #include "lib/ivis_common/ivisdef.h"
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/rendmode.h"
@@ -30,7 +32,7 @@
 #include "lib/ivis_common/textdraw.h"
 #include "lib/ivis_common/bitimage.h"
 
-#include <GL/gl.h>
+#include <SDL_opengl.h>
 #include <GL/glc.h>
 
 static const char font_family[] = "DejaVu Sans Mono";
@@ -44,8 +46,6 @@ static float font_colour[4] = {1.f, 1.f, 1.f, 1.f};
 static GLint GLC_Context = 0;
 static GLint GLC_Font_Regular = 0;
 static GLint GLC_Font_Bold = 0;
-
-static bool anti_aliasing = true;
 
 /***************************************************************************/
 /*
@@ -78,8 +78,7 @@ static inline void iV_printFontList()
 		char prBuffer[1024];
 		snprintf(prBuffer, sizeof(prBuffer), "Font #%d : %s ", font, (const char*)glcGetFontc(font, GLC_FAMILY));
 		prBuffer[sizeof(prBuffer) - 1] = 0;
-		strncat(prBuffer, glcGetFontFace(font), sizeof(prBuffer));
-		prBuffer[sizeof(prBuffer) - 1] = 0;
+		strlcat(prBuffer, glcGetFontFace(font), sizeof(prBuffer));
 		debug(LOG_NEVER, prBuffer);
 	}
 }
@@ -87,41 +86,63 @@ static inline void iV_printFontList()
 static void iV_initializeGLC()
 {
 	if (GLC_Context)
+	{
 		return;
+	}
 
 	GLC_Context = glcGenContext();
 	if (!GLC_Context)
+	{
 		debug(LOG_ERROR, "glcGenContext() failed");
+	}
 	else
+	{
 		debug(LOG_NEVER, "glcGenContext() succesful: GLC_Context = %d", GLC_Context);
+	}
 
 	glcContext(GLC_Context);
 
 	glcDisable(GLC_AUTO_FONT);
-	glcRenderStyle(GLC_TRIANGLE);
+	glcRenderStyle(GLC_TEXTURE);
 
 	GLC_Font_Regular = glcGenFontID();
 	GLC_Font_Bold = glcGenFontID();
 
 	if (!glcNewFontFromFamily(GLC_Font_Regular, font_family))
-			debug(LOG_ERROR, "glcNewFontFromFamily(GLC_Font_Regular (%d), \"%s\") failed", GLC_Font_Regular, font_family);
-		else
-			debug(LOG_NEVER, "glcNewFontFromFamily(GLC_Font_Regular (%d), \"%s\") succesful", GLC_Font_Regular, font_family);
+	{
+		debug(LOG_ERROR, "glcNewFontFromFamily(GLC_Font_Regular (%d), \"%s\") failed", GLC_Font_Regular, font_family);
+	}
+	else
+	{
+		debug(LOG_NEVER, "glcNewFontFromFamily(GLC_Font_Regular (%d), \"%s\") succesful", GLC_Font_Regular, font_family);
+	}
 
 	if (!glcFontFace(GLC_Font_Regular, font_face_regular))
-			debug(LOG_ERROR, "glcFontFace(GLC_Font_Regular (%d), \"%s\") failed", GLC_Font_Regular, font_face_regular);
-		else
-			debug(LOG_NEVER, "glcFontFace(GLC_Font_Regular (%d), \"%s\") succesful", GLC_Font_Regular, font_face_regular);
+	{
+		debug(LOG_ERROR, "glcFontFace(GLC_Font_Regular (%d), \"%s\") failed", GLC_Font_Regular, font_face_regular);
+	}
+	else
+	{
+		debug(LOG_NEVER, "glcFontFace(GLC_Font_Regular (%d), \"%s\") succesful", GLC_Font_Regular, font_face_regular);
+	}
 
 	if (!glcNewFontFromFamily(GLC_Font_Bold, font_family))
-			debug(LOG_ERROR, "glcNewFontFromFamily(GLC_Font_Bold (%d), \"%s\") failed", GLC_Font_Bold, font_family);
-		else
-			debug(LOG_NEVER, "glcNewFontFromFamily(GLC_Font_Bold (%d), \"%s\") succesful", GLC_Font_Bold, font_family);
+	{
+		debug(LOG_ERROR, "glcNewFontFromFamily(GLC_Font_Bold (%d), \"%s\") failed", GLC_Font_Bold, font_family);
+	}
+	else
+	{
+		debug(LOG_NEVER, "glcNewFontFromFamily(GLC_Font_Bold (%d), \"%s\") succesful", GLC_Font_Bold, font_family);
+	}
 
 	if (!glcFontFace(GLC_Font_Bold, font_face_bold))
-			debug(LOG_ERROR, "glcFontFace(GLC_Font_Bold (%d), \"%s\") failed", GLC_Font_Bold, font_face_bold);
-		else
-			debug(LOG_NEVER, "glcFontFace(GLC_Font_Bold (%d), \"%s\") succesful", GLC_Font_Bold, font_face_bold);
+	{
+		debug(LOG_ERROR, "glcFontFace(GLC_Font_Bold (%d), \"%s\") failed", GLC_Font_Bold, font_face_bold);
+	}
+	else
+	{
+		debug(LOG_NEVER, "glcFontFace(GLC_Font_Bold (%d), \"%s\") succesful", GLC_Font_Bold, font_face_bold);
+	}
 
 	debug(LOG_NEVER, "finished initializing GLC");
 
@@ -142,25 +163,21 @@ void iV_TextInit()
 void iV_TextShutdown()
 {
 	if (GLC_Font_Regular)
+	{
 		glcDeleteFont(GLC_Font_Regular);
+	}
 
 	if (GLC_Font_Bold)
+	{
 		glcDeleteFont(GLC_Font_Bold);
+	}
 
 	glcContext(0);
 
 	if (GLC_Context)
+	{
 		glcDeleteContext(GLC_Context);
-}
-
-void iV_SetTextAntialias(bool enable)
-{
-	anti_aliasing = enable;
-}
-
-bool iV_TextAntialiased()
-{
-	return anti_aliasing;
+	}
 }
 
 void iV_SetFont(enum iV_fonts FontID)
@@ -185,7 +202,9 @@ static inline float getGLCResolution()
 
 	// The default resolution as used by OpenGLC is 72 dpi
 	if (resolution == 0.f)
+	{
 		return 72.f;
+	}
 
 	return resolution;
 }
@@ -252,7 +271,7 @@ unsigned int iV_GetCountedTextWidth(const char* string, size_t string_length)
 	glcMeasureCountedString(GL_FALSE, string_length, string);
 	if (!glcGetStringMetric(GLC_BOUNDS, boundingbox))
 	{
-		debug(LOG_ERROR, "iV_GetTextWidth: couldn't retrieve a bounding box for the string");
+		debug(LOG_ERROR, "iV_GetCountedTextWidth: couldn't retrieve a bounding box for the string");
 		return 0;
 	}
 
@@ -301,7 +320,7 @@ int iV_GetTextLineSize()
 
 	if (!glcGetMaxCharMetric(GLC_BOUNDS, boundingbox))
 	{
-		debug(LOG_ERROR, "iV_GetCharWidth: couldn't retrieve a bounding box for the character");
+		debug(LOG_ERROR, "iV_GetTextLineSize: couldn't retrieve a bounding box for the character");
 		return 0;
 	}
 
@@ -332,7 +351,7 @@ int iV_GetTextAboveBase(void)
 
 	if (!glcGetMaxCharMetric(GLC_BOUNDS, boundingbox))
 	{
-		debug(LOG_ERROR, "iV_GetCharWidth: couldn't retrieve a bounding box for the character");
+		debug(LOG_ERROR, "iV_GetTextAboveBase: couldn't retrieve a bounding box for the character");
 		return 0;
 	}
 
@@ -351,7 +370,7 @@ int iV_GetTextBelowBase(void)
 
 	if (!glcGetMaxCharMetric(GLC_BOUNDS, boundingbox))
 	{
-		debug(LOG_ERROR, "iV_GetCharWidth: couldn't retrieve a bounding box for the character");
+		debug(LOG_ERROR, "iV_GetTextBelowBase: couldn't retrieve a bounding box for the character");
 		return 0;
 	}
 
@@ -433,13 +452,9 @@ UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width
 
 	const char* curChar = String;
 
-//	DBPRINTF(("[%s] @(%d,%d) extentsmode=%d just=%d\n",String,x,y,ExtentsMode,Justify));
-
 	curChar = String;
 	while (*curChar != 0)
 	{
-		char* curSpaceChar;
-
 		bool GotSpace = false;
 		bool NewLine = false;
 
@@ -474,7 +489,9 @@ UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width
 
 				// If this word doesn't fit on the current line then break out
 				if (WWidth > Width)
+				{
 					break;
+				}
 
 				// If width ok then add this character to the current word.
 				FWord[i] = *curChar;
@@ -483,7 +500,9 @@ UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width
 			// Don't forget the space.
 			if (*curChar == ASCII_SPACE)
 			{
-				WWidth += iV_GetCharWidth(' ');
+				// Should be a space below, not '-', but need to work around bug in QuesoGLC
+				// which was fixed in CVS snapshot as of 2007/10/26, same day as I reported it :) - Per
+				WWidth += iV_GetCharWidth('-');
 				if (WWidth <= Width)
 				{
 					FWord[i] = ' ';
@@ -516,21 +535,29 @@ UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width
 			FWord[i] = 0;
 
 			// And add it to the output string.
-			strcat(FString, FWord);
+			strlcat(FString, FWord, sizeof(FString));
 		}
 
 
 		// Remove trailing spaces, useful when doing center alignment.
-		curSpaceChar = &FString[strlen(FString) - 1];
-		while (curSpaceChar != &FString[-1] && *curSpaceChar == ASCII_SPACE)
 		{
-			*(curSpaceChar--) = 0;
+			// Find the string length (the "minus one" part
+			// guarantees that we get the length of the string, not
+			// the buffer size required to contain it).
+			size_t len = strnlen1(FString, sizeof(FString)) - 1;
+
+			for (; len != 0; --len)
+			{
+				// As soon as we encounter a non-space character, break out
+				if (FString[len] != ASCII_SPACE)
+					break;
+
+				// Cut off the current space character from the string
+				FString[len] = '\0';
+			}
 		}
 
 		TWidth = iV_GetTextWidth(FString);
-
-
-//		DBPRINTF(("string[%s] is %d of %d pixels wide (according to DrawFormattedText)\n",FString,TWidth,Width));
 
 		// Do justify.
 		switch (Justify)
@@ -540,7 +567,6 @@ UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width
 				break;
 
 			case FTEXT_RIGHTJUSTIFY:
-
 				jx = x + Width - TWidth;
 				break;
 
@@ -552,9 +578,6 @@ UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width
 		// draw the text.
 		//iV_SetTextSize(12.f);
 		iV_DrawText(FString, jx, jy);
-
-
-//DBPRINTF(("[%s] @ %d,%d\n",FString,jx,jy));
 
 		/* callback type for resload display callback*/
 		// remember where we were..
@@ -574,7 +597,6 @@ UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width
 		ExtentsEndY = jy - iV_GetTextLineSize() + iV_GetTextBelowBase();
 
 		ExtentsStartX = x;	// Was jx, but this broke the console centre justified text background.
-//		ExtentsEndX = jx + TWidth;
 		ExtentsEndX = x + Width;
 	}
 	else if (RecordExtents == EXTENTS_END)
@@ -589,18 +611,20 @@ UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width
 
 void iV_DrawTextRotated(const char* string, float XPos, float YPos, float rotation)
 {
+	GLint matrix_mode = 0;
+
 	pie_SetTexturePage(-2);
 
-	// Enable Anti Aliasing if it's enabled
-	if (anti_aliasing)
-	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		glEnable(GL_POLYGON_SMOOTH);
-	}
+	glGetIntegerv(GL_MATRIX_MODE, &matrix_mode);
+	glMatrixMode(GL_TEXTURE);
+	glPushMatrix();
+	glLoadIdentity();
+	glMatrixMode(matrix_mode);
 
 	if (rotation != 0.f)
+	{
 		rotation = 360.f - rotation;
+	}
 
 	glTranslatef(XPos, YPos, 0.f);
 	glRotatef(180.f, 1.f, 0.f, 0.f);
@@ -613,12 +637,9 @@ void iV_DrawTextRotated(const char* string, float XPos, float YPos, float rotati
 	glcRenderString(string);
 	glFrontFace(GL_CCW);
 
-	// Turn off anti aliasing (if we enabled it above)
-	if (anti_aliasing)
-	{
-		glDisable(GL_BLEND);
-		glDisable(GL_POLYGON_SMOOTH);
-	}
+	glMatrixMode(GL_TEXTURE);
+	glPopMatrix();
+	glMatrixMode(matrix_mode);
 
 	// Reset the current model view matrix
 	glLoadIdentity();

@@ -163,14 +163,10 @@ typedef struct _droid
 	UDWORD		ECMMod;
 	UDWORD		originalBody;		//the original body points
 	UDWORD		body;				// the current body points
-	//Watermleon:armour of all sides
-	UDWORD		armour[NUM_HIT_SIDES][NUM_WEAPON_CLASS];
-//tjc	UDWORD		imdNum;
 	UWORD		numKills;
 	UWORD		turretRotation[DROID_MAXWEAPS];		// Watermelon:turretRotation info for multiple turrents :)
 	UWORD		turretPitch[DROID_MAXWEAPS];	//* Watermelon:turrentPitch info for multiple turrents :)
 	UBYTE 		NameVersion;			// Version number used for generating on-the-fly names (e.g. Viper Mk "I" would be stored as 1 - Viper Mk "X" as 10)  - copied from droid template
-	UBYTE		currRayAng;
 
 	SWORD       resistance;             //used in Electronic Warfare
 
@@ -195,8 +191,17 @@ typedef struct _droid
 	UDWORD				timeLastHit;
 	BOOL				bTargetted;
 
-	BASE_OBJECT			*psTarget[DROID_MAXWEAPS];	// Who to shoot at etc
-	BASE_STATS			*psTarStats[DROID_MAXWEAPS];	// What to build etc; only first value ever used
+	BASE_OBJECT			*psTarget;	// Order target
+	BASE_STATS			*psTarStats;	// What to build etc
+#ifdef DEBUG
+	// these are to help tracking down dangling pointers
+	char				targetFunc[MAX_EVENT_NAME_LEN];
+	int				targetLine;
+	char				actionTargetFunc[DROID_MAXWEAPS][MAX_EVENT_NAME_LEN];
+	int				actionTargetLine[DROID_MAXWEAPS];
+	char				baseFunc[MAX_EVENT_NAME_LEN];
+	int				baseLine;
+#endif
 
 	// secondary order data
 	UDWORD				secondaryOrder;

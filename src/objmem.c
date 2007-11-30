@@ -95,11 +95,19 @@ static void objmemDestroy(BASE_OBJECT *psObj)
 	{
 		case OBJ_DROID:
 			debug(LOG_MEMORY, "objmemUpdate: freeing droid at %p", psObj);
+			if (!droidCheckReferences((DROID *)psObj))
+			{
+				return;
+			}
 			droidRelease((DROID *)psObj);
 			break;
 
 		case OBJ_STRUCTURE:
 			debug(LOG_MEMORY, "objmemUpdate: freeing structure at %p", psObj);
+			if (!structureCheckReferences((STRUCTURE *)psObj))
+			{
+				return;
+			}
 			structureRelease((STRUCTURE *)psObj);
 			break;
 
@@ -414,9 +422,9 @@ void killDroid(DROID *psDel)
 	ASSERT( psDel->player < MAX_PLAYERS,
 		"killUnit: invalid player for unit" );
 
+	setDroidTarget(psDel, NULL);
 	for (i = 0; i < DROID_MAXWEAPS; i++)
 	{
-		setDroidTarget(psDel, NULL, i);
 		setDroidActionTarget(psDel, NULL, i);
 	}
 	setDroidBase(psDel, NULL);
@@ -494,12 +502,6 @@ void killStruct(STRUCTURE *psBuilding)
 		if (StructIsFactory(psBuilding))
 		{
 			FACTORY *psFactory = (FACTORY *)psBuilding->pFunctionality;
-
-			// free up factory stuff
-			if (psFactory->psFormation)
-			{
-				formationReset(psFactory->psFormation);
-			}
 
 			// remove any assembly points
 			if (psFactory->psAssemblyPoint != NULL)
@@ -976,3 +978,42 @@ static void objListIntegCheck(void)
 	}
 }
 #endif
+
+void objCount(int *droids, int *structures, int *features)
+{
+	int 		i;
+	DROID		*psDroid;
+	STRUCTURE	*psStruct;
+	FEATURE		*psFeat;
+
+	*droids = 0;
+	*structures = 0;
+	*features = 0;
+
+	for (i = 0; i < MAX_PLAYERS; i++)
+	{
+		for (psDroid = apsDroidLists[i]; psDroid; psDroid = psDroid->psNext)
+		{
+			(*droids)++;
+			if (psDroid->droidType == DROID_TRANSPORTER)
+			{
+				DROID *psTrans = psDroid->psGroup->psList;
+
+				for(psTrans = psTrans->psGrpNext; psTrans != NULL; psTrans = psTrans->psGrpNext)
+				{
+					(*droids)++;
+				}
+			}
+		}
+
+		for (psStruct = apsStructLists[i]; psStruct; psStruct = psStruct->psNext)
+		{
+			(*structures)++;
+		}
+	}
+
+	for (psFeat = apsFeatureLists[0]; psFeat; psFeat = psFeat->psNext)
+	{
+		(*features)++;
+	}
+}

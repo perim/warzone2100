@@ -1128,32 +1128,32 @@ const char *widgGetString(W_SCREEN *psScreen, UDWORD id)
 				aStringRetBuffer[0] = '\0';
 				break;
 			case WIDG_LABEL:
-				strcpy(aStringRetBuffer, ((W_LABEL *)psWidget)->aText);
+				strlcpy(aStringRetBuffer, ((W_LABEL *)psWidget)->aText, sizeof(aStringRetBuffer));
 				break;
 			case WIDG_BUTTON:
 				if (((W_BUTTON *)psWidget)->pText)
 				{
-					strcpy(aStringRetBuffer, ((W_BUTTON *)psWidget)->pText);
+					strlcpy(aStringRetBuffer, ((W_BUTTON *)psWidget)->pText, sizeof(aStringRetBuffer));
 				}
 				else
 				{
-					aStringRetBuffer[0]=0;
+					aStringRetBuffer[0] = '\0';
 				}
 				break;
 			case WIDG_EDITBOX:
-				strcpy(aStringRetBuffer, ((W_EDITBOX *)psWidget)->aText);
+				strlcpy(aStringRetBuffer, ((W_EDITBOX *)psWidget)->aText, sizeof(aStringRetBuffer));
 				break;
 			case WIDG_BARGRAPH:
 				ASSERT( FALSE, "widgGetString: Bar Graphs do not have a string" );
-				aStringRetBuffer[0]=0;
+				aStringRetBuffer[0] = '\0';
 				break;
 			case WIDG_SLIDER:
 				ASSERT( FALSE, "widgGetString: Sliders do not have a string" );
-				aStringRetBuffer[0]=0;
+				aStringRetBuffer[0] = '\0';
 				break;
 			default:
 				ASSERT( FALSE,"widgGetString: Unknown widget type" );
-				aStringRetBuffer[0]=0;
+				aStringRetBuffer[0] = '\0';
 				break;
 		}
 	}
@@ -1190,10 +1190,7 @@ void widgSetString(W_SCREEN *psScreen, UDWORD id, const char *pText)
 			break;
 
 		case WIDG_LABEL:
-			strncpy(((W_LABEL *)psWidget)->aText, pText, sizeof(((W_LABEL *)psWidget)->aText));
-
-			// Terminate the string with a NUL character
-			((W_LABEL *)psWidget)->aText[sizeof(((W_LABEL *)psWidget)->aText) - 1] = '\0';
+			strlcpy(((W_LABEL *)psWidget)->aText, pText, sizeof(((W_LABEL *)psWidget)->aText));
 			break;
 
 		case WIDG_BUTTON:

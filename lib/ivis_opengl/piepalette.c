@@ -29,9 +29,8 @@
 #define GREEN_CHROMATICITY	1
 #define BLUE_CHROMATICITY	1
 
+static void pie_SetColourDefines(void);
 
-Uint8 pal_GetNearestColour(Uint8 r, Uint8 g, Uint8 b);
-void pie_SetColourDefines(void);
 /*
 	This is how far from the end you want the drawn as the artist intended shades
 	to appear
@@ -39,10 +38,12 @@ void pie_SetColourDefines(void);
 
 #define COLOUR_BALANCE	6		// 3 from the end. (two brighter shades!)
 
-iColour*			psGamePal = NULL;
+static PIELIGHT	*psGamePal = NULL;
+static BOOL	bPaletteInitialised = FALSE;
+
 Uint8	palShades[PALETTE_SIZE * PALETTE_SHADE_LEVEL];
-BOOL	bPaletteInitialised = FALSE;
 Uint8	colours[16];
+PIELIGHT psPalette[WZCOL_MAX];
 
 
 //*************************************************************************
@@ -54,15 +55,15 @@ Uint8	colours[16];
 //*
 //******
 
-int pal_AddNewPalette(iColour *pal)
+int pal_AddNewPalette(PIELIGHT *pal)
 {
 	int i;
-	iColour *p;
+	PIELIGHT *p;
 
 	bPaletteInitialised = TRUE;
 	if (psGamePal == NULL)
 	{
-		psGamePal = (iColour*) malloc(PALETTE_SIZE * sizeof(iColour));
+		psGamePal = malloc(PALETTE_SIZE * sizeof(PIELIGHT));
 		if (psGamePal == NULL)
 		{
 			debug( LOG_ERROR, "pal_AddNewPalette - Out of memory" );
@@ -76,9 +77,7 @@ int pal_AddNewPalette(iColour *pal)
 	for (i=0; i<PALETTE_SIZE; i++)
 	{
 		//set pie palette
-		p[i].r = pal[i].r;
-		p[i].g = pal[i].g;
-		p[i].b = pal[i].b;
+		p[i].argb = pal[i].argb;
 	}
 	pie_SetColourDefines();
 
@@ -110,6 +109,58 @@ void pie_SetColourDefines(void)
 	COL_LIGHTMAGENTA	= pal_GetNearestColour( 255,  0, 255);
 	COL_YELLOW	  	= pal_GetNearestColour( 255, 255,  0);
 	COL_WHITE 		= pal_GetNearestColour( 255, 255, 255);
+
+// used to print out values from the old palette; remove with the old palette
+// #define PRINTCOL(x) debug(LOG_ERROR, "(%hhu, %hhu, %hhu)", psGamePal[x].byte.r, psGamePal[x].byte.g, psGamePal[x].byte.b);
+
+	// TODO: Read these from file so that mod-makers can change them
+	WZCOL_WHITE.byte.a = 255;
+	WZCOL_WHITE.byte.r = 255;
+	WZCOL_WHITE.byte.g = 255;
+	WZCOL_WHITE.byte.b = 255;
+
+	WZCOL_BLACK.byte.a = 255;
+	WZCOL_BLACK.byte.r = 1;
+	WZCOL_BLACK.byte.g = 1;
+	WZCOL_BLACK.byte.b = 1;
+
+	WZCOL_GREEN.byte.a = 255;
+	WZCOL_GREEN.byte.r = 0;
+	WZCOL_GREEN.byte.g = 255;
+	WZCOL_GREEN.byte.b = 0;
+
+	WZCOL_RED.byte.a = 255;
+	WZCOL_RED.byte.r = 255;
+	WZCOL_RED.byte.g = 0;
+	WZCOL_RED.byte.b = 0;
+
+	WZCOL_YELLOW.byte.a = 255;
+	WZCOL_YELLOW.byte.r = 255;
+	WZCOL_YELLOW.byte.g = 255;
+	WZCOL_YELLOW.byte.b = 0;
+
+	WZCOL_RELOAD_BAR	= WZCOL_WHITE;
+	WZCOL_RELOAD_BACKGROUND	= WZCOL_BLACK;
+	WZCOL_HEALTH_HIGH	= WZCOL_GREEN;
+	WZCOL_HEALTH_MEDIUM	= WZCOL_YELLOW;
+	WZCOL_HEALTH_LOW	= WZCOL_RED;
+	WZCOL_CURSOR		= WZCOL_WHITE;
+
+	WZCOL_MENU_BACKGROUND.byte.a	= 255;
+	WZCOL_MENU_BACKGROUND.byte.r	= 0;
+	WZCOL_MENU_BACKGROUND.byte.g	= 1;
+	WZCOL_MENU_BACKGROUND.byte.b	= 97;
+
+	WZCOL_MENU_BORDER.byte.a	= 255;
+	WZCOL_MENU_BORDER.byte.r	= 0;
+	WZCOL_MENU_BORDER.byte.g	= 21;
+	WZCOL_MENU_BORDER.byte.b	= 240;
+
+	WZCOL_MENU_LOAD_BORDER		= WZCOL_BLACK;
+	WZCOL_MENU_LOAD_BORDER.byte.r	= 133;
+
+	WZCOL_MENU_SCORES_INTERIOR	= WZCOL_BLACK;
+	WZCOL_MENU_SCORES_INTERIOR.byte.b = 33;
 }
 
 void pal_ShutDown(void)
@@ -134,9 +185,9 @@ Uint8 pal_GetNearestColour(Uint8 r, Uint8 g, Uint8 b)
 
 	for (c = 0; c < PALETTE_SIZE; c++) {
 
-		distance_r = r -  psGamePal[c].r;
-		distance_g = g -  psGamePal[c].g;
-		distance_b = b -  psGamePal[c].b;
+		distance_r = r -  psGamePal[c].byte.r;
+		distance_g = g -  psGamePal[c].byte.g;
+		distance_b = b -  psGamePal[c].byte.b;
 
 		squared_distance =  distance_r * distance_r + distance_g * distance_g + distance_b * distance_b;
 
@@ -164,9 +215,9 @@ int		numShades;
 
 	for(numColours = 0; numColours<255; numColours++)
 	{
-			redFraction =	(float)psGamePal[numColours].r /	(float) 16;
-			greenFraction = (float)psGamePal[numColours].g /	(float) 16;
-			blueFraction =	(float)psGamePal[numColours].b /	(float) 16;
+		redFraction =	(float)psGamePal[numColours].byte.r / (float) 16;
+		greenFraction = (float)psGamePal[numColours].byte.g / (float) 16;
+		blueFraction =	(float)psGamePal[numColours].byte.b / (float) 16;
 
 		for(numShades = COLOUR_BALANCE; numShades < 16+COLOUR_BALANCE; numShades++)
 		{
@@ -184,7 +235,7 @@ int		numShades;
 	}
 }
 
-iColour*	pie_GetGamePal(void)
+PIELIGHT *pie_GetGamePal(void)
 {
 	ASSERT( bPaletteInitialised,"pie_GetGamePal, palette not initialised" );
 	return 	psGamePal;

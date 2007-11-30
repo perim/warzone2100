@@ -26,8 +26,8 @@
 
 #include "lib/framework/frame.h"
 
-#include <SDL/SDL.h>
-#include <SDL/SDL_opengl.h>
+#include <SDL.h>
+#include <SDL_opengl.h>
 #include <physfs.h>
 #include <png.h>
 #include "lib/ivis_common/png_util.h"
@@ -43,23 +43,14 @@ UDWORD		screenWidth = 0;
 UDWORD		screenHeight = 0;
 UDWORD		screenDepth = 0;
 
-SDL_Surface     *screen;
-
 /* global used to indicate preferred internal OpenGL format */
 int wz_texture_compression;
 
-//backDrop
-UWORD*  pBackDropData = NULL;
-BOOL    bBackDrop = FALSE;
-BOOL    bUpload = FALSE;
-
-//fog
-SDWORD	fogColour = 0;
-
-static char screendump_filename[PATH_MAX];
-static BOOL screendump_required = FALSE;
-
-static GLuint backDropTexture = ~0;
+static SDL_Surface	*screen = NULL;
+static BOOL		bBackDrop = FALSE;
+static char		screendump_filename[PATH_MAX];
+static BOOL		screendump_required = FALSE;
+static GLuint		backDropTexture = ~0;
 
 /* Initialise the double buffered display */
 BOOL screenInitialise(
@@ -159,11 +150,28 @@ BOOL screenInitialise(
 	}
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &glval);
 	debug( LOG_TEXTURE, "Maximum texture size: %dx%d", (int)glval, (int)glval );
-	if ( glval < 512 ) // FIXME: Replace by a define that gives us the real maximum
+	if (glval < 512) // PAGE_WIDTH and PAGE_HEIGHT from src/texture.h
 	{
 		debug( LOG_ERROR, "OpenGL reports a texture size (%d) that is less than required!", (int)glval );
 		debug( LOG_ERROR, "This is either a bug in OpenGL or your graphics card is really old!" );
 		debug( LOG_ERROR, "Trying to run the game anyway..." );
+	}
+	debug(LOG_3D, "OpenGL extensions supported:");
+	if (check_extension("GL_ARB_texture_compression"))
+	{
+		debug(LOG_3D, "  * Texture compression supported.");
+	}
+	if (check_extension("GL_EXT_stencil_two_side"))
+	{
+		debug(LOG_3D, "  * Two side stencil supported.");
+	}
+	if (check_extension("GL_EXT_stencil_wrap"))
+	{
+		debug(LOG_3D, "  * Stencil wrap supported.");
+	}
+	if (check_extension("GL_EXT_texture_filter_anisotropic"))
+	{
+		debug(LOG_3D, "  * Anisotropic filtering supported.");
 	}
 
 	glViewport(0, 0, width, height);
@@ -173,7 +181,7 @@ BOOL screenInitialise(
 	glOrtho(0, width, height, 0, 1, -1);
 
 	glMatrixMode(GL_TEXTURE);
-	glScalef(1.0f/256.0f, 1.0f/256.0f, 1.0f); // FIXME Scaling texture coords to 256x256!
+	glScalef(1.0f/OLD_TEXTURE_SIZE_FIX, 1.0f/OLD_TEXTURE_SIZE_FIX, 1.0f); // FIXME Scaling texture coords to 256x256!
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -190,13 +198,8 @@ void screenShutDown(void)
 	if (screen != NULL)
 	{
 		SDL_FreeSurface(screen);
+		screen = NULL;
 	}
-}
-
-/* Return a pointer to the back buffer surface */
-void *screenGetSurface(void)
-{
-	return NULL;
 }
 
 
@@ -256,6 +259,7 @@ BOOL screen_GetBackDrop(void)
 {
 	return bBackDrop;
 }
+
 //******************************************************************
 //slight hack to display maps (or whatever) in background.
 //bitmap MUST be (BACKDROP_HACK_WIDTH * BACKDROP_HACK_HEIGHT) for now.

@@ -127,6 +127,7 @@ automake -a -c --foreign || {
   exit 1
 }
 
+
 # Chdir back to the builddir before the configure step.
 cd $BUILDDIR
 

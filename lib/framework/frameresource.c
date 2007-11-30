@@ -91,9 +91,9 @@ void resShutDown(void)
 
 
 // set the base resource directory
-void resSetBaseDir(char *pResDir)
+void resSetBaseDir(const char* pResDir)
 {
-	strncpy(aResDir, pResDir, PATH_MAX - 1);
+	strlcpy(aResDir, pResDir, sizeof(aResDir));
 }
 
 /* Parse the res file */
@@ -103,7 +103,7 @@ BOOL resLoad(const char *pResFile, SDWORD blockID,
 	char *pBuffer;
 	UDWORD	size;
 
-	strcpy(aCurrResDir, aResDir);
+	strlcpy(aCurrResDir, aResDir, sizeof(aCurrResDir));
 
 	// Note the block id number
 	resBlockID = blockID;
@@ -156,8 +156,7 @@ static RES_TYPE* resAlloc(const char *pType)
 	}
 
 	// setup the structure
-	strncpy(psT->aType, pType, RESTYPE_MAXCHAR - 1);
-	psT->aType[RESTYPE_MAXCHAR - 1] = 0;
+	strlcpy(psT->aType, pType, sizeof(psT->aType));
 
 	psT->HashedType=HashString(psT->aType);		// store a hased version for super speed !
 
@@ -241,8 +240,7 @@ const char *GetLastResourceFilename(void)
  */
 void SetLastResourceFilename(const char *pName)
 {
-	strncpy(LastResourceFilename, pName, PATH_MAX-1);
-	LastResourceFilename[PATH_MAX-1] = '\0';
+	strlcpy(LastResourceFilename, pName, sizeof(LastResourceFilename));
 }
 
 
@@ -339,20 +337,18 @@ static void FreeResourceFile(RESOURCEFILE *OldResource)
 
 static inline RES_DATA* resDataInit(const char *DebugName, UDWORD DataIDHash, void *pData, UDWORD BlockID)
 {
-	RES_DATA* psRes = malloc(sizeof(RES_DATA));
+	// Allocate memory to hold the RES_DATA structure plus the identifying string
+	RES_DATA* psRes = malloc(sizeof(RES_DATA) + strlen(DebugName) + 1);
 	if (!psRes)
 	{
 		debug(LOG_ERROR, "resDataInit: Out of memory");
 		return NULL;
 	}
 
-	psRes->aID = malloc(strlen(DebugName) + 1);
-	if (!psRes->aID)
-	{
-		debug(LOG_ERROR, "resDataInit: Out of memory");
-		return NULL;
-	}
+	// Initialize the pointer for our ID string
+	psRes->aID = (char*)(psRes + 1);
 
+	// Copy over the identifying string
 	strcpy((char*)psRes->aID, DebugName);
 
 	psRes->pData = pData;
@@ -386,8 +382,7 @@ static WZ_DECL_CONST const char* getLanguage(void)
 			return language; // Return empty string on errors
 		}
 
-		strncpy(language, localeName, sizeof(language));
-		language[sizeof(language) - 1] = '\0';  // be sure to have a 0-terminated string
+		strlcpy(language, localeName, sizeof(language));
 
 		delim = strchr(language, '_');
 
@@ -411,6 +406,7 @@ static WZ_DECL_CONST const char* getLanguage(void)
  * check if given file exists in a locale dependend subdir
  * if so, modify given fileName to hold the locale dep. file,
  * else do not change given fileName
+ * \param fileName[out] must be at least MAX_PATH bytes large
  */
 static void makeLocaleFile(char fileName[])  // given string must have MAX_PATH size
 {
@@ -428,7 +424,7 @@ static void makeLocaleFile(char fileName[])  // given string must have MAX_PATH 
 
 	if ( PHYSFS_exists(localeFile) )
 	{
-		strncpy(fileName, localeFile, sizeof(localeFile));
+		strlcpy(fileName, localeFile, sizeof(localeFile));
 		debug(LOG_WZ, "Found translated file: %s", fileName);
 	}
 #endif // ENABLE_NLS
@@ -484,8 +480,8 @@ BOOL resLoadFile(const char *pType, const char *pFile)
 		debug(LOG_ERROR, "resLoadFile: Filename too long!! %s%s", aCurrResDir, pFile);
 		return FALSE;
 	}
-	strcpy(aFileName, aCurrResDir);
-	strcat(aFileName, pFile);
+	strlcpy(aFileName, aCurrResDir, sizeof(aFileName));
+	strlcat(aFileName, pFile, sizeof(aFileName));
 
 	makeLocaleFile(aFileName);  // check for translated file
 

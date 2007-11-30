@@ -38,6 +38,8 @@
 #include "parser.h"
 #include "lib/framework/listmacs.h"
 
+#define INT_SCALE       1000
+
 /***************************************************************************/
 /* structs */
 
@@ -45,12 +47,7 @@
 /***************************************************************************/
 /* global variables */
 
-ANIMGLOBALS	g_animGlobals;
-
-/***************************************************************************/
-/* local functions */
-
-//static UINT	anim_HashFunction( int iKey1, int iKey2 );
+static ANIMGLOBALS	g_animGlobals;
 
 /***************************************************************************/
 /*
@@ -316,7 +313,7 @@ anim_SetVals( char szFileName[], UWORD uwAnimID )
 
 	/* set anim vals */
 	psAnim->uwID = uwAnimID;
-	strcpy( psAnim->szFileName, szFileName );
+	strlcpy(psAnim->szFileName, szFileName, sizeof(psAnim->szFileName));
 }
 
 /***************************************************************************/

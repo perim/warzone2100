@@ -109,7 +109,7 @@ extern BOOL loadStructureStrengthModifiers(const char *pStrengthModData, UDWORD 
 extern BOOL	structureStatsShutDown(void);
 
 extern SDWORD structureDamage(STRUCTURE *psStructure, UDWORD damage,
-                            UDWORD weaponClass, UDWORD weaponSubClass);
+                            UDWORD weaponClass, UDWORD weaponSubClass, HIT_SIDE impactSide);
 
 /* Set the type of droid for a factory to build */
 extern BOOL structSetManufacture(STRUCTURE *psStruct, DROID_TEMPLATE *psTempl,
@@ -251,7 +251,7 @@ Gens if any are available*/
 extern void releasePowerGen(STRUCTURE *psRelease);
 
 /* count the droids assigned to a structure (only sence by sensor towers and headquarters) */
-extern SDWORD countAssignedDroids(STRUCTURE *psStructure);
+extern unsigned int countAssignedDroids(STRUCTURE *psStructure);
 
 //print some info at the top of the screen dependant on the structure
 extern void printStructureInfo(STRUCTURE *psStructure);
@@ -399,10 +399,18 @@ extern BOOL	ptInStructure(STRUCTURE *psStruct, UDWORD x, UDWORD y);
 selected - returns TRUE if valid*/
 extern BOOL lasSatStructSelected(STRUCTURE *psStruct);
 
-static inline void setStructureTarget(STRUCTURE *psBuilding, BASE_OBJECT *psNewTarget, UWORD idx)
+BOOL structureCheckReferences(STRUCTURE *psVictimStruct);
+
+#define setStructureTarget(_psBuilding, _psNewTarget, _idx) _setStructureTarget(_psBuilding, _psNewTarget, _idx, __LINE__, __FUNCTION__)
+static inline void _setStructureTarget(STRUCTURE *psBuilding, BASE_OBJECT *psNewTarget, UWORD idx, int line, const char *func)
 {
 	assert(idx < STRUCT_MAXWEAPS);
 	psBuilding->psTarget[idx] = psNewTarget;
+	ASSERT(psNewTarget == NULL || !psNewTarget->died, "setStructureTarget set dead target");
+#ifdef DEBUG
+	psBuilding->targetLine[idx] = line;
+	strlcpy(psBuilding->targetFunc[idx], func, MAX_EVENT_NAME_LEN);
+#endif
 }
 
 #define CHECK_STRUCTURE(object) \

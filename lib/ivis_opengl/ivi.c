@@ -26,14 +26,12 @@
 void iV_Reset()
 {
 	_TEX_INDEX = 0;
-	iV_TextInit(); // Initialise the IVIS font module.
 }
-
 
 void iV_ShutDown(void)
 {
 	pie_ShutDown();
 	pie_TexShutDown();
 	iV_TextShutdown();
-	debug(LOG_3D, "iVi[ShutDown] = successful\n");
+	debug(LOG_3D, "iVi[ShutDown] = successful");
 }

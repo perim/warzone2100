@@ -44,7 +44,6 @@
 #include "hci.h"
 #include "lib/sound/sound.h"
 #include "ingameop.h"
-#include "player.h"
 #include "lib/gamelib/gtime.h"
 #include "miscimd.h"
 #include "effects.h"
@@ -67,7 +66,6 @@
 #include "intelmap.h"
 #include "loadsave.h"
 #include "game.h"
-#include "text.h"
 // FIXME Direct iVis implementation inlcude!
 #include "lib/ivis_opengl/screen.h"
 #include "multijoin.h"
@@ -155,9 +153,13 @@ GAMECODE gameLoop(void)
 	clearMode = CLEAR_FOG;
 	if (!war_GetFog())
 	{
+		PIELIGHT black;
+
 		// set the fog color to black (RGB)
 		// the fogbox will get this color
-		pie_SetFogColour(0x000000);
+		black.argb = 0;
+		black.byte.a = 255;
+		pie_SetFogColour(black);
 	}
 	if(getDrawShadows())
 	{
@@ -242,12 +244,6 @@ GAMECODE gameLoop(void)
 			// update the command droids
 			cmdDroidUpdate();
 
-			/* Update the AI for a player */
-			for(i = 0; i < MAX_PLAYERS; i++)
-			{
-				playerUpdate(i);
-			}
-
 			if(getDrivingStatus())
 			{
 				driveUpdate();
@@ -270,7 +266,6 @@ GAMECODE gameLoop(void)
 				powerCheck(TRUE, (UBYTE)i);
 
 				//set the flag for each player
-				//setPowerGenExists(FALSE, i);
 				setHQExists(FALSE, i);
 				setSatUplinkExists(FALSE, i);
 
@@ -467,7 +462,7 @@ GAMECODE gameLoop(void)
 			if(bRequestLoad)
 			{
 				loopMissionState = LMS_LOADGAME;
-				strcpy(saveGameName, sRequestResult);
+				strlcpy(saveGameName, sRequestResult, sizeof(saveGameName));
 			}
 			else
 			{

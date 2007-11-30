@@ -27,7 +27,6 @@
 #include "lib/framework/strres.h"
 #include "lib/widget/widget.h"
 #include "hci.h"
-#include "text.h"
 #include "intimage.h"
 #include "intdisplay.h"
 #include "init.h"		// for gameheap
@@ -205,7 +204,7 @@ BOOL startLimitScreen(void)
 	sFormInit.tabVertOffset = (OBJ_TABHEIGHT/2);			//(DES_TAB_HEIGHT/2)+2;
 	sFormInit.tabMajorThickness = OBJ_TABHEIGHT;
 	sFormInit.pFormDisplay = intDisplayObjectForm;
-	sFormInit.pUserData = (void*)&StandardTab;
+	sFormInit.pUserData = &StandardTab;
 	sFormInit.pTabDisplay = intDisplayTab;
 	for (i=0; i< sFormInit.numMajor; i++)
 	{
@@ -230,7 +229,7 @@ BOOL startLimitScreen(void)
 		if(useStruct(numButtons,i))
 		{
 			numButtons++;
-			sButInit.pUserData= (void*) i;
+			sButInit.UserData= i;
 
 			widgAddForm(psWScreen, &sButInit);
 			sButInit.id	++;
@@ -269,7 +268,7 @@ void runLimitScreen(void)
 	// sliders
 	if((id > IDLIMITS_ENTRIES_START)  && (id< IDLIMITS_ENTRIES_END))
 	{
-		statid = (UDWORD) widgGetFromID(psWScreen,id-1)->pUserData ;
+		statid = widgGetFromID(psWScreen,id-1)->UserData ;
 		if(statid)
 		{
 			asStructLimits[0][statid].limit = (UBYTE) ((W_SLIDER*)(widgGetFromID(psWScreen,id)))->pos;
@@ -415,7 +414,7 @@ static void displayStructureBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset
 	UDWORD	y = yOffset+psWidget->y;
 	UDWORD	w = psWidget->width;
 	UDWORD	h = psWidget->height;
-	STRUCTURE_STATS	*stat = asStructureStats+(UDWORD)psWidget->pUserData;
+	STRUCTURE_STATS	*stat = asStructureStats + psWidget->UserData;
 	Vector3i Rotation, Position;
 	char	str[3];
 

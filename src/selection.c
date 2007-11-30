@@ -32,7 +32,6 @@
 #include "basedef.h"
 #include "droiddef.h"
 #include "statsdef.h"
-#include "text.h"
 #include "geometry.h"
 #include "console.h"
 #include "selection.h"
@@ -42,13 +41,6 @@
 #include "display3d.h"
 #include "warcam.h"
 #include "display.h"
-
-// ---------------------------------------------------------------------
-// EXTERNALLY REFERENCED FUNCTIONS
-UDWORD	selDroidSelection		( UDWORD	player, SELECTION_CLASS droidClass,
-									SELECTIONTYPE droidType, BOOL bOnScreen );
-UDWORD	selDroidDeselect		( UDWORD player );
-UDWORD	selNumSelected			( UDWORD player );
 
 // ---------------------------------------------------------------------
 // STATIC SUPPORT FUNCTIONS
@@ -65,9 +57,9 @@ UDWORD	selNameSelect			( char *droidName, UDWORD player, BOOL bOnScreen );
 	It is also possible to request whether the units be onscreen or not.
 */
 
-DROID	*psOldRD = NULL;	// pointer to last selected repair unit
-DROID	*psOldNS = NULL;
-STRUCTURE	*psOldStruct = NULL;
+static DROID	*psOldRD = NULL;	// pointer to last selected repair unit
+static DROID	*psOldNS = NULL;
+static STRUCTURE *psOldStruct = NULL;
 
 UDWORD	selDroidSelection( UDWORD	player, SELECTION_CLASS droidClass,
 						  SELECTIONTYPE droidType, BOOL bOnScreen )
@@ -121,9 +113,9 @@ char	selInfo[255];
 	}
 
 	/* Send back the return value */
-	sprintf(selInfo,_("%d Unit(s) Selected"),retVal);
-	addConsoleMessage(selInfo,RIGHT_JUSTIFY);
-	return(retVal);
+	snprintf(selInfo, sizeof(selInfo), ngettext("%u unit selected", "%u units selected", retVal), retVal);
+	addConsoleMessage(selInfo, RIGHT_JUSTIFY);
+	return retVal;
 }
 
 // ---------------------------------------------------------------------
@@ -742,10 +734,3 @@ void selCommander(SDWORD n)
 		}
 	}
 }
-
-// ---------------------------------------------------------------------
-
-
-
-
-

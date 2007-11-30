@@ -75,9 +75,7 @@ typedef enum _droid_order
 	DORDER_RECOVER,				// pick up an artifact
 	DORDER_LEAVEMAP,			// 36 - vtol flying off the map
 	DORDER_RTR_SPECIFIED,		// return to repair at a specified repair center
-	DORDER_ATTACK_M,			// 38 - attack with multiple weapons
-	DORDER_ATTACKTARGET_M,		// 39 - attack multiple targets
-	DORDER_CIRCLE,				// circles target location and engage
+	DORDER_CIRCLE = 40,				// circles target location and engage
 } DROID_ORDER;
 
 // secondary orders for droids
@@ -165,7 +163,7 @@ extern void orderDroidLoc(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWORD y)
 extern BOOL orderStateLoc(DROID *psDroid, DROID_ORDER order, UDWORD *pX, UDWORD *pY);
 
 /* Give a droid an order with an object target */
-extern void orderDroidObj(DROID *psDroid, DROID_ORDER order, DROID_OACTION_INFO *psObj);
+extern void orderDroidObj(DROID *psDroid, DROID_ORDER order, BASE_OBJECT *psObj);
 
 /* Get the state of a droid order with an object */
 extern BOOL orderStateObj(DROID *psDroid, DROID_ORDER order, BASE_OBJECT **ppsObj);
@@ -247,9 +245,6 @@ extern BOOL getFactoryState(STRUCTURE *psStruct, SECONDARY_ORDER sec, SECONDARY_
 
 //lasSat structure can select a target
 extern void orderStructureObj(UDWORD player, BASE_OBJECT *psObj);
-
-// clear all targets (but not action targets)
-void clearDroidTargets(DROID *psDroid);
 
 static inline void setDroidOrderTarget(DROID *psDroid, void *psNewObject, SDWORD idx)
 {

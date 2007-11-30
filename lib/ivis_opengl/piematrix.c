@@ -28,7 +28,7 @@
 
 #include "lib/framework/frame.h"
 
-#include <SDL/SDL_opengl.h>
+#include <SDL_opengl.h>
 
 #include "lib/ivis_common/piedef.h"
 #include "lib/ivis_common/pieclip.h"
@@ -508,5 +508,5 @@ void pie_MatInit(void)
 	pie_MatReset();
 
 
-	debug(LOG_3D, "geo[_geo_setup] = setup successful\n");
+	debug(LOG_3D, "geo[_geo_setup] = setup successful");
 }

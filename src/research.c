@@ -32,7 +32,6 @@
 #include "lib/gamelib/gtime.h"
 #include "research.h"
 #include "message.h"
-#include "text.h"
 #include "lib/sound/sound.h"
 #include "lib/sound/audio_id.h"
 #include "lib/script/script.h"
@@ -802,13 +801,13 @@ BOOL loadResearchArtefacts(const char *pArteData, UDWORD bufferSize, UDWORD list
 		switch (listNumber)
 		{
 			case RED_LIST:
-				*(pResearch->pRedArtefacts + pResearch->storeCount) = pArtefact;
+				pResearch->pRedArtefacts[pResearch->storeCount] = pArtefact;
 				//keep tab on how many we have loaded in
 				numResearchArteRed++;
 				maxArtefacts = pResearch->numRedArtefacts;
 				break;
 			case RES_LIST:
-				*(pResearch->pArtefactResults + pResearch->storeCount) = pArtefact ;
+				pResearch->pArtefactResults[pResearch->storeCount] = pArtefact ;
 				//keep tab on how many we have loaded in
 				numResearchArteRes++;
 				maxArtefacts = pResearch->numArteResults;
@@ -831,7 +830,7 @@ BOOL loadResearchArtefacts(const char *pArteData, UDWORD bufferSize, UDWORD list
 				sscanf(pArteData, "%[^','],%[^','],%*d", ArteName, TypeName);
 				if (!strcmp(ArteName, "0"))
 				{
-					*(pResearch->pReplacedArtefacts + pResearch->storeCount) =  NULL;
+					pResearch->pReplacedArtefacts[pResearch->storeCount] =  NULL;
 				}
 				else
 				{
@@ -852,7 +851,7 @@ BOOL loadResearchArtefacts(const char *pArteData, UDWORD bufferSize, UDWORD list
 						return FALSE;
 					}
 					//ArtefactResearch found - alloc the artefact to the current Research topic
-					*(pResearch->pReplacedArtefacts + pResearch->storeCount) = pArtefact;
+					pResearch->pReplacedArtefacts[pResearch->storeCount] = pArtefact;
 					numResearchArteRep++;
 				}
 				break;
