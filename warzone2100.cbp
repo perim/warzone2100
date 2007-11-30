@@ -102,7 +102,7 @@
 					<Add library="dbghelp" />
 					<Add library="winmm" />
 					<Add library="wsock32" />
-					<Add directory="$(#boost)" />
+					<Add directory="$(#boost.lib)" />
 					<Add directory="$(#warzone_devpkg.lib)" />
 				</Linker>
 				<ExtraCommands>
@@ -124,6 +124,7 @@
 					<Add option='-DPACKAGE=\&quot;warzone2100\&quot;' />
 					<Add option="-DWIN32" />
 					<Add option="-DYY_STATIC" />
+					<Add directory="$(#boost)" />
 					<Add directory="$(#warzone_devpkg.include)" />
 					<Add directory="$(#warzone_devpkg.include)/SDL" />
 				</Compiler>
@@ -139,6 +140,7 @@
 					<Add library="dbghelp" />
 					<Add library="winmm" />
 					<Add library="wsock32" />
+					<Add directory="$(#boost.lib)" />
 					<Add directory="$(#warzone_devpkg.lib)" />
 					<Add option="-s" />
 				</Linker>
