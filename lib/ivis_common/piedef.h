@@ -124,13 +124,12 @@ typedef union  {PIELIGHTBYTES byte; UDWORD argb;} PIELIGHT;
 typedef struct
 {
 	Vector3i pos;
-	unsigned int u, v;
+	float u, v;
 	PIELIGHT light, specular;
 	Vector3i screen; //! Screenspace tile coordinates
 	Vector3i water; //! Screenspace water coordinates
 	int water_height; //! Worldspace water height
 	PIELIGHT wlight; //! Special water lighting
-	UBYTE drawInfo; //! Draw this tile?
 	UBYTE bWater; //! Is it a watertile?
 } TERRAIN_VERTEX;
 typedef struct {float x, y, z, u, v; PIELIGHT light, specular;} TERRAIN_VERTEXF;
@@ -155,7 +154,10 @@ typedef struct {
 extern void pie_Draw3DShape(iIMDShape *shape, int frame, int team, UDWORD colour, UDWORD specular, int pieFlag, int pieData);
 extern void pie_DrawImage(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style);
 
-void pie_DrawTerrainTriangle(const TERRAIN_VERTEX *aVrts, float offset);
+void pie_DrawTerrainInit(void);
+void pie_DrawTerrainDone(int mapx, int mapy);
+void pie_DrawTerrainTriangle(int index, const TERRAIN_VERTEX *aVrts);
+void pie_DrawWaterTriangle(const TERRAIN_VERTEX *aVrts);
 
 extern void pie_GetResetCounts(unsigned int* pPieCount, unsigned int* pTileCount, unsigned int* pPolyCount, unsigned int* pStateCount);
 

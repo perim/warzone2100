@@ -34,23 +34,10 @@
 #define VISIBLE_XTILES 64
 #define VISIBLE_YTILES 64
 
-#define MIN_TILE_X		(VISIBLE_XTILES/4)
-#define MAX_TILE_X		((3*VISIBLE_XTILES)/4)
-
-#define MIN_TILE_Y		(VISIBLE_YTILES/4)
-#define MAX_TILE_Y		((3*VISIBLE_YTILES)/4)
-
-
 #define LAND_XGRD	(VISIBLE_XTILES + 1)
 #define LAND_YGRD	(VISIBLE_YTILES + 1)
 #define MAXDISTANCE	(4500)
-#define MINDISTANCE	(200)
+#define MINDISTANCE	(1500)
 #define START_DISTANCE	(2500)
-
-
-#define NUM_TILES	100		//5 pages of 16 tiles.
-
-#define BOX_PULSE_SIZE	10
-extern UBYTE	boxPulseColours[BOX_PULSE_SIZE];
 
 #endif

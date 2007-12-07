@@ -65,7 +65,10 @@ VIAddVersionKey "ProductVersion"	"${PACKAGE_VERSION}"
   !define MUI_ABORTWARNING
 
   ; Settings for MUI_PAGE_LICENSE
-  !define MUI_LICENSEPAGE_RADIOBUTTONS
+  ; Purposefully commented out, as we do _not_ want to trouble users with an
+  ; additional mouse click (while otherwise pressing "return" continuously
+  ; would satisfy)
+;  !define MUI_LICENSEPAGE_RADIOBUTTONS
 
   ;Start Menu Folder Page Configuration (for MUI_PAGE_STARTMENU)
   !define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKLM"
@@ -79,7 +82,7 @@ VIAddVersionKey "ProductVersion"	"${PACKAGE_VERSION}"
   !define MUI_FINISHPAGE_RUN_TEXT $(TEXT_RunWarzone)
   !define MUI_FINISHPAGE_RUN_FUNCTION "LaunchLink"
   !define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
-  !define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\Readme.txt"
+  !define MUI_FINISHPAGE_SHOWREADME $(TEXT_Readme)
 
 ;--------------------------------
 ;Pages
@@ -148,7 +151,12 @@ Section $(TEXT_SecBase) SecBase
   File "/oname=ChangeLog.txt" "..\ChangeLog"
   File "/oname=Authors.txt" "..\AUTHORS"
   File "/oname=License.txt" "..\COPYING"
-  File "/oname=Readme.txt" "..\README"
+  File "/oname=Readme.en.txt" "..\doc\Readme.en"
+  File "/oname=Readme.de.txt" "..\doc\Readme.de"
+;  File "/oname=Readme.nl.txt" "..\doc\Readme.nl"
+  File "/oname=Readme.en.html" "..\doc\Readme.en.xhtml"
+  File "/oname=Readme.de.html" "..\doc\Readme.de.xhtml"
+;  File "/oname=Readme.nl.html" "..\doc\Readme.nl.xhtml"
 
 
   ;Store installation folder
@@ -325,6 +333,10 @@ FunctionEnd
   LangString TEXT_RunWarzone ${LANG_GERMAN} "Starte ${PACKAGE_NAME}"
 
 
+  LangString TEXT_Readme ${LANG_ENGLISH} "$INSTDIR\Readme.en.html"
+  ;LangString TEXT_Readme ${LANG_DUTCH}   "$INSTDIR\Readme.nl.html"
+  LangString TEXT_Readme ${LANG_GERMAN}  "$INSTDIR\Readme.de.html"
+
 
   ;Assign language strings to sections
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
@@ -358,7 +370,13 @@ Section "Uninstall"
   Delete "$INSTDIR\warzone.wz"
   Delete "$INSTDIR\mp.wz"
 
-  Delete "$INSTDIR\Readme.txt"
+  Delete "$INSTDIR\Readme.en.txt"
+  Delete "$INSTDIR\Readme.de.txt"
+  Delete "$INSTDIR\Readme.nl.txt"
+  Delete "$INSTDIR\Readme.en.html"
+  Delete "$INSTDIR\Readme.de.html"
+  Delete "$INSTDIR\Readme.nl.html"
+
   Delete "$INSTDIR\License.txt"
   Delete "$INSTDIR\Authors.txt"
   Delete "$INSTDIR\ChangeLog.txt"

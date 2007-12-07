@@ -168,7 +168,6 @@ extern UWORD	RadarZoomLevel;
 // reset the input state
 void resetInput(void);
 
-BOOL CheckObjInScrollLimits(UWORD *xPos,UWORD *zPos);
 BOOL CheckInScrollLimits(SDWORD *xPos,SDWORD *zPos);
 extern BOOL CheckScrollLimits(void);
 extern BOOL	rotActive;
@@ -192,7 +191,7 @@ extern BOOL	getRotActive( void );
 extern SDWORD	getDesiredPitch( void );
 extern void	setDesiredPitch(SDWORD pitch);
 
-#define MAX_PLAYER_X_ANGLE	(-7)
+#define MAX_PLAYER_X_ANGLE	(-14)
 #define MIN_PLAYER_X_ANGLE	(-50)
 
 #define	HIDDEN_FRONTEND_WIDTH	(640)

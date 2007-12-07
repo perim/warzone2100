@@ -24,10 +24,10 @@
 extern void	kf_HalveHeights( void );
 extern void	kf_DebugDroidInfo( void );
 extern void	kf_BuildInfo( void );
+extern void	kf_ToggleFPS(void);		//FPS counter NOT same as kf_Framerate! -Q
 extern void	kf_FrameRate( void );
 extern void	kf_ShowNumObjects( void );
 extern void	kf_ToggleRadar( void );
-extern void	kf_ToggleOutline( void );
 extern void	kf_TogglePower( void );
 extern void	kf_RecalcLighting( void );
 extern void	kf_RaiseGamma( void );
@@ -171,7 +171,6 @@ extern void	kf_JumpToSensorUnits( void );
 extern void kf_AddHelpBlip( void );				//Add a beacon
 
 extern void	kf_JumpToUnassignedUnits( void );
-extern void	kf_ScriptTest( void );
 extern void	kf_TriggerShockWave( void );
 extern void	kf_ToggleVisibility( void );
 extern void	kf_RadarZoomIn( void );

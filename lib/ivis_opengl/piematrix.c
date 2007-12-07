@@ -226,7 +226,8 @@ void pie_MatEnd(void)
 }
 
 
-void pie_MATTRANS(int x, int y, int z) {
+void pie_MATTRANS(int x, int y, int z)
+{
 	GLfloat matrix[16];
 
 	psMatrix->j = x<<FP12_SHIFT;
@@ -241,7 +242,8 @@ void pie_MATTRANS(int x, int y, int z) {
 	glMultMatrixf(matrix);
 }
 
-void pie_TRANSLATE(int x, int y, int z) {
+void pie_TRANSLATE(int x, int y, int z)
+{
 	psMatrix->j += ((x) * psMatrix->a + (y) * psMatrix->d + (z) * psMatrix->g);
 	psMatrix->k += ((x) * psMatrix->b + (y) * psMatrix->e + (z) * psMatrix->h);
 	psMatrix->l += ((x) * psMatrix->c + (y) * psMatrix->f + (z) * psMatrix->i);
@@ -286,9 +288,7 @@ void pie_MatScale( UDWORD percent )
 //******
 
 void pie_MatRotY(int y)
-
 {
-// printf("pie_MatRotY %i\n", y);
 	int t;
 	int cra, sra;
 
@@ -319,9 +319,7 @@ void pie_MatRotY(int y)
 //******
 
 void pie_MatRotZ(int z)
-
 {
-// printf("pie_MatRotZ %i\n", z);
 	int t;
 	int cra, sra;
 
@@ -353,7 +351,6 @@ void pie_MatRotZ(int z)
 
 void pie_MatRotX(int x)
 {
-// printf("pie_MatRotX %i\n", x);
 	int cra, sra;
 	int t;
 
@@ -416,7 +413,8 @@ Sint32 pie_RotateProject(const Vector3i *v3d, Vector2i *v2d)
 
 //*************************************************************************
 
-void pie_PerspectiveBegin(void) {
+void pie_PerspectiveBegin(void)
+{
 	const float width = pie_GetVideoBufferWidth();
 	const float height = pie_GetVideoBufferHeight();
 	const float xangle = width/6;
@@ -431,19 +429,39 @@ void pie_PerspectiveBegin(void) {
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void pie_PerspectiveEnd(void) {
+void pie_PerspectiveEnd(void)
+{
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0, pie_GetVideoBufferWidth(), pie_GetVideoBufferHeight(), 0, 1, -1);
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void pie_Begin3DScene(void) {
+
+void pie_TranslateTextureBegin(const Vector2f offset)
+{
+	glMatrixMode(GL_TEXTURE);
+	glTranslatef(offset.x, offset.y, 0.0f);
+	glMatrixMode(GL_MODELVIEW);
+}
+
+void pie_TranslateTextureEnd(void)
+{
+	glMatrixMode(GL_TEXTURE);
+	glLoadIdentity();
+	glScalef(1.0f/OLD_TEXTURE_SIZE_FIX, 1.0f/OLD_TEXTURE_SIZE_FIX, 1.0f); // FIXME Scaling texture coords to 256x256!
+	glMatrixMode(GL_MODELVIEW);
+}
+
+
+void pie_Begin3DScene(void)
+{
 	glDepthRange(0.1, 1);
 	drawing_interface = FALSE;
 }
 
-void pie_BeginInterface(void) {
+void pie_BeginInterface(void)
+{
 	glDepthRange(0, 0.1);
 	drawing_interface = TRUE;
 }
@@ -451,7 +469,6 @@ void pie_BeginInterface(void) {
 //*************************************************************************
 
 void pie_SetGeometricOffset(int x, int y)
-
 {
 	psRendSurface->xcentre = x;
 	psRendSurface->ycentre = y;
@@ -506,7 +523,4 @@ void pie_MatInit(void)
 	// init matrix/quat stack
 
 	pie_MatReset();
-
-
-	debug(LOG_3D, "geo[_geo_setup] = setup successful");
 }

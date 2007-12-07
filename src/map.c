@@ -26,14 +26,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <physfs.h>
-
-/* map line printf's */
 #include <assert.h>
 #include "lib/framework/frame.h"
-#include "lib/framework/frameint.h"
 #include "lib/framework/tagfile.h"
-#include "map.h"
-#include "lib/gamelib/gtime.h"
 #include "lib/ivis_common/tex.h"
 #include "hci.h"
 #include "projectile.h"
@@ -46,11 +41,10 @@
 #include "research.h"
 #include "mission.h"
 #include "formationdef.h"
-
 #include "gateway.h"
 #include "wrappers.h"
 
-#include "lib/framework/fractions.h"
+#include "map.h"
 
 //scroll min and max values
 SDWORD		scrollMinX, scrollMaxX, scrollMinY, scrollMaxY;
@@ -118,10 +112,6 @@ typedef struct _zonemap_save_header {
 #define DIR_STEEP			1  /* set when abs(dy) > abs(dx) */
 #define DIR_NEGY			2  /* set whey dy < 0 */
 
-/* Defines to access the map for aaLine */
-#define PIXADDR(x,y)		mapTile(x,y)
-#define PIXINC(dx,dy)		((dy * mapWidth) + dx)
-
 /* The size and contents of the map */
 UDWORD	mapWidth = 0, mapHeight = 0;
 MAPTILE	*psMapTiles = NULL;
@@ -132,21 +122,10 @@ TILE_COORD			*aMapLinePoints = NULL;
 /* Look up table that returns the terrain type of a given tile texture */
 UBYTE terrainTypes[MAX_TILE_TEXTURES];
 
-/* pointer to a load map function - depends on version */
-BOOL (*pLoadMapFunc)(char *pFileData, UDWORD fileSize);
-
-
-MAPTILE *GetCurrentMap(void)	// returns a pointer to the current loaded map data
-{
-	return(psMapTiles);
-}
-
 /* Create a new map of a specified size */
 BOOL mapNew(UDWORD width, UDWORD height)
 {
-//	UDWORD	numPoints;
 	UDWORD	i;
-	MAPTILE	*psTile;
 
 	/* See if a map has already been allocated */
 	if (psMapTiles != NULL)
@@ -156,10 +135,10 @@ BOOL mapNew(UDWORD width, UDWORD height)
 		freeAllStructs();
 		freeAllFeatures();
 		proj_FreeAllProjectiles();
-//		free(psMapTiles);
 		free(aMapLinePoints);
-		psMapTiles = NULL;
 		aMapLinePoints = NULL;
+		free(psMapTiles);
+		psMapTiles = NULL;
 	}
 
 	if (width*height > MAP_MAXAREA)
@@ -169,14 +148,8 @@ BOOL mapNew(UDWORD width, UDWORD height)
 		return FALSE;
 	}
 
-	psMapTiles = (MAPTILE *)malloc(sizeof(MAPTILE) * width*height);
-	if (psMapTiles == NULL)
-	{
-		debug( LOG_ERROR, "mapNew: Out of memory" );
-		abort();
-		return FALSE;
-	}
-	memset(psMapTiles, 0, sizeof(MAPTILE) * width*height);
+	psMapTiles = calloc(width * height, sizeof(MAPTILE));
+	ASSERT(psMapTiles != NULL, "mapNew: Out of memory")
 
 	mapWidth = width;
 	mapHeight = height;
@@ -186,29 +159,7 @@ BOOL mapNew(UDWORD width, UDWORD height)
 		terrainTypes[i] = TER_SANDYBRUSH;
 	}
 
-	/* Allocate a buffer for the LOS routines points */
-
-/*	numPoints = sqrtf(mapWidth * mapWidth +  mapHeight * mapHeight) + 1;
-
-	aMapLinePoints = (TILE_COORD *)malloc(sizeof(TILE_COORD) * numPoints);
-	if (!aMapLinePoints)
-	{
-		DBERROR(("Out of memory"));
-		return FALSE;
-	}
-	maxLinePoints = numPoints;
-*/
 	intSetMapPos(mapWidth * TILE_UNITS/2, mapHeight * TILE_UNITS/2);
-
-	/* Initialise the map terrain type */
-	psTile = psMapTiles;
-	/*
-	for(i=mapWidth * mapHeight; i>0; i--)
-	{
-		psTile->type = TER_GRASS;
-		psTile++;
-	}
-	*/
 
 	environReset();
 
@@ -216,6 +167,7 @@ BOOL mapNew(UDWORD width, UDWORD height)
 	scrollMinX = scrollMinY = 0;
 	scrollMaxX = mapWidth;
 	scrollMaxY = mapHeight;
+
 	return TRUE;
 }
 
@@ -239,17 +191,13 @@ static BOOL mapLoadV3(char *pFileData, UDWORD fileSize)
 		endian_uword(&psTileData->texture);
 
 		psMapTiles[i].texture = psTileData->texture;
-//		psMapTiles[i].type = psTileData->type;
 		psMapTiles[i].height = psTileData->height;
-		// Changed line - alex
-		//end of change - alex
 		for (j=0; j<MAX_PLAYERS; j++)
 		{
 			psMapTiles[i].tileVisBits =(UBYTE)(( (psMapTiles[i].tileVisBits) &~ (UBYTE)(1<<j) ));
 		}
 		psTileData = (MAP_SAVETILEV2 *)(((UBYTE *)psTileData) + SAVE_TILE_SIZE);
 	}
-
 
 	psGateHeader = (GATEWAY_SAVEHEADER*)psTileData;
 	psGate = (GATEWAY_SAVE*)(psGateHeader+1);
@@ -269,16 +217,6 @@ static BOOL mapLoadV3(char *pFileData, UDWORD fileSize)
 		psGate++;
 	}
 
-//	if (!gwProcessMap())
-//	{
-//		return FALSE;
-//	}
-//
-//	if ((psGateways != NULL) &&
-//		!gwGenerateLinkGates())
-//	{
-//		return FALSE;
-//	}
 	psZoneHeader = (ZONEMAP_SAVEHEADER*)psGate;
 
 	/* ZONEMAP_SAVEHEADER */
@@ -382,7 +320,6 @@ BOOL mapLoad(char *pFileData, UDWORD fileSize)
 {
 	UDWORD				width,height;
 	MAP_SAVEHEADER		*psHeader;
-	BOOL				mapAlloc;
 
 	/* Check the file type */
 	psHeader = (MAP_SAVEHEADER *)pFileData;
@@ -400,7 +337,6 @@ BOOL mapLoad(char *pFileData, UDWORD fileSize)
 	endian_udword(&psHeader->width);
 	endian_udword(&psHeader->height);
 
-	/* Check the file version - deal with version 1 files */
 	/* Check the file version */
 	if (psHeader->version <= VERSION_9)
 	{
@@ -408,11 +344,7 @@ BOOL mapLoad(char *pFileData, UDWORD fileSize)
 		free(pFileData);
 		return FALSE;
 	}
-	else if (psHeader->version <= CURRENT_VERSION_NUM)
-	{
-		pLoadMapFunc = mapLoadV3;	// Includes gateway data for routing.
-	}
-	else
+	else if (psHeader->version > CURRENT_VERSION_NUM)
 	{
 		ASSERT(FALSE, "MapLoad: undefined save format version %d", psHeader->version);
 		free(pFileData);
@@ -431,65 +363,17 @@ BOOL mapLoad(char *pFileData, UDWORD fileSize)
 	}
 
 	/* See if this is the first time a map has been loaded */
-	mapAlloc = TRUE;
-	if (psMapTiles != NULL)
-	{
-		if (mapWidth == width && mapHeight == height)
-		{
-			mapAlloc = FALSE;
-		}
-		else
-		{
-			/* Clear all the objects off the map and free up the map memory */
-			freeAllDroids();
-			freeAllStructs();
-			freeAllFeatures();
-			proj_FreeAllProjectiles();
-//			free(psMapTiles);
-			free(aMapLinePoints);
-			psMapTiles = NULL;
-			aMapLinePoints = NULL;
-		}
-	}
+	ASSERT(psMapTiles == NULL, "Map has not been cleared before calling mapLoad()!");
 
 	/* Allocate the memory for the map */
-	if (mapAlloc)
-	{
-		psMapTiles = (MAPTILE *)malloc(sizeof(MAPTILE) * width*height);
-		if (psMapTiles == NULL)
-		{
-			debug( LOG_ERROR, "mapLoad: Out of memory" );
-			abort();
-			return FALSE;
-		}
-		memset(psMapTiles, 0, sizeof(MAPTILE) * width*height);
+	psMapTiles = calloc(width * height, sizeof(MAPTILE));
+	ASSERT(psMapTiles != NULL, "mapLoad: Out of memory" );
 
-		mapWidth = width;
-		mapHeight = height;
-
-/*		a terrain type is loaded when necessary - so don't reset
-		for (i=0; i<MAX_TILE_TEXTURES; i++)
-		{
-			terrainTypes[i] = TER_SANDYBRUSH;
-		}*/
-
-		/* Allocate a buffer for the LOS routines points */
-
-/*		numPoints = sqrtf(mapWidth * mapWidth +  mapHeight * mapHeight) + 1;
-
-		aMapLinePoints = (TILE_COORD *)malloc(sizeof(TILE_COORD) * numPoints);
-		if (!aMapLinePoints)
-		{
-			DBERROR(("Out of memory"));
-			return FALSE;
-		}
-		maxLinePoints = numPoints;
-*/
-//		intSetMapPos(mapWidth * TILE_UNITS/2, mapHeight * TILE_UNITS/2);
-	}
+	mapWidth = width;
+	mapHeight = height;
 
 	//load in the map data itself
-	pLoadMapFunc(pFileData, fileSize);
+	mapLoadV3(pFileData, fileSize);
 
 	environReset();
 
@@ -930,7 +814,7 @@ BOOL mapSaveTagged(char *pFileName)
 	tagWriteLeave(0x05);
 
 	tagWriteEnter(0x0a, mapWidth * mapHeight); // tile group
-	psTile = GetCurrentMap();
+	psTile = psMapTiles;
 	for (i = 0, x = 0, y = 0; i < mapWidth * mapHeight; i++)
 	{
 		tagWrite(0x01, terrainType(psTile));
@@ -939,7 +823,6 @@ BOOL mapSaveTagged(char *pFileName)
 		tagWrite(0x04, psTile->texture & TILE_XFLIP);
 		tagWrite(0x05, psTile->texture & TILE_YFLIP);
 		tagWrite(0x06, TILE_IS_NOTBLOCKING(psTile));
-		tagWrite(0x07, !TILE_DRAW(psTile));
 		tagWrite(0x08, psTile->height); // should multiply by ELEVATION_SCALE? If so, use map_TileHeight()
 
 		psTile++;

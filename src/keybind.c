@@ -302,7 +302,11 @@ void	kf_SetToughUnitsLevel( void )
 	}
 }
 // --------------------------------------------------------------------------
-
+void kf_ToggleFPS(void) //This shows *just FPS* and is always visable (when active) -Q.
+{
+	showFPS ^= 1;
+	CONPRINTF(ConsoleString, (ConsoleString, "FPS display is %s", showFPS ? "Enabled" : "Disabled"));
+}
 /* Writes out the frame rate */
 void	kf_FrameRate( void )
 {
@@ -342,22 +346,6 @@ void	kf_ToggleRadar( void )
 {
   		radarOnScreen = !radarOnScreen;
 //		addConsoleMessage("Radar display toggled",DEFAULT_JUSTIFY);
-}
-
-// --------------------------------------------------------------------------
-
-/* Toggles the outline around the map tiles */
-void	kf_ToggleOutline( void )
-{
-		if(terrainOutline)
-		{
-			terrainOutline = FALSE;
-		}
-		else
-		{
-			terrainOutline = TRUE;
-		}
-		addConsoleMessage("Tile outline display toggled",DEFAULT_JUSTIFY);
 }
 
 // --------------------------------------------------------------------------
@@ -1099,14 +1087,12 @@ if(bMultiPlayer && (NetPlay.bComms != 0) )
 		godMode = FALSE;
 //		setDifficultyLevel(getDifficultyLevel());
 		CONPRINTF(ConsoleString,(ConsoleString,"God Mode OFF"));
-		demoProcessTilesOut();
 	}
 	else
 	{
 		godMode = TRUE;
 //		setModifiers(FRACTCONST(1000,100),FRACTCONST(100,1000));
 		CONPRINTF(ConsoleString,(ConsoleString,"God Mode ON"));
-		demoProcessTilesIn();
 	}
 
 }
@@ -2234,20 +2220,7 @@ BOOL	bFound;
 		intObjectSelected((BASE_OBJECT*)psGotOne);
 	}
 }
-// --------------------------------------------------------------------------
-void kf_ScriptTest( void )
-{
-	char	*pBuffer;
-	UDWORD	size;
 
-	eventSaveState(1,&pBuffer, &size);
-
-	eventReset();
-
-	eventLoadState(pBuffer, size, TRUE);
-
-	free(pBuffer);
-}
 // --------------------------------------------------------------------------
 void kf_TriggerShockWave( void )
 {

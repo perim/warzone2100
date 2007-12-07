@@ -40,6 +40,7 @@ typedef enum
 	BLOCKING_RUBBLE_TILE = 67 //! You cannot drive over these
 } TILE_ID;
 
+extern int showFPS;
 
 extern void	setViewAngle(SDWORD angle);
 extern UDWORD getViewDistance(void);
@@ -87,7 +88,6 @@ extern BOOL init3DView(void);
 extern void initViewPosition(void);
 extern iView player;
 extern UDWORD distance;
-extern UDWORD terrainOutline;
 extern UDWORD xOffset,yOffset;
 extern BOOL selectAttempt;
 extern BOOL draggingTile;

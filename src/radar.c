@@ -42,6 +42,7 @@
 #include "display.h"
 #include "mission.h"
 #include "multiplay.h"
+#include "texture.h"
 
 #define HIT_NOTIFICATION	(GAME_TICKS_PER_SEC*2)
 
@@ -80,7 +81,7 @@ static UDWORD		flashColours[CAMPAIGNS][MAX_PLAYERS] =
 {165,165,165,165,255,165,165,165},
 };
 
-static UBYTE		tileColours[NUM_TILES];
+static UBYTE		tileColours[MAX_TILES];
 static UBYTE		*radarBuffer;
 static UBYTE		heightMapColors[255];		//precalculated colors for heightmap mode
 
@@ -854,7 +855,7 @@ static void drawViewingWindow( UDWORD x, UDWORD y, UDWORD boxSizeH, UDWORD boxSi
 	UDWORD	shortX,longX,yDrop,yDropVar;
 	SDWORD	dif = getDistanceAdjust();
 	SDWORD	dif2 = getLengthAdjust();
-	UDWORD	colour = 0;
+	PIELIGHT colour;
 	UDWORD	camNumber;
 
 	shortX = ((visibleTiles.x/4)-(dif/6)) * boxSizeH;
@@ -883,14 +884,23 @@ static void drawViewingWindow( UDWORD x, UDWORD y, UDWORD boxSizeH, UDWORD boxSi
 	switch(camNumber)
 	{
 	case 1:
-		colour = 0x3fffffff;	//white
-		break;
 	case 2:
-		colour = 0x3fffffff;	//white
+		// white
+		colour.byte.r = UBYTE_MAX;
+		colour.byte.g = UBYTE_MAX;
+		colour.byte.b = UBYTE_MAX;
+		colour.byte.a = 0x3f;
 		break;
 	case 3:
-		colour = 0x3f3fff3f;	//green?
+		// greenish
+		colour.byte.r = 0x3f;
+		colour.byte.a = 0x3f;
+		colour.byte.g = UBYTE_MAX;
+		colour.byte.b = 0x3f;
 	default:
+		// black
+		colour.argb = 0;
+		colour.byte.a = 0x3f;
 		break;
 
 	}
