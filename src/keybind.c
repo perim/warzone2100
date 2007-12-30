@@ -125,6 +125,25 @@ void	kfsf_SetSelectedDroidsState( SECONDARY_ORDER sec, SECONDARY_STATE State );
 	Alex McLean, Pumpkin Studios, EIDOS Interactive.
 */
 
+/** A function to determine wether we're running a multiplayer game, not just a
+ *  single player campaign or a skirmish game.
+ *  \return false if this is a skirmish or single player game, true if it is a
+ *          multiplayer game.
+ */
+static bool runningMultiplayer(void)
+{
+	// NOTE: may want to only allow this for DEBUG builds?? -- Buginator
+	if (!bMultiPlayer || !NetPlay.bComms)
+		return false;
+
+	return true;
+}
+
+static void noMPCheatMsg(void)
+{
+	addConsoleMessage(_("Sorry, that cheat is disabled in multiplayer games."), DEFAULT_JUSTIFY);
+}
+
 // --------------------------------------------------------------------------
 void	kf_ToggleMissionTimer( void )
 {
@@ -146,9 +165,12 @@ void	kf_NoFaults( void )
 //===================================================
 void kf_ToggleSensorDisplay( void )
 {
-	if(rangeOnScreen) addConsoleMessage("Fine, sensor display is OFF!",LEFT_JUSTIFY);	//added this message... Yeah, its lame. :)
-	else	addConsoleMessage("Lets us see what you see!",LEFT_JUSTIFY);			//added this message... Yeah, its lame. :)
-	rangeOnScreen =~rangeOnScreen;							//toggle...  HMm  -Q 5-10-05
+	rangeOnScreen = !rangeOnScreen;
+
+	if (rangeOnScreen)
+		addConsoleMessage(_("Lets us see what you see!"), LEFT_JUSTIFY);        //added this message... Yeah, its lame. :)
+	else
+		addConsoleMessage(_("Fine, sensor display is off!"), LEFT_JUSTIFY);     //added this message... Yeah, its lame. :)
 }
 //===================================================
 /* Halves all the heights of the map tiles */
@@ -238,80 +260,117 @@ void	kf_ToggleConsoleDrop( void )
 // --------------------------------------------------------------------------
 void	kf_SetKillerLevel( void )
 {
-	if(!bMultiPlayer || (NetPlay.bComms == 0))
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
+	if (runningMultiplayer())
 	{
-		setDifficultyLevel(DL_KILLER);
-		addConsoleMessage("Hard as nails!!!",LEFT_JUSTIFY);
+		noMPCheatMsg();
+		return;
 	}
+
+	setDifficultyLevel(DL_KILLER);
+	addConsoleMessage(_("Hard as nails!!!"), LEFT_JUSTIFY);
 }
 // --------------------------------------------------------------------------
 void	kf_SetEasyLevel( void )
 {
-	if(!bMultiPlayer|| (NetPlay.bComms == 0))
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
+	if (runningMultiplayer())
 	{
-		setDifficultyLevel(DL_EASY);
-		addConsoleMessage("Takings thing easy!",LEFT_JUSTIFY);
+		noMPCheatMsg();
+		return;
 	}
+
+	setDifficultyLevel(DL_EASY);
+	addConsoleMessage(_("Takings thing easy!"), LEFT_JUSTIFY);
 }
 
 // --------------------------------------------------------------------------
 void	kf_UpThePower( void )
 {
-	if(!bMultiPlayer|| (NetPlay.bComms == 0))
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
+	if (runningMultiplayer())
 	{
-		asPower[selectedPlayer]->currentPower+=1000;
-		addConsoleMessage("1000 big ones!!!",LEFT_JUSTIFY);
+		noMPCheatMsg();
+		return;
 	}
+
+	asPower[selectedPlayer]->currentPower+=1000;
+	addConsoleMessage(_("1000 big ones!!!"), LEFT_JUSTIFY);
 }
 
 // --------------------------------------------------------------------------
 void	kf_MaxPower( void )
 {
-	if(!bMultiPlayer|| (NetPlay.bComms == 0))
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
+	if (runningMultiplayer())
 	{
-		asPower[selectedPlayer]->currentPower = SDWORD_MAX / 2;
-		addConsoleMessage("Power overwhelming",LEFT_JUSTIFY);
+		noMPCheatMsg();
+		return;
 	}
+
+	asPower[selectedPlayer]->currentPower = SDWORD_MAX / 2;
+	addConsoleMessage(_("Power overwhelming"), LEFT_JUSTIFY);
 }
 
 // --------------------------------------------------------------------------
 void	kf_SetNormalLevel( void )
 {
-	if(!bMultiPlayer|| (NetPlay.bComms == 0))
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
+	if (runningMultiplayer())
 	{
-		setDifficultyLevel(DL_NORMAL);
-		addConsoleMessage("Back to normality!",LEFT_JUSTIFY);
+		noMPCheatMsg();
+		return;
 	}
+
+	setDifficultyLevel(DL_NORMAL);
+	addConsoleMessage(_("Back to normality!"), LEFT_JUSTIFY);
 }
 // --------------------------------------------------------------------------
 void	kf_SetHardLevel( void )
 {
-	if(!bMultiPlayer|| (NetPlay.bComms == 0))
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
+	if (runningMultiplayer())
 	{
-		setDifficultyLevel(DL_HARD);
-		addConsoleMessage("Getting tricky!",LEFT_JUSTIFY);
+		noMPCheatMsg();
+		return;
 	}
+
+	setDifficultyLevel(DL_HARD);
+	addConsoleMessage(_("Getting tricky!"), LEFT_JUSTIFY);
 }
 // --------------------------------------------------------------------------
 void	kf_SetToughUnitsLevel( void )
 {
-	if(!bMultiPlayer|| (NetPlay.bComms == 0))
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
+	if (runningMultiplayer())
 	{
-		setDifficultyLevel(DL_TOUGH);
-		addConsoleMessage("Twice as nice!",LEFT_JUSTIFY);
+		noMPCheatMsg();
+		return;
 	}
+
+	setDifficultyLevel(DL_TOUGH);
+	addConsoleMessage(_("Twice as nice!"), LEFT_JUSTIFY);
 }
 // --------------------------------------------------------------------------
 void kf_ToggleFPS(void) //This shows *just FPS* and is always visable (when active) -Q.
 {
-	showFPS ^= 1;
+	// Toggle the boolean value of showFPS
+	showFPS = !showFPS;
+
 	CONPRINTF(ConsoleString, (ConsoleString, "FPS display is %s", showFPS ? "Enabled" : "Disabled"));
+}
+void kf_ToggleSamples(void) //Displays number of sound sample in the sound queues & lists.
+{
+	// Toggle the boolean value of showFPS
+	showSAMPLES = !showSAMPLES;
+
+	CONPRINTF(ConsoleString, (ConsoleString, "Sound Samples displayed is %s", showSAMPLES ? "Enabled" : "Disabled"));
 }
 /* Writes out the frame rate */
 void	kf_FrameRate( void )
 {
 	CONPRINTF(ConsoleString,(ConsoleString,"FPS %d; FPS-Limit: %d; PIEs %d; polys %d; Terr. polys %d; States %d", frameGetAverageRate(), getFramerateLimit(), loopPieCount, loopPolyCount, loopTileCount, loopStateChanges));
-	if (bMultiPlayer) {
+	if (runningMultiplayer()) {
 			CONPRINTF(ConsoleString,(ConsoleString,
 						"NETWORK:  Bytes: s-%d r-%d  Packets: s-%d r-%d",
 						NETgetBytesSent(),
@@ -353,24 +412,25 @@ void	kf_ToggleRadar( void )
 /* Toggles infinite power on/off */
 void	kf_TogglePower( void )
 {
-
 #ifndef DEBUG
-if(bMultiPlayer)
-{
-	return;
-}
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
+	if (runningMultiplayer())
+	{
+		noMPCheatMsg();
+		return;
+	}
 #endif
 
-		powerCalculated = !powerCalculated;
-		if (powerCalculated)
-		{
-			addConsoleMessage("Infinite power disabled",DEFAULT_JUSTIFY);
-			powerCalc(TRUE);
-		}
-		else
-		{
-			addConsoleMessage("Infinite power enabled",DEFAULT_JUSTIFY);
-		}
+	powerCalculated = !powerCalculated;
+	if (powerCalculated)
+	{
+		addConsoleMessage(_("Infinite power disabled"), DEFAULT_JUSTIFY);
+		powerCalc(TRUE);
+	}
+	else
+	{
+		addConsoleMessage(_("Infinite power enabled"), DEFAULT_JUSTIFY);
+	}
 }
 
 // --------------------------------------------------------------------------
@@ -415,13 +475,15 @@ void	kf_ScreenDump( void )
 void	kf_AllAvailable( void )
 {
 #ifndef DEBUG
-if(bMultiPlayer && (NetPlay.bComms != 0) )
-{
-	return;
-}
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
+	if (runningMultiplayer())
+	{
+		noMPCheatMsg();
+		return;
+	}
 #endif
-		addConsoleMessage("All items made available",DEFAULT_JUSTIFY);
-		makeAllAvailable();
+	addConsoleMessage(_("All items made available"), DEFAULT_JUSTIFY);
+	makeAllAvailable();
 }
 
 // --------------------------------------------------------------------------
@@ -512,13 +574,13 @@ void	kf_ToggleFog( void )
 			fogEnabled = FALSE;
 			pie_SetFogStatus(FALSE);
 			pie_EnableFog(fogEnabled);
-			addConsoleMessage("Fog Off", DEFAULT_JUSTIFY);
+			addConsoleMessage(_("Fog off"), DEFAULT_JUSTIFY);
 		}
 		else
 		{
 			fogEnabled = TRUE;
 			pie_EnableFog(fogEnabled);
-			addConsoleMessage("Fog On", DEFAULT_JUSTIFY);
+			addConsoleMessage(_("Fog on"), DEFAULT_JUSTIFY);
 		}
 }
 
@@ -587,13 +649,10 @@ void	kf_SystemClose( void )
 /* Zooms out from display */
 void	kf_ZoomOut( void )
 {
-float	fraction;
-float	zoomInterval;
-
-	fraction = MAKEFRACT(frameTime2)/GAME_TICKS_PER_SEC;
-	zoomInterval = fraction * MAP_ZOOM_RATE;
-	distance += MAKEINT(zoomInterval);
-	if(distance>MAXDISTANCE)
+	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
+	float zoomInterval = fraction * (float)MAP_ZOOM_RATE;
+	distance += zoomInterval;
+	if(distance > MAXDISTANCE)
 	{
 		distance = MAXDISTANCE;
 	}
@@ -634,14 +693,11 @@ void	kf_RadarZoomOut( void )
 /* Zooms in the map */
 void	kf_ZoomIn( void )
 {
-float	fraction;
-float	zoomInterval;
+	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
+	float zoomInterval = fraction * (float)MAP_ZOOM_RATE;
+	distance -= zoomInterval;
 
-	fraction = MAKEFRACT(frameTime2)/GAME_TICKS_PER_SEC;
-	zoomInterval = fraction * MAP_ZOOM_RATE;
-	distance -= MAKEINT(zoomInterval);
-
-	if( distance< MINDISTANCE)
+	if (distance < MINDISTANCE)
 	{
 		distance = MINDISTANCE;
 	}
@@ -697,27 +753,21 @@ void	kf_ExpandScreen( void )
 /* Spins the world round left */
 void	kf_RotateLeft( void )
 {
-float	fraction;
-float	rotAmount;
-
-	fraction = MAKEFRACT(frameTime2)/GAME_TICKS_PER_SEC;
-	rotAmount = fraction * MAP_SPIN_RATE;
-	player.r.y += MAKEINT(rotAmount);
+	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
+	float rotAmount = fraction * (float)MAP_SPIN_RATE;
+	player.r.y += rotAmount;
 }
 
 // --------------------------------------------------------------------------
 /* Spins the world right */
 void	kf_RotateRight( void )
 {
-float	fraction;
-float	rotAmount;
-
-	fraction = MAKEFRACT(frameTime2)/GAME_TICKS_PER_SEC;
-	rotAmount = fraction * MAP_SPIN_RATE;
-	player.r.y -= MAKEINT(rotAmount);
-	if(player.r.y<0)
+	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
+	float rotAmount = fraction * (float)MAP_SPIN_RATE;
+	player.r.y -= rotAmount;
+	if (player.r.y < 0)
 	{
-		player.r.y+= DEG(360);
+		player.r.y += DEG(360);
 	}
 }
 
@@ -725,16 +775,13 @@ float	rotAmount;
 /* Pitches camera back */
 void	kf_PitchBack( void )
 {
-float	fraction;
-float	pitchAmount;
-
 //#ifdef ALEXM
 //SDWORD	pitch;
 //SDWORD	angConcern;
 //#endif
 
-	fraction = MAKEFRACT(frameTime2)/GAME_TICKS_PER_SEC;
-	pitchAmount = fraction * MAP_PITCH_RATE;
+	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
+	float pitchAmount = fraction * (float)MAP_PITCH_RATE;
 
 //#ifdef ALEXM
 //	pitch = getSuggestedPitch();
@@ -744,7 +791,7 @@ float	pitchAmount;
 //	{
 //#endif
 
-	player.r.x+= MAKEINT(pitchAmount);
+	player.r.x += pitchAmount;
 
 //#ifdef ALEXM
 //	}
@@ -766,22 +813,19 @@ float	pitchAmount;
 /* Pitches camera foward */
 void	kf_PitchForward( void )
 {
-float	fraction;
-float	pitchAmount;
-
-	fraction = MAKEFRACT(frameTime2)/GAME_TICKS_PER_SEC;
-	pitchAmount = fraction * MAP_PITCH_RATE;
-	player.r.x-= MAKEINT(pitchAmount);
+	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
+	float pitchAmount = fraction * (float)MAP_PITCH_RATE;
+	player.r.x -= pitchAmount;
 //#ifdef ALEXM
 //	if(getDebugMappingStatus() == FALSE)
 //#endif
 //	{
-	if(player.r.x <DEG(360+MIN_PLAYER_X_ANGLE))
+	if (player.r.x < DEG(360 + MIN_PLAYER_X_ANGLE))
 	{
-		player.r.x = DEG(360+MIN_PLAYER_X_ANGLE);
+		player.r.x = DEG(360 + MIN_PLAYER_X_ANGLE);
 	}
 //	}
-	setDesiredPitch(player.r.x/DEG_1);
+	setDesiredPitch(player.r.x / DEG_1);
 }
 
 // --------------------------------------------------------------------------
@@ -806,10 +850,13 @@ void	kf_SelectPlayer( void )
     UDWORD	playerNumber, prevPlayer;
 
 #ifndef DEBUG
-if(bMultiPlayer && (NetPlay.bComms != 0) )
-{
-	return;
-}
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP
+	// cheating which could even result in undefined behaviour)
+	if (runningMultiplayer())
+	{
+		noMPCheatMsg();
+		return;
+	}
 #endif
 
     //store the current player
@@ -830,7 +877,6 @@ if(bMultiPlayer && (NetPlay.bComms != 0) )
     {
         changeProductionPlayer((UBYTE)selectedPlayer);
     }
-
 }
 // --------------------------------------------------------------------------
 
@@ -927,12 +973,13 @@ void	kf_addInGameOptions( void )
 /* Tell the scripts to start a mission*/
 void	kf_AddMissionOffWorld( void )
 {
-
 #ifndef DEBUG
-if(bMultiPlayer)
-{
-	return;
-}
+	// Bail out if we're running a _true_ multiplayer game
+	if (runningMultiplayer())
+	{
+		noMPCheatMsg();
+		return;
+	}
 #endif
 
 	game_SetValidityKey(VALIDITYKEY_CTRL_M);
@@ -942,12 +989,13 @@ if(bMultiPlayer)
 /* Tell the scripts to end a mission*/
 void	kf_EndMissionOffWorld( void )
 {
-
 #ifndef DEBUG
-if(bMultiPlayer)
-{
-	return;
-}
+	// Bail out if we're running a _true_ multiplayer game
+	if (runningMultiplayer())
+	{
+		noMPCheatMsg();
+		return;
+	}
 #endif
 
 	eventFireCallbackTrigger((TRIGGER_TYPE)CALL_MISSION_END);
@@ -956,12 +1004,13 @@ if(bMultiPlayer)
 /* Initialise the player power levels*/
 void	kf_NewPlayerPower( void )
 {
-
 #ifndef DEBUG
-if(bMultiPlayer)
-{
-	return;
-}
+	// Bail out if we're running a _true_ multiplayer game
+	if (runningMultiplayer())
+	{
+		noMPCheatMsg();
+		return;
+	}
 #endif
 
 	newGameInitPower();
@@ -971,12 +1020,10 @@ if(bMultiPlayer)
 // Display multiplayer guff.
 void	kf_addMultiMenu(void)
 {
-
-	if(bMultiPlayer)
+	if (bMultiPlayer)
 	{
 		intAddMultiMenu();
 	}
-
 }
 
 // --------------------------------------------------------------------------
@@ -1041,9 +1088,11 @@ void	kf_TogglePowerBar( void )
 void	kf_ToggleDebugMappings( void )
 {
 #ifndef DEBUG
-	// Prevent cheating in multiplayer when not compiled in debug mode
-	if (bMultiPlayer && (NetPlay.bComms != 0))
+	// Prevent cheating in multiplayer when not compiled in debug mode by
+	// bailing out if we're running a _true_ multiplayer game
+	if (runningMultiplayer())
 	{
+		noMPCheatMsg();
 		return;
 	}
 #endif
@@ -1073,14 +1122,14 @@ void	kf_ToggleDebugMappings( void )
 
 void	kf_ToggleGodMode( void )
 {
-
 #ifndef DEBUG
-if(bMultiPlayer && (NetPlay.bComms != 0) )
-{
-	return;
-}
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
+	if (runningMultiplayer())
+	{
+		noMPCheatMsg();
+		return;
+	}
 #endif
-
 
 	if(godMode)
 	{
@@ -1091,10 +1140,9 @@ if(bMultiPlayer && (NetPlay.bComms != 0) )
 	else
 	{
 		godMode = TRUE;
-//		setModifiers(FRACTCONST(1000,100),FRACTCONST(100,1000));
+//		setModifiers(1000.f / 100.f,100.f / 1000.f);
 		CONPRINTF(ConsoleString,(ConsoleString,"God Mode ON"));
 	}
-
 }
 // --------------------------------------------------------------------------
 /* Aligns the view to north - some people can't handle the world spinning */
@@ -1111,13 +1159,12 @@ void	kf_SeekNorth( void )
 // --------------------------------------------------------------------------
 void	kf_TogglePauseMode( void )
 {
-
-
-	if(bMultiPlayer && (NetPlay.bComms != 0) )
+	// Bail out if we're running a _true_ multiplayer game (which cannot be paused)
+	if (runningMultiplayer())
 	{
+		noMPCheatMsg();
 		return;
 	}
-
 
 	/* Is the game running? */
 	if(gamePaused() == FALSE)
@@ -1127,13 +1174,13 @@ void	kf_TogglePauseMode( void )
 		setConsolePause(TRUE);
 		setScriptPause(TRUE);
 		setAudioPause(TRUE);
-		
+
 		// If cursor trapping is enabled allow the cursor to leave the window
 		if (war_GetTrapCursor())
 		{
 			SDL_WM_GrabInput(SDL_GRAB_OFF);
 		}
-		
+
 		/* And stop the clock */
 		gameTimeStop();
 		addConsoleMessage(_("PAUSED"),CENTRE_JUSTIFY);
@@ -1146,13 +1193,13 @@ void	kf_TogglePauseMode( void )
 		setConsolePause(FALSE);
 		setScriptPause(FALSE);
 		setAudioPause(FALSE);
-		
+
 		// Re-enable cursor trapping if it is enabled
 		if (war_GetTrapCursor())
 		{
 			SDL_WM_GrabInput(SDL_GRAB_ON);
 		}
-				
+
 		/* And start the clock again */
 		gameTimeStart();
 	}
@@ -1206,14 +1253,7 @@ void	kf_FinishResearch( void )
 void	kf_ToggleEnergyBars( void )
 {
 	toggleEnergyBars();
-	CONPRINTF(ConsoleString,(ConsoleString, _("Energy bars display toggled") ));
-}
-
-// --------------------------------------------------------------------------
-void	kf_ToggleReloadBars( void )
-{
-	toggleReloadBarDisplay();
-	CONPRINTF(ConsoleString,(ConsoleString, _("Energy bars display toggled") ));
+	addConsoleMessage(_("Energy bars display toggled"), LEFT_JUSTIFY);
 }
 
 // --------------------------------------------------------------------------
@@ -1231,7 +1271,7 @@ void	kf_ToggleDemoMode( void )
 		flushConsoleMessages();
 		setConsolePermanence(FALSE,TRUE);
 		permitNewConsoleMessages(TRUE);
-		addConsoleMessage("Demo Mode OFF - Returning to normal game mode",LEFT_JUSTIFY);
+		addConsoleMessage(_("Demo mode off - Returning to normal game mode"), LEFT_JUSTIFY);
 		if(getWarCamStatus())
 		{
 			camToggleStatus();
@@ -1268,12 +1308,12 @@ SDWORD	xJump,yJump;
 	psStruct = getRExtractor(psOldRE);
 	if(psStruct)
 	{
-		xJump = (psStruct->x - ((visibleTiles.x/2)*TILE_UNITS));
-		yJump = (psStruct->y - ((visibleTiles.y/2)*TILE_UNITS));
+		xJump = (psStruct->pos.x - ((visibleTiles.x/2)*TILE_UNITS));
+		yJump = (psStruct->pos.y - ((visibleTiles.y/2)*TILE_UNITS));
 		player.p.x = xJump;
 		player.p.z = yJump;
 		player.r.y = 0; // face north
-		setViewPos(map_coord(psStruct->x), map_coord(psStruct->y), TRUE);
+		setViewPos(map_coord(psStruct->pos.x), map_coord(psStruct->pos.y), TRUE);
 		psOldRE = psStruct;
 	}
 	else
@@ -1334,13 +1374,12 @@ void	kf_ToggleOverlays( void )
 
 void	kf_SensorDisplayOn( void )
 {
-//	debugToggleSensorDisplay();
-	startSensorDisplay();
+	bDisplaySensorRange = TRUE;
 }
 
 void	kf_SensorDisplayOff( void )
 {
-	stopSensorDisplay();
+	bDisplaySensorRange = FALSE;
 }
 
 
@@ -1498,19 +1537,19 @@ void	kf_ToggleWeather( void )
 	if(atmosGetWeatherType() == WT_NONE)
 	{
 		atmosSetWeatherType(WT_SNOWING);
-		addConsoleMessage("Oh, the weather outside is frightful... SNOW",LEFT_JUSTIFY);
+		addConsoleMessage(_("Oh, the weather outside is frightful... SNOW"), LEFT_JUSTIFY);
 
 	}
 	else if(atmosGetWeatherType() == WT_SNOWING)
 	{
 		atmosSetWeatherType(WT_RAINING);
-		addConsoleMessage("Singing in the rain, I'm singing in the rain... RAIN",LEFT_JUSTIFY);
+		addConsoleMessage(_("Singing in the rain, I'm singing in the rain... RAIN"), LEFT_JUSTIFY);
 	}
 	else
 	{
 		atmosInitSystem();
 		atmosSetWeatherType(WT_NONE);
-		addConsoleMessage("Forecast : Clear skies for all areas... NO WEATHER",LEFT_JUSTIFY);
+		addConsoleMessage(_("Forecast : Clear skies for all areas... NO WEATHER"), LEFT_JUSTIFY);
 	}
 }
 
@@ -1675,9 +1714,13 @@ void kf_SendTextMessage(void)
 			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_CONSOLE);
 
 
-			if(bMultiPlayer && NetPlay.bComms)
+			if (runningMultiplayer())
 			{
 				sendTextMessage(sTextToSend,FALSE);
+				if (getDebugMappingStatus())
+				{
+					attemptCheatCode(sTextToSend);
+				}
 			}
 			else
 			{
@@ -2120,7 +2163,7 @@ DROID	*psOther;
 	if(found)
 	{
 //		 getBlockHeightDirToEdgeOfGrid(UDWORD x, UDWORD y, UBYTE direction, UDWORD *height, UDWORD *dist)
-   //		getBlockHeightDirToEdgeOfGrid(psOther->x,psOther->y,psOther->direction,&height,&dist);
+   //		getBlockHeightDirToEdgeOfGrid(psOther->pos.x,psOther->pos.y,psOther->direction,&height,&dist);
 //		getBlockHeightDirToEdgeOfGrid(mouseTileX*TILE_UNITS,mouseTileY*TILE_UNITS,getTestAngle(),&height,&dist);
 	}
 }
@@ -2146,8 +2189,8 @@ UDWORD		xJump = 0, yJump = 0;
 		if(psStruct->pStructureType->type == REF_HQ)
 		{
 			bGotHQ = TRUE;
-			xJump = (psStruct->x - ((visibleTiles.x/2)*TILE_UNITS));
-			yJump = (psStruct->y - ((visibleTiles.y/2)*TILE_UNITS));
+			xJump = (psStruct->pos.x - ((visibleTiles.x/2)*TILE_UNITS));
+			yJump = (psStruct->pos.y - ((visibleTiles.y/2)*TILE_UNITS));
 		}
 	}
 
@@ -2174,9 +2217,10 @@ UDWORD		xJump = 0, yJump = 0;
 
 void kf_ToggleFormationSpeedLimiting( void )
 {
-
-	if(bMultiPlayer)
+	// Bail out if we're running a _true_ multiplayer game
+	if (runningMultiplayer())
 	{
+		noMPCheatMsg();
 		return;
 	}
 
@@ -2273,81 +2317,104 @@ void	kf_ToggleShadows( void )
 // --------------------------------------------------------------------------
 
 float available_speed[] = {
-	FRACTCONST(1, 8),
-	FRACTCONST(1, 4),
-	FRACTCONST(1, 2),
-	FRACTCONST(3, 4),
-	FRACTCONST(1, 1),
-	FRACTCONST(3, 2),
-	FRACTCONST(2, 1),
-	FRACTCONST(5, 2),
-	FRACTCONST(3, 1),
-	FRACTCONST(10, 1),
-	FRACTCONST(20, 1)
+	1.f / 8.f,
+	1.f / 4.f,
+	1.f / 2.f,
+	3.f / 4.f,
+	1.f / 1.f,
+	3.f / 2.f,
+	2.f / 1.f,
+	5.f / 2.f,
+	3.f / 1.f,
+	10.f / 1.f,
+	20.f / 1.f
 };
 unsigned int nb_available_speeds = 11;
 
 void kf_SpeedUp( void )
 {
-	float	mod;
+	float           mod;
+	unsigned int    i;
 
-	if ( (!bMultiPlayer || (NetPlay.bComms==0) )  && !bInTutorial)
+	// Bail out if we're running a _true_ multiplayer game or are playing a tutorial
+	if (runningMultiplayer() || bInTutorial)
 	{
-		unsigned int i;
+		if (!bInTutorial)
+			noMPCheatMsg();
+		return;
+	}
 
-		// get the current modifier
-		gameTimeGetMod(&mod);
+	// get the current modifier
+	gameTimeGetMod(&mod);
 
-		for (i = 1; i < nb_available_speeds; ++i) {
-			if (mod < available_speed[i]) {
-				mod = available_speed[i];
+	for (i = 1; i < nb_available_speeds; ++i)
+	{
+		if (mod < available_speed[i])
+		{
+			mod = available_speed[i];
 
-				if (mod == FRACTCONST(1, 1)) {
-					CONPRINTF(ConsoleString,(ConsoleString,_("Game Speed Reset")));
-				} else {
-					CONPRINTF(ConsoleString,(ConsoleString,_("Game Speed Increased to %3.1f"),mod));
-				}
-				gameTimeSetMod(mod);
-				break;
+			if (mod == 1.f / 1.f)
+			{
+				CONPRINTF(ConsoleString,(ConsoleString,_("Game Speed Reset")));
 			}
+			else
+			{
+				CONPRINTF(ConsoleString,(ConsoleString,_("Game Speed Increased to %3.1f"), mod));
+			}
+			gameTimeSetMod(mod);
+			break;
 		}
 	}
 }
 
 void kf_SlowDown( void )
 {
-	float	mod;
+	float   mod;
+	int     i;
 
-	if ( (!bMultiPlayer || (NetPlay.bComms==0) )  && !bInTutorial)
+	// Bail out if we're running a _true_ multiplayer game or are playing a tutorial
+	if (runningMultiplayer() || bInTutorial)
 	{
-		int i;
+		if (!bInTutorial)
+			noMPCheatMsg();
+		return;
+	}
 
-		// get the current modifier
-		gameTimeGetMod(&mod);
+	// get the current modifier
+	gameTimeGetMod(&mod);
 
-		for (i = nb_available_speeds-2; i >= 0; --i) {
-			if (mod > available_speed[i]) {
-				mod = available_speed[i];
+	for (i = nb_available_speeds - 2; i >= 0; --i)
+	{
+		if (mod > available_speed[i])
+		{
+			mod = available_speed[i];
 
-				if (mod == FRACTCONST(1, 1)) {
-					CONPRINTF(ConsoleString,(ConsoleString,_("Game Speed Reset")));
-				} else {
-					CONPRINTF(ConsoleString,(ConsoleString,_("Game Speed Reduced to %3.1f"),mod));
-				}
-				gameTimeSetMod(mod);
-				break;
+			if (mod == 1.f / 1.f)
+			{
+				CONPRINTF(ConsoleString,(ConsoleString,_("Game Speed Reset")));
 			}
+			else
+			{
+				CONPRINTF(ConsoleString,(ConsoleString,_("Game Speed Reduced to %3.1f"),mod));
+			}
+			gameTimeSetMod(mod);
+			break;
 		}
 	}
 }
 
 void kf_NormalSpeed( void )
 {
-	if ( (!bMultiPlayer || (NetPlay.bComms == 0)) && !bInTutorial)
+	// Bail out if we're running a _true_ multiplayer game or are playing a tutorial
+	if (runningMultiplayer() || bInTutorial)
 	{
-		CONPRINTF(ConsoleString,(ConsoleString,_("Game Speed Reset")));
-		gameTimeResetMod();
+		if (!bInTutorial)
+			noMPCheatMsg();
+		return;
 	}
+
+	CONPRINTF(ConsoleString,(ConsoleString,_("Game Speed Reset")));
+	gameTimeResetMod();
 }
 
 // --------------------------------------------------------------------------
@@ -2378,8 +2445,28 @@ void kf_ToggleRadarTerrain(void)
 {
 	radarDrawMode = radarDrawMode + 1;
 
-	if(radarDrawMode >= NUM_RADAR_MODES)
+	if (radarDrawMode >= NUM_RADAR_MODES)
+	{
 		radarDrawMode = 0;
+	}
+	switch (radarDrawMode)
+	{
+		case RADAR_MODE_NO_TERRAIN:
+		 	CONPRINTF(ConsoleString, (ConsoleString, "Radar showing only objects"));
+			break;
+		case RADAR_MODE_COMBINED:
+		 	CONPRINTF(ConsoleString, (ConsoleString, "Radar blending terrain and height"));
+			break;
+		case RADAR_MODE_TERRAIN:
+		 	CONPRINTF(ConsoleString, (ConsoleString, "Radar showing terrain"));
+			break;
+		case RADAR_MODE_HEIGHT_MAP:
+		 	CONPRINTF(ConsoleString, (ConsoleString, "Radar showing height"));
+			break;
+		case NUM_RADAR_MODES:
+			assert(false);
+			break;
+	}
 
 	resetRadarRedraw();
 }

@@ -33,7 +33,11 @@
 #include "lib/ivis_common/bitimage.h"
 
 #include <SDL_opengl.h>
-#include <GL/glc.h>
+#ifdef WZ_OS_MAC
+# include <QuesoGLC/glc.h>
+#else
+# include <GL/glc.h>
+#endif
 
 static const char font_family[] = "DejaVu Sans Mono";
 static const char font_face_regular[] = "Book";
@@ -56,7 +60,7 @@ static GLint GLC_Font_Bold = 0;
 static inline void iV_printFontList()
 {
 	unsigned int i;
-	GLint font_count = glcGeti(GLC_CURRENT_FONT_COUNT);
+	unsigned int font_count = glcGeti(GLC_CURRENT_FONT_COUNT);
 	debug(LOG_NEVER, "GLC_CURRENT_FONT_COUNT = %d", font_count);
 
 	if (font_count == 0)
@@ -103,7 +107,12 @@ static void iV_initializeGLC()
 	glcContext(GLC_Context);
 
 	glcDisable(GLC_AUTO_FONT);
+#ifdef WZ_OS_MAC
+#warning Mac version still uses GLC_TRIANGE instead of GLC_TEXTURE
+        glcRenderStyle(GLC_TRIANGLE);
+#else
 	glcRenderStyle(GLC_TEXTURE);
+#endif
 
 	GLC_Font_Regular = glcGenFontID();
 	GLC_Font_Bold = glcGenFontID();
@@ -380,31 +389,12 @@ int iV_GetTextBelowBase(void)
 	return (int)pixel_height;
 }
 
-void iV_SetTextColour(SWORD Index)
+void iV_SetTextColour(PIELIGHT colour)
 {
-	switch (Index)
-	{
-		case PIE_TEXT_WHITE:
-			font_colour[0] = 1.f;
-			font_colour[1] = 1.f;
-			font_colour[2] = 1.f;
-			font_colour[3] = 1.f;
-			break;
-
-		case PIE_TEXT_LIGHTBLUE:
-			font_colour[0] = 0.627451f;
-			font_colour[1] = 0.627451f;
-			font_colour[2] = 1.f;
-			font_colour[3] = 1.f;
-			break;
-
-		case PIE_TEXT_DARKBLUE:
-			font_colour[0] = 0.376471f;
-			font_colour[1] = 0.376471f;
-			font_colour[2] = 0.752941f;
-			font_colour[3] = 1.f;
-			break;
-	};
+	font_colour[0] = colour.byte.r / 255.0f;
+	font_colour[1] = colour.byte.g / 255.0f;
+	font_colour[2] = colour.byte.b / 255.0f;
+	font_colour[3] = colour.byte.a / 255.0f;
 }
 
 // --------------------------------------------------------------------------
@@ -643,6 +633,39 @@ void iV_DrawTextRotated(const char* string, float XPos, float YPos, float rotati
 
 	// Reset the current model view matrix
 	glLoadIdentity();
+}
+
+void iV_DrawTextRotatedFv(float x, float y, float rotation, const char* format, va_list ap)
+{
+	// Determine the size of the string we'll be going to draw on screen
+	size_t size = vsnprintf(NULL, 0, format, ap);
+
+	// Allocate a buffer large enough to hold our string on the stack
+	char* str = alloca(size + 1);
+
+	// Print into our newly created string buffer
+	vsprintf(str, format, ap);
+
+	// Draw the produced string to the screen at the given position and rotation
+	iV_DrawTextRotated(str, x, y, rotation);
+}
+
+void iV_DrawTextRotatedF(float x, float y, float rotation, const char* format, ...)
+{
+	va_list ap;
+
+	va_start(ap, format);
+		iV_DrawTextRotatedFv(x, y, rotation, format, ap);
+	va_end(ap);
+}
+
+void iV_DrawTextF(float x, float y, const char* format, ...)
+{
+	va_list ap;
+	
+	va_start(ap, format);
+		iV_DrawTextFv(x, y, format, ap);
+	va_end(ap);
 }
 
 void iV_SetTextSize(float size)

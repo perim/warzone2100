@@ -58,14 +58,7 @@
 
 #define OLD_TEXTURE_SIZE_FIX 256.0f
 
-
 #define pie_MAX_POLY_SIZE	16
-
-//Effects
-#define pie_MAX_BRIGHT_LEVEL 255
-#define pie_BRIGHT_LEVEL_200 200
-#define pie_BRIGHT_LEVEL_180 180
-#define pie_DROID_BRIGHT_LEVEL 192
 
 //Render style flags for all pie draw functions
 #define pie_TRANSLUCENT         0x2
@@ -83,64 +76,38 @@
 #define pie_MAX_POLYGONS		512
 #define pie_MAX_VERTICES_PER_POLYGON	6
 
-#define pie_FILLRED			16
-#define pie_FILLGREEN			16
-#define pie_FILLBLUE			128
-#define pie_FILLTRANS			128
-
-#define MAX_UB_LIGHT			((UBYTE)255)
-#define MIN_UB_LIGHT			((UBYTE)0)
-#define MAX_LIGHT			0xffffffff
-
-/***************************************************************************/
-/*
- *	Global Definitions (MACROS)
- */
-/***************************************************************************/
-
-#define pie_ADDLIGHT(l,x)						\
-(((l)->byte.r > (MAX_UB_LIGHT - (x))) ? ((l)->byte.r = MAX_UB_LIGHT) : ((l)->byte.r +=(x)));		\
-(((l)->byte.g > (MAX_UB_LIGHT - (x))) ? ((l)->byte.g = MAX_UB_LIGHT) : ((l)->byte.g +=(x)));		\
-(((l)->byte.b > (MAX_UB_LIGHT - (x))) ? ((l)->byte.b = MAX_UB_LIGHT) : ((l)->byte.b +=(x)));
-
-#define pie_SUBTRACTLIGHT(l,x)						\
-(((l->byte.r) < (x)) ? ((l->byte.r) = MIN_UB_LIGHT) : ((l->byte.r) -=(x)));		\
-(((l->byte.g) < (x)) ? ((l->byte.g) = MIN_UB_LIGHT) : ((l->byte.g) -=(x)));		\
-(((l->byte.b) < (x)) ? ((l->byte.b) = MIN_UB_LIGHT) : ((l->byte.b) -=(x)));
-
-
 /***************************************************************************/
 /*
  *	Global Definitions (STRUCTURES)
  */
 /***************************************************************************/
 
-#ifdef __BIG_ENDIAN__
-typedef struct {UBYTE a, r, g, b;} PIELIGHTBYTES; //for byte fields in a DWORD
-#else
-typedef struct {UBYTE b, g, r, a;} PIELIGHTBYTES; //for byte fields in a DWORD
-#endif
-typedef union  {PIELIGHTBYTES byte; UDWORD argb;} PIELIGHT;
+typedef struct { UBYTE r, g, b, a; } PIELIGHTBYTES;
+
+/** Our basic colour type. Use whenever you want to define a colour. 
+ *  Set bytes separetely, and do not assume a byte order between the components. */
+typedef union  { PIELIGHTBYTES byte; UDWORD argb; UBYTE vector[4]; } PIELIGHT;
+
 typedef struct
 {
 	Vector3i pos;
 	float u, v;
-	PIELIGHT light, specular;
+	PIELIGHT light;
 	Vector3i screen; //! Screenspace tile coordinates
-	Vector3i water; //! Screenspace water coordinates
 	int water_height; //! Worldspace water height
-	PIELIGHT wlight; //! Special water lighting
 	UBYTE bWater; //! Is it a watertile?
 } TERRAIN_VERTEX;
 typedef struct {float x, y, z, u, v; PIELIGHT light, specular;} TERRAIN_VERTEXF;
 
-typedef struct {SWORD x, y, w, h;} PIERECT; //screen rectangle
-typedef struct {SDWORD texPage; SWORD tu, tv, tw, th;} PIEIMAGE; //an area of texture
-typedef struct {UDWORD pieFlag; PIELIGHT colour, specular; UBYTE light, trans, scale, height;} PIESTYLE; //render style for pie draw functions
+typedef struct {SWORD x, y, w, h;} PIERECT;				/**< Screen rectangle. */
+typedef struct {SDWORD texPage; SWORD tu, tv, tw, th;} PIEIMAGE;	/**< An area of texture. */
+
+/** Render style for pie draw functions. */
+typedef struct {UDWORD pieFlag; PIELIGHT colour, specular; UBYTE light, trans, scale, height;} PIESTYLE;
 
 typedef struct {
-	UDWORD flags;
-	SDWORD nVrts;
+	unsigned int flags;
+	unsigned int nVrts;
 	TERRAIN_VERTEXF *pVrts;
 	iTexAnim *pTexAnim;
 } PIEPOLY;
@@ -151,18 +118,21 @@ typedef struct {
  *	Global ProtoTypes
  */
 /***************************************************************************/
-extern void pie_Draw3DShape(iIMDShape *shape, int frame, int team, UDWORD colour, UDWORD specular, int pieFlag, int pieData);
+extern void pie_Draw3DShape(iIMDShape *shape, int frame, int team, PIELIGHT colour, PIELIGHT specular, int pieFlag, int pieData);
 extern void pie_DrawImage(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style);
 
-void pie_DrawTerrainInit(void);
 void pie_DrawTerrainDone(int mapx, int mapy);
 void pie_DrawTerrainTriangle(int index, const TERRAIN_VERTEX *aVrts);
 void pie_DrawWaterTriangle(const TERRAIN_VERTEX *aVrts);
 
 extern void pie_GetResetCounts(unsigned int* pPieCount, unsigned int* pTileCount, unsigned int* pPolyCount, unsigned int* pStateCount);
 
+/** Setup stencil shadows and OpenGL lighting. */
 void pie_BeginLighting(const Vector3f * light);
+
+/* Stop using stencil shadows and OpenGL lighting (if enabled). */
 void pie_EndLighting(void);
+
 void pie_RemainingPasses(void);
 
 void pie_CleanUp( void );

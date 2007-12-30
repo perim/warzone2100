@@ -206,11 +206,11 @@ BOOL	ptInStructure(STRUCTURE *psStruct, UDWORD x, UDWORD y)
 	height = (psStruct->pStructureType->baseBreadth * TILE_UNITS);
 
 
-	tlX = psStruct->x - (width/2);
-	tlY = psStruct->y - (height/2);
+	tlX = psStruct->pos.x - (width/2);
+	tlY = psStruct->pos.y - (height/2);
 
-	brX = psStruct->x + (width/2);
-	brY = psStruct->y + (height/2);
+	brX = psStruct->pos.x + (width/2);
+	brY = psStruct->pos.y + (height/2);
 
 	if (x > tlX && x < brX && y > tlY && y < brY)
 		return(TRUE);
@@ -1305,9 +1305,9 @@ BOOL structureStatsShutDown(void)
  * \param damage amount of damage to deal
  * \param weaponClass the class of the weapon that deals the damage
  * \param weaponSubClass the subclass of the weapon that deals the damage
- * \return TRUE when the dealt damage destroys the structure, FALSE when the structure survives
+ * \return < 0 when the dealt damage destroys the structure, > 0 when the structure survives
  */
-SDWORD structureDamage(STRUCTURE *psStructure, UDWORD damage, UDWORD weaponClass,
+float structureDamage(STRUCTURE *psStructure, UDWORD damage, UDWORD weaponClass,
                        UDWORD weaponSubClass, HIT_SIDE impactSide)
 {
 	// Do at least one point of damage
@@ -1356,13 +1356,13 @@ SDWORD structureDamage(STRUCTURE *psStructure, UDWORD damage, UDWORD weaponClass
 	{
 		debug( LOG_ATTACK, "        DESTROYED\n");
 		destroyStruct(psStructure);
-		return (SDWORD) (body / originalBody * -100);
+		return body / originalBody * -1.0f;
 	}
 
 	// Substract the dealt damage from the structure's remaining body points
 	psStructure->body -= actualDamage;
 
-	return (SDWORD) ((float) actualDamage / originalBody * 100);
+	return (float) actualDamage / originalBody;
 }
 
 
@@ -1491,8 +1491,8 @@ static SDWORD structChooseWallType(UDWORD player, UDWORD mapX, UDWORD mapY)
 	memset(aWallPresent, 0, sizeof(aWallPresent));
 	for(psStruct=apsStructLists[player]; psStruct; psStruct=psStruct->psNext)
 	{
-		xdiff = (SDWORD)mapX - map_coord((SDWORD)psStruct->x);
-		ydiff = (SDWORD)mapY - map_coord((SDWORD)psStruct->y);
+		xdiff = (SDWORD)mapX - map_coord((SDWORD)psStruct->pos.x);
+		ydiff = (SDWORD)mapY - map_coord((SDWORD)psStruct->pos.y);
 		if (xdiff >= -2 && xdiff <= 2 &&
 			ydiff >= -2 && ydiff <= 2 &&
 			(psStruct->pStructureType->type == REF_WALL ||
@@ -1553,7 +1553,7 @@ static SDWORD structChooseWallType(UDWORD player, UDWORD mapX, UDWORD mapY)
 								psStats = ((WALL_FUNCTION *)psStruct
 												->pStructureType->asFuncList[0])
 														->pCornerStat;
-								sx = psStruct->x; sy = psStruct->y;
+								sx = psStruct->pos.x; sy = psStruct->pos.y;
 								removeStruct(psStruct, TRUE);
 								powerCalc(FALSE);
 								psStruct = buildStructure(psStats, sx,sy, player, TRUE);
@@ -1569,7 +1569,7 @@ static SDWORD structChooseWallType(UDWORD player, UDWORD mapX, UDWORD mapY)
 								psStats = ((WALL_FUNCTION *)psStruct
 												->pStructureType->asFuncList[0])
 														->pCornerStat;
-								sx = psStruct->x; sy = psStruct->y;
+								sx = psStruct->pos.x; sy = psStruct->pos.y;
 								removeStruct(psStruct, TRUE);
 								powerCalc(FALSE);
 								psStruct = buildStructure(psStats, sx,sy, player, TRUE);
@@ -1620,7 +1620,7 @@ void buildFlatten(STRUCTURE_STATS *pStructureType, UDWORD atx, UDWORD aty,UDWORD
 				// We need to raise features on raised tiles to the new height
 				if(TILE_HAS_FEATURE(mapTile(x+width,y+breadth)))
 				{
-					getTileFeature(x+width, y+breadth)->z = (UWORD)h;
+					getTileFeature(x+width, y+breadth)->pos.z = (UWORD)h;
 				}
 			}
 		}
@@ -1634,7 +1634,6 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 	UDWORD		mapX, mapY, mapH;
 	UDWORD		width, breadth, weapon, capacity, bodyDiff = 0;
 	SDWORD		wallType = 0, preScrollMinX = 0, preScrollMinY = 0, preScrollMaxX = 0, preScrollMaxY = 0;
-	UDWORD		min,max;
 	int			i;
 	STRUCTURE	*psBuilding = NULL;
 
@@ -1644,7 +1643,8 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 	if (IsStatExpansionModule(pStructureType)==FALSE)
 	{
 		//some prelim tests...
-		max = pStructureType - asStructureStats;
+		UDWORD	max = pStructureType - asStructureStats;
+
 		if (max > numStructureStats)
 		{
 			ASSERT(!"invalid structure type", "buildStructure: Invalid structure type");
@@ -1735,8 +1735,8 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 		//fill in other details
 		psBuilding->pStructureType = pStructureType;
 
-		psBuilding->x = (UWORD)x;
-		psBuilding->y = (UWORD)y;
+		psBuilding->pos.x = (UWORD)x;
+		psBuilding->pos.y = (UWORD)y;
 
 		//This needs to be done before the functionality bit...
 		//load into the map data and structure list if not an upgrade
@@ -1807,13 +1807,23 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 		if(pStructureType->type != REF_DEFENSE)
 		{
 			buildFlatten(pStructureType, world_coord(mapX), world_coord(mapY), mapH);
-			psBuilding->z = (UWORD)mapH;
+			psBuilding->pos.z = (UWORD)mapH;
 		}
 		else
 		{
+			psBuilding->pos.z = TILE_MIN_HEIGHT;
+
 			/* Set it at the higher coord */
-			getTileMaxMin(mapX,mapY,&max,&min);
-			psBuilding->z = (UWORD)max;	// Got to be - don't change!!!! ALEXM
+			for (width = 0; width < pStructureType->baseWidth; width++)
+			{
+				for (breadth = 0; breadth < pStructureType->baseBreadth; breadth++)
+				{
+					UDWORD tmpMax, tmpMin;
+
+					getTileMaxMin(mapX + width, mapY + breadth, &tmpMax, &tmpMin);
+					psBuilding->pos.z = MAX(tmpMax, psBuilding->pos.z);
+				}
+			}
 		}
 
 		//set up the rest of the data
@@ -2251,8 +2261,8 @@ BOOL setFunctionality(STRUCTURE	*psBuilding, UDWORD functionType)
 			}
 
 			// initialise the assembly point position
-			x = map_coord(psBuilding->x + 256);
-			y = map_coord(psBuilding->y + 256);
+			x = map_coord(psBuilding->pos.x + 256);
+			y = map_coord(psBuilding->pos.y + 256);
 
 			// Set the assembly point
 			setAssemblyPoint(psFactory->psAssemblyPoint, world_coord(x), world_coord(y), psBuilding->player, TRUE);
@@ -2346,8 +2356,8 @@ BOOL setFunctionality(STRUCTURE	*psBuilding, UDWORD functionType)
 			}
 
 			// Initialise the assembly point
-			x = map_coord(psBuilding->x+256);
-			y = map_coord(psBuilding->y+256);
+			x = map_coord(psBuilding->pos.x+256);
+			y = map_coord(psBuilding->pos.y+256);
 
 			// Set the assembly point
 			setAssemblyPoint(psRepairFac->psDeliveryPoint, world_coord(x),
@@ -2526,8 +2536,8 @@ static BOOL structClearTile(UWORD x, UWORD y)
 	{
 		for(psCurr = apsDroidLists[player]; psCurr; psCurr=psCurr->psNext)
 		{
-			if (map_coord(psCurr->x) == x
-			 && map_coord(psCurr->y) == y)
+			if (map_coord(psCurr->pos.x) == x
+			 && map_coord(psCurr->pos.y) == y)
 			{
 				debug( LOG_NEVER, "structClearTile: failed\n");
 				return FALSE;
@@ -2548,9 +2558,9 @@ BOOL placeDroid(STRUCTURE *psStructure, UDWORD *droidX, UDWORD *droidY)
 	CHECK_STRUCTURE(psStructure);
 
 	/* Get the tile coords for the top left of the structure */
-	sx = (SWORD)(psStructure->x - psStructure->pStructureType->baseWidth * TILE_UNITS/2);
+	sx = (SWORD)(psStructure->pos.x - psStructure->pStructureType->baseWidth * TILE_UNITS/2);
 	sx = map_coord(sx);
-	sy = (SWORD)(psStructure->y - psStructure->pStructureType->baseBreadth * TILE_UNITS/2);
+	sy = (SWORD)(psStructure->pos.y - psStructure->pStructureType->baseBreadth * TILE_UNITS/2);
 	sy = map_coord(sy);
 
 	/* Find the four corners of the square */
@@ -2686,18 +2696,18 @@ static BOOL structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl,
 		if(psStructure->visible[selectedPlayer])
 		{
 			/* add smoke effect to cover the droid's emergence from the factory */
-			iVecEffect.x = psNewDroid->x;
-			iVecEffect.y = map_Height( psNewDroid->x, psNewDroid->y ) + DROID_CONSTRUCTION_SMOKE_HEIGHT;
-			iVecEffect.z = psNewDroid->y;
+			iVecEffect.x = psNewDroid->pos.x;
+			iVecEffect.y = map_Height( psNewDroid->pos.x, psNewDroid->pos.y ) + DROID_CONSTRUCTION_SMOKE_HEIGHT;
+			iVecEffect.z = psNewDroid->pos.y;
 			addEffect( &iVecEffect,EFFECT_CONSTRUCTION,CONSTRUCTION_TYPE_DRIFTING,FALSE,NULL,0 );
-			iVecEffect.x = psNewDroid->x - DROID_CONSTRUCTION_SMOKE_OFFSET;
-			iVecEffect.z = psNewDroid->y - DROID_CONSTRUCTION_SMOKE_OFFSET;
+			iVecEffect.x = psNewDroid->pos.x - DROID_CONSTRUCTION_SMOKE_OFFSET;
+			iVecEffect.z = psNewDroid->pos.y - DROID_CONSTRUCTION_SMOKE_OFFSET;
 			addEffect( &iVecEffect,EFFECT_CONSTRUCTION,CONSTRUCTION_TYPE_DRIFTING,FALSE,NULL,0 );
-			iVecEffect.z = psNewDroid->y + DROID_CONSTRUCTION_SMOKE_OFFSET;
+			iVecEffect.z = psNewDroid->pos.y + DROID_CONSTRUCTION_SMOKE_OFFSET;
 			addEffect( &iVecEffect,EFFECT_CONSTRUCTION,CONSTRUCTION_TYPE_DRIFTING,FALSE,NULL,0 );
-			iVecEffect.x = psNewDroid->x + DROID_CONSTRUCTION_SMOKE_OFFSET;
+			iVecEffect.x = psNewDroid->pos.x + DROID_CONSTRUCTION_SMOKE_OFFSET;
 			addEffect( &iVecEffect,EFFECT_CONSTRUCTION,CONSTRUCTION_TYPE_DRIFTING,FALSE,NULL,0 );
-			iVecEffect.z = psNewDroid->y - DROID_CONSTRUCTION_SMOKE_OFFSET;
+			iVecEffect.z = psNewDroid->pos.y - DROID_CONSTRUCTION_SMOKE_OFFSET;
 			addEffect( &iVecEffect,EFFECT_CONSTRUCTION,CONSTRUCTION_TYPE_DRIFTING,FALSE,NULL,0 );
 		}
 		/* add the droid to the list */
@@ -3029,8 +3039,8 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 					//if were going to shoot at something move the turret first then fire when locked on
 					if (psWStats->pMountGraphic == NULL)//no turret so lock on whatever
 					{
-						psStructure->turretRotation[i] = (UWORD)calcDirection(psStructure->x,
-							psStructure->y, psChosenObjs[i]->x, psChosenObjs[i]->y);
+						psStructure->turretRotation[i] = (UWORD)calcDirection(psStructure->pos.x,
+							psStructure->pos.y, psChosenObjs[i]->pos.x, psChosenObjs[i]->pos.y);
 						combFire(&psStructure->asWeaps[i], (BASE_OBJECT *)psStructure, psChosenObjs[i], i);
 					}
 					else if(actionTargetTurret((BASE_OBJECT*)psStructure, psChosenObjs[i],
@@ -3170,8 +3180,8 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 						(psTarget == (BASE_OBJECT *)psStructure) &&
 						psDroid->action == DACTION_WAITFORREPAIR)
 					{
-						xdiff = (SDWORD)psDroid->x - (SDWORD)psStructure->x;
-						ydiff = (SDWORD)psDroid->y - (SDWORD)psStructure->y;
+						xdiff = (SDWORD)psDroid->pos.x - (SDWORD)psStructure->pos.x;
+						ydiff = (SDWORD)psDroid->pos.y - (SDWORD)psStructure->pos.y;
 						currdist = xdiff*xdiff + ydiff*ydiff;
 						if (currdist < mindist)
 						{
@@ -3193,7 +3203,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 
 				/* move droid to repair point at rear of facility */
 				actionDroidObjLoc( psDroid, DACTION_MOVETOREPAIRPOINT,
-						(BASE_OBJECT *) psStructure, psStructure->x, psStructure->y);
+						(BASE_OBJECT *) psStructure, psStructure->pos.x, psStructure->pos.y);
 				/* reset repair started */
 				psRepairFac->timeStarted = ACTION_START_TIME;
 				psRepairFac->currentPtsAdded = 0;
@@ -3617,9 +3627,9 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 				if (psStructure->visible[selectedPlayer] && psDroid->visible[selectedPlayer])
 				{
 					/* add plasma repair effect whilst being repaired */
-					iVecEffect.x = psDroid->x + (10-rand()%20);
-					iVecEffect.y = psDroid->z + (10-rand()%20);
-					iVecEffect.z = psDroid->y + (10-rand()%20);
+					iVecEffect.x = psDroid->pos.x + (10-rand()%20);
+					iVecEffect.y = psDroid->pos.z + (10-rand()%20);
+					iVecEffect.z = psDroid->pos.y + (10-rand()%20);
 					effectSetSize(100);
 					addEffect( &iVecEffect,EFFECT_EXPLOSION,EXPLOSION_TYPE_SPECIFIED,
 								TRUE,getImdFromIndex(MI_FLAME),0 );
@@ -3793,10 +3803,10 @@ void structureUpdate(STRUCTURE *psBuilding)
 			{
 				widthScatter = ((psBuilding->pStructureType->baseWidth) * TILE_UNITS/2)/3;
 				breadthScatter = ((psBuilding->pStructureType->baseBreadth) * TILE_UNITS/2)/3;
-				dv.x = psBuilding->x + widthScatter - rand()%(2*widthScatter);
-				dv.z = psBuilding->y + breadthScatter - rand()%(2*breadthScatter);
-				dv.y = psBuilding->z;
-				dv.y += ((psBuilding->sDisplay.imd->ymax)*3)/4;
+				dv.x = psBuilding->pos.x + widthScatter - rand()%(2*widthScatter);
+				dv.z = psBuilding->pos.y + breadthScatter - rand()%(2*breadthScatter);
+				dv.y = psBuilding->pos.z;
+				dv.y += (psBuilding->sDisplay.imd->max.y * 3) / 4;
 				addEffect(&dv,EFFECT_SMOKE,SMOKE_TYPE_DRIFTING_HIGH,FALSE,NULL,0);
 				psBuilding->lastEmission = gameTime;
 			}
@@ -3880,10 +3890,10 @@ void structureUpdate(STRUCTURE *psBuilding)
 
 				pointIndex = rand()%(psBuilding->sDisplay.imd->npoints-1);
 				point = &(psBuilding->sDisplay.imd->points[pointIndex]);
-				position.x = psBuilding->x + point->x;
-				realY = MAKEINT((structHeightScale(psBuilding) * point->y));
-				position.y = psBuilding->z + realY;
-				position.z = psBuilding->y - point->z;
+				position.x = psBuilding->pos.x + point->x;
+				realY = structHeightScale(psBuilding) * point->y;
+				position.y = psBuilding->pos.z + realY;
+				position.z = psBuilding->pos.y - point->z;
 
 				effectSetSize(30);
 				addEffect(&position, EFFECT_EXPLOSION, EXPLOSION_TYPE_SPECIFIED, TRUE,
@@ -4240,8 +4250,8 @@ BOOL validLocation(BASE_STATS *psStats, UDWORD x, UDWORD y, UDWORD player,
 		if (psStruct->pStructureType->type == REF_REPAIR_FACILITY)
 		{
 			// get the top left of the struct
-			i = map_coord(psStruct->x) - 1;
-			j = map_coord(psStruct->y) - 1;
+			i = map_coord(psStruct->pos.x) - 1;
+			j = map_coord(psStruct->pos.y) - 1;
 
 			// see if the x extents overlap
 			if ((site.xTL >= i && site.xTL <= (i+2)) ||
@@ -4618,20 +4628,18 @@ failed:
 	if (!valid)
 	{
 		// Only set the hilight colour if it's the selected player.
-		if(player == selectedPlayer) {
-
-			outlineColour = outlineNotOK;
-			outlineColour3D = outlineNotOK3D;
-
+		if(player == selectedPlayer)
+		{
+			outlineTile = FALSE;
 		}
 
 		return FALSE;
 	}
 
 	// Only set the hilight colour if it's the selected player.
-	if(player == selectedPlayer) {
-		outlineColour = outlineOK;
-		outlineColour3D = outlineOK3D;
+	if (player == selectedPlayer)
+	{
+		outlineTile = TRUE;
 	}
 
 	return TRUE;
@@ -4845,8 +4853,8 @@ static void removeStructFromMap(STRUCTURE *psStruct)
 	MAPTILE		*psTile;
 
 	/* set tiles drawing */
-	mapX = map_coord(psStruct->x - psStruct->pStructureType->baseWidth * TILE_UNITS / 2);
-	mapY = map_coord(psStruct->y - psStruct->pStructureType->baseBreadth * TILE_UNITS / 2);
+	mapX = map_coord(psStruct->pos.x - psStruct->pStructureType->baseWidth * TILE_UNITS / 2);
+	mapY = map_coord(psStruct->pos.y - psStruct->pStructureType->baseBreadth * TILE_UNITS / 2);
 	for (i = 0; i < psStruct->pStructureType->baseWidth; i++)
 	{
 		for (j = 0; j < psStruct->pStructureType->baseBreadth; j++)
@@ -4888,7 +4896,7 @@ BOOL removeStruct(STRUCTURE *psDel, BOOL bDestroy)
 		{
 			if (psDel->pFunctionality->resourceExtractor.power)
 			{
-				buildFeature(&asFeatureStats[oilResFeature], psDel->x, psDel->y, FALSE);
+				buildFeature(&asFeatureStats[oilResFeature], psDel->pos.x, psDel->pos.y, FALSE);
 				resourceFound = TRUE;
 			}
 		}
@@ -5024,15 +5032,15 @@ BOOL destroyStruct(STRUCTURE *psDel)
 		heightScatter = TILE_UNITS;
 		for(i=0; i<(UDWORD)(bMinor ? 2 : 4); i++)	// only add two for walls - gets crazy otherwise
 		{
-			pos.x = psDel->x + widthScatter - rand()%(2*widthScatter);
-			pos.z = psDel->y + breadthScatter - rand()%(2*breadthScatter);
-			pos.y = psDel->z + 32 + rand()%heightScatter;
+			pos.x = psDel->pos.x + widthScatter - rand()%(2*widthScatter);
+			pos.z = psDel->pos.y + breadthScatter - rand()%(2*breadthScatter);
+			pos.y = psDel->pos.z + 32 + rand()%heightScatter;
 			addEffect(&pos,EFFECT_EXPLOSION,EXPLOSION_TYPE_MEDIUM,FALSE,NULL,0);
 		}
 
 		/* Get coordinates for everybody! */
-		pos.x = psDel->x;
-		pos.z = psDel->y;
+		pos.x = psDel->pos.x;
+		pos.z = psDel->pos.y;
 		pos.y = map_Height((UWORD)pos.x,(UWORD)pos.z);
 
 //--------------------------------------- Do we add a fire?
@@ -5100,7 +5108,7 @@ BOOL destroyStruct(STRUCTURE *psDel)
 
 //--------------------------------------- And finally, add a boom sound!!!!
 		/* and add a sound effect */
-		audio_PlayStaticTrack( psDel->x, psDel->y, ID_SOUND_EXPLOSION );
+		audio_PlayStaticTrack( psDel->pos.x, psDel->pos.y, ID_SOUND_EXPLOSION );
 	}
 //---------------------------------------------------------------------------------------
 
@@ -5113,8 +5121,8 @@ BOOL destroyStruct(STRUCTURE *psDel)
 		if (!resourceFound && !(psDel->pStructureType->type == REF_WALL) &&
 			!(psDel->pStructureType->type == REF_WALLCORNER))
 		{
-			mapX = map_coord(psDel->x - psDel->pStructureType->baseWidth * TILE_UNITS / 2);
-			mapY = map_coord(psDel->y - psDel->pStructureType->baseBreadth * TILE_UNITS / 2);
+			mapX = map_coord(psDel->pos.x - psDel->pStructureType->baseWidth * TILE_UNITS / 2);
+			mapY = map_coord(psDel->pos.y - psDel->pStructureType->baseBreadth * TILE_UNITS / 2);
 			for (width = 0; width < psDel->pStructureType->baseWidth; width++)
 			{
 				for (breadth = 0; breadth < psDel->pStructureType->baseBreadth; breadth++)
@@ -5585,113 +5593,57 @@ BOOL calcStructureMuzzleLocation(STRUCTURE *psStructure, Vector3i *muzzle, int w
 
 	CHECK_STRUCTURE(psStructure);
 
-	if (weapon_slot >= 0)
+	if (psStructure->asWeaps[weapon_slot].nStat > 0)
 	{
-		//if (psStructure->numWeaps > 0)
-		if (psStructure->asWeaps[weapon_slot].nStat > 0)
-		{
-			psWeaponImd =  asWeaponStats[psStructure->asWeaps[weapon_slot].nStat].pIMD;
-		}
-		else
-		{
-			psWeaponImd =  NULL;
-		}
-
-		if(psShape && psShape->nconnectors)
-		{
-			pie_MatBegin();
-
-			pie_TRANSLATE(psStructure->x,-(SDWORD)psStructure->z,psStructure->y);
-			//matrix = the center of droid
-			pie_MatRotY( DEG( (SDWORD)psStructure->direction ) );
-			pie_MatRotX( DEG( psStructure->pitch ) );
-			pie_MatRotZ( DEG( -(SDWORD)psStructure->roll ) );
-			pie_TRANSLATE( psShape->connectors[weapon_slot].x, -psShape->connectors[weapon_slot].z,
-						-psShape->connectors[weapon_slot].y);//note y and z flipped
-
-			//matrix = the gun and turret mount on the body
-			pie_MatRotY(DEG((SDWORD)psStructure->turretRotation[weapon_slot]));//+ve anticlockwise
-			pie_MatRotX(DEG(psStructure->turretPitch[weapon_slot]));//+ve up
-			pie_MatRotZ(DEG(0));
-			//matrix = the muzzle mount on turret
-			if( psWeaponImd && psWeaponImd->nconnectors )
-			{
-				barrel.x = psWeaponImd->connectors->x;
-				barrel.y = -psWeaponImd->connectors->y;
-				barrel.z = -psWeaponImd->connectors->z;
-			}
-			else
-			{
-				barrel.x = 0;
-				barrel.y = 0;
-				barrel.z = 0;
-			}
-
-			pie_RotateTranslate3iv(&barrel, muzzle);
-			muzzle->z = -muzzle->z;
-
-			pie_MatEnd();
-		}
-		else
-		{
-			muzzle->x = psStructure->x;
-			muzzle->y = psStructure->y;
-			muzzle->z = psStructure->z + psStructure->sDisplay.imd->ymax;;
-		}
+		psWeaponImd =  asWeaponStats[psStructure->asWeaps[weapon_slot].nStat].pIMD;
 	}
 	else
 	{
-		if (psStructure->asWeaps[weapon_slot].nStat > 0)
-		{
-			psWeaponImd =  asWeaponStats[psStructure->asWeaps[weapon_slot].nStat].pIMD;
-		}
-		else
-		{
-			psWeaponImd =  NULL;
-		}
-
-		if(psShape && psShape->nconnectors)
-		{
-			pie_MatBegin();
-
-			pie_TRANSLATE(psStructure->x,-(SDWORD)psStructure->z,psStructure->y);
-			//matrix = the center of droid
-			pie_MatRotY( DEG( (SDWORD)psStructure->direction ) );
-			pie_MatRotX( DEG( psStructure->pitch ) );
-			pie_MatRotZ( DEG( -(SDWORD)psStructure->roll ) );
-			pie_TRANSLATE( psShape->connectors->x, -psShape->connectors->z,
-						-psShape->connectors->y);//note y and z flipped
-
-			//matrix = the gun and turret mount on the body
-			pie_MatRotY(DEG((SDWORD)psStructure->turretRotation[0]));//+ve anticlockwise
-			pie_MatRotX(DEG(psStructure->turretPitch[0]));//+ve up
-			pie_MatRotZ(DEG(0));
-			//matrix = the muzzle mount on turret
-			if( psWeaponImd && psWeaponImd->nconnectors )
-			{
-				barrel.x = psWeaponImd->connectors->x;
-				barrel.y = -psWeaponImd->connectors->y;
-				barrel.z = -psWeaponImd->connectors->z;
-			}
-			else
-			{
-				barrel.x = 0;
-				barrel.y = 0;
-				barrel.z = 0;
-			}
-
-			pie_RotateTranslate3iv(&barrel, muzzle);
-			muzzle->z = -muzzle->z;
-
-			pie_MatEnd();
-		}
-		else
-		{
-			muzzle->x = psStructure->x;
-			muzzle->y = psStructure->y;
-			muzzle->z = psStructure->z + psStructure->sDisplay.imd->ymax;;
-		}
+		psWeaponImd =  NULL;
 	}
+
+	if(psShape && psShape->nconnectors)
+	{
+		pie_MatBegin();
+
+		pie_TRANSLATE(psStructure->pos.x,-(SDWORD)psStructure->pos.z,psStructure->pos.y);
+		//matrix = the center of droid
+		pie_MatRotY( DEG( (SDWORD)psStructure->direction ) );
+		pie_MatRotX( DEG( psStructure->pitch ) );
+		pie_MatRotZ( DEG( -(SDWORD)psStructure->roll ) );
+		pie_TRANSLATE( psShape->connectors[weapon_slot].x, -psShape->connectors[weapon_slot].z,
+					-psShape->connectors[weapon_slot].y);//note y and z flipped
+
+		//matrix = the gun and turret mount on the body
+		pie_MatRotY(DEG((SDWORD)psStructure->turretRotation[weapon_slot]));//+ve anticlockwise
+		pie_MatRotX(DEG(psStructure->turretPitch[weapon_slot]));//+ve up
+		pie_MatRotZ(DEG(0));
+		//matrix = the muzzle mount on turret
+		if( psWeaponImd && psWeaponImd->nconnectors )
+		{
+			barrel.x = psWeaponImd->connectors->x;
+			barrel.y = -psWeaponImd->connectors->y;
+			barrel.z = -psWeaponImd->connectors->z;
+		}
+		else
+		{
+			barrel.x = 0;
+			barrel.y = 0;
+			barrel.z = 0;
+		}
+
+		pie_RotateTranslate3iv(&barrel, muzzle);
+		muzzle->z = -muzzle->z;
+
+		pie_MatEnd();
+	}
+	else
+	{
+		muzzle->x = psStructure->pos.x;
+		muzzle->y = psStructure->pos.y;
+		muzzle->z = psStructure->pos.z + psStructure->sDisplay.imd->max.y;
+	}
+
 	return TRUE;
 }
 
@@ -6328,9 +6280,9 @@ BOOL electronicDamage(BASE_OBJECT *psTarget, UDWORD damage, UBYTE attackPlayer)
 				{
 					for(i=0; i<5; i++)
 					{
-						pos.x = psDroid->x + (30-rand()%60);
-						pos.z = psDroid->y + (30-rand()%60);
-						pos.y = psDroid->z + (rand()%8);
+						pos.x = psDroid->pos.x + (30-rand()%60);
+						pos.z = psDroid->pos.y + (30-rand()%60);
+						pos.y = psDroid->pos.z + (rand()%8);
 						effectGiveAuxVar(80);
 						addEffect(&pos,EFFECT_EXPLOSION,EXPLOSION_TYPE_FLAMETHROWER,FALSE,NULL,0);
 					}
@@ -7267,8 +7219,8 @@ void checkDeliveryPoints(UDWORD version)
 							addFlagPosition(psRepair->psDeliveryPoint);
 							setFlagPositionInc(psStruct->pFunctionality, psStruct->player, REPAIR_FLAG);
 							//initialise the assembly point position
-							x = map_coord(psStruct->x + 256);
-							y = map_coord(psStruct->y + 256);
+							x = map_coord(psStruct->pos.x + 256);
+							y = map_coord(psStruct->pos.y + 256);
 							// Belt and braces - shouldn't be able to build too near edge
 							setAssemblyPoint( psRepair->psDeliveryPoint, world_coord(x),
 								world_coord(y), inc, TRUE);
@@ -7358,12 +7310,12 @@ void checkResExtractorsActive(void)
 /*Used for determining how much of the structure to draw as being built or demolished*/
 float structHeightScale(STRUCTURE *psStruct)
 {
-	float	retVal = (MAKEFRACT(psStruct->currentBuildPts)/psStruct->pStructureType->buildPoints);
-	if(retVal<0.05f)
-	{
+	float retVal = (float)psStruct->currentBuildPts / (float)psStruct->pStructureType->buildPoints;
+
+	if(retVal < 0.05f)
 		retVal = 0.05f;
-	}
-	return(retVal);
+
+	return retVal;
 
 }
 
@@ -7511,13 +7463,13 @@ STRUCTURE *	findNearestReArmPad(DROID *psDroid, STRUCTURE *psTarget, BOOL bClear
 
 	if (psTarget != NULL)
 	{
-		cx = (SDWORD)psTarget->x;
-		cy = (SDWORD)psTarget->y;
+		cx = (SDWORD)psTarget->pos.x;
+		cy = (SDWORD)psTarget->pos.y;
 	}
 	else
 	{
-		cx = (SDWORD)psDroid->x;
-		cy = (SDWORD)psDroid->y;
+		cx = (SDWORD)psDroid->pos.x;
+		cy = (SDWORD)psDroid->pos.y;
 	}
 
 	mindist = SDWORD_MAX;
@@ -7530,8 +7482,8 @@ STRUCTURE *	findNearestReArmPad(DROID *psDroid, STRUCTURE *psTarget, BOOL bClear
 			(psTarget == NULL || psTarget->cluster == psStruct->cluster) &&
 			(!bClear || clearRearmPad(psStruct)))
 		{
-			xdiff = (SDWORD)psStruct->x - cx;
-			ydiff = (SDWORD)psStruct->y - cy;
+			xdiff = (SDWORD)psStruct->pos.x - cx;
+			ydiff = (SDWORD)psStruct->pos.y - cy;
 			currdist = xdiff*xdiff + ydiff*ydiff;
 			if (bClear && !vtolOnRearmPad(psStruct, psDroid))
 			{
@@ -7567,14 +7519,14 @@ void ensureRearmPadClear(STRUCTURE *psStruct, DROID *psDroid)
 	DROID	*psCurr;
 	SDWORD	tx,ty;
 
-	tx = map_coord(psStruct->x);
-	ty = map_coord(psStruct->y);
+	tx = map_coord(psStruct->pos.x);
+	ty = map_coord(psStruct->pos.y);
 
 	for(psCurr = apsDroidLists[psDroid->player]; psCurr; psCurr=psCurr->psNext)
 	{
 		if (psCurr != psDroid
-		 && map_coord(psCurr->x) == tx
-		 && map_coord(psCurr->y) == ty
+		 && map_coord(psCurr->pos.x) == tx
+		 && map_coord(psCurr->pos.y) == ty
 		 && vtolDroid(psCurr))
 		{
 			actionDroidObj(psCurr, DACTION_CLEARREARMPAD, (BASE_OBJECT *)psStruct);
@@ -7590,15 +7542,15 @@ BOOL vtolOnRearmPad(STRUCTURE *psStruct, DROID *psDroid)
 	SDWORD	tx,ty;
 	BOOL	found;
 
-	tx = map_coord(psStruct->x);
-	ty = map_coord(psStruct->y);
+	tx = map_coord(psStruct->pos.x);
+	ty = map_coord(psStruct->pos.y);
 
 	found = FALSE;
 	for(psCurr = apsDroidLists[psDroid->player]; psCurr; psCurr=psCurr->psNext)
 	{
 		if (psCurr != psDroid
-		 && map_coord(psCurr->x) == tx
-		 && map_coord(psCurr->y) == ty)
+		 && map_coord(psCurr->pos.x) == tx
+		 && map_coord(psCurr->pos.y) == ty)
 		{
 			found = TRUE;
 			break;
@@ -7748,8 +7700,8 @@ STRUCTURE * giftSingleStructure(STRUCTURE *psStructure, UBYTE attackPlayer, BOOL
 
 	//save info about the structure
 	psType = psStructure->pStructureType;
-	x = psStructure->x;
-	y = psStructure->y;
+	x = psStructure->pos.x;
+	y = psStructure->pos.y;
 	direction = psStructure->direction;
 	originalPlayer = psStructure->player;
 	//save how complete the build process is
@@ -7795,7 +7747,7 @@ STRUCTURE * giftSingleStructure(STRUCTURE *psStructure, UBYTE attackPlayer, BOOL
 			case REF_POWER_GEN:
 			case REF_RESEARCH:
 				//build the module for powerGen and research
-				buildStructure(psModule, psNewStruct->x, psNewStruct->y,
+				buildStructure(psModule, psNewStruct->pos.x, psNewStruct->pos.y,
 					attackPlayer, FALSE);
 				break;
 			case REF_FACTORY:
@@ -7803,7 +7755,7 @@ STRUCTURE * giftSingleStructure(STRUCTURE *psStructure, UBYTE attackPlayer, BOOL
 				//build the appropriate number of modules
 				while (capacity)
 				{
-					buildStructure(psModule, psNewStruct->x, psNewStruct->y,
+					buildStructure(psModule, psNewStruct->pos.x, psNewStruct->pos.y,
 						attackPlayer, FALSE);
 					capacity--;
 				}
@@ -7833,14 +7785,14 @@ STRUCTURE * giftSingleStructure(STRUCTURE *psStructure, UBYTE attackPlayer, BOOL
 				{
 
 					audio_QueueTrackPos( ID_SOUND_NEXUS_DEFENCES_ABSORBED,
-						psNewStruct->x, psNewStruct->y, psNewStruct->z );
+						psNewStruct->pos.x, psNewStruct->pos.y, psNewStruct->pos.z );
 
 				}
 				else
 				{
 
 					audio_QueueTrackPos( ID_SOUND_NEXUS_STRUCTURE_ABSORBED,
-						psNewStruct->x, psNewStruct->y, psNewStruct->z );
+						psNewStruct->pos.x, psNewStruct->pos.y, psNewStruct->pos.z );
 
 				}
 				//make sure this structure is visible to selectedPlayer if the structure used to be selectedPlayers'
@@ -7888,11 +7840,9 @@ void	structUpdateRecoil( STRUCTURE *psStruct )
 		recoil = percent/5;
 	}
 
-	fraction =
-		MAKEFRACT(asWeaponStats[psStruct->asWeaps[0].nStat].recoilValue)/
-		(MAKEFRACT(100));
+	fraction = (float)asWeaponStats[psStruct->asWeaps[0].nStat].recoilValue / 100.f;
 
-	recoil = MAKEINT( MAKEFRACT(recoil) * fraction);
+	recoil = (float)recoil * fraction;
 
 	/* Put it into the weapon data */
 	psStruct->asWeaps[0].recoilValue = recoil;

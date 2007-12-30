@@ -107,7 +107,7 @@ typedef int VERTEXID;	// Size of the entry for vertex id in the imd polygon stru
 typedef struct {
 	Uint32 flags;
 	Sint32 zcentre;
-	int npnts;
+	unsigned int npnts;
 	Vector3f normal;
 	VERTEXID *pindex;
 	Vector2f *texCoord;
@@ -116,7 +116,8 @@ typedef struct {
 
 typedef struct iIMDShape {
 	int texpage;
-	int sradius, radius, xmin, xmax, ymin, ymax, zmin, zmax;
+	int sradius, radius;
+	Vector3i min, max;
 
 	Vector3f ocen;
 	unsigned short numFrames;

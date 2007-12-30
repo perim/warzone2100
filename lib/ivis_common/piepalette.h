@@ -23,10 +23,7 @@
 #include "lib/ivis_common/piedef.h"
 //*************************************************************************
 
-#define PALETTE_MAX	8
-
 #define PALETTE_SIZE	256
-#define PALETTE_SHADE_LEVEL 16
 
 #define COL_TRANS			0
 #define COL_BLACK			colours[0]
@@ -62,21 +59,43 @@
 #define WZCOL_CURSOR			psPalette[13]
 #define WZCOL_MENU_SCORES_INTERIOR	psPalette[14]
 #define WZCOL_MENU_SEPARATOR		psPalette[15]
-#define WZCOL_MAX			16
+#define WZCOL_TEXT_BRIGHT		psPalette[16]
+#define WZCOL_TEXT_MEDIUM		psPalette[17]
+#define WZCOL_TEXT_DARK			psPalette[18]
+#define WZCOL_SCORE_BOX_BORDER		psPalette[19]
+#define WZCOL_SCORE_BOX			psPalette[20]
+#define WZCOL_TOOLTIP_TEXT		psPalette[21]
+#define WZCOL_UNIT_SELECT_BORDER	psPalette[22]
+#define WZCOL_UNIT_SELECT_BOX		psPalette[23]
+#define WZCOL_RADAR_BACKGROUND		psPalette[24]
+#define WZCOL_MAP_OUTLINE_OK		psPalette[25]
+#define WZCOL_MAP_OUTLINE_BAD		psPalette[26]
+#define WZCOL_MAX			27
 
 //*************************************************************************
 
 extern Uint8		colours[];
-extern Uint8		palShades[PALETTE_SIZE * PALETTE_SHADE_LEVEL];
 extern PIELIGHT		psPalette[];
 
 //*************************************************************************
 extern void		pal_Init(void);
 extern void		pal_ShutDown(void);
-extern void		pal_BuildAdjustedShadeTable( void );
 extern Uint8	pal_GetNearestColour(Uint8 r, Uint8 g, Uint8 b);
 extern int		pal_AddNewPalette(PIELIGHT *pal);
 extern void		pal_PaletteSet(void);
 extern PIELIGHT		*pie_GetGamePal(void);
+extern PIELIGHT		pal_SetBrightness(UBYTE brightness);
+
+static inline PIELIGHT pal_Colour(UBYTE r, UBYTE g, UBYTE b)
+{
+	PIELIGHT c;
+
+	c.byte.r = r;
+	c.byte.g = g;
+	c.byte.b = b;
+	c.byte.a = UBYTE_MAX;
+
+	return c;
+}
 
 #endif

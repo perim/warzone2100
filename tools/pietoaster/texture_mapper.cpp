@@ -1,4 +1,4 @@
-/* 
+/*
  *  PieToaster is an OpenGL application to edit 3D models in
  *  Warzone 2100's (an RTS game) PIE 3D model format, which is heavily
  *  inspired by PieSlicer created by stratadrake.
@@ -16,18 +16,13 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  $Revision$
- *  $Id$
- *  $HeadURL$
  */
-
 #include "texture_mapper.h"
 #include "texture.h"
 #include "screen.h"
 
-void	CTextureMapper::addTargets(uint16_t width, uint16_t height, uint16_t textureId, iIMDPoly *target, uint16_t quantity) {
-	uint16_t	i;
+void	CTextureMapper::addTargets(Uint16 width, Uint16 height, Uint16 textureId, iIMDPoly *target, Uint16 quantity) {
+	Uint16	i;
 
 	if (this->m_Up)
 	{
@@ -69,7 +64,7 @@ void	CTextureMapper::addTargets(uint16_t width, uint16_t height, uint16_t textur
 }
 
 void	CTextureMapper::removeTargets() {
-	uint16_t	i;
+	Uint16	i;
 
 	if (!this->m_Up)
 	{
@@ -119,7 +114,7 @@ void	CTextureMapper::draw(void) {
 	glDisable(GL_TEXTURE_2D);
 
 	//Draw polygon vertices/points
-	int32_t	i, x, y;
+	Sint32	i, x, y;
 	glColor4ub(255, 192, 255, 255);
 	for (i = 0;i < m_targets[0]->npnts;i++)
 	{
@@ -196,13 +191,13 @@ void	CTextureMapper::draw(void) {
 }
 
 ///Translate texture coord X in float into screen coords in int
-int32_t	CTextureMapper::translateX(float texCoord) {
-	return (int32_t)(texCoord * m_width);
+Sint32	CTextureMapper::translateX(float texCoord) {
+	return (Sint32)(texCoord * m_width);
 }
 
 ///Translate texture coord Y in float into screen coords in int
-int32_t	CTextureMapper::translateY(float texCoord) {
-	return (int32_t)(texCoord * m_height);
+Sint32	CTextureMapper::translateY(float texCoord) {
+	return (Sint32)(texCoord * m_height);
 }
 
 void	CTextureMapper::addGUI(void) {
@@ -211,7 +206,7 @@ void	CTextureMapper::addGUI(void) {
 	char	tmDefine[255];
 	snprintf(tmDefine, 255, "TextureMapper ");
 
-	uint16_t	i, j;
+	Uint16	i, j;
 
 	//assert(m_quantity < 10 && m_targets[i]->npnts < 10)
 
@@ -226,8 +221,7 @@ void	CTextureMapper::addGUI(void) {
 			//TODO:non-power-of-two support?
 			snprintf(varDefine, 255, "label = 'vertice%u'", j);
 
-			TwAddVarRW(m_GUI, varName, g_pieVector2fType, &m_targets[i]->texCoord[j], varDefine);
-
+			TwAddVarRW(m_GUI, varName, g_tw_pieVector2fType, &m_targets[i]->texCoord[j], varDefine);
 		}
 	}
 }

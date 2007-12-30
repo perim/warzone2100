@@ -1,4 +1,4 @@
-/* 
+/*
  *  PieToaster is an OpenGL application to edit 3D models in
  *  Warzone 2100's (an RTS game) PIE 3D model format, which is heavily
  *  inspired by PieSlicer created by stratadrake.
@@ -16,32 +16,37 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  $Revision$
- *  $Id$
- *  $HeadURL$
  */
-
 #ifndef _screen_h
 #define _screen_h
 
-#ifdef _WIN32
-	#include <windows.h>	// required by gl.h
-#endif
-#include <GL/gl.h>
-#include <GL/glu.h>
+#include <SDL_opengl.h>
 
+#include "wzglobal.h"
 #include "pie_types.h"
+
 
 class CScreen {
 public:
-	uint16_t	m_width;
-	uint16_t	m_height;
-	int32_t	m_bpp;
-	uint32_t	m_flags;
+	PFNGLGENBUFFERSARBPROC glGenBuffersARB;
+	PFNGLBINDBUFFERARBPROC glBindBufferARB;
+	PFNGLBUFFERDATAARBPROC glBufferDataARB;
+	PFNGLBUFFERSUBDATAARBPROC glBufferSubDataARB;
+	PFNGLDELETEBUFFERSARBPROC glDeleteBuffersARB;
+	PFNGLGETBUFFERPARAMETERIVARBPROC glGetBufferParameterivARB;
+	PFNGLMAPBUFFERARBPROC glMapBufferARB;
+	PFNGLUNMAPBUFFERARBPROC glUnmapBufferARB;
+
+	Uint16	m_width;	///<width of window
+	Uint16	m_height;	///<height of window
+	Sint32	m_bpp;	///<bit per pixel
+	Uint32	m_flags;	///<SDL surface flags
+	bool	m_useVBO;	///uses VBO or not
 
 	int		initialize(void);
+	void	initializeVBOExtension(void);
 	bool	setVideoMode(void);
+	SDL_Surface	*m_Surface;
 
 };
 

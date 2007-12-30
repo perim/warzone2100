@@ -96,7 +96,7 @@ PFNGLACTIVESTENCILFACEEXTPROC glActiveStencilFaceEXT;
 #endif
 
 
-/// Check if we can use one-pass stencil in the shadow draw code
+/** Check if we can use one-pass stencil in the shadow draw code. */
 static BOOL stencil_one_pass(void)
 {
 	// tribool, -1: uninitialized, 0: FALSE, 1: TRUE
@@ -174,7 +174,7 @@ void pie_EndLighting(void)
 }
 
 
-static inline void pie_Polygon(const SDWORD numVerts, const TERRAIN_VERTEXF* pVrts, const BOOL light)
+static inline void pie_Polygon(const unsigned int numVerts, const TERRAIN_VERTEXF* pVrts, const BOOL light)
 {
 	unsigned int i = 0;
 
@@ -228,7 +228,7 @@ static inline void pie_Polygon(const SDWORD numVerts, const TERRAIN_VERTEXF* pVr
 
 	for (i = 0; i < numVerts; i++)
 	{
-		glColor4ub(pVrts[i].light.byte.r, pVrts[i].light.byte.g, pVrts[i].light.byte.b, pVrts[i].light.byte.a);
+		glColor4ubv(pVrts[i].light.vector);
 		glTexCoord2f(pVrts[i].u, pVrts[i].v);
 		glVertex3f(pVrts[i].x, pVrts[i].y, pVrts[i].z);
 	}
@@ -259,13 +259,13 @@ static inline void pie_PiePoly(const PIEPOLY *poly, const BOOL light)
 	{
 		if (poly->flags & PIE_COLOURKEYED)
 		{
-			pie_SetColourKeyedBlack(TRUE);
+			pie_SetAlphaTest(TRUE);
 		}
 		else
 		{
-			pie_SetColourKeyedBlack(FALSE);
+			pie_SetAlphaTest(FALSE);
 		}
-		pie_SetColourKeyedBlack(TRUE);
+		pie_SetAlphaTest(TRUE);
 		if (poly->flags & PIE_NO_CULL)
 		{
 			glDisable(GL_CULL_FACE);
@@ -382,7 +382,7 @@ static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELI
 
 	if (pieFlag & pie_RAISE)
 	{
-		pieFlagData = (shape->ymax * (pie_RAISE_SCALE - pieFlagData))/pie_RAISE_SCALE;
+		pieFlagData = (shape->max.y * (pie_RAISE_SCALE - pieFlagData)) / pie_RAISE_SCALE;
 	}
 
 	pie_SetTexturePage(shape->texpage);
@@ -437,8 +437,8 @@ static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELI
 			pieVrts[n].z = scrPoints[*index].z;
 			pieVrts[n].u = pPolys->texCoord[n].x;
 			pieVrts[n].v = pPolys->texCoord[n].y;
-			pieVrts[n].light.argb = colour.argb;
-			pieVrts[n].specular.argb = specular.argb;
+			pieVrts[n].light = colour;
+			pieVrts[n].specular = specular;
 		}
 		piePoly.nVrts = pPolys->npnts;
 		piePoly.pVrts = pieVrts;
@@ -484,10 +484,10 @@ static int compare_edge (EDGE *A, EDGE *B, const Vector3f *pVertices )
 
 /// Add an edge to an edgelist
 /// Makes sure only silhouette edges are present
-static void addToEdgeList(int a, int b, EDGE *edgelist, int *edge_count, Vector3f *pVertices)
+static void addToEdgeList(int a, int b, EDGE *edgelist, unsigned int* edge_count, Vector3f *pVertices)
 {
 	EDGE newEdge = {a, b};
-	int i;
+	unsigned int i;
 	BOOL foundMatching = FALSE;
 
 	for(i = 0; i < *edge_count; i++)
@@ -531,12 +531,12 @@ static inline float scale_y(float y, int flag, int flag_data)
 /// Draw the shadow for a shape
 static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* light)
 {
-	int i, j, n;
+	unsigned int i, j, n;
 	Vector3f *pVertices;
 	iIMDPoly *pPolys;
-	int edge_count = 0;
+	unsigned int edge_count = 0;
 	static EDGE *edgelist = NULL;
-	static int edgelistsize = 256;
+	static unsigned int edgelistsize = 256;
 	EDGE *drawlist = NULL;
 
 	if(!edgelist)
@@ -574,12 +574,19 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 					if(edge_count >= edgelistsize-1)
 					{
 						// enlarge
-						EDGE *newstack = (EDGE*)malloc(sizeof(EDGE)*edgelistsize*2);
-						memcpy(newstack, edgelist, sizeof(EDGE)*edgelistsize);
-						free(edgelist);
-						edgelistsize*=2;
+						EDGE* newstack;
+						edgelistsize *= 2;
+						newstack = realloc(edgelist, sizeof(EDGE) * edgelistsize);
+						if (newstack == NULL)
+						{
+							debug(LOG_ERROR, "pie_DrawShadow: Out of memory!");
+							abort();
+							return;
+						}
+
 						edgelist = newstack;
-						debug(LOG_WARNING, "new edge list size: %i", edgelistsize);
+
+						debug(LOG_WARNING, "new edge list size: %u", edgelistsize);
 					}
 				}
 				// back to the first
@@ -674,10 +681,8 @@ void pie_CleanUp( void )
 	scshapes = NULL;
 }
 
-void pie_Draw3DShape(iIMDShape *shape, int frame, int team, UDWORD col, UDWORD spec, int pieFlag, int pieFlagData)
+void pie_Draw3DShape(iIMDShape *shape, int frame, int team, PIELIGHT colour, PIELIGHT specular, int pieFlag, int pieFlagData)
 {
-	PIELIGHT colour, specular;
-
 	pieCount++;
 
 	// Fix for transparent buildings and features!!
@@ -687,20 +692,6 @@ void pie_Draw3DShape(iIMDShape *shape, int frame, int team, UDWORD col, UDWORD s
 		pieFlag = pieFlag & ~pie_TRANSLUCENT;
 		pieFlagData = 0;
 	}
-
-// WARZONE light as byte passed in colour so expand
-	if (col <= MAX_UB_LIGHT)
-	{
-		colour.byte.a = 255;//no fog
-		colour.byte.r = (UBYTE)col;
-		colour.byte.g = (UBYTE)col;
-		colour.byte.b = (UBYTE)col;
-	}
-	else
-	{
-		colour.argb = col;
-	}
-	specular.argb = spec;
 
 	if (frame == 0)
 	{
@@ -816,7 +807,7 @@ static void pie_DrawShadows(void)
 
 	glPushMatrix();
 
-	pie_SetColourKeyedBlack(FALSE);
+	pie_SetAlphaTest(FALSE);
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_FALSE);
@@ -926,10 +917,10 @@ void pie_DrawImage(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style)
 
 	pie_SetTexturePage(image->texPage);
 
-	style->colour.argb = 0xffffffff; // draw solid
-	style->specular.argb = 0x00000000;
+	style->colour = WZCOL_WHITE; // draw solid
+	style->specular = WZCOL_BLACK;
 
-	glColor4ub(style->colour.byte.r, style->colour.byte.g, style->colour.byte.b, style->colour.byte.a);
+	glColor4ubv(style->colour.vector);
 
 	glBegin(GL_TRIANGLE_STRIP);
 		//set up 4 pie verts
@@ -960,9 +951,9 @@ void pie_DrawRect(SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1, PIELIGHT colour)
 {
 	polyCount++;
 
-	pie_SetColourKeyedBlack(FALSE);
+	pie_SetAlphaTest(FALSE);
 
-	glColor4ub(colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a);
+	glColor4ubv(colour.vector);
 	glBegin(GL_TRIANGLE_STRIP);
 		glVertex2i(x0, y0);
 		glVertex2i(x1, y0);
@@ -977,7 +968,7 @@ void pie_DrawRect(SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1, PIELIGHT colour)
  *
  ***************************************************************************/
 
-void pie_DrawTerrainInit()
+void pie_DrawTerrainDone(int mapx, int mapy)
 {
 	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_VERTEX_ARRAY);
@@ -987,10 +978,6 @@ void pie_DrawTerrainInit()
 	glVertexPointer(VERTEX_COMPONENTS, GL_FLOAT, 0, aVertex);
 	glMatrixMode(GL_TEXTURE);
 	glLoadIdentity();
-}
-
-void pie_DrawTerrainDone(int mapx, int mapy)
-{
 	glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_TRIANGLE * mapx * mapy * 2);
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_VERTEX_ARRAY);
@@ -1031,7 +1018,7 @@ void pie_DrawWaterTriangle(const TERRAIN_VERTEX *aVrts)
 	glBegin(GL_TRIANGLE_FAN);
 		for ( i = 0; i < 3; i++ )
 		{
-			glColor4ub( aVrts[i].light.byte.r, aVrts[i].light.byte.g, aVrts[i].light.byte.b, aVrts[i].light.byte.a );
+			glColor4ubv(aVrts[i].light.vector);
 			glTexCoord2f(aVrts[i].u, aVrts[i].v);
 			glVertex3f( aVrts[i].pos.x, aVrts[i].pos.y, aVrts[i].pos.z );
 		}

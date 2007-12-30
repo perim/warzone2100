@@ -234,30 +234,30 @@ extern BOOL multiplayerWinSequence(BOOL firstCall);
 // definitions of functions in multiplay's other c files.
 
 // Buildings . multistruct
-extern BOOL	sendBuildStarted	(STRUCTURE *psStruct,DROID *psDroid);
+extern BOOL	sendBuildStarted	(STRUCTURE *psStruct, DROID *psDroid);
 extern BOOL SendDestroyStructure(STRUCTURE *s);
 extern BOOL	SendBuildFinished	(STRUCTURE *psStruct);
-extern BOOL sendLasSat			(UBYTE player,STRUCTURE *psStruct, BASE_OBJECT *psObj);
+extern BOOL sendLasSat			(UBYTE player, STRUCTURE *psStruct, BASE_OBJECT *psObj);
 
 
 // droids . multibot
-extern BOOL SendDroid			(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UBYTE player, UDWORD id);
-extern BOOL SendDestroyDroid	(DROID *d);
+extern BOOL SendDroid			(const DROID_TEMPLATE* pTemplate, uint32_t x, uint32_t y, uint8_t player, uint32_t id);
+extern BOOL SendDestroyDroid	(const DROID* psDroid);
 extern BOOL SendDemolishFinished(STRUCTURE *psS,DROID *psD);
-extern BOOL SendDroidInfo		(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWORD y, BASE_OBJECT *psObj);
-extern BOOL SendDroidMove		(DROID *psDroid, UDWORD x, UDWORD y,BOOL bFormation);
-extern BOOL SendGroupOrderSelected	(UBYTE player, UDWORD x, UDWORD y, BASE_OBJECT *psObj);
+extern BOOL SendDroidInfo		(const DROID* psDroid, DROID_ORDER order, uint32_t x, uint32_t y, const BASE_OBJECT* psObj);
+extern BOOL SendDroidMove		(const DROID* psDroid, uint32_t x, uint32_t y, BOOL formation);
+extern BOOL SendGroupOrderSelected(uint8_t player, uint32_t x, uint32_t y, const BASE_OBJECT* psObj);
 extern BOOL SendCmdGroup		(DROID_GROUP *psGroup, UWORD x, UWORD y, BASE_OBJECT *psObj);
 
-extern BOOL SendGroupOrderGroup(DROID_GROUP *psGroup, DROID_ORDER order,UDWORD x,UDWORD y,BASE_OBJECT *psObj);
+extern BOOL SendGroupOrderGroup(const DROID_GROUP* psGroup, DROID_ORDER order, uint32_t x, uint32_t y, const BASE_OBJECT* psObj);
 
 
-extern BOOL sendDroidSecondary	(DROID *psDroid, SECONDARY_ORDER sec, SECONDARY_STATE state);
-extern BOOL sendDroidSecondaryAll(DROID *psDroid);
-extern BOOL sendDroidEmbark     (DROID *psDroid);
-extern BOOL sendDroidDisEmbark  (DROID *psDroid);
+extern BOOL sendDroidSecondary	(const DROID* psDroid, SECONDARY_ORDER sec, SECONDARY_STATE state);
+extern BOOL sendDroidSecondaryAll(const DROID* psDroid);
+extern BOOL sendDroidEmbark     (const DROID* psDroid);
+extern BOOL sendDroidDisEmbark  (const DROID* psDroid);
 extern BOOL sendDestroyExtra	(BASE_OBJECT *psKilled,BASE_OBJECT *psKiller);
-extern BOOL sendHappyVtol		(DROID *psDroid);
+extern BOOL sendHappyVtol		(const DROID* psDroid);
 
 // Startup. mulitopt
 extern BOOL multiTemplateSetup	(void);

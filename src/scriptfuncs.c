@@ -134,8 +134,8 @@ BOOL objectInRange(BASE_OBJECT *psList, SDWORD x, SDWORD y, SDWORD range)
 			continue;
 		}
 
-		xdiff = (SDWORD)psCurr->x - x;
-		ydiff = (SDWORD)psCurr->y - y;
+		xdiff = (SDWORD)psCurr->pos.x - x;
+		ydiff = (SDWORD)psCurr->pos.y - y;
 		if (xdiff*xdiff + ydiff*ydiff < rangeSq)
 		{
 			return TRUE;
@@ -274,8 +274,8 @@ static BOOL objectInArea(BASE_OBJECT *psList, SDWORD x1, SDWORD y1, SDWORD x2, S
 			continue;
 		}
 
-		ox = (SDWORD)psCurr->x;
-		oy = (SDWORD)psCurr->y;
+		ox = (SDWORD)psCurr->pos.x;
+		oy = (SDWORD)psCurr->pos.y;
 		if (ox >= x1 && ox <= x2 &&
 			oy >= y1 && oy <= y2)
 		{
@@ -410,8 +410,8 @@ BOOL scrSeenStructInArea(void)
 			continue;
 		}
 
-		ox = (SDWORD)psCurr->x;
-		oy = (SDWORD)psCurr->y;
+		ox = (SDWORD)psCurr->pos.x;
+		oy = (SDWORD)psCurr->pos.y;
 		if (ox >= x1 && ox <= x2 &&	oy >= y1 && oy <= y2)
 		{
 			// structure is in area.
@@ -457,8 +457,8 @@ BOOL scrStructButNoWallsInArea(void)
 			(psStruct->pStructureType->type != REF_WALLCORNER) &&
 			(psStruct->status == SS_BUILT) )
 		{
-			ox = (SDWORD)psStruct->x;
-			oy = (SDWORD)psStruct->y;
+			ox = (SDWORD)psStruct->pos.x;
+			oy = (SDWORD)psStruct->pos.y;
 			if ((ox >= x1) && (ox <= x2) &&
 				(oy >= y1) && (oy <= y2))
 			{
@@ -497,8 +497,8 @@ static SDWORD numObjectsInArea(BASE_OBJECT *psList, SDWORD x1, SDWORD y1, SDWORD
 			continue;
 		}
 
-		ox = (SDWORD)psCurr->x;
-		oy = (SDWORD)psCurr->y;
+		ox = (SDWORD)psCurr->pos.x;
+		oy = (SDWORD)psCurr->pos.y;
 		if (ox >= x1 && ox <= x2 &&
 			oy >= y1 && oy <= y2)
 		{
@@ -626,8 +626,8 @@ BOOL scrNumStructsButNotWallsInArea(void)
 			(psStruct->pStructureType->type != REF_WALLCORNER) &&
 			(psStruct->status == SS_BUILT))
 		{
-			ox = (SDWORD)psStruct->x;
-			oy = (SDWORD)psStruct->y;
+			ox = (SDWORD)psStruct->pos.x;
+			oy = (SDWORD)psStruct->pos.y;
 			if ((ox >= x1) && (ox <= x2) &&
 				(oy >= y1) && (oy <= y2))
 			{
@@ -672,8 +672,8 @@ BOOL scrNumStructsByTypeInArea(void)
 		if ((psStruct->pStructureType->type == (UDWORD)type) &&
 			(psStruct->status == SS_BUILT))
 		{
-			ox = (SDWORD)psStruct->x;
-			oy = (SDWORD)psStruct->y;
+			ox = (SDWORD)psStruct->pos.x;
+			oy = (SDWORD)psStruct->pos.y;
 			if ((ox >= x1) && (ox <= x2) &&
 				(oy >= y1) && (oy <= y2))
 			{
@@ -1712,8 +1712,8 @@ BOOL scrGetFeature(void)
 	{
 		if (psFeat->psStats->subType == psFeatureStatToFind[bucket]->subType
 		 && psFeat->visible[playerToEnum[bucket]] != 0
-		 && !TILE_HAS_STRUCTURE(mapTile(map_coord(psFeat->x), map_coord(psFeat->y)))
-		 && !fireOnLocation(psFeat->x,psFeat->y)		// not burning.
+		 && !TILE_HAS_STRUCTURE(mapTile(map_coord(psFeat->pos.x), map_coord(psFeat->pos.y)))
+		 && !fireOnLocation(psFeat->pos.x,psFeat->pos.y)		// not burning.
 		   )
 		{
 			scrFunctionResult.v.oval = psFeat;
@@ -1775,8 +1775,8 @@ BOOL scrGetFeatureB(void)
 	{
 		if(	( psCurrEnumFeature[bucket]->psStats->subType == psFeatureStatToFind[bucket]->subType)
 			&&( psCurrEnumFeature[bucket]->visible[playerToEnum[bucket]]	!= 0)
-			&&!TILE_HAS_STRUCTURE(mapTile(map_coord(psCurrEnumFeature[bucket]->x), map_coord(psCurrEnumFeature[bucket]->y)))
-			 /*&&!fireOnLocation(psCurrEnumFeature[bucket]->x,psCurrEnumFeature[bucket]->y )*/		// not burning.
+			&&!TILE_HAS_STRUCTURE(mapTile(map_coord(psCurrEnumFeature[bucket]->pos.x), map_coord(psCurrEnumFeature[bucket]->pos.y)))
+			 /*&&!fireOnLocation(psCurrEnumFeature[bucket]->pos.x,psCurrEnumFeature[bucket]->pos.y )*/		// not burning.
 			)
 		{
 			scrFunctionResult.v.oval = psCurrEnumFeature[bucket];
@@ -1823,7 +1823,7 @@ BOOL scrGetFeature(void)
 			&&
 			( psCurrEnumFeature[bucket]->visible[playerToEnum[bucket]]	!= 0)
 			&&
-			!TILE_HAS_STRUCTURE(mapTile(map_coord(psCurrEnumFeature[bucket]->x), map_coord(psCurrEnumFeature[bucket]->y)))
+			!TILE_HAS_STRUCTURE(mapTile(map_coord(psCurrEnumFeature[bucket]->pos.x), map_coord(psCurrEnumFeature[bucket]->pos.y)))
 		   )
 		{
 			if (!stackPushResult(ST_FEATURE,(UDWORD) psCurrEnumFeature[bucket]))			//	push scrFunctionResult
@@ -1872,8 +1872,8 @@ BOOL scrAddFeature(void)
 		/* check for wrecked feature already on-tile and remove */
 		for(psFeat = apsFeatureLists[0]; psFeat; psFeat = psFeat->psNext)
 		{
-			iTestX = map_coord(psFeat->x);
-			iTestY = map_coord(psFeat->y);
+			iTestX = map_coord(psFeat->pos.x);
+			iTestY = map_coord(psFeat->pos.y);
 
 			if ( (iTestX == iMapX) && (iTestY == iMapY) )
 			{
@@ -1959,7 +1959,7 @@ BOOL scrAddStructure(void)
 			{
 				for ( iB=iMapY; iB<=iMapY+(SDWORD)psStat->baseBreadth; iB+=iBreadth )
 				{
-					setTileHeight(iW, iB, psStruct->z);
+					setTileHeight(iW, iB, psStruct->pos.z);
 				}
 			}*/
 		}
@@ -2334,7 +2334,7 @@ BOOL scrCentreView(void)
 	}
 
 	//centre the view on the objects x/y
-	setViewPos(map_coord(psObj->x), map_coord(psObj->y), FALSE);
+	setViewPos(map_coord(psObj->pos.x), map_coord(psObj->pos.y), FALSE);
 
 	return TRUE;
 }
@@ -4324,8 +4324,8 @@ BOOL scrStructureBuiltInRange(void)
 	found = FALSE;
 	for(psCurr = apsStructLists[player]; psCurr; psCurr = psCurr->psNext)
 	{
-		xdiff = (SDWORD)psCurr->x - x;
-		ydiff = (SDWORD)psCurr->y - y;
+		xdiff = (SDWORD)psCurr->pos.x - x;
+		ydiff = (SDWORD)psCurr->pos.y - y;
 		if (xdiff*xdiff + ydiff*ydiff <= rangeSquared)
 		{
 
@@ -5031,8 +5031,8 @@ SDWORD		sX,sY;
 		/* Keep a copy */
 		psNextS = psStructure->psNext;
 
-		sX = psStructure->x;
-		sY = psStructure->y;
+		sX = psStructure->pos.x;
+		sY = psStructure->pos.y;
 
 		if(psStructure->pStructureType->type == typeRef)
 		{
@@ -5057,8 +5057,8 @@ SDWORD		sX,sY;
 			/* Keep a copy */
 			psNextF = psFeature->psNext;
 
-			sX = psFeature->x;
-			sY = psFeature->y;
+			sX = psFeature->pos.x;
+			sY = psFeature->pos.y;
 
 		  	if( psFeature->psStats->subType == FEAT_BUILDING)
 		  //		(psFeature->psStats->subType != FEAT_OIL_DRUM) &&
@@ -5118,8 +5118,8 @@ BOOL	bVisible;
 			continue;
 		}
 
-		dX = psDroid->x;
-		dY = psDroid->y;
+		dX = psDroid->pos.x;
+		dY = psDroid->pos.y;
 		/* Do we care if the droid is visible or not */
 		if(bVisible ? psDroid->visible[playerLooking] : TRUE)
 		{
@@ -5368,19 +5368,19 @@ UDWORD		newVal;
 	}
 
 	/* Get percentage in range [0.1] */
-	divisor =  MAKEFRACT(damagePercent) / 100;
+	divisor =  (float)damagePercent / 100.f;
 
 	/* See what we're dealing with */
 	switch(psObj->type)
 	{
 	case OBJ_DROID:
 		psDroid = (DROID *) psObj;
-		newVal = MAKEINT((divisor*psDroid->originalBody));
+		newVal = divisor * psDroid->originalBody;
 		psDroid->body = newVal;
 		break;
 	case OBJ_STRUCTURE:
 		psStructure = (STRUCTURE *) psObj;
-		newVal = MAKEINT((divisor*structureBody(psStructure)));
+		newVal = divisor * structureBody(psStructure);
 		psStructure->body = (UWORD)newVal;
 		break;
 	case OBJ_FEATURE:
@@ -5388,7 +5388,7 @@ UDWORD		newVal;
 		/* Some features cannot be damaged */
 		if(psFeature->psStats->damageable)
 		{
-			newVal = MAKEINT((divisor*psFeature->psStats->body));
+			newVal = divisor * psFeature->psStats->body;
 			psFeature->body = newVal;
 		}
 		break;
@@ -5424,8 +5424,8 @@ UDWORD	count=0;
 	for(psDroid = apsDroidLists[player]; psDroid; psDroid = psNext)
 	{
 		psNext = psDroid->psNext;	// get a copy cos pointer will be lost
-		if( (psDroid->x > x1) && (psDroid->x < x2) &&
-			(psDroid->y > y1) && (psDroid->y < y2) )
+		if( (psDroid->pos.x > x1) && (psDroid->pos.x < x2) &&
+			(psDroid->pos.y > y1) && (psDroid->pos.y < y2) )
 		{
 			/* then it's inside the area */
 			destroyDroid(psDroid);
@@ -5627,157 +5627,17 @@ static BOOL structDoubleCheck(BASE_STATS *psStat,UDWORD xx,UDWORD yy, SDWORD max
 
 }
 
-// pick a structure location(only used in skirmish game at 27Aug) ajl.
-BOOL scrPickStructLocation(void)
+static BOOL pickStructLocation(int index, int *pX, int *pY, int player, int maxBlockingTiles)
 {
-	SDWORD			*pX,*pY;
-	SDWORD			index;
 	STRUCTURE_STATS	*psStat;
 	UDWORD			numIterations = 30;
 	BOOL			found = FALSE;
 	UDWORD			startX, startY, incX, incY;
 	SDWORD			x=0, y=0;
-	UDWORD			player;
-
-	if (!stackPopParams(4, ST_STRUCTURESTAT, &index, VAL_REF|VAL_INT, &pX ,
-        VAL_REF|VAL_INT, &pY, VAL_INT, &player))
-	{
-		return FALSE;
-	}
 
 	if (player >= MAX_PLAYERS)
 	{
-		ASSERT( FALSE, "scrPickStructLocation:player number is too high" );
-		return FALSE;
-	}
-
-    // check for wacky coords.
-	if(		*pX < 0
-		||	*pX > world_coord(mapWidth)
-		||	*pY < 0
-		||	*pY > world_coord(mapHeight)
-	  )
-	{
-		goto failedstructloc;
-	}
-
-	psStat = &asStructureStats[index];			// get stat.
-	startX = map_coord(*pX);					// change to tile coords.
-	startY = map_coord(*pY);
-
-	x = startX;
-	y = startY;
-
-	// first try the original location
-	if ( validLocation((BASE_STATS*)psStat, startX, startY, player, FALSE) )
-	{
-		if(structDoubleCheck((BASE_STATS*)psStat,startX,startY,MAX_BLOCKING_TILES))
-		{
-			found = TRUE;
-		}
-	}
-
-	// try some locations nearby
-	if(!found)
-	{
-		for (incX = 1, incY = 1; incX < numIterations; incX++, incY++)
-		{
-			if (!found){			//top
-				y = startY - incY;
-				for(x = startX - incX; x < (SDWORD)(startX + incX); x++){
-					if ( validLocation((BASE_STATS*)psStat, x, y, player, FALSE)
-						 && structDoubleCheck((BASE_STATS*)psStat,x,y,MAX_BLOCKING_TILES)
-						){
-						found = TRUE;
-						break;
-					}}}
-
-			if (!found)	{			//right
-				x = startX + incX;
-				for(y = startY - incY; y < (SDWORD)(startY + incY); y++){
-					if(validLocation((BASE_STATS*)psStat, x, y, player, FALSE)
-						 && structDoubleCheck((BASE_STATS*)psStat,x,y,MAX_BLOCKING_TILES)
-						){
-						found = TRUE;
-						break;
-					}}}
-
-			if (!found){			//bot
-				y = startY + incY;
-				for(x = startX + incX; x > (SDWORD)(startX - incX); x--){
-					if(validLocation((BASE_STATS*)psStat, x, y, player, FALSE)
-						 && structDoubleCheck((BASE_STATS*)psStat,x,y,MAX_BLOCKING_TILES)
-						 ){
-						found = TRUE;
-						break;
-					}}}
-
-			if (!found){			//left
-				x = startX - incX;
-				for(y = startY + incY; y > (SDWORD)(startY - incY); y--){
-					if(validLocation((BASE_STATS*)psStat, x, y, player, FALSE)
-						 && structDoubleCheck((BASE_STATS*)psStat,x,y,MAX_BLOCKING_TILES)
-						 ){
-						found = TRUE;
-						break;
-					}}}
-
-			if (found)
-			{
-				break;
-			}
-		}
-	}
-
-	if(found)	// did It!
-	{
-		// back to world coords.
-		*pX = world_coord(x) + (psStat->baseWidth * (TILE_UNITS / 2));
-		*pY = world_coord(y) + (psStat->baseBreadth * (TILE_UNITS / 2));
-
-		scrFunctionResult.v.bval = TRUE;
-		if (!stackPushResult(VAL_BOOL, &scrFunctionResult))		// success!
-		{
-			return FALSE;
-		}
-
-		return TRUE;
-	}
-	else
-	{
-failedstructloc:
-		scrFunctionResult.v.bval = FALSE;
-		if (!stackPushResult(VAL_BOOL, &scrFunctionResult))		// failed!
-		{
-			return FALSE;
-		}
-	}
-	return TRUE;
-}
-
-// pick a structure location(only used in skirmish game at 27Aug) ajl.
-// Max number of blocking tiles is passed as parameter for this one
-BOOL scrPickStructLocationB(void)
-{
-	SDWORD			*pX,*pY;
-	SDWORD			index;
-	STRUCTURE_STATS	*psStat;
-	UDWORD			numIterations = 30;
-	BOOL			found = FALSE;
-	UDWORD			startX, startY, incX, incY;
-	SDWORD			x=0, y=0;
-	UDWORD			player;
-	SDWORD			maxBlockingTiles;
-
-	if (!stackPopParams(5, ST_STRUCTURESTAT, &index, VAL_REF|VAL_INT, &pX ,
-        VAL_REF|VAL_INT, &pY, VAL_INT, &player, VAL_INT, &maxBlockingTiles))
-	{
-		return FALSE;
-	}
-
-	if (player >= MAX_PLAYERS)
-	{
-		ASSERT( FALSE, "scrPickStructLocationB:player number is too high" );
+		ASSERT( FALSE, "pickStructLocation:player number is too high" );
 		return FALSE;
 	}
 
@@ -5883,6 +5743,38 @@ failedstructloc:
 		}
 	}
 	return TRUE;
+}
+
+// pick a structure location(only used in skirmish game at 27Aug) ajl.
+BOOL scrPickStructLocation(void)
+{
+	SDWORD			*pX,*pY;
+	SDWORD			index;
+	UDWORD			player;
+
+	if (!stackPopParams(4, ST_STRUCTURESTAT, &index, VAL_REF|VAL_INT, &pX ,
+        VAL_REF|VAL_INT, &pY, VAL_INT, &player))
+	{
+		return FALSE;
+	}
+	return pickStructLocation(index, pX, pY, player, MAX_BLOCKING_TILES);
+}
+
+// pick a structure location(only used in skirmish game at 27Aug) ajl.
+// Max number of blocking tiles is passed as parameter for this one
+BOOL scrPickStructLocationB(void)
+{
+	SDWORD			*pX,*pY;
+	SDWORD			index;
+	UDWORD			player;
+	SDWORD			maxBlockingTiles;
+
+	if (!stackPopParams(5, ST_STRUCTURESTAT, &index, VAL_REF|VAL_INT, &pX ,
+        VAL_REF|VAL_INT, &pY, VAL_INT, &player, VAL_INT, &maxBlockingTiles))
+	{
+		return FALSE;
+	}
+	return pickStructLocation(index, pX, pY, player, maxBlockingTiles);
 }
 
 // -----------------------------------------------------------------------------------------
@@ -6115,8 +6007,8 @@ BOOL scrTakeOverDroidsInArea(void)
     {
         psNext = psDroid->psNext;
         //check if within area specified
-        if (psDroid->x >= x1 && psDroid->x <= x2 &&
-            psDroid->y >= y1 && psDroid->y <= y2)
+        if (psDroid->pos.x >= x1 && psDroid->pos.x <= x2 &&
+            psDroid->pos.y >= y1 && psDroid->pos.y <= y2)
         {
             //give the droid away
             if (giftSingleDroid(psDroid, toPlayer))
@@ -6224,9 +6116,9 @@ BOOL scrTakeOverDroidsInAreaExp(void)
             (psDroid->droidType != DROID_CYBORG_CONSTRUCT) &&
             (psDroid->droidType != DROID_CYBORG_REPAIR) &&
 //			((SDWORD)getDroidLevel(psDroid) <= level) &&
-			((SDWORD)psDroid->numKills <= level) &&
-			psDroid->x >= x1 && psDroid->x <= x2 &&
-            psDroid->y >= y1 && psDroid->y <= y2)
+			((SDWORD)psDroid->experience <= level) &&
+			psDroid->pos.x >= x1 && psDroid->pos.x <= x2 &&
+            psDroid->pos.y >= y1 && psDroid->pos.y <= y2)
         {
             //give the droid away
             if (giftSingleDroid(psDroid, toPlayer))
@@ -6361,8 +6253,8 @@ BOOL scrTakeOverStructsInArea(void)
     {
         psNext = psStruct->psNext;
         //check if within area specified
-        if (psStruct->x >= x1 && psStruct->x <= x2 &&
-            psStruct->y >= y1 && psStruct->y <= y2)
+        if (psStruct->pos.x >= x1 && psStruct->pos.x <= x2 &&
+            psStruct->pos.y >= y1 && psStruct->pos.y <= y2)
         {
             //changed this so allows takeOver is have less than 5 factories
             //don't work on factories for the selectedPlayer
@@ -6486,7 +6378,7 @@ BOOL scrFireWeaponAtObj(void)
 	sWeapon.nStat = wIndex;
 
 	// send the projectile using the selectedPlayer so that it can always be seen
-	proj_SendProjectile(&sWeapon, NULL, selectedPlayer, psTarget->x,psTarget->y,psTarget->z, psTarget, TRUE, FALSE, 0);
+	proj_SendProjectile(&sWeapon, NULL, selectedPlayer, psTarget->pos.x,psTarget->pos.y,psTarget->pos.z, psTarget, TRUE, FALSE, 0);
 
 	return TRUE;
 }
@@ -6529,7 +6421,7 @@ BOOL scrSetDroidKills(void)
 		return FALSE;
 	}
 
-	psDroid->numKills = (UWORD)kills * 100;
+	psDroid->experience = (UWORD)kills * 100;
 
 	return TRUE;
 }
@@ -6551,7 +6443,7 @@ BOOL scrGetDroidKills(void)
 		return FALSE;
 	}
 
-	scrFunctionResult.v.ival = psDroid->numKills;
+	scrFunctionResult.v.ival = psDroid->experience;
 	if (!stackPushResult(VAL_INT, &scrFunctionResult))
 	{
 		return FALSE;
@@ -7376,7 +7268,7 @@ BOOL ThreatInRange(SDWORD player, SDWORD range, SDWORD rangeX, SDWORD rangeY, BO
 						case REF_REARM_PAD:
 
 						if (range < 0
-						 || world_coord(dirtySqrt(tx, ty, map_coord(psStruct->x), map_coord(psStruct->y))) < range)	//enemy in range
+						 || world_coord(dirtySqrt(tx, ty, map_coord(psStruct->pos.x), map_coord(psStruct->pos.y))) < range)	//enemy in range
 						{
 							return TRUE;
 						}
@@ -7407,7 +7299,7 @@ BOOL ThreatInRange(SDWORD player, SDWORD range, SDWORD rangeX, SDWORD rangeY, BO
 				}
 
 				if (range < 0
-				 || world_coord(dirtySqrt(tx, ty , map_coord(psDroid->x), map_coord(psDroid->y))) < range)	//enemy in range
+				 || world_coord(dirtySqrt(tx, ty , map_coord(psDroid->pos.x), map_coord(psDroid->pos.y))) < range)	//enemy in range
 				{
 					return TRUE;
 				}
@@ -7954,44 +7846,12 @@ BOOL scrFriendlyWeapObjCostInRange(void)
 	return TRUE;
 }
 
-UDWORD numPlayerWeapDroidsInRange(SDWORD player, SDWORD lookingPlayer, SDWORD range, SDWORD rangeX, SDWORD rangeY, BOOL bVTOLs)
-{
-	UDWORD				numEnemies;
-	DROID				*psDroid;
-
-	numEnemies = 0;
-
-	//check droids
-	for(psDroid = apsDroidLists[player]; psDroid; psDroid = psDroid->psNext)
-	{
-		if(psDroid->visible[lookingPlayer])		//can see this droid?
-		{
-			if (psDroid->droidType != DROID_WEAPON &&
-				psDroid->droidType != DROID_PERSON &&
-				psDroid->droidType != DROID_CYBORG &&
-				psDroid->droidType != DROID_CYBORG_SUPER)
-			{
-				continue;
-			}
-
-			//if VTOLs are excluded, skip them
-			if(!bVTOLs && ((asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat].propulsionType == LIFT) || (psDroid->droidType == DROID_TRANSPORTER)))
-			{
-				continue;
-			}
-
-			if((range < 0) || (dirtySqrt(rangeX, rangeY , psDroid->x, psDroid->y) < range))	//enemy in range
-			{
-				numEnemies++;
-			}
-		}
-	}
-
-	return numEnemies;
-}
-
-UDWORD playerWeapDroidsCostInRange(SDWORD player, SDWORD lookingPlayer, SDWORD range,
-								   SDWORD rangeX, SDWORD rangeY, BOOL bVTOLs)
+/**
+ * Helper function for numPlayerWeapDroidsInRange and playerWeapDroidsCostInRange.
+ * Will either count the number of droids or calculate the total costs.
+ */
+static UDWORD costOrAmountInRange(SDWORD player, SDWORD lookingPlayer, SDWORD range,
+								   SDWORD rangeX, SDWORD rangeY, BOOL bVTOLs, BOOL justCount)
 {
 	UDWORD				droidCost;
 	DROID				*psDroid;
@@ -8017,14 +7877,32 @@ UDWORD playerWeapDroidsCostInRange(SDWORD player, SDWORD lookingPlayer, SDWORD r
 				continue;
 			}
 
-			if((range < 0) || (dirtySqrt(rangeX, rangeY , psDroid->x, psDroid->y) < range))	//enemy in range
+			if((range < 0) || (dirtySqrt(rangeX, rangeY , psDroid->pos.x, psDroid->pos.y) < range))	//enemy in range
 			{
-				droidCost += calcDroidPower(psDroid);
+				if (justCount)
+				{
+					droidCost++;
+				}
+				else
+				{
+					droidCost += calcDroidPower(psDroid);
+				}
 			}
 		}
 	}
 
 	return droidCost;
+}
+
+UDWORD numPlayerWeapDroidsInRange(SDWORD player, SDWORD lookingPlayer, SDWORD range, SDWORD rangeX, SDWORD rangeY, BOOL bVTOLs)
+{
+	return costOrAmountInRange(player, lookingPlayer, range, rangeX, rangeY, bVTOLs, TRUE /*only count*/);
+}
+
+UDWORD playerWeapDroidsCostInRange(SDWORD player, SDWORD lookingPlayer, SDWORD range,
+								   SDWORD rangeX, SDWORD rangeY, BOOL bVTOLs)
+{
+	return costOrAmountInRange(player, lookingPlayer, range, rangeX, rangeY, bVTOLs, FALSE /*total cost*/);
 }
 
 
@@ -8050,7 +7928,7 @@ UDWORD numPlayerWeapStructsInRange(SDWORD player, SDWORD lookingPlayer, SDWORD r
 				if(!bFinished || psStruct->status == SS_BUILT)
 				{
 					if (range < 0
-					 || world_coord(dirtySqrt(tx, ty, map_coord(psStruct->x), map_coord(psStruct->y))) < range)	//enemy in range
+					 || world_coord(dirtySqrt(tx, ty, map_coord(psStruct->pos.x), map_coord(psStruct->pos.y))) < range)	//enemy in range
 					{
 						numStructs++;
 					}
@@ -8082,7 +7960,7 @@ UDWORD playerWeapStructsCostInRange(SDWORD player, SDWORD lookingPlayer, SDWORD 
 			{
 				if(!bFinished || psStruct->status == SS_BUILT)
 				{
-					if((range < 0) || ((dirtySqrt(tx, ty, psStruct->x >> TILE_SHIFT, psStruct->y >> TILE_SHIFT)
+					if((range < 0) || ((dirtySqrt(tx, ty, psStruct->pos.x >> TILE_SHIFT, psStruct->pos.y >> TILE_SHIFT)
 						<< TILE_SHIFT) < range))	//enemy in range
 					{
 						structsCost += structPowerToBuild(psStruct);
@@ -8381,7 +8259,7 @@ UDWORD numEnemyObjInRange(SDWORD player, SDWORD range, SDWORD rangeX, SDWORD ran
 				if(!bFinished || psStruct->status == SS_BUILT)
 				{
 					if (range < 0
-					 || world_coord(dirtySqrt(tx, ty, map_coord(psStruct->x), map_coord(psStruct->y))) < range)	//enemy in range
+					 || world_coord(dirtySqrt(tx, ty, map_coord(psStruct->pos.x), map_coord(psStruct->pos.y))) < range)	//enemy in range
 					{
 						numEnemies++;
 					}
@@ -8401,7 +8279,7 @@ UDWORD numEnemyObjInRange(SDWORD player, SDWORD range, SDWORD rangeX, SDWORD ran
 				}
 
 				if (range < 0
-				 || world_coord(dirtySqrt(tx, ty , map_coord(psDroid->x), map_coord(psDroid->y))) < range)	//enemy in range
+				 || world_coord(dirtySqrt(tx, ty , map_coord(psDroid->pos.x), map_coord(psDroid->pos.y))) < range)	//enemy in range
 				{
 					numEnemies++;
 				}
@@ -8465,8 +8343,8 @@ BOOL scrNumStructsByStatInRange(void)
 	rangeSquared = range * range;
 	for(psCurr = apsStructLists[player]; psCurr; psCurr = psCurr->psNext)
 	{
-		xdiff = (SDWORD)psCurr->x - x;
-		ydiff = (SDWORD)psCurr->y - y;
+		xdiff = (SDWORD)psCurr->pos.x - x;
+		ydiff = (SDWORD)psCurr->pos.y - y;
 		if (xdiff*xdiff + ydiff*ydiff <= rangeSquared)
 		{
 			if( strcmp(psCurr->pStructureType->pName,psTarget->pName) == 0 )
@@ -8532,10 +8410,10 @@ BOOL scrNumStructsByStatInArea(void)
 		{
 			if(psCurr->visible[lookingPlayer])		//can we see it?
 			{
-				if(psCurr->x < x1) continue;		//not in bounds
-				if(psCurr->y < y1) continue;		//not in bounds
-				if(psCurr->x > x2) continue;		//not in bounds
-				if(psCurr->y > y2) continue;		//not in bounds
+				if(psCurr->pos.x < x1) continue;		//not in bounds
+				if(psCurr->pos.y < y1) continue;		//not in bounds
+				if(psCurr->pos.x > x2) continue;		//not in bounds
+				if(psCurr->pos.y > y2) continue;		//not in bounds
 				NumStruct++;
 			}
 		}
@@ -8597,8 +8475,8 @@ BOOL scrNumStructsByTypeInRange(void)
 	rangeSquared = range * range;
 	for(psCurr = apsStructLists[targetPlayer]; psCurr; psCurr = psCurr->psNext)
 	{
-		xdiff = (SDWORD)psCurr->x - x;
-		ydiff = (SDWORD)psCurr->y - y;
+		xdiff = (SDWORD)psCurr->pos.x - x;
+		ydiff = (SDWORD)psCurr->pos.y - y;
 		if (xdiff*xdiff + ydiff*ydiff <= rangeSquared)
 		{
 			if((type < 0) ||(psCurr->pStructureType->type == type))
@@ -8667,8 +8545,8 @@ BOOL scrNumFeatByTypeInRange(void)
 	rangeSquared = range * range;
 	for(psCurr = apsFeatureLists[0]; psCurr; psCurr = psCurr->psNext)
 	{
-		xdiff = (SDWORD)psCurr->x - x;
-		ydiff = (SDWORD)psCurr->y - y;
+		xdiff = (SDWORD)psCurr->pos.x - x;
+		ydiff = (SDWORD)psCurr->pos.y - y;
 		if (xdiff*xdiff + ydiff*ydiff <= rangeSquared)
 		{
 			if((type < 0) ||(psCurr->psStats->subType == type))	//like FEAT_OIL_RESOURCE
@@ -8740,8 +8618,8 @@ BOOL scrNumStructsButNotWallsInRangeVis(void)
 		{
 			if(psCurr->visible[lookingPlayer])		//can we see it?
 			{
-				xdiff = (SDWORD)psCurr->x - x;
-				ydiff = (SDWORD)psCurr->y - y;
+				xdiff = (SDWORD)psCurr->pos.x - x;
+				ydiff = (SDWORD)psCurr->pos.y - y;
 				if (xdiff*xdiff + ydiff*ydiff <= rangeSquared)
 				{
 					NumStruct++;
@@ -8920,7 +8798,7 @@ BOOL scrGetClosestEnemy(void)
 					continue;
 				}
 
-				dist = world_coord(dirtySqrt(tx, ty , map_coord(psDroid->x), map_coord(psDroid->y)));
+				dist = world_coord(dirtySqrt(tx, ty , map_coord(psDroid->pos.x), map_coord(psDroid->pos.y)));
 				if(dist < bestDist)
 				{
 					if((range < 0) || (dist < range))	//enemy in range
@@ -8945,7 +8823,7 @@ BOOL scrGetClosestEnemy(void)
 					continue;
 				}
 
-				dist = world_coord(dirtySqrt(tx, ty, map_coord(psStruct->x), map_coord(psStruct->y)));
+				dist = world_coord(dirtySqrt(tx, ty, map_coord(psStruct->pos.x), map_coord(psStruct->pos.y)));
 				if(dist < bestDist)
 				{
 					if((range < 0) || (dist < range))	//in range
@@ -9318,7 +9196,7 @@ BOOL scrGetClosestEnemyDroidByType(void)
 					continue;
 				}
 
-				dist = world_coord(dirtySqrt(tx, ty , map_coord(psDroid->x), map_coord(psDroid->y)));
+				dist = world_coord(dirtySqrt(tx, ty , map_coord(psDroid->pos.x), map_coord(psDroid->pos.y)));
 				if(dist < bestDist)
 				{
 					if(dist < range)	//enemy in range
@@ -9400,7 +9278,7 @@ BOOL scrGetClosestEnemyStructByType(void)
 					continue;
 				}
 
-				dist = world_coord(dirtySqrt(tx, ty, map_coord(psStruct->x), map_coord(psStruct->y)));
+				dist = world_coord(dirtySqrt(tx, ty, map_coord(psStruct->pos.x), map_coord(psStruct->pos.y)));
 				if(dist < bestDist)
 				{
 					if((range < 0) || (dist < range))	//in range or no range check
@@ -9581,7 +9459,7 @@ BOOL scrNumAAinRange(void)
 				(asWeaponStats[psStruct->asWeaps[0].nStat].surfaceToAir == SHOOT_IN_AIR) )
 			{
 				if (range < 0
-				 || world_coord(dirtySqrt(tx, ty, map_coord(psStruct->x), map_coord(psStruct->y))) < range)	//enemy in range
+				 || world_coord(dirtySqrt(tx, ty, map_coord(psStruct->pos.x), map_coord(psStruct->pos.y))) < range)	//enemy in range
 				{
 					numFound++;
 				}
@@ -10225,7 +10103,7 @@ BOOL addHelpBlip(SDWORD locX, SDWORD locY, SDWORD forPlayer, SDWORD sender, char
 		height = map_Height(((VIEW_PROXIMITY *)pTempData->pData)->x,
 			((VIEW_PROXIMITY *)pTempData->pData)->y);
 
-		//if (((VIEW_PROXIMITY *)pTempData->pData)->z < height)
+		//if (((VIEW_PROXIMITY *)pTempData->pData)->pos.z < height)
 		//{
 			((VIEW_PROXIMITY *)pTempData->pData)->z = height;
 		//}
@@ -10458,7 +10336,7 @@ BOOL scrClosestDamagedGroupDroid(void)
 	{
 		if((psDroid->body * 100 / psDroid->originalBody) <= healthLeft)	//in%
 		{
-			wDist = map_coord(dirtySqrt(psDroid->x, psDroid->y, x, y));	//in tiles
+			wDist = map_coord(dirtySqrt(psDroid->pos.x, psDroid->pos.y, x, y));	//in tiles
 			if(wDist < wBestDist)
 			{
 				if((maxRepairedBy < 0) || (getNumRepairedBy(psDroid, player) <= maxRepairedBy))
@@ -10584,8 +10462,8 @@ BOOL objectInRangeVis(BASE_OBJECT *psList, SDWORD x, SDWORD y, SDWORD range, SDW
 			continue;
 		}
 
-		xdiff = (SDWORD)psCurr->x - x;
-		ydiff = (SDWORD)psCurr->y - y;
+		xdiff = (SDWORD)psCurr->pos.x - x;
+		ydiff = (SDWORD)psCurr->pos.y - y;
 		if (xdiff*xdiff + ydiff*ydiff < rangeSq)
 		{
 			return TRUE;

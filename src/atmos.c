@@ -26,6 +26,7 @@
 #include "lib/framework/frame.h"
 #include "lib/ivis_common/piedef.h"
 #include "lib/ivis_opengl/piematrix.h"
+#include "lib/ivis_common/piepalette.h"
 #include "lib/ivis_common/piestate.h"
 #include "display3d.h"
 #include "display3ddef.h"
@@ -102,7 +103,7 @@ void	atmosUpdateSystem( void )
 	Vector3i pos;
 
 	/* Establish how long the last game frame took */
-	fraction = MAKEFRACT(frameTime)/GAME_TICKS_PER_SEC;
+	fraction = (float)frameTime / GAME_TICKS_PER_SEC;
 
  //	if(weather==WT_NONE)
  //	{
@@ -190,10 +191,11 @@ void	processParticle( ATPART *psPart )
 		if(psPart->position.y < 255*ELEVATION_SCALE)
 		{
 			/* Get ground height */
-			groundHeight = map_Height((UDWORD)MAKEINT(psPart->position.x),(UDWORD)MAKEINT(psPart->position.z));
+			groundHeight = map_Height(psPart->position.x, psPart->position.z);
 
 			/* Are we below ground? */
-			if( (MAKEINT(psPart->position.y) < groundHeight) || (psPart->position.y<0.0f) )
+			if ((int)psPart->position.y < groundHeight
+			 || psPart->position.y < 0.f)
 			{
 				/* Kill it and return */
 				psPart->status = APS_INACTIVE;
@@ -204,8 +206,8 @@ void	processParticle( ATPART *psPart )
 					psTile = mapTile(x,y);
 					if (terrainType(psTile) == TER_WATER && TEST_TILE_VISIBLE(selectedPlayer,psTile))
 					{
-						pos.x = MAKEINT(psPart->position.x);
-						pos.z = MAKEINT(psPart->position.z);
+						pos.x = psPart->position.x;
+						pos.z = psPart->position.z;
 						pos.y = groundHeight;
 						effectSetSize(60);
 						addEffect(&pos,EFFECT_EXPLOSION,EXPLOSION_TYPE_SPECIFIED,TRUE,getImdFromIndex(MI_SPLASH),0);
@@ -218,11 +220,11 @@ void	processParticle( ATPART *psPart )
 		{
 			if(rand()%30 == 1)
 			{
-				psPart->velocity.z = MAKEFRACT(SNOW_SPEED_DRIFT);
+				psPart->velocity.z = (float)SNOW_SPEED_DRIFT;
 			}
 			if(rand()%30 == 1)
 			{
-				psPart->velocity.x = MAKEFRACT(SNOW_SPEED_DRIFT);
+				psPart->velocity.x = (float)SNOW_SPEED_DRIFT;
 			}
 		}
 	}
@@ -281,22 +283,22 @@ void atmosAddParticle( Vector3i *pos, AP_TYPE type )
 	}
 
 	/* Setup position */
-	asAtmosParts[freeParticle].position.x = MAKEFRACT(pos->x);
-	asAtmosParts[freeParticle].position.y = MAKEFRACT(pos->y);
-	asAtmosParts[freeParticle].position.z = MAKEFRACT(pos->z);
+	asAtmosParts[freeParticle].position.x = (float)pos->x;
+	asAtmosParts[freeParticle].position.y = (float)pos->y;
+	asAtmosParts[freeParticle].position.z = (float)pos->z;
 
 	/* Setup its velocity */
 	if(type == AP_RAIN)
 	{
-		asAtmosParts[freeParticle].velocity.x = MAKEFRACT(RAIN_SPEED_DRIFT);
-		asAtmosParts[freeParticle].velocity.y = MAKEFRACT(RAIN_SPEED_FALL);
-		asAtmosParts[freeParticle].velocity.z = MAKEFRACT(RAIN_SPEED_DRIFT);
+		asAtmosParts[freeParticle].velocity.x = (float)RAIN_SPEED_DRIFT;
+		asAtmosParts[freeParticle].velocity.y = (float)RAIN_SPEED_FALL;
+		asAtmosParts[freeParticle].velocity.z = (float)RAIN_SPEED_DRIFT;
 	}
 	else
 	{
-		asAtmosParts[freeParticle].velocity.x = MAKEFRACT(SNOW_SPEED_DRIFT);
-		asAtmosParts[freeParticle].velocity.y = MAKEFRACT(SNOW_SPEED_FALL);
-		asAtmosParts[freeParticle].velocity.z = MAKEFRACT(SNOW_SPEED_DRIFT);
+		asAtmosParts[freeParticle].velocity.x = (float)SNOW_SPEED_DRIFT;
+		asAtmosParts[freeParticle].velocity.y = (float)SNOW_SPEED_FALL;
+		asAtmosParts[freeParticle].velocity.z = (float)SNOW_SPEED_DRIFT;
 	}
 }
 // -----------------------------------------------------------------------------
@@ -316,7 +318,7 @@ UDWORD	i;
 		if(asAtmosParts[i].status == APS_ACTIVE)
 		{
 			/* Is it on the grid */
-			if(clipXY((UDWORD)MAKEINT(asAtmosParts[i].position.x),(UDWORD)MAKEINT(asAtmosParts[i].position.z)))
+			if (clipXY(asAtmosParts[i].position.x, asAtmosParts[i].position.z))
 			{
 				renderParticle(&asAtmosParts[i]);
 			}
@@ -328,13 +330,12 @@ UDWORD	i;
 void	renderParticle( ATPART *psPart )
 {
 	Vector3i dv;
-	UDWORD brightness, specular;
 	SDWORD centreX, centreZ;
-	SDWORD x, y, z;
+	SDWORD x, y, z, rx, rz;
 
-	x = MAKEINT(psPart->position.x);
-	y = MAKEINT(psPart->position.y);
-	z = MAKEINT(psPart->position.z);
+	x = psPart->position.x;
+	y = psPart->position.y;
+	z = psPart->position.z;
 	/* Transform it */
 	dv.x = ((UDWORD)x - player.p.x) - terrainMidX * TILE_UNITS;
 	dv.y = (UDWORD)y;
@@ -352,10 +353,10 @@ void	renderParticle( ATPART *psPart )
 	/* Draw it... */
 	centreX = player.p.x + world_coord(visibleTiles.x / 2);
 	centreZ = player.p.z + world_coord(visibleTiles.y / 2);
-	brightness = lightDoFogAndIllumination(pie_MAX_BRIGHT_LEVEL,centreX - x,centreZ - z, &specular);
-   	pie_Draw3DShape(psPart->imd, 0, 0, brightness, 0, pie_NO_BILINEAR, 0);
+   	pie_Draw3DShape(psPart->imd, 0, 0, WZCOL_WHITE, WZCOL_BLACK, pie_NO_BILINEAR, 0);
 	iV_MatrixEnd();
 }
+
 // -----------------------------------------------------------------------------
 /*	Makes a particle wrap around - if it goes off the grid, then it returns
 	on the other side - provided it's still on world... Which it should be */

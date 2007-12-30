@@ -88,8 +88,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Deletes old .exe, then copy new on to root directory."
-				CommandLine="del $(SolutionDir)\..\$(TargetFileName)&#x0D;&#x0A;copy /Y $(OutDir)\$(TargetFileName) $(SolutionDir)..\$(TargetFileName)&#x0D;&#x0A;"
+				Description="* Updating &amp; copying $(TargetFileName) into correct directory. *"
+				CommandLine="del $(SolutionDir)\..\$(TargetFileName)&#x0D;&#x0A;copy /Y $(OutDir)\$(TargetFileName) $(SolutionDir)..\$(TargetFileName)"
 			/>
 		</Configuration>
 		<Configuration
@@ -165,6 +165,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="* Updating &amp; copying $(TargetFileName) into correct directory. *"
+				CommandLine="del $(SolutionDir)\..\$(TargetFileName)&#x0D;&#x0A;copy /Y $(OutDir)\$(TargetFileName) $(SolutionDir)..\$(TargetFileName)"
 			/>
 		</Configuration>
 	</Configurations>

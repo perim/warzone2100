@@ -282,11 +282,9 @@ UDWORD				selectedPlayer=0;
 //BOOL				intelMapUp = FALSE;
 
 //two colours used for drawing the footprint outline for objects in 2D
-UDWORD				outlineOK;
-UDWORD				outlineNotOK;
-//value gets set to colour used for drawing
-UDWORD				outlineColour;
-UDWORD				outlineColour3D;
+PIELIGHT			outlineOK;
+PIELIGHT			outlineNotOK;
+BOOL				outlineTile = FALSE;
 
 // The last widget ID from widgRunScreen
 UDWORD				intLastWidget;
@@ -522,10 +520,9 @@ BOOL intInitialise(void)
 {
 	UDWORD			comp, inc;
 
-
 	intInitialiseReticule();
 
-	widgSetTipColour(psWScreen, 0, 164, 0);
+	widgSetTipColour(psWScreen, WZCOL_TOOLTIP_TEXT);
 
 	if(GetGameMode() == GS_NORMAL) {
 //		WidgSetAudio(WidgetAudioCallback,ID_SOUND_HILIGHTBUTTON,ID_SOUND_SELECT);
@@ -681,32 +678,16 @@ BOOL intInitialise(void)
 	/* Initialise the screen to be run */
 	widgStartScreen(psWScreen);
 
-
-
 	/* Note the current screen state */
 	intMode = INT_NORMAL;
 
 	objectsChanged = FALSE;
 
 	//set the default colours to be used for drawing outlines in 2D
-	outlineOK = iV_PaletteNearestColour(0xff,0xff,0xff);
-	outlineNotOK = iV_PaletteNearestColour(0xff,0x00,0x00);
-
-
-	LOADBARCALLBACK();	//	loadingScreenCallback();
+	outlineOK = WZCOL_MAP_OUTLINE_OK;
+	outlineNotOK = WZCOL_MAP_OUTLINE_BAD;
 
 	LOADBARCALLBACK();	//	loadingScreenCallback();
-
-
-	/*Initialise the video playback buffer*/
-	if (!seq_SetupVideoBuffers())
-	{
-		debug( LOG_ERROR, "intInitialise: Unable to initialise video playback buffer" );
-		abort();
-		return FALSE;
-	}
-
-
 	LOADBARCALLBACK();	//	loadingScreenCallback();
 
 	// reset the previous objects
@@ -784,9 +765,6 @@ void intShutDown(void)
 	apsExtraSysList = NULL;
 	apsObjectList = NULL;
 	apsListToOrder = NULL;
-
-	//release the video buffers
-	seq_ReleaseVideoBuffers();
 
 	intDeleteGraphics();
 
@@ -1529,7 +1507,7 @@ static void intProcessEditStats(UDWORD id)
 		int temp;
 #ifdef  DEBUG_SCROLLTABS
 		char buf[200];		//only used for debugging
-#endif	
+#endif
 		psTForm = (W_TABFORM *)widgGetFromID(psWScreen, IDSTAT_TABFORM);	//get our form
 		psTForm->TabMultiplier -=1;				// -1 since user hit left button
 		if (psTForm->TabMultiplier < 1 )
@@ -1538,7 +1516,7 @@ static void intProcessEditStats(UDWORD id)
 		}
 		// add routine to update tab widgets now...
 		temp = psTForm->majorT;					//set tab # to previous "page"
-		temp -=TAB_SEVEN;						//7 = 1 "page" of tabs						
+		temp -=TAB_SEVEN;						//7 = 1 "page" of tabs
 		if ( temp < 0)
 			psTForm->majorT = 0;
 		else
@@ -1548,7 +1526,7 @@ static void intProcessEditStats(UDWORD id)
 		addConsoleMessage(buf,DEFAULT_JUSTIFY);
 #endif
 	}
-	else if (id == IDSTAT_TABSCRL_RIGHT) // user hit right scroll tab from DEBUG menu 
+	else if (id == IDSTAT_TABSCRL_RIGHT) // user hit right scroll tab from DEBUG menu
 	{
 	W_TABFORM	*psTForm;
 	UWORD numTabs;
@@ -1565,10 +1543,10 @@ static void intProcessEditStats(UDWORD id)
 		}
 	//add routine to update tab widgets now...
 		psTForm->majorT += TAB_SEVEN;					// set tab # to next "page"
-		if (psTForm->majorT >= psTForm->numMajor) 
+		if (psTForm->majorT >= psTForm->numMajor)
 		{
 			psTForm->majorT = psTForm->numMajor - 1;		//set it back to max -1
-		}	
+		}
 #ifdef  DEBUG_SCROLLTABS		//for debuging
 		sprintf(buf, "[debug menu]Clicked RT %d numtabs %d tab # %d", psTForm->TabMultiplier, numTabs, psTForm->majorT);
 		addConsoleMessage(buf, DEFAULT_JUSTIFY);
@@ -2120,14 +2098,34 @@ INT_RETVAL intRunWidgets(void)
 							removeFeature(psFeature);
 						}
 						psStructure = NULL;
-					} else {
+					}
+					else
+					{
+						const char* msg;
 						psStructure = buildStructure(psBuilding, structX, structY,
 						                             selectedPlayer, FALSE);
+						/* NOTE: if this was a regular buildprocess we would
+						 * have to call sendBuildStarted(psStructure, <droid>);
+						 * In this case there is no droid working on the
+						 * building though. So we cannot fill out the <droid>
+						 * part.
+						 */
+
+						// Send a text message to all players, notifying them of
+						// the fact that we're cheating ourselves a new
+						// structure.
+						sasprintf((char**)&msg, _("Player %u is cheating (debug menu) him/herself a new structure: %s."), selectedPlayer, psStructure->pStructureType->pName);
+						sendTextMessage(msg, TRUE);
 					}
 					if (psStructure)
 					{
 						psStructure->status = SS_BUILT;
 						buildingComplete(psStructure);
+
+						// In multiplayer games be sure to send a message to the
+						// other players, telling them a new structure has been
+						// placed.
+						SendBuildFinished(psStructure);
 					}
 				}
 				else if (psPositionStats->ref >= REF_FEATURE_START &&
@@ -2663,12 +2661,12 @@ static void intProcessObject(UDWORD id)
 								    getPlayerPos((SDWORD*)&asJumpPos[butIndex].x, (SDWORD*)&asJumpPos[butIndex].y);
 
 
-    								setPlayerPos(psObj->x, psObj->y);
+    								setPlayerPos(psObj->pos.x, psObj->pos.y);
 	    							if(getWarCamStatus())
 		    						{
 			    						camToggleStatus();
 				    				}
-	//							intSetMapPos(psObj->x, psObj->y);
+	//							intSetMapPos(psObj->pos.x, psObj->pos.y);
 
 			    				}
 				    			else
@@ -3068,7 +3066,7 @@ static void intProcessStats(UDWORD id)
 		int temp;
 #ifdef  DEBUG_SCROLLTABS
 		char buf[200];		//only used for debugging
-#endif	
+#endif
 		psTForm = (W_TABFORM *)widgGetFromID(psWScreen, IDSTAT_TABFORM);	//get our form
 		psTForm->TabMultiplier -= 1;				// -1 since user hit left button
 		if (psTForm->TabMultiplier < 1)
@@ -3077,7 +3075,7 @@ static void intProcessStats(UDWORD id)
 		}
 		//add routine to update tab widgets now...
 		temp = psTForm->majorT;					// set tab # to previous "page"
-		temp -= TAB_SEVEN;						// 7 = 1 "page" of tabs						
+		temp -= TAB_SEVEN;						// 7 = 1 "page" of tabs
 		if ( temp < 0)
 			psTForm->majorT = 0;
 		else
@@ -3107,7 +3105,7 @@ static void intProcessStats(UDWORD id)
 		if (psTForm->majorT >= psTForm->numMajor)	// check if too many
 		{
 			psTForm->majorT = psTForm->numMajor - 1;	// set it back to max -1
-		}	
+		}
 #ifdef  DEBUG_SCROLLTABS		//for debuging
 		sprintf(buf, "[build menu]Clicked RT %d numtabs %d tab # %d", psTForm->TabMultiplier, numTabs, psTForm->majorT);
 		addConsoleMessage(buf, DEFAULT_JUSTIFY);
@@ -3950,9 +3948,9 @@ BOOL intAddPower(void)
 	sBarInit.y = (SWORD)POW_Y;
 	sBarInit.width = POW_BARWIDTH;
 	sBarInit.height = iV_GetImageHeight(IntImages,IMAGE_PBAR_EMPTY);
-	sBarInit.sCol.red = POW_CLICKBARMAJORRED;
-	sBarInit.sCol.green = POW_CLICKBARMAJORGREEN;
-	sBarInit.sCol.blue = POW_CLICKBARMAJORBLUE;
+	sBarInit.sCol.byte.r = POW_CLICKBARMAJORRED;
+	sBarInit.sCol.byte.g = POW_CLICKBARMAJORGREEN;
+	sBarInit.sCol.byte.b = POW_CLICKBARMAJORBLUE;
 	sBarInit.pDisplay = intDisplayPowerBar;
 	sBarInit.iRange = POWERBAR_SCALE;
 
@@ -4560,12 +4558,12 @@ static BOOL intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected,B
 	sBarInit.width = STAT_PROGBARWIDTH;
 	sBarInit.height = STAT_PROGBARHEIGHT;
 	sBarInit.size = 0;
-	sBarInit.sCol.red = STAT_PROGBARMAJORRED;
-	sBarInit.sCol.green = STAT_PROGBARMAJORGREEN;
-	sBarInit.sCol.blue = STAT_PROGBARMAJORBLUE;
-	sBarInit.sMinorCol.red = STAT_PROGBARMINORRED;
-	sBarInit.sMinorCol.green = STAT_PROGBARMINORGREEN;
-	sBarInit.sMinorCol.blue = STAT_PROGBARMINORBLUE;
+	sBarInit.sCol.byte.r = STAT_PROGBARMAJORRED;
+	sBarInit.sCol.byte.g = STAT_PROGBARMAJORGREEN;
+	sBarInit.sCol.byte.b = STAT_PROGBARMAJORBLUE;
+	sBarInit.sMinorCol.byte.r = STAT_PROGBARMINORRED;
+	sBarInit.sMinorCol.byte.g = STAT_PROGBARMINORGREEN;
+	sBarInit.sMinorCol.byte.b = STAT_PROGBARMINORBLUE;
 	sBarInit.pTip = _("Progress Bar");
 
     //object output bar ie manuf power o/p, research power o/p
@@ -5359,12 +5357,12 @@ static void intSetStats(UDWORD id, BASE_STATS *psStats)
 	sBarInit.width = STAT_PROGBARWIDTH;
 	sBarInit.height = STAT_PROGBARHEIGHT;
 	sBarInit.size = 0;
-	sBarInit.sCol.red = STAT_PROGBARMAJORRED;
-	sBarInit.sCol.green = STAT_PROGBARMAJORGREEN;
-	sBarInit.sCol.blue = STAT_PROGBARMAJORBLUE;
-	sBarInit.sMinorCol.red = STAT_PROGBARMINORRED;
-	sBarInit.sMinorCol.green = STAT_PROGBARMINORGREEN;
-	sBarInit.sMinorCol.blue = STAT_PROGBARMINORBLUE;
+	sBarInit.sCol.byte.r = STAT_PROGBARMAJORRED;
+	sBarInit.sCol.byte.g = STAT_PROGBARMAJORGREEN;
+	sBarInit.sCol.byte.b = STAT_PROGBARMAJORBLUE;
+	sBarInit.sMinorCol.byte.r = STAT_PROGBARMINORRED;
+	sBarInit.sMinorCol.byte.g = STAT_PROGBARMINORGREEN;
+	sBarInit.sMinorCol.byte.b = STAT_PROGBARMINORBLUE;
 	sBarInit.iRange = GAME_TICKS_PER_SEC;
 	// Setup widget update callback and object pointer so we can update the progress bar.
 	sBarInit.pCallback = intUpdateProgressBar;
@@ -5727,7 +5725,7 @@ static BOOL intAddStats(BASE_STATS **ppsStatsList, UDWORD numStats,
 //================== adds L/R Scroll buttons ===================================
 if (numForms(numStats, butPerForm)>8)	//only want these buttons when tab count >8
 	{
-		// Add the left tab scroll button 
+		// Add the left tab scroll button
 		memset(&sButInit, 0, sizeof(W_BUTINIT));
 		sButInit.formID = IDSTAT_FORM;
 		sButInit.id = IDSTAT_TABSCRL_LEFT;
@@ -5744,7 +5742,7 @@ if (numForms(numStats, butPerForm)>8)	//only want these buttons when tab count >
 		{
 		return FALSE;
 		}
-		// Add the right tab scroll button 
+		// Add the right tab scroll button
 		memset(&sButInit, 0, sizeof(W_BUTINIT));
 		sButInit.formID = IDSTAT_FORM;
 		sButInit.id = IDSTAT_TABSCRL_RIGHT;
@@ -5763,7 +5761,7 @@ if (numForms(numStats, butPerForm)>8)	//only want these buttons when tab count >
 		}
 	}
 //==============buttons before tabbed form!==========================
-	// Add the tabbed form 
+	// Add the tabbed form
 	memset(&sFormInit, 0, sizeof(W_FORMINIT));
 	sFormInit.formID = IDSTAT_FORM;
 	sFormInit.id = IDSTAT_TABFORM;
@@ -5800,7 +5798,7 @@ if (numForms(numStats, butPerForm)>8)	//only want these buttons when tab count >
 		sFormInit.majorOffset = OBJ_TABOFFSET + 10;
 		sFormInit.TabMultiplier = 1;		// Enable our tabMultiplier buttons.
 	}
-	for (i = 0; i< sFormInit.numMajor; i++)	// Sets # of tab's minors 
+	for (i = 0; i< sFormInit.numMajor; i++)	// Sets # of tab's minors
 	{
 		sFormInit.aNumMinors[i] = 1;
 	}
@@ -5830,12 +5828,12 @@ if (numForms(numStats, butPerForm)>8)	//only want these buttons when tab count >
 	sBarInit.width = STAT_PROGBARWIDTH;
 	sBarInit.height = STAT_PROGBARHEIGHT;
 	sBarInit.size = 50;
-	sBarInit.sCol.red = STAT_PROGBARMAJORRED;
-	sBarInit.sCol.green = STAT_PROGBARMAJORGREEN;
-	sBarInit.sCol.blue = STAT_PROGBARMAJORBLUE;
-	sBarInit.sMinorCol.red = STAT_PROGBARMINORRED;
-	sBarInit.sMinorCol.green = STAT_PROGBARMINORGREEN;
-	sBarInit.sMinorCol.blue = STAT_PROGBARMINORBLUE;
+	sBarInit.sCol.byte.r = STAT_PROGBARMAJORRED;
+	sBarInit.sCol.byte.g = STAT_PROGBARMAJORGREEN;
+	sBarInit.sCol.byte.b = STAT_PROGBARMAJORBLUE;
+	sBarInit.sMinorCol.byte.r = STAT_PROGBARMINORRED;
+	sBarInit.sMinorCol.byte.g = STAT_PROGBARMINORGREEN;
+	sBarInit.sMinorCol.byte.b = STAT_PROGBARMINORBLUE;
 	//sBarInit.pTip = _("Power Usage");
 
 	statID = 0;
@@ -7274,7 +7272,7 @@ STRUCTURE* intGotoNextStructureType(UDWORD structType,BOOL JumpTo,BOOL CancelDri
 
 	// Center it on screen.
 	if((CurrentStruct) && (JumpTo)) {
-		intSetMapPos(CurrentStruct->x, CurrentStruct->y);
+		intSetMapPos(CurrentStruct->pos.x, CurrentStruct->pos.y);
 	}
 
 	return CurrentStruct;
@@ -7351,7 +7349,7 @@ DROID *intGotoNextDroidType(DROID *CurrDroid,UDWORD droidType,BOOL AllowGroup)
 
 		// Center it on screen.
 		if(CurrentDroid) {
-			intSetMapPos(CurrentDroid->x, CurrentDroid->y);
+			intSetMapPos(CurrentDroid->pos.x, CurrentDroid->pos.y);
 		}
 
 		return CurrentDroid;

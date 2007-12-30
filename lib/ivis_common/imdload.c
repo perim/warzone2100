@@ -81,7 +81,7 @@ static BOOL AtEndOfFile(const char *CurPos, const char *EndOfFile)
 static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 {
 	const char *pFileData = *ppFileData;
-	int i, j, cnt;
+	unsigned int i, j;
 	iIMDPoly *poly;
 
 	s->numFrames = 0;
@@ -96,11 +96,12 @@ static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 
 	for (i = 0, poly = s->polys; i < s->npolys; i++, poly++)
 	{
-		UDWORD flags, npnts;
+		unsigned int flags, npnts;
+		int cnt;
 
-		if (sscanf(pFileData, "%x %d%n", &flags, &npnts, &cnt) != 2)
+		if (sscanf(pFileData, "%x %u%n", &flags, &npnts, &cnt) != 2)
 		{
-			debug(LOG_ERROR, "(_load_polys) [poly %d] error loading flags and npoints", i);
+			debug(LOG_ERROR, "(_load_polys) [poly %u] error loading flags and npoints", i);
 		}
 		pFileData += cnt;
 
@@ -110,7 +111,7 @@ static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 		poly->pindex = (VERTEXID*)malloc(sizeof(VERTEXID) * poly->npnts);
 		if (poly->pindex == NULL)
 		{
-			debug(LOG_ERROR, "(_load_polys) [poly %d] memory alloc fail (poly indices)", i);
+			debug(LOG_ERROR, "(_load_polys) [poly %u] memory alloc fail (poly indices)", i);
 			return FALSE;
 		}
 
@@ -120,7 +121,7 @@ static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 
 			if (sscanf(pFileData, "%d%n", &newID, &cnt) != 1)
 			{
-				debug(LOG_ERROR, "failed poly %d. point %d", i, j);
+				debug(LOG_ERROR, "failed poly %u. point %d", i, j);
 				return FALSE;
 			}
 			pFileData += cnt;
@@ -159,14 +160,14 @@ static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 			poly->pTexAnim = (iTexAnim*)malloc(sizeof(iTexAnim));
 			if (poly->pTexAnim == NULL)
 			{
-				debug(LOG_ERROR, "(_load_polys) [poly %d] memory alloc fail (iTexAnim struct)", i);
+				debug(LOG_ERROR, "(_load_polys) [poly %u] memory alloc fail (iTexAnim struct)", i);
 				return FALSE;
 			}
 
 			// even the psx needs to skip the data
 			if (sscanf(pFileData, "%d %d %d %d%n", &nFrames, &pbRate, &tWidth, &tHeight, &cnt) != 4)
 			{
-				debug(LOG_ERROR, "(_load_polys) [poly %d] error reading texanim data", i);
+				debug(LOG_ERROR, "(_load_polys) [poly %u] error reading texanim data", i);
 				return FALSE;
 			}
 			pFileData += cnt;
@@ -195,7 +196,7 @@ static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 			poly->texCoord = malloc(sizeof(Vector2f) * poly->npnts);
 			if (poly->texCoord == NULL)
 			{
-				debug(LOG_ERROR, "(_load_polys) [poly %d] memory alloc fail (vertex struct)", i);
+				debug(LOG_ERROR, "(_load_polys) [poly %u] memory alloc fail (vertex struct)", i);
 				return FALSE;
 			}
 
@@ -204,7 +205,7 @@ static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 				float VertexU, VertexV;
 				if (sscanf(pFileData, "%f %f%n", &VertexU, &VertexV, &cnt) != 2)
 				{
-					debug(LOG_ERROR, "(_load_polys) [poly %d] error reading tex outline", i);
+					debug(LOG_ERROR, "(_load_polys) [poly %u] error reading tex outline", i);
 					return FALSE;
 				}
 				pFileData += cnt;
@@ -228,7 +229,8 @@ static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 static BOOL ReadPoints( const char **ppFileData, iIMDShape *s )
 {
 	const char *pFileData = *ppFileData;
-	int cnt, i, j, lastPoint = 0, match = -1;
+	unsigned int i;
+	int cnt, j, lastPoint = 0, match = -1;
 	Vector3f newVector = {0.0f, 0.0f, 0.0f};
 
 	for (i = 0; i < s->npoints; i++)
@@ -307,8 +309,8 @@ static BOOL _imd_load_points( const char **ppFileData, iIMDShape *s )
 		return FALSE;
 	}
 
-	s->xmax = s->ymax = s->zmax = tempXMax = tempZMax = -FP12_MULTIPLIER;
-	s->xmin = s->ymin = s->zmin = tempXMin = tempZMin = FP12_MULTIPLIER;
+	s->max.x = s->max.y = s->max.z = tempXMax = tempZMax = -FP12_MULTIPLIER;
+	s->min.x = s->min.y = s->min.z = tempXMin = tempZMin = FP12_MULTIPLIER;
 
 	vxmax.x = vymax.y = vzmax.z = -FP12_MULTIPLIER;
 	vxmin.x = vymin.y = vzmin.z = FP12_MULTIPLIER;
@@ -316,10 +318,14 @@ static BOOL _imd_load_points( const char **ppFileData, iIMDShape *s )
 	// set up bounding data for minimum number of vertices
 	for (p = s->points; p < s->points + s->npoints; p++)
 	{
-		if (p->x > s->xmax)
-			s->xmax = p->x;
-		if (p->x < s->xmin)
-			s->xmin = p->x;
+		if (p->x > s->max.x)
+		{
+			s->max.x = p->x;
+		}
+		if (p->x < s->min.x)
+		{
+			s->min.x = p->x;
+		}
 
 		/* Biggest x coord so far within our height window? */
 		if( p->x > tempXMax && p->y > DROID_VIS_LOWER && p->y < DROID_VIS_UPPER )
@@ -333,15 +339,23 @@ static BOOL _imd_load_points( const char **ppFileData, iIMDShape *s )
 			tempXMin = p->x;
 		}
 
-		if (p->y > s->ymax)
-			s->ymax = p->y;
-		if (p->y < s->ymin)
-			s->ymin = p->y;
+		if (p->y > s->max.y)
+		{
+			s->max.y = p->y;
+		}
+		if (p->y < s->min.y)
+		{
+			s->min.y = p->y;
+		}
 
-		if (p->z > s->zmax)
-			s->zmax = p->z;
-		if (p->z < s->zmin)
-			s->zmin = p->z;
+		if (p->z > s->max.z)
+		{
+			s->max.z = p->z;
+		}
+		if (p->z < s->min.z)
+		{
+			s->min.z = p->z;
+		}
 
 		/* Biggest z coord so far within our height window? */
 		if( p->z > tempZMax && p->y > DROID_VIS_LOWER && p->y < DROID_VIS_UPPER )
@@ -400,9 +414,9 @@ static BOOL _imd_load_points( const char **ppFileData, iIMDShape *s )
 	}
 
 	// no need to scale an IMD shape (only FSD)
-	xmax = MAX(s->xmax, -s->xmin);
-	ymax = MAX(s->ymax, -s->ymin);
-	zmax = MAX(s->zmax, -s->zmin);
+	xmax = MAX(s->max.x, -s->min.x);
+	ymax = MAX(s->max.y, -s->min.y);
+	zmax = MAX(s->max.z, -s->min.z);
 
 	s->radius = MAX(xmax, (MAX(ymax, zmax)));
 	s->sradius = sqrtf(xmax*xmax + ymax*ymax + zmax*zmax);

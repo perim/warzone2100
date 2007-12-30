@@ -89,7 +89,7 @@ UDWORD	x2;
 UDWORD	y2;
 UDWORD	status;
 UDWORD	lastTime;
-UDWORD	boxColourIndex;
+UDWORD	pulse;
 };
 
 extern struct	_dragBox dragBox3D,wallDrag;
@@ -191,8 +191,18 @@ extern BOOL	getRotActive( void );
 extern SDWORD	getDesiredPitch( void );
 extern void	setDesiredPitch(SDWORD pitch);
 
-#define MAX_PLAYER_X_ANGLE	(-14)
-#define MIN_PLAYER_X_ANGLE	(-50)
+#define MAX_PLAYER_X_ANGLE	(-1)
+#define MIN_PLAYER_X_ANGLE	(-60)
+
+#define MAXDISTANCE	(3500)
+#define MINDISTANCE	(500)
+#define START_DISTANCE	(2000)
+
+#define CAMERA_PIVOT_HEIGHT (500)
+
+#define INITIAL_DESIRED_PITCH (-40)
+#define INITIAL_STARTING_PITCH (-40)
+#define INITIAL_DESIRED_ROTATION (-45)
 
 #define	HIDDEN_FRONTEND_WIDTH	(640)
 #define	HIDDEN_FRONTEND_HEIGHT	(480)

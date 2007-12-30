@@ -33,7 +33,7 @@
 #endif
 
 #ifdef __MACOSX__
-#include "config-macosx.h"
+#  include "config-macosx.h"
 #endif
 
 
@@ -421,6 +421,14 @@
 #    define isfinite _finite
 #    define PATH_MAX MAX_PATH
 #  endif /* WZ_CC_MSVC */
+
+/* Make sure that PATH_MAX is large enough to use as the size for return
+ * buffers for Windows API calls
+ */
+#  if (PATH_MAX < MAX_PATH)
+#    undef PATH_MAX
+#    define PATH_MAX MAX_PATH
+#  endif
 
 #elif defined(WZ_OS_UNIX)
 #  include <unistd.h>

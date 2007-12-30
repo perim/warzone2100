@@ -90,10 +90,6 @@
 #include "main.h"
 #include "wrappers.h"
 
-#ifdef ARROWS
-#include "arrow.h"
-#endif
-
 extern char UserMusicPath[];
 
 extern void statsInitVars(void);
@@ -605,7 +601,7 @@ BOOL frontendInitialise(const char *ResourceFile)
 	}
 
 	debug(LOG_MAIN, "frontEndInitialise: loading resource file .....");
-	if (!resLoad(ResourceFile, 0, fileLoadBuffer, FILE_LOAD_BUFFER_SIZE))
+	if (!resLoad(ResourceFile, 0))
 	{
 		//need the object heaps to have been set up before loading in the save game
 		return FALSE;
@@ -1061,7 +1057,6 @@ BOOL stageThreeInitialise(void)
 	}
 
 	preProcessVisibility();
-	atmosInitSystem();
 	closeLoadingScreen();			// reset the loading screen.
 
 	if (!fpathInitialise())
@@ -1246,8 +1241,6 @@ void	initMiscVars( void )
 
 	radarOnScreen = TRUE;
 	enableConsoleDisplay(TRUE);
-
-	setEnergyBarDisplay(TRUE);
 
 	setSelectedGroup(UBYTE_MAX);
 	processDebugMappings(FALSE);

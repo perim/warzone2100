@@ -26,6 +26,8 @@
   06 US 01 0		# Not blocking (even if structure or feature on it)
   07 US 01 0		# *RETIRED* Do not draw flag
   08 US 01 0		# Height of first corner
+  09 US 01 0		# Visibility bits
+  0a US 01 0		# Info bits
   FF EN 00 -
 0b GR 00 -		# GATEWAY GROUP
   01 US 04 -		# (x1, y1, x2, y2) coordinates
@@ -122,7 +124,7 @@
     08 US 01 -		# Base speed
     09 ST 60 -		# Droid name (typically template name)
     0a US 01 -		# Current body points
-    0b US 01 -		# Number of kills
+    0b FP 01 -		# Experience
     0c US 01 -		# Name version (EXPLAIN ME)
     0e SI 01 -1		# Current job target ID (repairing stuff etc)
     0f SI 01 -1		# Current stats target ID (building stuff etc)
@@ -209,4 +211,10 @@
     03 US 01 0		# currentPtsAdded
     04 SI 01 -1		# Object being rearmed, if any, -1 if none
     FF EN 00 -
+  FF EN 00 -
+10 GR 00 -		# GATEWAY ZONE LINES
+  01 US 01 -		# Ugly binary blob of data. Someone please decode me!
+  FF EN 00 -
+11 GR 00 -		# GATEWAY ZONES
+  01 US 01 -		# Ugly binary blob of data. Someone please decode me!
   FF EN 00 -

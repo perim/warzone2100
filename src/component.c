@@ -35,6 +35,7 @@
 #include "lib/ivis_opengl/piematrix.h"
 #include "lib/ivis_common/piedef.h" //ivis matrix code
 #include "lib/ivis_common/piestate.h" //ivis render code
+#include "lib/ivis_common/piepalette.h"
 #include "lighting.h"
 #include "loop.h"
 
@@ -242,7 +243,7 @@ UDWORD getStructureStatHeight(STRUCTURE_STATS *psStat)
 {
 	if (psStat->pIMD)
 	{
-		return (psStat->pIMD->ymax - psStat->pIMD->ymin);
+		return (psStat->pIMD->max.y - psStat->pIMD->min.y);
 	}
 
 	return 0;
@@ -257,11 +258,9 @@ void displayIMDButton(iIMDShape *IMDShape, Vector3i *Rotation, Vector3i *Positio
 	pie_MatScale(scale);
 
 	pie_SetFogStatus(FALSE);
-	pie_Draw3DShape(IMDShape, 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0); // ajl changed 0 to selectedPlayer
+	pie_Draw3DShape(IMDShape, 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 	unsetMatrix();
 }
-
-
 
 
 //Watermelon:changed it to loop thru and draw all weapons
@@ -290,9 +289,9 @@ void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i
 	/* Draw the building's base first */
 	baseImd = psStructure->pStructureType->pBaseIMD;
 	if(baseImd!=NULL) {
-		pie_Draw3DShape(baseImd, 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);		// ajl changed 0 to selectedPlayer
+		pie_Draw3DShape(baseImd, 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 	}
-	pie_Draw3DShape(psStructure->sDisplay.imd, 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);	// ajl changed 0 to selectedPlayer
+	pie_Draw3DShape(psStructure->sDisplay.imd, 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 	//and draw the turret
 	if(psStructure->sDisplay.imd->nconnectors)
 	{
@@ -382,14 +381,14 @@ void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i
 					pie_MatRotY(DEG(-((SDWORD)psStructure->turretRotation[i])));
 					if (mountImd[i] != NULL)
 					{
-						pie_Draw3DShape(mountImd[i], 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);
+						pie_Draw3DShape(mountImd[i], 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 						if(mountImd[i]->nconnectors)
 						{
 							iV_TRANSLATE(mountImd[i]->connectors->x,mountImd[i]->connectors->z,mountImd[i]->connectors->y);
 						}
 					}
 					iV_MatrixRotateX(DEG(psStructure->turretPitch[i]));
-					pie_Draw3DShape(weaponImd[i], 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);
+					pie_Draw3DShape(weaponImd[i], 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 					//we have a droid weapon so do we draw a muzzle flash
 					iV_MatrixEnd();
 				}
@@ -401,14 +400,14 @@ void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i
 				pie_MatRotY(DEG(-((SDWORD)psStructure->turretRotation[0])));
 				if (mountImd[0] != NULL)
 				{
-					pie_Draw3DShape(mountImd[0], 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);
+					pie_Draw3DShape(mountImd[0], 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 					if(mountImd[0]->nconnectors)
 					{
 						iV_TRANSLATE(mountImd[0]->connectors->x,mountImd[0]->connectors->z,mountImd[0]->connectors->y);
 					}
 				}
 				iV_MatrixRotateX(DEG(psStructure->turretPitch[0]));
-				pie_Draw3DShape(weaponImd[0], 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);
+				pie_Draw3DShape(weaponImd[0], 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 				//we have a droid weapon so do we draw a muzzle flash
 				iV_MatrixEnd();
 			}
@@ -441,10 +440,11 @@ void displayStructureStatButton(STRUCTURE_STATS *Stats,UDWORD Player, Vector3i *
 	/* Draw the building's base first */
 	baseImd = Stats->pBaseIMD;
 
-	if(baseImd!=NULL) {
-		pie_Draw3DShape(baseImd, 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);// ajl changed 0 to selectedPlayer
+	if (baseImd != NULL)
+	{
+		pie_Draw3DShape(baseImd, 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 	}
-	pie_Draw3DShape(Stats->pIMD, 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);// ajl changed 0 to selectedPlayer
+	pie_Draw3DShape(Stats->pIMD, 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 
 	//and draw the turret
 	if(Stats->pIMD->nconnectors)
@@ -539,14 +539,14 @@ void displayStructureStatButton(STRUCTURE_STATS *Stats,UDWORD Player, Vector3i *
 					pie_MatRotY(DEG(0));
 					if (mountImd[i] != NULL)
 					{
-						pie_Draw3DShape(mountImd[i], 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);
+						pie_Draw3DShape(mountImd[i], 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 						if(mountImd[i]->nconnectors)
 						{
 							iV_TRANSLATE(mountImd[i]->connectors->x,mountImd[i]->connectors->z,mountImd[i]->connectors->y);
 						}
 					}
 					iV_MatrixRotateX(DEG(0));
-					pie_Draw3DShape(weaponImd[i], 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);
+					pie_Draw3DShape(weaponImd[i], 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 					//we have a droid weapon so do we draw a muzzle flash
 					iV_MatrixEnd();
 				}
@@ -558,14 +558,14 @@ void displayStructureStatButton(STRUCTURE_STATS *Stats,UDWORD Player, Vector3i *
 				pie_MatRotY(DEG(0));
 				if (mountImd[0] != NULL)
 				{
-					pie_Draw3DShape(mountImd[0], 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);
+					pie_Draw3DShape(mountImd[0], 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 					if(mountImd[0]->nconnectors)
 					{
 						iV_TRANSLATE(mountImd[0]->connectors->x,mountImd[0]->connectors->z,mountImd[0]->connectors->y);
 					}
 				}
 				iV_MatrixRotateX(DEG(0));
-				pie_Draw3DShape(weaponImd[0], 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);
+				pie_Draw3DShape(weaponImd[0], 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 				//we have a droid weapon so do we draw a muzzle flash
 				iV_MatrixEnd();
 			}
@@ -610,11 +610,11 @@ void displayComponentButton(BASE_STATS *Stat, Vector3i *Rotation, Vector3i *Posi
 
 	if(MountIMD)
 	{
-		pie_Draw3DShape(MountIMD, 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);// ajl changed 0 to selectedPlayer
+		pie_Draw3DShape(MountIMD, 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 	}
 	if(ComponentIMD)
 	{
-		pie_Draw3DShape(ComponentIMD, 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);// ajl changed 0 to selectedPlayer
+		pie_Draw3DShape(ComponentIMD, 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 	}
 
 	unsetMatrix();
@@ -635,9 +635,9 @@ void displayResearchButton(BASE_STATS *Stat, Vector3i *Rotation, Vector3i *Posit
 		pie_MatScale(scale);
 
 		if(MountIMD) {
-			pie_Draw3DShape(MountIMD, 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);	// ajl, added colourthing using selectedPlayer
+			pie_Draw3DShape(MountIMD, 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 		}
-		pie_Draw3DShape(ResearchIMD, 0, getPlayerColour(selectedPlayer), pie_MAX_BRIGHT_LEVEL, 0, pie_BUTTON, 0);		//ajl, added colourthing using selectedPlayer
+		pie_Draw3DShape(ResearchIMD, 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 
 		unsetMatrix();
 	}
@@ -679,7 +679,7 @@ void displayComponentButtonTemplate(DROID_TEMPLATE *psTemplate, Vector3i *Rotati
 	droidSetBits(psTemplate,&Droid);
 	Droid.player = (UBYTE)selectedPlayer;
 
-	Droid.x = Droid.y = Droid.z = 0;
+	Droid.pos.x = Droid.pos.y = Droid.pos.z = 0;
 
 	//draw multi component object as a button object
 	displayCompObj((BASE_OBJECT*)&Droid, TRUE);
@@ -758,9 +758,9 @@ void displayComponentObject(BASE_OBJECT *psObj)
 	pie_TRANSLATE(xShift,0,-zShift);
 
 	/* Get the real position */
-	position.x = (psDroid->x - player.p.x) - terrainMidX*TILE_UNITS;
-	position.z = terrainMidY*TILE_UNITS - (psDroid->y - player.p.z);
-	position.y = psDroid->z;
+	position.x = (psDroid->pos.x - player.p.x) - terrainMidX*TILE_UNITS;
+	position.z = terrainMidY*TILE_UNITS - (psDroid->pos.y - player.p.z);
+	position.y = psDroid->pos.z;
 
 	if(psDroid->droidType == DROID_TRANSPORTER)
 	{
@@ -791,9 +791,9 @@ void displayComponentObject(BASE_OBJECT *psObj)
 		Vector3i position;
 
 		//add an effect on the droid
-		position.x = psDroid->x + DROID_EMP_SPREAD;
-		position.y = psDroid->z + rand()%8;;
-		position.z = psDroid->y + DROID_EMP_SPREAD;
+		position.x = psDroid->pos.x + DROID_EMP_SPREAD;
+		position.y = psDroid->pos.z + rand()%8;;
+		position.z = psDroid->pos.y + DROID_EMP_SPREAD;
 		effectGiveAuxVar(90+rand()%20);
 		addEffect(&position,EFFECT_EXPLOSION,EXPLOSION_TYPE_PLASMA,FALSE,NULL,0);
 	}
@@ -808,8 +808,8 @@ void displayComponentObject(BASE_OBJECT *psObj)
 	{
 
 		// make sure it's not over water.
-		tileX = psDroid->x/TILE_UNITS;
-		tileY = psDroid->y/TILE_UNITS;
+		tileX = psDroid->pos.x/TILE_UNITS;
+		tileY = psDroid->pos.y/TILE_UNITS;
 		// double check it's on map
 		if ( tileX < mapWidth && tileY < mapHeight )
 		{
@@ -817,16 +817,13 @@ void displayComponentObject(BASE_OBJECT *psObj)
 			if (terrainType(psTile) != TER_WATER)
 			{
 			   	frame = gameTime/BLIP_ANIM_DURATION + psDroid->id; //visible[selectedPlayer];
-			   	pie_Draw3DShape(getImdFromIndex(MI_BLIP), frame, 0, pie_MAX_BRIGHT_LEVEL, 0, pie_ADDITIVE, (psDroid->visible[selectedPlayer]/2));
-			// 	pie_Draw3DShape(blipImd, frame, 0, pie_MAX_BRIGHT_LEVEL, 0, pie_TRANSLUCENT, 128);
+			   	pie_Draw3DShape(getImdFromIndex(MI_BLIP), frame, 0, WZCOL_WHITE, WZCOL_BLACK, pie_ADDITIVE, psDroid->visible[selectedPlayer] / 2);
 				/* set up all the screen coords stuff - need to REMOVE FROM THIS LOOP */
 			}
 		}
 	}
 	pie_MatEnd();
 }
-
-
 
 
 /* Assumes matrix context is already set */
@@ -842,7 +839,8 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 	PROPULSION_STATS	*psPropStats;
 	SDWORD				frame;
 	SDWORD				pieFlag, iPieData;
-	UDWORD				brightness, specular;
+	PIELIGHT			brightness;
+	const PIELIGHT			specular = WZCOL_BLACK;
 	UDWORD				colour;
 	UDWORD				bDarkSide = FALSE;
 	UBYTE	i;
@@ -871,13 +869,12 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 
 	if(!bButton)
 	{
-		brightness = lightDoFogAndIllumination(psDroid->illumination,getCentreX() - psDroid->x,getCentreZ() - psDroid->y, &specular);
+		brightness = pal_SetBrightness(psDroid->illumination);
 		pieFlag = pie_SHADOW;
 	}
 	else
 	{
-		brightness = pie_MAX_BRIGHT_LEVEL;
-		specular = 0;
+		brightness = WZCOL_WHITE;
 	}
 
 	/* We've got a z value here _and_ screen coords of origin */
@@ -898,7 +895,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 	psShapeTemp = (leftFirst ? getLeftPropulsionIMD(psDroid) : getRightPropulsionIMD(psDroid));
 	if(psShapeTemp!=NULL)
 	{
-		pie_Draw3DShape(psShapeTemp, 0, colour/*getPlayerColour(psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+		pie_Draw3DShape(psShapeTemp, 0, colour, brightness, specular, pieFlag, iPieData);
 	}
 
 	/* set default components transparent */
@@ -935,12 +932,12 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 			/* draw body if cyborg not animating */
 			if ( psDroid->psCurAnim == NULL || psDroid->psCurAnim->bVisible == FALSE )
 			{
-				pie_Draw3DShape(psShapeTemp, 0, colour/*getPlayerColour(psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+				pie_Draw3DShape(psShapeTemp, 0, colour, brightness, specular, pieFlag, iPieData);
 			}
 		}
 		else
 		{
-			pie_Draw3DShape(psShapeTemp, 0, colour/*getPlayerColour(psDroid->player)*/, brightness, specular, pieFlag, iPieData );
+			pie_Draw3DShape(psShapeTemp, 0, colour, brightness, specular, pieFlag, iPieData);
 		}
 	}
 
@@ -964,7 +961,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 
 			if ( psJet != NULL )
 			{
-				pie_Draw3DShape( psJet, getStaticTimeValueRange(100,psJet->numFrames), colour /*getPlayerColour(psDroid->player)*/, brightness, specular, pie_ADDITIVE, 200);
+				pie_Draw3DShape(psJet, getStaticTimeValueRange(100,psJet->numFrames), colour, brightness, specular, pie_ADDITIVE, 200);
 			}
 		}
 	}
@@ -1072,7 +1069,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 							}
 							if(psShape)
 							{
-								pie_Draw3DShape(psShape, 0, colour/*getPlayerColour(psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+								pie_Draw3DShape(psShape, 0, colour, brightness, specular, pieFlag, iPieData);
 							}
 
 							//if(psDroid->numWeaps) already done this check above?!
@@ -1107,7 +1104,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 							/* Draw it */
 							if(psShape)
 							{
-								pie_Draw3DShape(psShape, 0, colour/*getPlayerColour(psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+								pie_Draw3DShape(psShape, 0, colour, brightness, specular, pieFlag, iPieData);
 							}
 							//we have a droid weapon so do we draw a muzzle flash
 							if( psShape && psShape->nconnectors )
@@ -1129,7 +1126,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 									{
 										if (gameTime < (psDroid->asWeaps[i].lastFired + BASE_MUZZLE_FLASH_DURATION))
 										{
-   										pie_Draw3DShape(psShape, 0, 0, brightness, 0, pieFlag | pie_ADDITIVE, EFFECT_MUZZLE_ADDITIVE);//muzzle flash
+											pie_Draw3DShape(psShape, 0, 0, brightness, WZCOL_BLACK, pieFlag | pie_ADDITIVE, EFFECT_MUZZLE_ADDITIVE);//muzzle flash
 										}
 									}
 									else
@@ -1137,7 +1134,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 										frame = (gameTime - psDroid->asWeaps[i].lastFired)/psShape->animInterval;
 										if (frame < psShape->numFrames)
 										{
-											pie_Draw3DShape(psShape, frame, 0, brightness, 0, pieFlag | pie_ADDITIVE, EFFECT_MUZZLE_ADDITIVE);//muzzle flash
+											pie_Draw3DShape(psShape, frame, 0, brightness, WZCOL_BLACK, pieFlag | pie_ADDITIVE, EFFECT_MUZZLE_ADDITIVE);//muzzle flash
 										}
 									}
 								}
@@ -1175,7 +1172,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 				/* Draw it */
 				if(psShape)
 				{
-					pie_Draw3DShape(psShape, 0,colour/*getPlayerColour( psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+					pie_Draw3DShape(psShape, 0,colour, brightness, specular, pieFlag, iPieData);
 				}
 
 				/* Get the sensor graphic, assuming it's there */
@@ -1183,7 +1180,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 				/* Draw it */
 				if(psShape)
 				{
-					pie_Draw3DShape(psShape, 0,colour/*getPlayerColour( psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+					pie_Draw3DShape(psShape, 0,colour, brightness, specular, pieFlag, iPieData);
 				}
 				/* Pop Matrix */
 				pie_MatEnd();
@@ -1215,7 +1212,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 				/* Draw it */
 				if(psShape)
 				{
-					pie_Draw3DShape(psShape, 0,colour/*getPlayerColour( psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+					pie_Draw3DShape(psShape, 0,colour, brightness, specular, pieFlag, iPieData);
 				}
 
 				/* translate for construct mount point if cyborg */
@@ -1232,7 +1229,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 				/* Draw it */
 				if(psShape)
 				{
-					pie_Draw3DShape(psShape, 0,colour/*getPlayerColour( psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+					pie_Draw3DShape(psShape, 0,colour, brightness, specular, pieFlag, iPieData);
 				}
 				/* Pop Matrix */
 				pie_MatEnd();
@@ -1262,7 +1259,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 				/* Draw it */
 				if(psShape)
 				{
-					pie_Draw3DShape(psShape, 0, colour/*getPlayerColour(psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+					pie_Draw3DShape(psShape, 0, colour, brightness, specular, pieFlag, iPieData);
 				}
 
 				/* Get the ECM graphic assuming it's there.... */
@@ -1270,7 +1267,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 				/* Draw it */
 				if(psShape)
 				{
-					pie_Draw3DShape(psShape, 0, colour/*getPlayerColour(psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+					pie_Draw3DShape(psShape, 0, colour, brightness, specular, pieFlag, iPieData);
 				}
 				/* Pop Matrix */
 				pie_MatEnd();
@@ -1301,7 +1298,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 				/* Draw it */
 				if(psShape)
 				{
-					pie_Draw3DShape(psShape, 0,colour /*getPlayerColour( psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+					pie_Draw3DShape(psShape, 0, colour, brightness, specular, pieFlag, iPieData);
 				}
 
 				/* translate for construct mount point if cyborg */
@@ -1318,7 +1315,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 				/* Draw it */
 				if(psShape)
 				{
-					pie_Draw3DShape(psShape, 0,colour /*getPlayerColour( psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+					pie_Draw3DShape(psShape, 0, colour, brightness, specular, pieFlag, iPieData);
 					if(psShape->nconnectors && psDroid->action == DACTION_DROIDREPAIR)
 					{
 						pie_TRANSLATE( psShape->connectors[0].x,
@@ -1339,7 +1336,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 						iV_MatrixRotateX(-player.r.x);
 							/* Dither on software */
 
-					   	pie_Draw3DShape(psShape, getStaticTimeValueRange(100,psShape->numFrames), 0, brightness, 0, pie_ADDITIVE, 140);
+					   	pie_Draw3DShape(psShape, getStaticTimeValueRange(100,psShape->numFrames), 0, brightness, WZCOL_BLACK, pie_ADDITIVE, 140);
 					  		/* Dither off software */
 
 						iV_MatrixRotateX(player.r.x);
@@ -1376,7 +1373,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 	psShape = (leftFirst ? getRightPropulsionIMD(psDroid) : getLeftPropulsionIMD(psDroid));
 	if(psShape!=NULL)
 	{
-		pie_Draw3DShape(psShape, 0,colour /*getPlayerColour( psDroid->player)*/, brightness, specular, pieFlag, iPieData);
+		pie_Draw3DShape(psShape, 0, colour, brightness, specular, pieFlag, iPieData);
 	}
 }
 
@@ -1393,9 +1390,9 @@ void destroyFXDroid(DROID	*psDroid)
 	heightScatter = TILE_UNITS/5;
 	for(i=0; i<5; i++)
 	{
-		pos.x = psDroid->x + widthScatter - rand()%(2*widthScatter);
-		pos.z = psDroid->y + breadthScatter - rand()%(2*breadthScatter);
-		pos.y = psDroid->z + 16 +heightScatter;
+		pos.x = psDroid->pos.x + widthScatter - rand()%(2*widthScatter);
+		pos.z = psDroid->pos.y + breadthScatter - rand()%(2*breadthScatter);
+		pos.y = psDroid->pos.z + 16 +heightScatter;
 		switch(i)
 		{
 		case 0:
@@ -1496,10 +1493,10 @@ void	compPersonToBits(DROID *psDroid)
 	}
 
 	/* Get where he's at */
-	position.x = psDroid->x;
-	position.y = psDroid->z+1;
-	groundHeight = psDroid->z;
-	position.z = psDroid->y;
+	position.x = psDroid->pos.x;
+	position.y = psDroid->pos.z+1;
+	groundHeight = psDroid->pos.z;
+	position.z = psDroid->pos.y;
 
 
 	/* Tell about player colour */

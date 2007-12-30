@@ -51,14 +51,14 @@ typedef struct _tab_pos
 static void formSetDefaultColours(W_FORM *psForm)
 {
 	static BOOL bDefaultsSet = FALSE;
-	static UBYTE wcol_bkgrnd;
-	static SDWORD wcol_text;
-	static UBYTE wcol_light;
-	static UBYTE wcol_dark;
-	static UBYTE wcol_hilite;
-	static UBYTE wcol_cursor;
-	static UBYTE wcol_tipbkgrnd;
-	static UBYTE wcol_disable;
+	static PIELIGHT wcol_bkgrnd;
+	static PIELIGHT wcol_text;
+	static PIELIGHT wcol_light;
+	static PIELIGHT wcol_dark;
+	static PIELIGHT wcol_hilite;
+	static PIELIGHT wcol_cursor;
+	static PIELIGHT wcol_tipbkgrnd;
+	static PIELIGHT wcol_disable;
 
 	if (bDefaultsSet)
 	{
@@ -73,14 +73,14 @@ static void formSetDefaultColours(W_FORM *psForm)
 	}
 	else
 	{
-		wcol_bkgrnd    = (UBYTE)pal_GetNearestColour(0x7f,0x7f,0x7f);
-		wcol_text      = -1;
-		wcol_light     = (UBYTE)pal_GetNearestColour(0xff,0xff,0xff);
-		wcol_dark      = (UBYTE)pal_GetNearestColour(0,0,0);
-		wcol_hilite    = (UBYTE)pal_GetNearestColour(0x40,0x40,0x40);
-		wcol_cursor    = (UBYTE)pal_GetNearestColour(0xff,0x00,0x00);
-		wcol_tipbkgrnd = (UBYTE)pal_GetNearestColour(0x30,0x30,0x60);
-		wcol_disable   = (UBYTE)pal_GetNearestColour(0xbf,0xbf,0xbf);
+		wcol_bkgrnd    = pal_Colour(0x7f, 0x7f, 0x7f);
+		wcol_text      = WZCOL_WHITE;
+		wcol_light     = WZCOL_WHITE;
+		wcol_dark      = WZCOL_BLACK;
+		wcol_hilite    = pal_Colour(0x40, 0x40, 0x40);
+		wcol_cursor    = pal_Colour(0xff, 0x00, 0x00);
+		wcol_tipbkgrnd = pal_Colour(0x30, 0x30, 0x60);
+		wcol_disable   = pal_Colour(0xbf, 0xbf, 0xbf);
 
 		bDefaultsSet   = TRUE;
 
@@ -92,7 +92,6 @@ static void formSetDefaultColours(W_FORM *psForm)
 		psForm->aColours[WCOL_CURSOR]    = wcol_cursor;
 		psForm->aColours[WCOL_TIPBKGRND] = wcol_tipbkgrnd;
 		psForm->aColours[WCOL_DISABLE]   = wcol_disable;
-
 	}
 }
 
@@ -607,16 +606,16 @@ void widgSetTabs(W_SCREEN *psScreen, UDWORD id, UWORD major, UWORD minor)
 		return; /* make us work fine in no assert compiles */
 	}
 
-	if (major >= psForm->numMajor)
+	ASSERT(major < psForm->numMajor, "widgSetTabs id=%u: invalid major id %u >= max %u", id,
+	       major, psForm->numMajor);
+
+	ASSERT(minor < psForm->asMajor[major].numMinor, "widgSetTabs id=%u: invalid minor id %u >= max %u", id,
+	       minor, psForm->asMajor[major].numMinor);
+
+	// Make sure to bail out when we've been passed out-of-bounds major or minor numbers
+	if (major >= psForm->numMajor
+	 || minor >= psForm->asMajor[major].numMinor)
 	{
-		ASSERT(FALSE, "widgSetTabs id=%u: invalid major id %u >= max %u", id,
-		       major, psForm->numMajor);
-		return;
-	}
-	if (minor >= psForm->asMajor[major].numMinor)
-	{
-		ASSERT(FALSE, "widgSetTabs id=%u: invalid minor id %u >= max %u", id,
-		       minor, psForm->asMajor[major].numMinor);
 		return;
 	}
 
@@ -666,7 +665,7 @@ void widgSetColour(W_SCREEN *psScreen, UDWORD id, UDWORD colour,
 		ASSERT( FALSE, "widgSetColour: Colour id out of range" );
 		return;
 	}
-	psForm->aColours[colour] = (UBYTE)pal_GetNearestColour(red,green,blue);
+	psForm->aColours[colour] = pal_Colour(red,green,blue);
 }
 
 
@@ -1240,7 +1239,7 @@ void formHiLiteLost(W_FORM *psWidget, W_CONTEXT *psContext)
 }
 
 /* Display a form */
-void formDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
+void formDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours)
 {
 	UDWORD	x0,y0,x1,y1;
 
@@ -1251,7 +1250,7 @@ void formDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColo
 		x1 = x0 + psWidget->width;
 		y1 = y0 + psWidget->height;
 
-		pie_BoxFillIndex(x0+1,y0+1, x1-1,y1-1,WCOL_BKGRND);
+		pie_BoxFill(x0 + 1, y0 + 1, x1 - 1, y1 - 1, pColours[WCOL_BKGRND]);
 		iV_Line(x0,y1,x0,y0, pColours[WCOL_LIGHT]);
 		iV_Line(x0,y0,x1,y0, pColours[WCOL_LIGHT]);
 		iV_Line(x1,y0,x1,y1, pColours[WCOL_DARK]);
@@ -1261,7 +1260,7 @@ void formDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColo
 
 
 /* Display a clickable form */
-void formDisplayClickable(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
+void formDisplayClickable(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours)
 {
 	UDWORD			x0,y0,x1,y1;
 	W_CLICKFORM		*psForm;
@@ -1273,7 +1272,7 @@ void formDisplayClickable(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWO
 	y1 = y0 + psWidget->height;
 
 	/* Fill the background */
-	pie_BoxFillIndex(x0+1,y0+1, x1-1,y1-1,WCOL_BKGRND);
+	pie_BoxFill(x0 + 1, y0 + 1, x1 - 1, y1 - 1, pColours[WCOL_BKGRND]);
 
 	/* Display the border */
 	if (psForm->state & (WCLICK_DOWN | WCLICK_LOCKED | WCLICK_CLICKLOCK))
@@ -1299,7 +1298,7 @@ void formDisplayClickable(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWO
 static void formDisplayTTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 							 UDWORD width, UDWORD height,
 							 UDWORD number, UDWORD selected, UDWORD hilite,
-							 UDWORD *pColours,UDWORD TabType,UDWORD TabGap)
+							 PIELIGHT *pColours,UDWORD TabType,UDWORD TabGap)
 {
 	SDWORD	x,x1, y1;
 	UDWORD	i, drawnumber;
@@ -1340,7 +1339,7 @@ static void formDisplayTTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 			if (i == selected)
 			{
 				/* Fill in the tab */
-				pie_BoxFillIndex(x+1,y0+1, x1-1,y1,WCOL_BKGRND);
+				pie_BoxFill(x + 1, y0 + 1, x1 - 1, y1, pColours[WCOL_BKGRND]);
 				/* Draw the outline */
 				iV_Line(x,y0+2, x,y1-1, pColours[WCOL_LIGHT]);
 				iV_Line(x,y0+2, x+2,y0, pColours[WCOL_LIGHT]);
@@ -1350,7 +1349,7 @@ static void formDisplayTTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 			else
 			{
 				/* Fill in the tab */
-				pie_BoxFillIndex(x+1,y0+2, x1-1,y1-1,WCOL_BKGRND);
+				pie_BoxFill(x + 1, y0 + 2, x1 - 1, y1 - 1, pColours[WCOL_BKGRND]);
 				/* Draw the outline */
 				iV_Line(x,y0+3, x,y1-1, pColours[WCOL_LIGHT]);
 				iV_Line(x,y0+3, x+2,y0+1, pColours[WCOL_LIGHT]);
@@ -1373,7 +1372,7 @@ static void formDisplayTTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 static void formDisplayBTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 							 UDWORD width, UDWORD height,
 							 UDWORD number, UDWORD selected, UDWORD hilite,
-							 UDWORD *pColours,UDWORD TabType,UDWORD TabGap)
+							 PIELIGHT *pColours,UDWORD TabType,UDWORD TabGap)
 {
 	SDWORD	x,x1, y1;
 	UDWORD	i;
@@ -1397,7 +1396,7 @@ static void formDisplayBTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 			if (i == selected)
 			{
 				/* Fill in the tab */
-				pie_BoxFillIndex(x+1,y0, x1-1,y1-1,WCOL_BKGRND);
+				pie_BoxFill(x + 1, y0, x1 - 1, y1 - 1, pColours[WCOL_BKGRND]);
 				/* Draw the outline */
 				iV_Line(x,y0, x,y1-1, pColours[WCOL_LIGHT]);
 				iV_Line(x,y1, x1-3,y1, pColours[WCOL_DARK]);
@@ -1407,7 +1406,7 @@ static void formDisplayBTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 			else
 			{
 				/* Fill in the tab */
-				pie_BoxFillIndex(x+1,y0+1, x1-1,y1-2,WCOL_BKGRND);
+				pie_BoxFill(x + 1, y0 + 1, x1 - 1, y1 - 2, pColours[WCOL_BKGRND]);
 				/* Draw the outline */
 				iV_Line(x,y0+1, x,y1-1, pColours[WCOL_LIGHT]);
 				iV_Line(x+1,y1-1, x1-3,y1-1, pColours[WCOL_DARK]);
@@ -1430,7 +1429,7 @@ static void formDisplayBTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 static void formDisplayLTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 							 UDWORD width, UDWORD height,
 							 UDWORD number, UDWORD selected, UDWORD hilite,
-							 UDWORD *pColours,UDWORD TabType,UDWORD TabGap)
+							 PIELIGHT *pColours,UDWORD TabType,UDWORD TabGap)
 {
 	SDWORD	x1, y,y1;
 	UDWORD	i;
@@ -1454,7 +1453,7 @@ static void formDisplayLTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 			if (i == selected)
 			{
 				/* Fill in the tab */
-				pie_BoxFillIndex(x0+1,y+1, x1,y1-1,WCOL_BKGRND);
+				pie_BoxFill(x0 + 1, y + 1, x1, y1 - 1, pColours[WCOL_BKGRND]);
 				/* Draw the outline */
 				iV_Line(x0,y, x1-1,y, pColours[WCOL_LIGHT]);
 				iV_Line(x0,y+1, x0,y1-2, pColours[WCOL_LIGHT]);
@@ -1464,7 +1463,7 @@ static void formDisplayLTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 			else
 			{
 				/* Fill in the tab */
-				pie_BoxFillIndex(x0+2,y+1, x1-1,y1-1,WCOL_BKGRND);
+				pie_BoxFill(x0 + 2, y + 1, x1 - 1, y1 - 1, pColours[WCOL_BKGRND]);
 				/* Draw the outline */
 				iV_Line(x0+1,y, x1-1,y, pColours[WCOL_LIGHT]);
 				iV_Line(x0+1,y+1, x0+1,y1-2, pColours[WCOL_LIGHT]);
@@ -1486,7 +1485,7 @@ static void formDisplayLTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 static void formDisplayRTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 							 UDWORD width, UDWORD height,
 							 UDWORD number, UDWORD selected, UDWORD hilite,
-							 UDWORD *pColours,UDWORD TabType,UDWORD TabGap)
+							 PIELIGHT *pColours,UDWORD TabType,UDWORD TabGap)
 {
 	SDWORD	x1, y,y1;
 	UDWORD	i;
@@ -1510,7 +1509,7 @@ static void formDisplayRTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 			if (i == selected)
 			{
 				/* Fill in the tab */
-				pie_BoxFillIndex(x0,y+1, x1-1,y1-1, (UBYTE)pColours[WCOL_BKGRND]);
+				pie_BoxFill(x0,y+1, x1-1,y1-1, pColours[WCOL_BKGRND]);
 				/* Draw the outline */
 				iV_Line(x0,y, x1-1,y, pColours[WCOL_LIGHT]);
 				iV_Line(x1,y, x1,y1-2, pColours[WCOL_DARK]);
@@ -1520,7 +1519,7 @@ static void formDisplayRTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 			else
 			{
 				/* Fill in the tab */
-				pie_BoxFillIndex(x0+1,y+1, x1-2,y1-1, (UBYTE)pColours[WCOL_BKGRND]);
+				pie_BoxFill(x0+1,y+1, x1-2,y1-1, pColours[WCOL_BKGRND]);
 				/* Draw the outline */
 				iV_Line(x0+1,y, x1-1,y, pColours[WCOL_LIGHT]);
 				iV_Line(x1-1,y, x1-1,y1-2, pColours[WCOL_DARK]);
@@ -1539,7 +1538,7 @@ static void formDisplayRTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 
 
 /* Display a tabbed form */
-void formDisplayTabbed(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
+void formDisplayTabbed(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours)
 {
 	UDWORD		x0,y0,x1,y1;
 	W_TABFORM	*psForm;
@@ -1599,7 +1598,7 @@ void formDisplayTabbed(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD 
 		/* Draw the form outline */
 		if (!(psForm->style & WFORM_INVISIBLE))
 		{
-			pie_BoxFillIndex(x0,y0,x1,y1,WCOL_BKGRND);
+			pie_BoxFill(x0, y0, x1, y1, pColours[WCOL_BKGRND]);
 			iV_Line(x0,y1,x0,y0, pColours[WCOL_LIGHT]);
 			iV_Line(x0,y0,x1,y0, pColours[WCOL_LIGHT]);
 			iV_Line(x1,y0,x1,y1, pColours[WCOL_DARK]);
@@ -1670,5 +1669,4 @@ void formDisplayTabbed(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD 
 		break;
 	/* case WFORM_TABNONE - no minor tabs so nothing to display */
 	}
-
 }

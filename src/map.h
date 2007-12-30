@@ -93,8 +93,8 @@ static inline unsigned short TileNumber_texture(unsigned short tilenumber)
 					&& (((STRUCTURE*)x->psObject)->pStructureType->type == REF_WALL \
 					    || ((STRUCTURE*)x->psObject)->pStructureType->type == REF_WALLCORNER))
 #define TILE_HIGHLIGHT(x)		(x->texture & TILE_HILIGHT)
-#define TILE_HAS_TALLSTRUCTURE(x)	((TILE_HAS_STRUCTURE(x) && ((STRUCTURE*)x->psObject)->sDisplay.imd->ymax > TALLOBJECT_YMAX) \
-                                         || (TILE_HAS_FEATURE(x) && ((FEATURE*)x->psObject)->sDisplay.imd->ymax > TALLOBJECT_YMAX))
+#define TILE_HAS_TALLSTRUCTURE(x)	((TILE_HAS_STRUCTURE(x) && ((STRUCTURE*)x->psObject)->sDisplay.imd->max.y > TALLOBJECT_YMAX) \
+                                         || (TILE_HAS_FEATURE(x) && ((FEATURE*)x->psObject)->sDisplay.imd->max.y > TALLOBJECT_YMAX))
 #define TILE_HAS_SMALLSTRUCTURE(x)	(TILE_HAS_STRUCTURE(x) && ((STRUCTURE*)x->psObject)->pStructureType->height == 1)
 
 #define SET_TILE_NOTBLOCKING(x)	(x->texture |= TILE_NOTBLOCKING)
@@ -128,10 +128,11 @@ typedef struct _maptile
 	UBYTE			height;			// The height at the top left of the tile
 	UBYTE			illumination;	// How bright is this tile?
 	UWORD			texture;		// Which graphics texture is on this tile
-	UBYTE			bMaxed;
+	bool			bMaxed;
+	bool			activeSensor;	// selected player can see through fog of war here
 	UBYTE			level;
-	UBYTE			inRange;		// sensor range display.
 	BASE_OBJECT		*psObject;		// Any object sitting on the location (e.g. building)
+	PIELIGHT		colour;
 
 //	TYPE_OF_TERRAIN	type;			// The terrain type for the tile
 } MAPTILE;

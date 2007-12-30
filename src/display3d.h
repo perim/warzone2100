@@ -22,6 +22,7 @@
 #ifndef _display3d_h
 #define _display3d_h
 
+#include "display.h"
 #include "display3ddef.h"	// This should be the only place including this file
 #include "lib/ivis_common/pietypes.h"
 #include "lib/ivis_common/piedef.h"
@@ -40,13 +41,14 @@ typedef enum
 	BLOCKING_RUBBLE_TILE = 67 //! You cannot drive over these
 } TILE_ID;
 
-extern int showFPS;
+extern bool showFPS;
+extern bool showSAMPLES;
 
 extern void	setViewAngle(SDWORD angle);
 extern UDWORD getViewDistance(void);
 extern void	setViewDistance(UDWORD dist);
 extern BOOL	radarOnScreen;
-extern BOOL   rangeOnScreen;	// Added to get sensor/gun range on screen.  -Q 5-10-05
+extern bool rangeOnScreen; // Added to get sensor/gun range on screen.  -Q 5-10-05
 extern void	scaleMatrix( UDWORD percent );
 extern void setViewPos( UDWORD x, UDWORD y, BOOL Pan);
 extern void getPlayerPos(SDWORD *px, SDWORD *py);
@@ -70,7 +72,6 @@ extern void displayDynamicObjects( void );
 extern void displayProximityMsgs( void );
 extern void displayDelivPoints(void);
 extern void calcScreenCoords(DROID *psDroid);
-extern void toggleReloadBarDisplay( void );
 extern void toggleEnergyBars( void );
 
 extern BOOL doWeDrawRadarBlips( void );
@@ -79,6 +80,8 @@ extern void setBlipDraw(BOOL val);
 extern void setProximityDraw(BOOL val);
 extern void renderShadow( DROID *psDroid, iIMDShape *psShadowIMD );
 
+extern PIELIGHT getTileColour(int x, int y);
+extern void setTileColour(int x, int y, PIELIGHT colour);
 
 extern UDWORD getSuggestedPitch( void );
 
@@ -94,15 +97,11 @@ extern BOOL draggingTile;
 extern struct iIMDShape *g_imd;
 extern BOOL	droidSelected;
 extern UDWORD terrainMidX,terrainMidY;
- // FIXME This only used in one location outside of display3d.c, maybe create a wrapper function instead? ->
-extern Sint32 playerXTile, playerZTile, // -> lighting.c
- rx, rz; // -> atmos.c
 
 extern SDWORD scrollSpeed;
 //extern void	assignSensorTarget( DROID *psDroid );
 extern void assignSensorTarget( BASE_OBJECT *psObj );
 extern void assignDestTarget( void );
-extern void setEnergyBarDisplay( BOOL val );
 extern UDWORD getWaterTileNum( void);
 extern void setUnderwaterTile(UDWORD num);
 extern UDWORD getRubbleTileNum( void );
@@ -113,15 +112,9 @@ extern SDWORD	getCentreZ( void );
 
 extern SDWORD mouseTileX, mouseTileY;
 
-#define INITIAL_DESIRED_PITCH (325)
-#define INITIAL_STARTING_PITCH (-75)
-#define INITIAL_DESIRED_ROTATION (-45)
-
 extern BOOL bRender3DOnly;
 
 extern const Vector2i visibleTiles;
-
-extern TERRAIN_VERTEX tileScreenInfo[LAND_YGRD][LAND_XGRD];
 
 /*returns the graphic ID for a droid rank*/
 extern UDWORD  getDroidRankGraphic(DROID *psDroid);
@@ -137,9 +130,15 @@ extern void showRangeAtPos(SDWORD centerX, SDWORD centerY, SDWORD radius);
 #define BAR_DOT		2
 #define BAR_NONE	3
 
-extern UDWORD barMode;
+extern UWORD barMode;
 extern UDWORD geoOffset;
 
-extern void draw3dLine(Vector3i *src, Vector3i *dest, UBYTE col);
+enum
+{
+	BAR_SELECTED,
+	BAR_DROIDS,
+	BAR_DROIDS_AND_STRUCTURES,
+	BAR_LAST
+};
 
 #endif

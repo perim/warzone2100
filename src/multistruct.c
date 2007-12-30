@@ -52,75 +52,95 @@
 
 // ////////////////////////////////////////////////////////////////////////////
 // INFORM others that a building has been started, and base plate should be put down.
-BOOL sendBuildStarted(STRUCTURE *psStruct,DROID *psDroid)
+BOOL sendBuildStarted(STRUCTURE *psStruct, DROID *psDroid)
 {
-	NETMSG	msg;
-	UDWORD zero=0;
-	UWORD player,order;
-	player = (UBYTE)psDroid->player;
-	order = (UBYTE)psDroid->order;
-	NetAdd(msg,0,player);			//player
-	NetAdd(msg,1,psDroid->psTarStats->ref);	//id of thing to build
-	NetAdd(msg,5,psDroid->orderX);					// x
-	NetAdd(msg,7,psDroid->orderY);					// y
-	NetAdd(msg,11,psDroid->id);						// droid to order to build it
-	NetAdd(msg,15,psStruct->id);					// building id to create
-	NetAdd(msg,19,order);			// building id to create
+	NETbeginEncode(NET_BUILD, NET_ALL_PLAYERS);
+	
+		// Who is building it
+		NETuint8_t(&psDroid->player);
+		
+		// What they are building
+		NETuint32_t(&psDroid->psTarStats->ref);
+		
+		// Where it is being built
+		NETuint16_t(&psDroid->orderX);
+		NETuint16_t(&psDroid->orderY);
+		
+		// The droid building it
+		NETuint32_t(&psDroid->id);
+		
+		// The ID assigned to the structure being built
+		NETuint32_t(&psStruct->id);
+		
+		// The droids order
+		NETint32_t(&psDroid->order);
+	
+		if (psDroid->psTarget
+		 && psDroid->psTarget->type == OBJ_STRUCTURE)
+		{
+			// The ID of the droids target (== psStruct->id ?)
+			NETuint32_t(&psDroid->psTarget->id);
+		}
+		else
+		{
+			NETnull();
+		}
+	
+		// Z coord
+		NETuint16_t(&psStruct->pos.z);
 
-	if (psDroid->psTarget && psDroid->psTarget->type == OBJ_STRUCTURE)
-	{
-		NetAdd(msg,20,((STRUCTURE*)psDroid->psTarget)->id);
-	}
-	else
-	{
-		NetAdd(msg,20,zero);
-	}
-
-	NetAdd(msg,24,psStruct->z);
-
-	msg.size =28;
-	msg.type = NET_BUILD;
-	return (NETbcast(&msg,FALSE));
+	return NETend();
 }
 
 // ////////////////////////////////////////////////////////////////////////////
 // put down a base plate and start droid building it!
-BOOL recvBuildStarted(NETMSG *pMsg)
+BOOL recvBuildStarted()
 {
-	UDWORD			targetId,order,droidId,structId,structStat;
-	UWORD			x,z,y,player;
 	STRUCTURE_STATS *psStats;
 	DROID			*psDroid;
-	UDWORD			typeindex,actionX,actionY;
+	UDWORD			actionX,actionY;
+	int				typeIndex;
+	uint8_t			player;
+	uint16_t		x, y, z;
+	int32_t			order;
+	uint32_t		structRef, structId, targetId,droidID;
 
-	player = pMsg->body[0];					// decode message.
-	NetGet(pMsg,1,structStat);
-	NetGet(pMsg,5,x);
-	NetGet(pMsg,7,y);
-	NetGet(pMsg,11,droidId);
-	NetGet(pMsg,15,structId);
-	order = pMsg->body[19];
-	NetGet(pMsg,20,targetId);
-	NetGet(pMsg,24,z);
-	for(typeindex=0;										// find structure target
-	(typeindex<numStructureStats ) && (asStructureStats[typeindex].ref != structStat);
-	typeindex++);
+	NETbeginDecode();
 
-	psStats = &asStructureStats[typeindex];
+	NETuint8_t(&player);
+	NETuint32_t(&structRef);
+	NETuint16_t(&x);
+	NETuint16_t(&y);
+	NETuint32_t(&droidID);
+	NETuint32_t(&structId);
+	NETint32_t(&order);
+	NETuint32_t(&targetId);
+	NETuint16_t(&z);
 
-	if(IdToDroid(droidId,player, &psDroid))
+	// Find structure target
+	for (typeIndex = 0;
+	     typeIndex < numStructureStats && asStructureStats[typeIndex].ref != structRef;
+	     typeIndex++);
+
+	psStats = &asStructureStats[typeIndex];
+
+	if (IdToDroid(droidID, player, &psDroid))
 	{
-		if (getDroidDestination( (BASE_STATS *)psStats ,x,y, &actionX,&actionY))
+		// Tell the droid to go to where it needs to in order to build the struct
+		if (getDroidDestination((BASE_STATS *) psStats, x, y, &actionX, &actionY))
 		{
 			psDroid->order = order;
-			if(psDroid->order == DORDER_LINEBUILD)
+			
+			if (psDroid->order == DORDER_LINEBUILD)
 			{
 				psDroid->order = DORDER_BUILD;
 			}
+			
 			psDroid->orderX = x;
 			psDroid->orderY = y;
 			psDroid->psTarStats = (BASE_STATS *) psStats;
-			if(targetId)
+			
+			if (targetId)
 			{
 				setDroidTarget(psDroid, IdToPointer(targetId, ANYPLAYER));
 			}
@@ -138,235 +158,240 @@ BOOL recvBuildStarted(NETMSG *pMsg)
 				droidStartBuild(psDroid);
 				psDroid->action = DACTION_BUILD;
 			}
-
 		}
 
-		if (psDroid->psTarget)									//sync id's
+		// Sync IDs
+		if (psDroid->psTarget)
 		{
-			((STRUCTURE*)psDroid->psTarget)->id = structId;
+			((STRUCTURE *) psDroid->psTarget)->id = structId;
 		}
 	}
-
-	// order droid to start building it.
+	
+	NETend();
 	return TRUE;
 }
 
 // ////////////////////////////////////////////////////////////////////////////
 // INFORM others that a building has been completed.
 BOOL SendBuildFinished(STRUCTURE *psStruct)
-{
-	NETMSG m;
-
-	NetAdd(m,0,psStruct->id);							//id of finished struct
-	// also enough info to build it if we don't already know about it.
-	NetAdd(m,4,psStruct->pStructureType->ref);			// kind of building.
-	NetAdd(m,8,psStruct->x);							// x pos
-	NetAdd(m,10,psStruct->y);							// y pos
-	NetAdd(m,12,psStruct->z);							// y pos
-	m.body[14] =(char) psStruct->player;				// player
-
-	m.size =15;
-	m.type =NET_BUILDFINISHED;
-	return (NETbcast(&m,FALSE));
+{	
+	NETbeginEncode(NET_BUILDFINISHED, NET_ALL_PLAYERS);
+		// ID of building
+		NETuint32_t(&psStruct->id);
+		
+		// Along with enough info to build it (if needed)
+		NETuint32_t(&psStruct->pStructureType->ref);
+		NETuint16_t(&psStruct->pos.x);
+		NETuint16_t(&psStruct->pos.y);
+		NETuint16_t(&psStruct->pos.z);
+		NETuint8_t(&psStruct->player);
+	return NETend();
 }
 
 // ////////////////////////////////////////////////////////////////////////////
-BOOL recvBuildFinished(NETMSG *m)
+BOOL recvBuildFinished()
 {
-	UDWORD strId;//,i;
-	STRUCTURE *psStr;
+	UDWORD structId;
+	STRUCTURE *psStruct;
 	UWORD	x,y,z;
 	UDWORD	type,typeindex;
 	UBYTE	player;
 
-	NetGet(m,0,strId);									// get the struct id.
-	psStr = IdToStruct(strId,ANYPLAYER);
 
-	if(psStr)
+	NETbeginDecode();
+	NETuint32_t(&structId);			// get the struct id.
+	psStruct = IdToStruct(structId,ANYPLAYER);
+
+	if (psStruct)
 	{												// make it complete.
-		psStr->currentBuildPts = psStr->pStructureType->buildPoints+1;
+		psStruct->currentBuildPts = psStruct->pStructureType->buildPoints+1;
 
-		if(psStr->status != SS_BUILT)
+		if (psStruct->status != SS_BUILT)
 		{
-			psStr->status = SS_BUILT;
-			buildingComplete(psStr);
+			psStruct->status = SS_BUILT;
+			buildingComplete(psStruct);
 		}
 		NETlogEntry("building finished ok." ,0,0);
+		NETend();
 		return TRUE;
 	}
 
-	// the building wasn't started, so we'll have to just plonk it down in the map.
-	NetGet(m,4,type);									// kind of building.
-	NetGet(m,8,x);										// x pos
-	NetGet(m,10,y);										// y pos
-	NetGet(m,12,z);										// z pos
+	// The building wasn't started, so we'll have to just plonk it down in the map.
+	NETuint32_t(&type); 	// Kind of building.
+	NETuint16_t(&x);    	// x pos
+	NETuint16_t(&y);    	// y pos
+	NETuint16_t(&z);    	// z pos
+    NETuint8_t(&player);
 
-	player = m->body[14];								// player
-
-	for(typeindex=0;														// find structure target
+	// Find the structures stats
+	for (typeindex=0;						// Find structure target
 		(typeindex<numStructureStats ) && (asStructureStats[typeindex].ref != type);
 		typeindex++);
-	psStr = 0;
 
-	// check for similar buildings, to avoid overlaps
+	// Check for similar buildings, to avoid overlaps
 	if (TILE_HAS_STRUCTURE(mapTile(map_coord(x), map_coord(y))))
 	{
-		// get structure;
-		psStr = getTileStructure(map_coord(x), map_coord(y));
-		if(asStructureStats[typeindex].type == psStr->pStructureType->type)
+		// Get the current structure
+		psStruct = getTileStructure(map_coord(x), map_coord(y));
+		if (asStructureStats[typeindex].type == psStruct->pStructureType->type)
 		{
-			// correct type, correct location, just rename the id's to sync it.. (urgh)
-			psStr->id = strId;
-			psStr->status = SS_BUILT;
-			buildingComplete(psStr);
-			NETlogEntry("structure id modified" ,0,player);
+			// Correct type, correct location, just rename the id's to sync it.. (urgh)
+			psStruct->id = structId;
+			psStruct->status = SS_BUILT;
+			buildingComplete(psStruct);
+			NETlogEntry("structure id modified", 0, player);
+			NETend();
 			return TRUE;
 		}
 	}
-
-	psStr = buildStructure(&(asStructureStats[typeindex]),					// build the structure.
-					x,y,
-					player,TRUE);
-	if (psStr)
+	// Build the structure
+	psStruct = buildStructure(&(asStructureStats[typeindex]),	// Build the structure.
+	                          x, y, player,TRUE);
+	
+	if (psStruct)
 	{
-		psStr->id		= strId;
-		psStr->status	= SS_BUILT;
-		buildingComplete(psStr);
+		psStruct->id		= structId;
+		psStruct->status	= SS_BUILT;
+		buildingComplete(psStruct);
 
-		DBCONPRINTF(ConsoleString,(ConsoleString,"MultiPlayer: Struct not found on recvbuildcomplete :%d",strId ));
 		NETlogEntry("had to plonk down a building" ,0,player);
 	}
 	else
 	{
-		DBCONPRINTF(ConsoleString,(ConsoleString,"MultiPlayer: Struct not found on recvbuildcomplete BUILDIT FAILED TOO!:%d",strId ));
 		NETlogEntry("had to plonk down a building, BUT FAILED OH S**T." ,0,player);
 	}
+	
+	NETend();
 	return FALSE;
 }
 
 
 // ////////////////////////////////////////////////////////////////////////////
 // demolish message.
-BOOL SendDemolishFinished( STRUCTURE *psStruct,DROID *psDroid)
+BOOL SendDemolishFinished(STRUCTURE *psStruct, DROID *psDroid)
 {
-	NETMSG m;
+	NETbeginEncode(NET_DEMOLISH, NET_ALL_PLAYERS);             
+                                                         
+		// Send what is being demolish and who is doing it
+		NETuint32_t(&psStruct->id);
+		NETuint32_t(&psDroid->id);
 
-	NetAdd(m,0,psStruct->id);
-	NetAdd(m,4,psDroid->id);
-
-	m.size = 2*sizeof(UDWORD);
-	m.type = NET_DEMOLISH;
-	return( NETbcast(&m,FALSE));
+	return NETend();
 }
 
-BOOL recvDemolishFinished(NETMSG *m)
+BOOL recvDemolishFinished()
 {
 	STRUCTURE	*psStruct;
-	UDWORD		s,d;
 	DROID		*psDroid;
+	uint32_t structID,droidID;
 
-	NetGet(m,0,s);
-	NetGet(m,4,d);
+	NETbeginDecode();
 
-	psStruct = IdToStruct(s,ANYPLAYER);
-	IdToDroid(d,ANYPLAYER,&psDroid);
+	NETuint32_t(&structID);			
+	NETuint32_t(&droidID);
 
-	if(psStruct)
+	psStruct = IdToStruct(structID, ANYPLAYER);
+	IdToDroid(droidID, ANYPLAYER, &psDroid);
+
+	if (psStruct)
 	{
-		removeStruct( psStruct, TRUE );				// demolish it.
-		if(psDroid && psDroid->psTarStats)
+		// Demolish it
+		removeStruct(psStruct, TRUE);
+		if (psDroid && psDroid->psTarStats)
 		{
-			psDroid->psTarStats = NULL;		// update droid if reqd.
+			// Update droid if reqd
+			psDroid->psTarStats = NULL;
 		}
 	}
+	
+	NETend();
 	return TRUE;
 }
-
 
 
 // ////////////////////////////////////////////////////////////////////////////
 // Inform others that a structure has been destroyed
 BOOL SendDestroyStructure(STRUCTURE *s)
 {
-	NETMSG m;
-
 	technologyGiveAway(s);
+	NETbeginEncode(NET_STRUCTDEST, NET_ALL_PLAYERS);
 
-	NetAdd(m,0,s->id);									// struct to destroy
-	m.size =sizeof(UDWORD);
-	m.type=NET_STRUCTDEST;
-	return( NETbcast(&m,FALSE));
+	// Struct to destroy
+	NETuint32_t(&s->id);
+
+	return NETend();
 }
 
 // ////////////////////////////////////////////////////////////////////////////
 // acknowledge the destruction of a structure, from another player.
-BOOL recvDestroyStructure(NETMSG * m)
+BOOL recvDestroyStructure()
 {
-	UDWORD s;
-	STRUCTURE *psStr;
+	uint32_t structID;
+	STRUCTURE *psStruct;
 
-	NetGet(m,0,s);								// struct to destory
+	NETbeginDecode();
+		NETuint32_t(&structID);
+	NETend();
+								
+	// Struct to destory
+	psStruct = IdToStruct(structID,ANYPLAYER);
 
-	psStr = IdToStruct(s,ANYPLAYER);
-	if (psStr)
+	if (psStruct)
 	{
 		turnOffMultiMsg(TRUE);
-		destroyStruct(psStr);				// remove the struct from remote players machine.
+		// Remove the struct from remote players machine
+		destroyStruct(psStruct);
 		turnOffMultiMsg(FALSE);
-
-		technologyGiveAway(psStr);
-
-		return (TRUE);
+		// NOTE: I do not think this should be here!
+		technologyGiveAway(psStruct);
 	}
-	return (TRUE);
+	
+	return TRUE;
 }
-
 
 // ////////////////////////////////////////////////////////////////////////////
 //lassat is firing
 
-BOOL sendLasSat(UBYTE player,STRUCTURE *psStruct, BASE_OBJECT *psObj)
+BOOL sendLasSat(UBYTE player, STRUCTURE *psStruct, BASE_OBJECT *psObj)
 {
-	NETMSG msg;
-	UBYTE p;
+	NETbeginEncode(NET_LASSAT, NET_ALL_PLAYERS);
 
-	NetAdd(msg,0,player);
-	NetAdd(msg,1,psStruct->id);
-	NetAdd(msg,5,psObj->id);
-	p = psObj->player;
-	NetAdd(msg,9,p);
+		NETuint8_t(&player);
+		NETuint32_t(&psStruct->id);
+		NETuint32_t(&psObj->id);	// Target
+		NETuint8_t(&psObj->player);	// Target player
 
-	msg.size = 10;
-	msg.type = NET_LASSAT;
-
-	return  (NETbcast(&msg,FALSE) );
-
+	return NETend();
 }
 
 // recv lassat info on the receiving end.
-BOOL recvLasSat(NETMSG *pMsg)
+BOOL recvLasSat()
 {
 	BASE_OBJECT	*psObj;
 	UBYTE		player,targetplayer;
 	STRUCTURE	*psStruct;
-	UDWORD		id,tid;
+	uint32_t	id,targetid;
+	
+	NETbeginDecode();
 
-	NetGet(pMsg,0,player);
-	NetGet(pMsg,1,id);
-	NetGet(pMsg,5,tid);
-	NetGet(pMsg,9,targetplayer);
+		NETuint8_t(&player);
+		NETuint32_t(&id);
+		NETuint32_t(&targetid);
+		NETuint8_t(&targetplayer);
+	
+		psStruct = IdToStruct (id, player);
+		psObj	 = IdToPointer(targetid, targetplayer);
+	
+		if( psStruct && psObj)
+		{
+			// Give enemy no quarter, unleash the lasat
+			proj_SendProjectile(&psStruct->asWeaps[0], NULL, player, psObj->pos.x,
+	            psObj->pos.y, psObj->pos.z, psObj, TRUE, FALSE, 0);
+	      	// Play 5 second countdown message
+			audio_QueueTrackPos( ID_SOUND_LAS_SAT_COUNTDOWN, psObj->pos.x, psObj->pos.y,
+	            psObj->pos.z);
+		}
 
-	psStruct = IdToStruct (id ,player);
-	psObj	 = IdToPointer(tid,targetplayer);
-
-	if(psStruct && psObj)
-	{
-		proj_SendProjectile(&psStruct->asWeaps[0], NULL, player, psObj->x,
-            psObj->y, psObj->z, psObj, TRUE, FALSE, 0);
-        //play 5 second countdown message
-		audio_QueueTrackPos( ID_SOUND_LAS_SAT_COUNTDOWN, psObj->x, psObj->y,
-            psObj->z );
-	}
-
+	NETend();
 	return TRUE;
 }

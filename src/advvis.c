@@ -42,7 +42,7 @@ static BOOL bRevealActive = FALSE;
 // ------------------------------------------------------------------------------------
 void	avSetStatus(BOOL var)
 {
-	debug(LOG_FOG, "avSetStatus: Setting visual fog %s", var ? "ON" : "OFF");
+	debug(LOG_FOG, "avSetStatus: Setting fog of war %s", var ? "ON" : "OFF");
 	bRevealActive = var;
 }
 
@@ -93,8 +93,8 @@ static void processAVTile(UDWORD x, UDWORD y)
 		return;
 	}
 
-	time = (MAKEFRACT(frameTime) / GAME_TICKS_PER_SEC);
-	newLevel = MAKEINT(psTile->level + (time * FADE_IN_TIME));
+	time = (float)frameTime / (float)GAME_TICKS_PER_SEC;
+	newLevel = (int)(psTile->level + (time * FADE_IN_TIME));
 	if (newLevel >= psTile->illumination)
 	{
 		psTile->level = psTile->illumination;
@@ -162,17 +162,17 @@ UDWORD	i,j;
 // ------------------------------------------------------------------------------------
 UDWORD	avGetObjLightLevel(BASE_OBJECT *psObj,UDWORD origLevel)
 {
-float	div;
-UDWORD	lowest,newLevel;
+	float div = (float)psObj->visible[selectedPlayer] / 255.f;
 
-	div = MAKEFRACT(psObj->visible[selectedPlayer])/255;
-	lowest = origLevel/START_DIVIDE;
-	newLevel = (UDWORD)(div*origLevel);
-	if(newLevel<lowest)
+	unsigned int lowest = origLevel / START_DIVIDE;
+	unsigned int newLevel = div * origLevel;
+
+	if(newLevel < lowest)
 	{
 		newLevel = lowest;
 	}
-	return(newLevel);
+
+	return newLevel;
 }
 
 // ------------------------------------------------------------------------------------

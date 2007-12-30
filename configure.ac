@@ -104,6 +104,15 @@ AC_MSG_CHECKING([whether to build NSIS installer])
 AC_MSG_RESULT([${enable_installer}])
 
 
+AC_ARG_WITH(distributor,
+	AS_HELP_STRING([--with-distributor],[Name of distributor compiling this package]))
+if test "x$with_distributor" = "x" ; then
+	AC_DEFINE([PACKAGE_DISTRIBUTOR], "UNKNOWN", [Name of distributor compiling this package])
+else
+	AC_DEFINE_UNQUOTED([PACKAGE_DISTRIBUTOR], ["${with_distributor}"], [Name of distributor compiling this package])
+fi
+
+
 AC_ARG_WITH(makensis,
 	AS_HELP_STRING([--with-makensis],[Path to makensis]))
 
@@ -261,7 +270,12 @@ AC_CONFIG_FILES([Makefile
 AC_OUTPUT
 
 if test "x$enable_debug" = "xyes" ; then
-	echo ""
-	echo " *** Running in debug mode! ***"
-	echo ""
+	AC_MSG_NOTICE()
+	AC_MSG_NOTICE([*** Running in debug mode! ***])
+fi
+
+if test "x$with_distributor" = "x" ; then
+	AC_MSG_NOTICE()
+	AC_MSG_WARN([Distributor unknown!])
+	AC_MSG_NOTICE([Use --with-distributor when compiling package for distribution])
 fi

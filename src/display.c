@@ -162,7 +162,8 @@ UDWORD	arnMPointers[POSSIBLE_TARGETS][POSSIBLE_SELECTIONS] =
 	IDC_GUARD,IDC_NOTPOSSIBLE,IDC_NOTPOSSIBLE,IDC_DEST,IDC_MOVE},
 };
 
-UDWORD	scroll_speed_accel=800;		// acceleration on scrolling. Game Option.
+/// acceleration on scrolling. Game Option.
+UDWORD	scroll_speed_accel;
 
 static BOOL	buildingDamaged(STRUCTURE *psStructure);
 static BOOL	repairDroidSelected(UDWORD player);
@@ -193,7 +194,6 @@ static STRUCTURE	*psBuilding;
 static SDWORD	direction = 0;
 static BOOL	edgeOfMap = FALSE;
 static UDWORD	scrollRefTime;
-static float	scrollAccel;
 static float	scrollSpeedLeftRight; //use two directions and add them because its simple
 static float	scrollStepLeftRight;
 static float	scrollSpeedUpDown;
@@ -667,42 +667,17 @@ static void HandleDrag(void)
 {
 	UDWORD dragX, dragY;
 
-	if(driveModeActive()) {
-		if(mouseDown(MOUSE_LMB)) {
-			if(buildState == BUILD3D_VALID)
-			{
-				if ((((STRUCTURE_STATS *)sBuildDetails.psStats)->type == REF_WALL
-				     || ((STRUCTURE_STATS *)sBuildDetails.psStats)->type == REF_DEFENSE)
-				    && !isLasSat((STRUCTURE_STATS *)sBuildDetails.psStats))
-				{
-					int dx,dy;
-
-					wallDrag.x2 = mouseTileX;
-					wallDrag.y2 = mouseTileY;
-
-					dx = abs(mouseTileX - wallDrag.x1);
-					dy = abs(mouseTileY - wallDrag.y1);
-
-					if(dx >= dy) {
-						wallDrag.y2 = wallDrag.y1;
-					} else if(dx < dy) {
-						wallDrag.x2 = wallDrag.x1;
-					}
-
-					wallDrag.status = DRAG_DRAGGING;
-				}
-			}
-		}
-
-		return;
-	}
-
-	if(mouseDrag(MOUSE_LMB, &dragX, &dragY) && !mouseOverRadar && !mouseDown(MOUSE_RMB))
+	if ( (driveModeActive() && mouseDown(MOUSE_LMB))
+		|| (mouseDrag(MOUSE_LMB, &dragX, &dragY) && !mouseOverRadar && !mouseDown(MOUSE_RMB)) )
 	{
-		dragBox3D.x1 = dragX;
-		dragBox3D.x2 = mouseXPos;
-		dragBox3D.y1 = dragY;
-		dragBox3D.y2 = mouseYPos;
+		if(!driveModeActive()) {
+			dragBox3D.x1 = dragX;
+			dragBox3D.x2 = mouseXPos;
+			dragBox3D.y1 = dragY;
+			dragBox3D.y2 = mouseYPos;
+
+			dragBox3D.status = DRAG_DRAGGING;
+		}
 
 		if(buildState == BUILD3D_VALID)
 		{
@@ -727,7 +702,6 @@ static void HandleDrag(void)
 				wallDrag.status = DRAG_DRAGGING;
 			}
 		}
-		dragBox3D.status = DRAG_DRAGGING;
 	}
 }
 
@@ -994,6 +968,9 @@ void scroll(void)
 	BOOL	bRetardScroll = FALSE;
 	BOOL mouseAtLeft = FALSE, mouseAtRight = FALSE,
 		mouseAtTop = FALSE, mouseAtBottom = FALSE;
+	float scroll_zoom_factor = 1+2*((getViewDistance()-MINDISTANCE)/((float)(MAXDISTANCE-MINDISTANCE)));
+	float scaled_max_scroll_speed = scroll_zoom_factor * MAX_SCROLL_SPEED;
+	float scaled_accel;
 
 	if(InGameOpUp || bDisplayMultiJoiningStatus )		// cant scroll when menu up. or when over radar
 	{
@@ -1103,36 +1080,36 @@ void scroll(void)
 	{
 		timeDiff = GTIME_MAXFRAME;
 	}
-	scrollAccel = (float)scroll_speed_accel * (float)(timeDiff) / (float)GAME_TICKS_PER_SEC;
+	scaled_accel = scroll_zoom_factor * (float)scroll_speed_accel * (float)(timeDiff) / (float)GAME_TICKS_PER_SEC;
 	if(mouseAtLeft)
 	{
 		if(scrollSpeedLeftRight > 0)
 			scrollSpeedLeftRight = 0.0f;
-		scrollSpeedLeftRight -= scrollAccel;
-		if(scrollSpeedLeftRight < -(float)MAX_SCROLL_SPEED)
+		scrollSpeedLeftRight -= scaled_accel;
+		if(scrollSpeedLeftRight < -scaled_max_scroll_speed)
 		{
-			scrollSpeedLeftRight = -(float)MAX_SCROLL_SPEED;
+			scrollSpeedLeftRight = -scaled_max_scroll_speed;
 		}
 	}
 	else if(mouseAtRight)
 	{
 		if(scrollSpeedLeftRight < 0)
 			scrollSpeedLeftRight = 0.0f;
-		scrollSpeedLeftRight += scrollAccel;
-		if(scrollSpeedLeftRight > (float)MAX_SCROLL_SPEED)
+		scrollSpeedLeftRight += scaled_accel;
+		if(scrollSpeedLeftRight > scaled_max_scroll_speed)
 		{
-			scrollSpeedLeftRight = (float)MAX_SCROLL_SPEED;
+			scrollSpeedLeftRight = scaled_max_scroll_speed;
 		}
 	}
 	else // not at left or right so retard the scroll
 	{
-		if(scrollSpeedLeftRight > 2*scrollAccel)
+		if(scrollSpeedLeftRight > 2*scaled_accel)
 		{
-			scrollSpeedLeftRight -= 2*scrollAccel;
+			scrollSpeedLeftRight -= 2*scaled_accel;
 		}
-		else if(scrollSpeedLeftRight < -2*scrollAccel)
+		else if(scrollSpeedLeftRight < -2*scaled_accel)
 		{
-			scrollSpeedLeftRight += 2*scrollAccel;
+			scrollSpeedLeftRight += 2*scaled_accel;
 		}
 		else
 		{
@@ -1143,31 +1120,31 @@ void scroll(void)
 	{
 		if(scrollSpeedUpDown < 0)
 			scrollSpeedUpDown = 0.0f;
-		scrollSpeedUpDown += scrollAccel;
-		if(scrollSpeedUpDown > (float)MAX_SCROLL_SPEED)
+		scrollSpeedUpDown += scaled_accel;
+		if(scrollSpeedUpDown > scaled_max_scroll_speed)
 		{
-			scrollSpeedUpDown = (float)MAX_SCROLL_SPEED;
+			scrollSpeedUpDown = scaled_max_scroll_speed;
 		}
 	}
 	else if(mouseAtTop)//its at the bottom??
 	{
 		if(scrollSpeedUpDown > 0)
 			scrollSpeedUpDown = 0.0f;
-		scrollSpeedUpDown -= scrollAccel;
-		if(scrollSpeedUpDown < -(float)MAX_SCROLL_SPEED)
+		scrollSpeedUpDown -= scaled_accel;
+		if(scrollSpeedUpDown < -scaled_max_scroll_speed)
 		{
-			scrollSpeedUpDown = -(float)MAX_SCROLL_SPEED;
+			scrollSpeedUpDown = -scaled_max_scroll_speed;
 		}
 	}
 	else // not at top or bottom so retard the scroll
 	{
-		if(scrollSpeedUpDown > scrollAccel)
+		if(scrollSpeedUpDown > scaled_accel)
 		{
-			scrollSpeedUpDown -= 2*scrollAccel;
+			scrollSpeedUpDown -= 2*scaled_accel;
 		}
-		else if(scrollSpeedUpDown < -scrollAccel)
+		else if(scrollSpeedUpDown < -scaled_accel)
 		{
-			scrollSpeedUpDown += 2*scrollAccel;
+			scrollSpeedUpDown += 2*scaled_accel;
 		}
 		else
 		{
@@ -1191,9 +1168,9 @@ void scroll(void)
 	sine = sinf(radians);
 
 	/* Get x component of movement */
-	xDif = ROUND(cosine * scrollStepLeftRight + sine * scrollStepUpDown);
+	xDif = math_round(cosine * scrollStepLeftRight + sine * scrollStepUpDown);
 	/* Get y component of movement */
-	yDif = ROUND(sine * scrollStepLeftRight - cosine * scrollStepUpDown);
+	yDif = math_round(sine * scrollStepLeftRight - cosine * scrollStepUpDown);
 
 	/* Adjust player's position by these components */
 	player.p.x += xDif;
@@ -1831,9 +1808,9 @@ static inline void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 		if (getDebugMappingStatus()) // cheating on, so output debug info
 		{
 			CONPRINTF(ConsoleString, (ConsoleString,
-			          "%s - Damage %d%% - ID %d - kills %d, %s - order %d - action %d - sensor range %hu power %hu - ECM %u",
+			          "%s - Damage %d%% - ID %d - kills %f, %s - order %d - action %d - sensor range %hu power %hu - ECM %u",
 			          droidGetName(psDroid), 100 - PERCENT(psDroid->body, psDroid->originalBody), psDroid->id,
-			          psDroid->numKills / 100, getDroidLevelName(psDroid), psDroid->order, psDroid->action, psDroid->sensorRange,
+			          psDroid->experience, getDroidLevelName(psDroid), psDroid->order, psDroid->action, psDroid->sensorRange,
 			          psDroid->sensorPower, psDroid->ECMMod));
 			FeedbackClickedOn();
 		}
@@ -1842,9 +1819,9 @@ static inline void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 		if(godMode)
 		{
 			CONPRINTF(ConsoleString, (ConsoleString,
-			          "%s - Damage %d%% - Serial ID %d - Kills %d order %d action %d, %s",
+			          "%s - Damage %d%% - Serial ID %d - Kills %f order %d action %d, %s",
 			droidGetName(psDroid), 100 - PERCENT(psDroid->body,
-			psDroid->originalBody),psDroid->id, psDroid->numKills / 100,
+			psDroid->originalBody),psDroid->id, psDroid->experience,
 			psDroid->order, psDroid->action, getDroidLevelName(psDroid)));
 			FeedbackClickedOn();
 		}
@@ -1855,7 +1832,7 @@ static inline void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 				CONPRINTF(ConsoleString, (ConsoleString,
 					_("%s - Damage %d%% - Kills %d, %s"),
 				droidGetName(psDroid), 100 - PERCENT(psDroid->body,
-				psDroid->originalBody), psDroid->numKills / 100,
+				psDroid->originalBody), (SDWORD) psDroid->experience,
 				getDroidLevelName(psDroid)));
 				FeedbackClickedOn();
 			}
@@ -2071,7 +2048,7 @@ static inline void dealWithLMBFeature(FEATURE* psFeature)
 				if ((droidType(psCurr) == DROID_CONSTRUCT ||
 					droidType(psCurr) == DROID_CYBORG_CONSTRUCT) && (psCurr->selected))
 				{
-					if(fireOnLocation(psFeature->x,psFeature->y))
+					if(fireOnLocation(psFeature->pos.x,psFeature->pos.y))
 					{
 						// Can't build because it's burning
 						AddDerrickBurningMessage();
@@ -2082,13 +2059,13 @@ static inline void dealWithLMBFeature(FEATURE* psFeature)
 					{
 						orderDroidStatsLocAdd(psCurr, DORDER_BUILD,
 							(BASE_STATS*) &asStructureStats[i],
-							psFeature->x, psFeature->y);
+							psFeature->pos.x, psFeature->pos.y);
 					}
 					else
 					{
 						orderDroidStatsLoc(psCurr, DORDER_BUILD,
 							(BASE_STATS*) &asStructureStats[i],
-							psFeature->x, psFeature->y);
+							psFeature->pos.x, psFeature->pos.y);
 					}
 					addConsoleMessage(_("Truck ordered to build Oil Derrick"),DEFAULT_JUSTIFY);
 		//				"Construction vehicle ordered to build a Derrick.",DEFAULT_JUSTIFY);
@@ -2132,7 +2109,7 @@ static inline void dealWithLMBFeature(FEATURE* psFeature)
 				}
 				else
 				{
-					orderSelectedLoc(selectedPlayer, psFeature->x,psFeature->y);	// recover it.
+					orderSelectedLoc(selectedPlayer, psFeature->pos.x,psFeature->pos.y);	// recover it.
 				}
 				break;*/
 			case FEAT_BOULDER:
@@ -2555,8 +2532,8 @@ static void dealWithRMB( void )
 						psStructure = findDeliveryFactory((FLAG_POSITION *)psLocation);
 						if (psStructure)
 						{
-							setViewPos(map_coord(psStructure->x),
-							           map_coord(psStructure->y),
+							setViewPos(map_coord(psStructure->pos.x),
+							           map_coord(psStructure->pos.y),
 							           TRUE);
 						}
 					}

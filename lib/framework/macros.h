@@ -29,6 +29,11 @@
 
 #define ABSDIF(a,b) ((a)>(b) ? (a)-(b) : (b)-(a))
 
+#define CLIP(val, min, max) do                                                \
+{                                                                             \
+    if ((val) < (min)) (val) = (min);                                         \
+    else if ((val) > (max)) (val) = (max);                                    \
+} while(0)
 
 /*
    defines for ONEINX
@@ -44,5 +49,12 @@
 #define ONEINNINE				(rand()%9==0)
 #define ONEINTEN				(rand()%10==0)
 
+#define MACROS_H_STRINGIFY(x) #x
+#define TOSTRING(x) MACROS_H_STRINGIFY(x)
+
+#define AT_MACRO __FILE__ ":" TOSTRING(__LINE__)
+
+#define MKID(a) MKID_(a, __LINE__)   
+#define MKID_(a, b) a ## b
 
 #endif // MACROS_H

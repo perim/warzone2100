@@ -2860,7 +2860,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
                     cyborgDroid(psCurr) ||
                     psCurr->droidType == DROID_TRANSPORTER))
 	            {
-					if(psCurr->x != INVALID_XY)
+					if(psCurr->pos.x != INVALID_XY)
 					{
 						updateDroidOrientation(psCurr);
 					}
@@ -3056,7 +3056,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
                     cyborgDroid(psCurr) ||
                     psCurr->droidType == DROID_TRANSPORTER))
 	            {
-					if(psCurr->x != INVALID_XY)
+					if(psCurr->pos.x != INVALID_XY)
 					{
 			            updateDroidOrientation(psCurr);
 					}
@@ -3860,8 +3860,8 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 		{
 			psNext = psDroid->psNext;
 			//limbo list invalidate XY
-			psDroid->x = INVALID_XY;
-			psDroid->y = INVALID_XY;
+			psDroid->pos.x = INVALID_XY;
+			psDroid->pos.y = INVALID_XY;
             //this is mainly for VTOLs
 			setSaveDroidBase(psDroid, NULL);
             psDroid->cluster = 0;
@@ -5418,7 +5418,7 @@ static DROID* buildDroidFromSaveDroidV11(SAVE_DROID_V11* psSaveDroid)
 	//copy the values across
 	psDroid->id = psSaveDroid->id;
 	//are these going to ever change from the values set up with?
-//			psDroid->z = psSaveDroid->z;		// use the correct map height value
+//			psDroid->pos.z = psSaveDroid->pos.z;		// use the correct map height value
 
 	psDroid->direction = psSaveDroid->direction;
 	psDroid->body = psSaveDroid->body;
@@ -5432,7 +5432,7 @@ static DROID* buildDroidFromSaveDroidV11(SAVE_DROID_V11* psSaveDroid)
 	burnTime = psSaveDroid->burnStart;
 	psDroid->burnStart = burnTime;
 
-	psDroid->numKills = (UWORD)psSaveDroid->numKills;
+	psDroid->experience = (UWORD)psSaveDroid->numKills;
 	//version 11
 	for (i=0; i < psDroid->numWeaps; i++)
 	{
@@ -5554,7 +5554,7 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 	//copy the values across
 	psDroid->id = psSaveDroid->id;
 	//are these going to ever change from the values set up with?
-//			psDroid->z = psSaveDroid->z;		// use the correct map height value
+//			psDroid->pos.z = psSaveDroid->pos.z;		// use the correct map height value
 
 	psDroid->direction = psSaveDroid->direction;
     psDroid->body = psSaveDroid->body;
@@ -5568,7 +5568,7 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 	burnTime = psSaveDroid->burnStart;
 	psDroid->burnStart = burnTime;
 
-	psDroid->numKills = (UWORD)psSaveDroid->numKills;
+	psDroid->experience = (UWORD)psSaveDroid->numKills;
 	//version 14
 	psDroid->resistance = droidResistance(psDroid);
 
@@ -5809,7 +5809,7 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 	//copy the values across
 	psDroid->id = psSaveDroid->id;
 	//are these going to ever change from the values set up with?
-//			psDroid->z = psSaveDroid->z;		// use the correct map height value
+//			psDroid->pos.z = psSaveDroid->pos.z;		// use the correct map height value
 
 	psDroid->direction = psSaveDroid->direction;
 	psDroid->body = psSaveDroid->body;
@@ -5823,7 +5823,7 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 	burnTime = psSaveDroid->burnStart;
 	psDroid->burnStart = burnTime;
 
-	psDroid->numKills = (UWORD)psSaveDroid->numKills;
+	psDroid->experience = (UWORD)psSaveDroid->numKills;
 	//version 14
 	psDroid->resistance = droidResistance(psDroid);
 
@@ -5918,7 +5918,7 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 	{
 		psDroid->resistance = (SWORD)psSaveDroid->resistance;
 		memcpy(&psDroid->sMove, &psSaveDroid->sMove, sizeof(SAVE_MOVE_CONTROL));
-		psDroid->sMove.fz= (float)psDroid->z;
+		psDroid->sMove.fz= (float)psDroid->pos.z;
 		if (psDroid->sMove.psFormation != NULL)
 		{
 			psDroid->sMove.psFormation = NULL;
@@ -6592,7 +6592,7 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 
 
             //save out experience level
-			psSaveDroid->numKills		= psCurr->numKills;
+			psSaveDroid->numKills		= psCurr->experience;
 			//version 11
 			//Watermelon:endian_udword for new save format
 			for(i = 0;i < psCurr->numWeaps;i++)
@@ -6736,9 +6736,9 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			}
 
 			psSaveDroid->id = psCurr->id;
-			psSaveDroid->x = psCurr->x;
-			psSaveDroid->y = psCurr->y;
-			psSaveDroid->z = psCurr->z;
+			psSaveDroid->x = psCurr->pos.x;
+			psSaveDroid->y = psCurr->pos.y;
+			psSaveDroid->z = psCurr->pos.z;
 			psSaveDroid->direction = psCurr->direction;
 			psSaveDroid->player = psCurr->player;
 			psSaveDroid->inFire = psCurr->inFire;
@@ -6774,8 +6774,8 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 				endian_sword(&psSaveDroid->sMove.psFormation->size);
 				endian_sword(&psSaveDroid->sMove.psFormation->rankDist);
 				endian_sword(&psSaveDroid->sMove.psFormation->dir);
-				endian_sdword(&psSaveDroid->sMove.psFormation->x);
-				endian_sdword(&psSaveDroid->sMove.psFormation->y);
+				endian_sdword(&psSaveDroid->sMove.psFormation->pos.x);
+				endian_sdword(&psSaveDroid->sMove.psFormation->pos.y);
 				for(i = 0; i < F_MAXLINES; i++) {
 					endian_sword(&psSaveDroid->sMove.psFormation->asLines[i].xoffset);
 					endian_sword(&psSaveDroid->sMove.psFormation->asLines[i].yoffset);
@@ -6920,8 +6920,8 @@ BOOL writeDroidFile(char *pFileName, DROID **ppsCurrentDroidLists)
             if (psCurr->droidType == DROID_TRANSPORTER &&
                 ppsCurrentDroidLists[player] == mission.apsDroidLists[player])
             {
-                psCurr->x = INVALID_XY;
-                psCurr->y = INVALID_XY;
+                psCurr->pos.x = INVALID_XY;
+                psCurr->pos.y = INVALID_XY;
             }
 
 			buildSaveDroidFromDroid(psSaveDroid, psCurr, DROID_NORMAL);
@@ -7102,7 +7102,7 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
 		}
 		/*create the Structure */
 		//psStructure = buildStructure((asStructureStats + psSaveStructure->
-		//	structureInc), psSaveStructure->x, psSaveStructure->y,
+		//	structureInc), psSaveStructure->pos.x, psSaveStructure->pos.y,
 		//	psSaveStructure->player);
 
 		//for modules - need to check the base structure exists
@@ -7120,7 +7120,7 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
 		}
 
         //check not too near the edge
-        /*if (psSaveStructure->x <= TILE_UNITS || psSaveStructure->y <= TILE_UNITS)
+        /*if (psSaveStructure->pos.x <= TILE_UNITS || psSaveStructure->pos.y <= TILE_UNITS)
         {
 			DBERROR(("Structure being built too near the edge of the map"));
             continue;
@@ -7159,7 +7159,7 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
 			//copy the values across
 			psStructure->id = psSaveStructure->id;
 			//are these going to ever change from the values set up with?
-//			psStructure->z = (UWORD)psSaveStructure->z;
+//			psStructure->pos.z = (UWORD)psSaveStructure->pos.z;
 			psStructure->direction = psSaveStructure->direction;
 		}
 
@@ -7410,7 +7410,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
 			}
 		}
         //check not too near the edge
-        /*if (psSaveStructure->x <= TILE_UNITS || psSaveStructure->y <= TILE_UNITS)
+        /*if (psSaveStructure->pos.x <= TILE_UNITS || psSaveStructure->pos.y <= TILE_UNITS)
         {
 			DBERROR(("Structure being built too near the edge of the map"));
             continue;
@@ -7448,7 +7448,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
 			//copy the values across
 			psStructure->id = psSaveStructure->id;
 			//are these going to ever change from the values set up with?
-//			psStructure->z = (UWORD)psSaveStructure->z;
+//			psStructure->pos.z = (UWORD)psSaveStructure->pos.z;
 			psStructure->direction = psSaveStructure->direction;
 		}
 
@@ -7517,7 +7517,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
 						//build the appropriate number of modules
 						while (capacity)
 						{
-		                    buildStructure(psModule, psStructure->x, psStructure->y,
+		                    buildStructure(psModule, psStructure->pos.x, psStructure->pos.y,
                                 psStructure->player, FALSE);
                             capacity--;
 						}
@@ -7603,7 +7603,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
 				    psModule = getModuleStat(psStructure);
 					capacity = psSaveStructure->capacity;
 					//build the appropriate number of modules
-                    buildStructure(psModule, psStructure->x, psStructure->y, psStructure->player, FALSE);
+                    buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, FALSE);
 //					psStructure->sDisplay.imd = researchModuleIMDs[psSaveStructure->capacity-1];
 				}
 				break;
@@ -7614,7 +7614,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
 				    psModule = getModuleStat(psStructure);
 					capacity = psSaveStructure->capacity;
 					//build the appropriate number of modules
-                    buildStructure(psModule, psStructure->x, psStructure->y, psStructure->player, FALSE);
+                    buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, FALSE);
 //					psStructure->sDisplay.imd = powerModuleIMDs[psSaveStructure->capacity-1];
 				}
 				break;
@@ -7853,7 +7853,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 			}
 		}
         //check not too near the edge
-        /*if (psSaveStructure->x <= TILE_UNITS || psSaveStructure->y <= TILE_UNITS)
+        /*if (psSaveStructure->pos.x <= TILE_UNITS || psSaveStructure->pos.y <= TILE_UNITS)
         {
 			DBERROR(("Structure being built too near the edge of the map"));
             continue;
@@ -7891,7 +7891,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 			//copy the values across
 			psStructure->id = psSaveStructure->id;
 			//are these going to ever change from the values set up with?
-//			psStructure->z = (UWORD)psSaveStructure->z;
+//			psStructure->pos.z = (UWORD)psSaveStructure->pos.z;
 			psStructure->direction = psSaveStructure->direction;
 		}
 
@@ -7948,7 +7948,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 					//build the appropriate number of modules
 					while (capacity)
 					{
-		                buildStructure(psModule, psStructure->x, psStructure->y,
+		                buildStructure(psModule, psStructure->pos.x, psStructure->pos.y,
                             psStructure->player, FALSE);
                         capacity--;
 					}
@@ -7999,7 +7999,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 				    psModule = getModuleStat(psStructure);
 					capacity = psSaveStructure->capacity;
 					//build the appropriate number of modules
-                    buildStructure(psModule, psStructure->x, psStructure->y, psStructure->player, FALSE);
+                    buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, FALSE);
 				}
                 //this is set up during module build - if the stats have changed it will also set up with the latest value
 				psResearch->powerAccrued = psSaveStructure->powerAccrued;
@@ -8038,7 +8038,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 				    psModule = getModuleStat(psStructure);
 					capacity = psSaveStructure->capacity;
 					//build the appropriate number of modules
-                    buildStructure(psModule, psStructure->x, psStructure->y, psStructure->player, FALSE);
+                    buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, FALSE);
 //					psStructure->sDisplay.imd = powerModuleIMDs[psSaveStructure->capacity-1];
 				}
 				break;
@@ -8225,9 +8225,9 @@ BOOL writeStructFile(char *pFileName)
 			psSaveStruct->id = psCurr->id;
 
 
-			psSaveStruct->x = psCurr->x;
-			psSaveStruct->y = psCurr->y;
-			psSaveStruct->z = psCurr->z;
+			psSaveStruct->x = psCurr->pos.x;
+			psSaveStruct->y = psCurr->pos.y;
+			psSaveStruct->z = psCurr->pos.z;
 
 			psSaveStruct->direction = psCurr->direction;
 			psSaveStruct->player = psCurr->player;
@@ -8685,7 +8685,7 @@ BOOL loadSaveFeatureV14(char *pFileData, UDWORD filesize, UDWORD numFeatures, UD
 		}
 		//create the Feature
 		//buildFeature(asFeatureStats + psSaveFeature->featureInc,
-		//	psSaveFeature->x, psSaveFeature->y);
+		//	psSaveFeature->pos.x, psSaveFeature->pos.y);
 		pFeature = buildFeature(psStats, psSaveFeature->x, psSaveFeature->y,TRUE);
 		//will be added to the top of the linked list
 		//pFeature = apsFeatureLists[0];
@@ -8789,7 +8789,7 @@ BOOL loadSaveFeatureV(char *pFileData, UDWORD filesize, UDWORD numFeatures, UDWO
 		}
 		//create the Feature
 		//buildFeature(asFeatureStats + psSaveFeature->featureInc,
-		//	psSaveFeature->x, psSaveFeature->y);
+		//	psSaveFeature->pos.x, psSaveFeature->pos.y);
 		pFeature = buildFeature(psStats, psSaveFeature->x, psSaveFeature->y,TRUE);
 		//will be added to the top of the linked list
 		//pFeature = apsFeatureLists[0];
@@ -8859,13 +8859,13 @@ BOOL writeFeatureFile(char *pFileName)
 
 		psSaveFeature->id = psCurr->id;
 
-//		psSaveFeature->x = psCurr->x - psCurr->psStats->baseWidth * TILE_UNITS / 2;
-//		psSaveFeature->y = psCurr->y - psCurr->psStats->baseBreadth * TILE_UNITS / 2;
-//		psSaveFeature->z = psCurr->z;
+//		psSaveFeature->pos.x = psCurr->pos.x - psCurr->psStats->baseWidth * TILE_UNITS / 2;
+//		psSaveFeature->pos.y = psCurr->pos.y - psCurr->psStats->baseBreadth * TILE_UNITS / 2;
+//		psSaveFeature->pos.z = psCurr->pos.z;
 
-		psSaveFeature->x = psCurr->x;
-		psSaveFeature->y = psCurr->y;
-		psSaveFeature->z = psCurr->z;
+		psSaveFeature->x = psCurr->pos.x;
+		psSaveFeature->y = psCurr->pos.y;
+		psSaveFeature->z = psCurr->pos.z;
 
 		psSaveFeature->direction = psCurr->direction;
 		psSaveFeature->inFire = psCurr->inFire;

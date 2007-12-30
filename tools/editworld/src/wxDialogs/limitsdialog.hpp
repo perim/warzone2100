@@ -30,15 +30,12 @@
 
 #ifndef WX_PRECOMP
 //(*Headers(LimitsDialog)
-#include <wx/button.h>
-#include <wx/dialog.h>
-#include <wx/listctrl.h>
-#include <wx/sizer.h>
-#include <wx/stattext.h>
 #include <wx/textctrl.h>
+#include <wx/dialog.h>
 //*)
   #include <wx/xrc/xmlres.h>
   #include <wx/xrc/xh_listc.h>
+  #include <wx/listctrl.h>
   #include <wx/string.h>
 #endif
 
@@ -104,7 +101,7 @@ class LimitsDialog : public wxDialog
 
 				class XmlHandler : public wxListCtrlXmlHandler
 				{
-						DECLARE_DYNAMIC_CLASS(ListCtrl);
+						DECLARE_DYNAMIC_CLASS(XmlHandler);
 
 					public:
 						virtual wxObject* DoCreateResource();

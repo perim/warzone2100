@@ -470,7 +470,7 @@ ORDERBUTTONS OrderButtons[NUM_ORDERS]=
 extern BOOL ClosingOrder;
 extern W_SCREEN *psWScreen;
 extern UDWORD currentGameFrame;
-extern void intDisplayPlainForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours);
+extern void intDisplayPlainForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours);
 
 static BOOL BuildSelectedDroidList(void);
 //static BOOL factorySelected(void);
@@ -671,7 +671,7 @@ BOOL intAddOrder(BASE_OBJECT *psObj)
 	sButInit.formID = IDORDER_FORM;
 	sButInit.id = IDORDER_CLOSE+1;
 	sButInit.style = WBUT_PLAIN;
-	sButInit.pDisplay = intDisplayAltButtonHilight;
+	sButInit.pDisplay = intDisplayButtonHilight;
 	sButInit.FontID = font_regular;
 	sButInit.y = ORDER_BUTY;
 

@@ -54,7 +54,7 @@
 #define DEFAULTFXVOL	80
 #define DEFAULTCDVOL	60
 #define DEFAULTGAMMA	20
-#define DEFAULTSCROLL	800
+#define DEFAULTSCROLL	1000
 #define DEFAULTMAPNAME	"Rush"
 
 extern void registry_clear(void); // from configfile.c
@@ -121,6 +121,11 @@ BOOL loadConfig(void)
 	{
 		setFramerateLimit(60);
 		setWarzoneKeyNumeric("framerate", 60);
+	}
+
+	if (getWarzoneKeyNumeric("showFPS", &val))
+	{
+		showFPS = val;
 	}
 
 	// //////////////////////////
@@ -265,19 +270,6 @@ BOOL loadConfig(void)
 		setDifficultyLevel(DL_NORMAL);
 		setWarzoneKeyNumeric("difficulty", DL_NORMAL);
 	}
-
-
-	if(getWarzoneKeyNumeric("barmode", &val)&&(val<3)&&(val>=0))
-	{
-		barMode = val;
-	}
-	else
-	{
-		barMode = BAR_FULL;
-//		setDifficultyLevel(DL_NORMAL);
-		setWarzoneKeyNumeric("barmode", BAR_FULL);
-	}
-
 
 	// //////////////////////////
 	// use vis fog
@@ -602,10 +594,10 @@ BOOL saveConfig(void)
 	setWarzoneKeyNumeric("allowSubtitles", war_GetAllowSubtitles());
 	setWarzoneKeyNumeric("debugmode", bAllowDebugMode);
 	setWarzoneKeyNumeric("framerate", (SDWORD)getFramerateLimit());
+	setWarzoneKeyNumeric("showFPS", (SDWORD)showFPS);
 	setWarzoneKeyNumeric("gamma", (SDWORD)gammaValue);
 	setWarzoneKeyNumeric("scroll",(SDWORD)scroll_speed_accel);		// scroll
 	setWarzoneKeyNumeric("difficulty", getDifficultyLevel());		// level
-	setWarzoneKeyNumeric("barmode",(SDWORD)barMode);			//energybars
 	setWarzoneKeyNumeric("visfog",(SDWORD)(!war_GetFog()));			// fogtype
 	setWarzoneKeyNumeric("shake",(SDWORD)(getShakeStatus()));		// screenshake
 	setWarzoneKeyNumeric("mouseflip",(SDWORD)(getInvertMouseStatus()));	// flipmouse

@@ -25,6 +25,7 @@
 #include "lib/ivis_common/ivisdef.h" //ivis matrix code
 #include "lib/ivis_common/piedef.h" //pie render
 #include "lib/ivis_opengl/piematrix.h"
+#include "lib/ivis_common/piepalette.h"
 #include "miscimd.h"
 #include "effects.h"
 #include "bridge.h"
@@ -125,9 +126,9 @@ BOOL	renderBridgeSection(STRUCTURE *psStructure)
 			}
 
 			/* Get it's x and y coordinates so we don't have to deref. struct later */
-			structX = psStructure->x;
-			structY = psStructure->y;
-			structZ = psStructure->z;
+			structX = psStructure->pos.x;
+			structY = psStructure->pos.y;
+			structZ = psStructure->pos.z;
 
 			/* Establish where it is in the world */
 			dv.x = (structX - player.p.x) - terrainMidX*TILE_UNITS;
@@ -147,7 +148,7 @@ BOOL	renderBridgeSection(STRUCTURE *psStructure)
 			/* Translate */
 			pie_TRANSLATE(rx,0,-rz);
 
-			pie_Draw3DShape(psStructure->sDisplay.imd, 0, 0, pie_DROID_BRIGHT_LEVEL, 0, 0, 0);
+			pie_Draw3DShape(psStructure->sDisplay.imd, 0, 0, WZCOL_WHITE, WZCOL_BLACK, 0, 0);
 
 			pie_MatEnd();
 			return(TRUE);

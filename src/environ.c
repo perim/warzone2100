@@ -100,32 +100,31 @@ MAPTILE	*psTile;
 			if(terrainType(psTile) == TER_WATER)
 			{
 				pEnvironData[index].type = ET_WATER;
-				pEnvironData[index].val = MAKEFRACT(ENVIRON_WATER_INIT_VALUE);
+				pEnvironData[index].val = (float)ENVIRON_WATER_INIT_VALUE;
 				pEnvironData[index].data = ENVIRON_WATER_DATA_VALUE;
 				pEnvironData[index].bProcess = BYTE_TRUE;
 			}
 			else
 			{
 				pEnvironData[index].type = ET_LAND;
-				pEnvironData[index].val = MAKEFRACT(0);//ENVIRON_LAND_INIT_VALUE;
+				pEnvironData[index].val = 0.f; //ENVIRON_LAND_INIT_VALUE;
 				pEnvironData[index].data = ENVIRON_LAND_DATA_VALUE;
 				pEnvironData[index].bProcess = BYTE_FALSE;
 			}
 
-			pEnvironData[index].vec = MAKEFRACT(RANDOMLY_ONE_OR_MINUS_ONE);
+			pEnvironData[index].vec = (float)RANDOMLY_ONE_OR_MINUS_ONE;
 		}
 	}
 }
 
 // -------------------------------------------------------------------------------
-UDWORD	environGetValue( UDWORD x, UDWORD y )
+unsigned int environGetValue(unsigned int x, unsigned int y)
 {
-SDWORD	retVal;
+	int retVal = pEnvironData[(y * mapWidth) + x].val;
+	if (retVal < 0)
+		retVal = 0;
 
-	retVal = MAKEINT(pEnvironData[(y*mapWidth) + x].val);
-	if(retVal<0) retVal = 0;
-	return(retVal);
-
+	return retVal;
 }
 
 // -------------------------------------------------------------------------------

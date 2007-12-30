@@ -150,10 +150,6 @@ SOURCE=.\expandlimitsdlg.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\exportinfo.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\fileparse.cpp
 # End Source File
 # Begin Source File
@@ -178,7 +174,11 @@ SOURCE=.\heightmap.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\initiallimitsdlg.cpp
+SOURCE=.\infodialog.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\initiallimitsdialog.cpp
 # End Source File
 # Begin Source File
 
@@ -190,7 +190,7 @@ SOURCE=.\limitsdialog.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\mainfrm.cpp
+SOURCE=.\mainframe.cpp
 # End Source File
 # Begin Source File
 
@@ -314,10 +314,6 @@ SOURCE=.\expandlimitsdlg.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\exportinfo.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\fileparse.h
 # End Source File
 # Begin Source File
@@ -346,7 +342,11 @@ SOURCE=.\heightmap.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\initiallimitsdlg.hpp
+SOURCE=.\infodialog.hpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\initiallimitsdialog.hpp
 # End Source File
 # Begin Source File
 
@@ -362,7 +362,7 @@ SOURCE=.\macros.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\mainfrm.h
+SOURCE=.\mainframe.h
 # End Source File
 # Begin Source File
 

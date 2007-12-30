@@ -178,9 +178,9 @@ BOOL multiplayerWinSequence(BOOL firstCall)
 	// rotate world
 	if(!getWarCamStatus())
 	{
-		fraction = MAKEFRACT(frameTime)/GAME_TICKS_PER_SEC;
-		rotAmount = fraction * MAP_SPIN_RATE/12;
-		player.r.y += MAKEINT(rotAmount);
+		fraction = (float)frameTime / (float)GAME_TICKS_PER_SEC;
+		rotAmount = fraction * MAP_SPIN_RATE / 12;
+		player.r.y += rotAmount;
 	}
 
 	if(last > gameTime)last= 0;
@@ -575,18 +575,18 @@ Vector3i cameraToHome(UDWORD player,BOOL scroll)
 
 	if(psBuilding)
 	{
-		x= map_coord(psBuilding->x);
-		y= map_coord(psBuilding->y);
+		x= map_coord(psBuilding->pos.x);
+		y= map_coord(psBuilding->pos.y);
 	}
 	else if (apsDroidLists[player])				// or first droid
 	{
-		 x= map_coord(apsDroidLists[player]->x);
-		 y=	map_coord(apsDroidLists[player]->y);
+		 x= map_coord(apsDroidLists[player]->pos.x);
+		 y=	map_coord(apsDroidLists[player]->pos.y);
 	}
 	else if (apsStructLists[player])							// center on first struct
 	{
-		x= map_coord(apsStructLists[player]->x);
-		y= map_coord(apsStructLists[player]->y);
+		x= map_coord(apsStructLists[player]->pos.x);
+		y= map_coord(apsStructLists[player]->pos.y);
 	}
 	else														//or map center.
 	{
@@ -622,6 +622,9 @@ BOOL recvMessage(void)
 
 	while(NETrecv(&msg) == TRUE)			// for all incoming messages.
 	{
+		// Cocpy the message to the global one used by the new NET API
+		NetMsg = msg;
+
 		// messages only in game.
 		if(!ingame.localJoiningInProgress)
 		{
@@ -631,31 +634,31 @@ BOOL recvMessage(void)
 				recvAudioMsg(&msg);
 				break;
 			case NET_DROID:						// new droid of known type
-				recvDroid(&msg);
+				recvDroid();
 				break;
 			case NET_DROIDINFO:					//droid update info
-				recvDroidInfo(&msg);
+				recvDroidInfo();
 				break;
 			case NET_DROIDDEST:					// droid destroy
-				recvDestroyDroid(&msg);
+				recvDestroyDroid();
 				break;
 			case NET_DESTROYXTRA:
 				recvDestroyExtra(&msg);			// a generic destroy, complete wiht killer info.
 				break;
 			case NET_DROIDMOVE:					// move a droid to x,y command.
-				recvDroidMove(&msg);
+				recvDroidMove();
 				break;
 			case NET_GROUPORDER:				// an order for more than 1 droid.
-				recvGroupOrder(&msg);
+				recvGroupOrder();
 				break;
 			case NET_CHECK_DROID:				// droid damage and position checks
-				recvDroidCheck(&msg);
+				recvDroidCheck();
 				break;
 			case NET_CHECK_STRUCT:				// structure damage checks.
-				recvStructureCheck(&msg);
+				recvStructureCheck();
 				break;
 			case NET_CHECK_POWER:				// Power level syncing.
-				recvPowerCheck(&msg);
+				recvPowerCheck();
 				break;
 			case NET_TEXTMSG:					// simple text message
 				recvTextMessage(&msg);
@@ -667,28 +670,28 @@ BOOL recvMessage(void)
 				recvBeacon(&msg);
 				break;
 			case NET_BUILD:						// a build order has been sent.
-				recvBuildStarted(&msg);
+				recvBuildStarted();
 				break;
 			case NET_BUILDFINISHED:				// a building is complete
-				recvBuildFinished(&msg);
+				recvBuildFinished();
 				break;
 			case NET_STRUCTDEST:				// structure destroy
-				recvDestroyStructure(&msg);
+				recvDestroyStructure();
 				break;
 			case NET_SECONDARY:					// set a droids secondary order level.
-				recvDroidSecondary(&msg);
+				recvDroidSecondary();
 				break;
 			case NET_SECONDARY_ALL:					// set a droids secondary order level.
-				recvDroidSecondaryAll(&msg);
+				recvDroidSecondaryAll();
 				break;
 			case NET_DROIDEMBARK:
-				recvDroidEmbark(&msg);              //droid has embarked on a Transporter
+				recvDroidEmbark();              //droid has embarked on a Transporter
 				break;
 			case NET_DROIDDISEMBARK:
-				recvDroidDisEmbark(&msg);           //droid has disembarked from a Transporter
+				recvDroidDisEmbark();           //droid has disembarked from a Transporter
 				break;
 			case NET_REQUESTDROID:				// player requires a droid that they dont have.
-				recvRequestDroid(&msg);
+				recvRequestDroid();
 				break;
 //			case NET_REQUESTPLAYER:				// a new player requires information
 //				multiPlayerRequest(&msg);
@@ -697,13 +700,13 @@ BOOL recvMessage(void)
 				recvGift(&msg);
 				break;
 			case NET_SCORESUBMIT:				//  a score update from another player
-				recvScoreSubmission(&msg);
+				recvScoreSubmission();
 				break;
 			case NET_VTOL:
-				recvHappyVtol(&msg);
+				recvHappyVtol();
 				break;
 			case NET_LASSAT:
-				recvLasSat(&msg);
+				recvLasSat();
 				break;
 			default:
 				break;
@@ -723,10 +726,10 @@ BOOL recvMessage(void)
 			recvDestroyFeature(&msg);
 			break;
 		case NET_PING:						// diagnostic ping msg.
-			recvPing(&msg);
+			recvPing();
 			break;
 		case NET_DEMOLISH:					// structure demolished.
-			recvDemolishFinished(&msg);
+			recvDemolishFinished();
 			break;
 		case NET_RESEARCH:					// some research has been done.
 			recvResearch(&msg);
@@ -755,10 +758,10 @@ BOOL recvMessage(void)
 			recvTeamRequest(&msg);
 			break;
 		case NET_ARTIFACTS:
-			recvMultiPlayerRandomArtifacts(&msg);
+			recvMultiPlayerRandomArtifacts();
 			break;
 		case NET_ALLIANCE:
-			recvAlliance(&msg,TRUE);
+			recvAlliance(TRUE);
 			break;
 		case NET_KICK:
 			NetGet((&msg),0,dp);
@@ -1506,11 +1509,11 @@ BOOL recvDestroyExtra(NETMSG *pMsg)
 			psKiller = 	(DROID*)psSrc;
 #if 0
 			// FIXME: this code *and* the code that sends this message needs to be modified
-			//        in such a way that they update psKiller->numKills with the percentage
+			//        in such a way that they update psKiller->experience with the percentage
 			//        of damage dealt rather than just a kill count.
 			if(psKiller)
 			{
-				psKiller->numKills++;
+				psKiller->experience++;
 			}
 			cmdDroidUpdateKills(psKiller);
 #endif

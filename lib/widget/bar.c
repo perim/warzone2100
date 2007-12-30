@@ -112,14 +112,12 @@ BOOL barGraphCreate(W_BARGRAPH **ppsWidget, W_BARINIT *psInit)
 		(*ppsWidget)->display = barGraphDisplay;
 	}
 	/* Set the major colour */
-	(*ppsWidget)->majorCol = (UBYTE)pal_GetNearestColour(psInit->sCol.red,
-															psInit->sCol.green, psInit->sCol.blue);
+	(*ppsWidget)->majorCol = psInit->sCol;
 
 	/* Set the minor colour if necessary */
 	if (psInit->style & WBAR_DOUBLE)
 	{
-		(*ppsWidget)->majorCol = (UBYTE)pal_GetNearestColour(psInit->sMinorCol.red,
-												psInit->sMinorCol.green, psInit->sMinorCol.blue);
+		(*ppsWidget)->majorCol = psInit->sMinorCol;
 	}
 
 	barGraphInitialise(*ppsWidget);
@@ -242,8 +240,7 @@ void barGraphHiLiteLost(W_BARGRAPH *psWidget)
 
 
 /* The simple bar graph display function */
-void barGraphDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
-							UDWORD *pColours)
+void barGraphDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours)
 {
 	SDWORD		x0 = 0, y0 = 0, x1 = 0, y1 = 0;
 	W_BARGRAPH	*psBGraph;
@@ -280,7 +277,7 @@ void barGraphDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 	}
 
 	/* Now draw the graph */
-	pie_BoxFillIndex(x0,y0, x1,y1,psBGraph->majorCol);
+	pie_BoxFill(x0,y0, x1,y1,psBGraph->majorCol);
 	iV_Line(x0,y1, x0,y0, pColours[WCOL_LIGHT]);
 	iV_Line(x0,y0, x1,y0, pColours[WCOL_LIGHT]);
 	iV_Line(x1,y0, x1,y1, pColours[WCOL_DARK]);
@@ -289,8 +286,7 @@ void barGraphDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 
 
 /* The double bar graph display function */
-void barGraphDisplayDouble(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
-								  UDWORD *pColours)
+void barGraphDisplayDouble(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours)
 {
 	SDWORD		x0 = 0, y0 = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0, x3 = 0, y3 = 0;
 	W_BARGRAPH	*psBGraph;
@@ -357,7 +353,7 @@ void barGraphDisplayDouble(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 	/* Draw the minor bar graph */
 	if (psBGraph->minorSize > 0)
 	{
-		pie_BoxFillIndex(x2,y2, x3,y3,psBGraph->minorCol);
+		pie_BoxFill(x2,y2, x3,y3,psBGraph->minorCol);
 		iV_Line(x2,y3, x2,y2, pColours[WCOL_LIGHT]);
 		iV_Line(x2,y2, x3,y2, pColours[WCOL_LIGHT]);
 		iV_Line(x3,y2, x3,y3, pColours[WCOL_DARK]);
@@ -365,7 +361,7 @@ void barGraphDisplayDouble(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 	}
 
 	/* Draw the major bar graph */
-	pie_BoxFillIndex(x0,y0, x1,y1,psBGraph->majorCol);
+	pie_BoxFill(x0,y0, x1,y1,psBGraph->majorCol);
 	iV_Line(x0,y1, x0,y0, pColours[WCOL_LIGHT]);
 	iV_Line(x0,y0, x1,y0, pColours[WCOL_LIGHT]);
 	iV_Line(x1,y0, x1,y1, pColours[WCOL_DARK]);
@@ -374,8 +370,7 @@ void barGraphDisplayDouble(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 
 
 /* The trough bar graph display function */
-void barGraphDisplayTrough(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
-							UDWORD *pColours)
+void barGraphDisplayTrough(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours)
 {
 	SDWORD		x0 = 0, y0 = 0, x1 = 0, y1 = 0;		// Position of the bar
 	SDWORD		tx0 = 0, ty0 = 0, tx1 = 0, ty1 = 0;	// Position of the trough
@@ -464,17 +459,14 @@ void barGraphDisplayTrough(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 	/* Now draw the graph */
 	if (showBar)
 	{
-		pie_BoxFillIndex(x0,y0, x1,y1,psBGraph->majorCol);
+		pie_BoxFill(x0, y0, x1, y1, psBGraph->majorCol);
 	}
 	if (showTrough)
 	{
-		pie_BoxFillIndex(tx0,ty0, tx1,ty1,WCOL_BKGRND);
+		pie_BoxFill(tx0, ty0, tx1, ty1, pColours[WCOL_BKGRND]);
 		iV_Line(tx0,ty1, tx0,ty0, pColours[WCOL_DARK]);
 		iV_Line(tx0,ty0, tx1,ty0, pColours[WCOL_DARK]);
 		iV_Line(tx1,ty0, tx1,ty1, pColours[WCOL_LIGHT]);
 		iV_Line(tx0,ty1, tx1,ty1, pColours[WCOL_LIGHT]);
 	}
 }
-
-
-

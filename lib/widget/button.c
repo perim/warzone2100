@@ -294,7 +294,7 @@ void buttonHiLiteLost(W_BUTTON *psWidget)
 
 
 /* Display a button */
-void buttonDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pColours)
+void buttonDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours)
 {
 	W_BUTTON	*psButton;
 	SDWORD		x0,y0,x1,y1, fx,fy,fw;
@@ -314,7 +314,7 @@ void buttonDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pCo
 	if (psButton->state & (WBUTS_DOWN | WBUTS_LOCKED | WBUTS_CLICKLOCK))
 	{
 		/* Display the button down */
-		pie_BoxFillIndex(x0,y0,x1,y1,WCOL_BKGRND);
+		pie_BoxFill(x0, y0, x1, y1, pColours[WCOL_BKGRND]);
 		iV_Line(x0,y0, x1,y0, pColours[WCOL_DARK]);
 		iV_Line(x0,y0, x0,y1, pColours[WCOL_DARK]);
 		iV_Line(x0,y1, x1,y1, pColours[WCOL_LIGHT]);
@@ -323,7 +323,7 @@ void buttonDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pCo
 		if (psButton->pText)
 		{
 			iV_SetFont(psButton->FontID);
-			iV_SetTextColour((UWORD)pColours[WCOL_TEXT]);
+			iV_SetTextColour(pColours[WCOL_TEXT]);
 			fw = iV_GetTextWidth(psButton->pText);
 			if(psButton->style & WBUT_NOCLICKMOVE) {
 				fx = x0 + (psButton->width - fw) / 2 + 1;
@@ -347,7 +347,7 @@ void buttonDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pCo
 	else if (psButton->state & WBUTS_GREY)
 	{
 		/* Display the disabled button */
-		pie_BoxFillIndex(x0,y0,x1,y1,WCOL_BKGRND);
+		pie_BoxFill(x0, y0, x1, y1, pColours[WCOL_BKGRND]);
 		iV_Line(x0,y0, x1,y0, pColours[WCOL_LIGHT]);
 		iV_Line(x0,y0, x0,y1, pColours[WCOL_LIGHT]);
 		iV_Line(x0,y1, x1,y1, pColours[WCOL_DARK]);
@@ -359,9 +359,9 @@ void buttonDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pCo
 			fw = iV_GetTextWidth(psButton->pText);
 			fx = x0 + (psButton->width - fw) / 2;
 			fy = y0 + (psButton->height - iV_GetTextLineSize())/2 - iV_GetTextAboveBase();
-			iV_SetTextColour((UWORD)pColours[WCOL_LIGHT]);
+			iV_SetTextColour(pColours[WCOL_LIGHT]);
 			iV_DrawText(psButton->pText, fx+1, fy+1);
-			iV_SetTextColour((UWORD)pColours[WCOL_DISABLE]);
+			iV_SetTextColour(pColours[WCOL_DISABLE]);
 			iV_DrawText(psButton->pText, fx, fy);
 		}
 
@@ -377,7 +377,7 @@ void buttonDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pCo
 	else
 	{
 		/* Display the button up */
-		pie_BoxFillIndex(x0,y0,x1,y1,WCOL_BKGRND);
+		pie_BoxFill(x0, y0, x1, y1, pColours[WCOL_BKGRND]);
 		iV_Line(x0,y0, x1,y0, pColours[WCOL_LIGHT]);
 		iV_Line(x0,y0, x0,y1, pColours[WCOL_LIGHT]);
 		iV_Line(x0,y1, x1,y1, pColours[WCOL_DARK]);
@@ -387,7 +387,7 @@ void buttonDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, UDWORD *pCo
 		if (psButton->pText)
 		{
 			iV_SetFont(psButton->FontID);
-			iV_SetTextColour((UWORD)pColours[WCOL_TEXT]);
+			iV_SetTextColour(pColours[WCOL_TEXT]);
 			fw = iV_GetTextWidth(psButton->pText);
 			fx = x0 + (psButton->width - fw) / 2;
 			fy = y0 + (psButton->height - iV_GetTextLineSize())/2 - iV_GetTextAboveBase();

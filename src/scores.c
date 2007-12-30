@@ -301,10 +301,6 @@ UDWORD	index;
 BOOL	bMoreBars;
 UDWORD	x,y;
 UDWORD	width,height;
-float	length;
-float	mul;
-UDWORD	div;
-	PIELIGHT colour;
 
 	if(!bDispStarted)
 	{
@@ -315,12 +311,8 @@ UDWORD	div;
 
 	fillUpStats();
 
-	colour.byte.r = 0;
-	colour.byte.b = 0;
-	colour.byte.b = 88;
-	colour.byte.a = 128;
-	pie_UniTransBoxFill( 16 + D_W, MT_Y_POS - 16, pie_GetVideoBufferWidth() - D_W - 16, MT_Y_POS + 256, colour );
-	iV_Box( 16 + D_W, MT_Y_POS - 16, pie_GetVideoBufferWidth() - D_W - 16, MT_Y_POS + 256, 1);
+	pie_UniTransBoxFill(16 + D_W, MT_Y_POS - 16, pie_GetVideoBufferWidth() - D_W - 16, MT_Y_POS + 256, WZCOL_SCORE_BOX);
+	iV_Box(16 + D_W, MT_Y_POS - 16, pie_GetVideoBufferWidth() - D_W - 16, MT_Y_POS + 256, WZCOL_SCORE_BOX_BORDER);
 
 	iV_DrawText( _("Unit Losses"), LC_X + D_W, 80 + 16 + D_H );
 	iV_DrawText( _("Structure Losses"), LC_X + D_W, 140 + 16 + D_H );
@@ -347,7 +339,7 @@ UDWORD	div;
 			width = infoBars[index].width;
 			height = infoBars[index].height;
 
-			iV_Box(x,y,x+width,y+height,0);
+			iV_Box(x, y, x + width, y + height, WZCOL_BLACK);
 
 			/* Draw the background border box */
 			pie_BoxFill(x - 1, y - 1, x + width + 1, y + height + 1, WZCOL_MENU_BACKGROUND);
@@ -357,20 +349,20 @@ UDWORD	div;
 
 			if( ((gameTime2 - dispST) > infoBars[index].queTime) )
 			{
-			   					/* Now draw amount filled */
-				length = MAKEFRACT(infoBars[index].percent)/MAKEFRACT(100);
-				length = length*MAKEFRACT(infoBars[index].width);
-				div = PERCENT(gameTime2-dispST,BAR_CRAWL_TIME);
-				if(div>100) div = 100;
-				mul = MAKEFRACT(div)/100;
-				length = length * mul;
-		   	   	if(MAKEINT(length)>4)
+				/* Now draw amount filled */
+				const float mul = (gameTime2 - dispST < BAR_CRAWL_TIME) ?
+				                   (float)(gameTime2 - dispST) / (float)BAR_CRAWL_TIME
+				                  : 1.f;
+
+				const float length = (float)infoBars[index].percent / 100.f * (float)infoBars[index].width * mul;
+
+				if((int)length > 4)
 				{
 
 					/* Black shadow */
-					pie_BoxFill(x + 1, y + 3, x + MAKEINT(length) - 1, y + height - 1, WZCOL_MENU_BACKGROUND);
+					pie_BoxFill(x + 1, y + 3, x + length - 1, y + height - 1, WZCOL_MENU_BACKGROUND);
 					/* Solid coloured bit */
-					pie_BoxFillIndex(x + 1, y + 2, x + MAKEINT(length) - 4, y + height - 4, (UBYTE)infoBars[index].colour);
+					pie_BoxFillIndex(x + 1, y + 2, x + length - 4, y + height - 4, infoBars[index].colour);
 				}
 			}
 			/* Now render the text by the bar */
@@ -440,17 +432,17 @@ void	fillUpStats( void )
 	/* Make sure we got something */
 	if(maxi == 0)
 	{
-		scaleFactor = MAKEFRACT(0);
+		scaleFactor = 0.f;
 	}
 	else
 	{
-		scaleFactor = (MAKEFRACT(RANK_BAR_WIDTH)/maxi);
+		scaleFactor = (float)RANK_BAR_WIDTH / maxi;
 	}
 
 	/* Scale for percent */
 	for(i=0; i<DROID_LEVELS; i++)
 	{
-		length = MAKEINT((scaleFactor*getNumDroidsForLevel(i)));
+		length = scaleFactor * getNumDroidsForLevel(i);
 		infoBars[STAT_ROOKIE+i].percent = PERCENT(length,RANK_BAR_WIDTH);
 		infoBars[STAT_ROOKIE+i].number = getNumDroidsForLevel(i);
 	}
@@ -460,32 +452,32 @@ void	fillUpStats( void )
 	maxi = MAX(missionData.unitsLost, missionData.unitsKilled);
 	if (maxi == 0)
 	{
-		scaleFactor = 0;
+		scaleFactor = 0.f;
 	}
 	else
 	{
-		scaleFactor = (MAKEFRACT(STAT_BAR_WIDTH)/maxi);
+		scaleFactor = (float)STAT_BAR_WIDTH / maxi;
 	}
 
-	length = MAKEINT(scaleFactor*missionData.unitsLost);
+	length = scaleFactor * missionData.unitsLost;
 	infoBars[STAT_UNIT_LOST].percent = PERCENT(length,STAT_BAR_WIDTH);
-	length = MAKEINT(scaleFactor*missionData.unitsKilled);
+	length = scaleFactor * missionData.unitsKilled;
 	infoBars[STAT_UNIT_KILLED].percent = PERCENT(length,STAT_BAR_WIDTH);
 
 	/* Now do the structure losses */
 	maxi = MAX(missionData.strLost, missionData.strKilled);
 	if (maxi == 0)
 	{
-		scaleFactor = 0;
+		scaleFactor = 0.f;
 	}
 	else
 	{
-		scaleFactor = (MAKEFRACT(STAT_BAR_WIDTH)/maxi);
+		scaleFactor = (float)STAT_BAR_WIDTH / maxi;
 	}
 
-	length = MAKEINT(scaleFactor*missionData.strLost);
+	length = scaleFactor * missionData.strLost;
 	infoBars[STAT_STR_LOST].percent = PERCENT(length,STAT_BAR_WIDTH);
-	length = MAKEINT(scaleFactor*missionData.strKilled);
+	length = scaleFactor * missionData.strKilled;
 	infoBars[STAT_STR_BLOWN_UP].percent = PERCENT(length,STAT_BAR_WIDTH);
 
 	/* Finally the force information - need amount of droids as well*/
@@ -501,18 +493,18 @@ void	fillUpStats( void )
 
 	if (maxi == 0)
 	{
-		scaleFactor = 0;
+		scaleFactor = 0.f;
 	}
 	else
 	{
-		scaleFactor = (MAKEFRACT(STAT_BAR_WIDTH)/maxi);
+		scaleFactor = (float)STAT_BAR_WIDTH / maxi;
 	}
 
-	length = MAKEINT(scaleFactor*missionData.unitsBuilt);
+	length = scaleFactor * missionData.unitsBuilt;
 	infoBars[STAT_UNITS_BUILT].percent = PERCENT(length,STAT_BAR_WIDTH);
-	length = MAKEINT(scaleFactor*numUnits);
+	length = scaleFactor * numUnits;
 	infoBars[STAT_UNITS_NOW].percent = PERCENT(length,STAT_BAR_WIDTH);
-	length = MAKEINT(scaleFactor*missionData.strBuilt);
+	length = scaleFactor * missionData.strBuilt;
 	infoBars[STAT_STR_BUILT].percent = PERCENT(length,STAT_BAR_WIDTH);
 
 	/* Finally the numbers themselves */

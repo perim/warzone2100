@@ -83,15 +83,15 @@ BOOL scrBaseObjGet(UDWORD index)
 	{
 	case OBJID_POSX:
 		type = VAL_INT;
-		scrFunctionResult.v.ival = (SDWORD)psObj->x;
+		scrFunctionResult.v.ival = (SDWORD)psObj->pos.x;
 		break;
 	case OBJID_POSY:
 		type = VAL_INT;
-		scrFunctionResult.v.ival = (SDWORD)psObj->y;
+		scrFunctionResult.v.ival = (SDWORD)psObj->pos.y;
 		break;
 	case OBJID_POSZ:
 		type = VAL_INT;
-		scrFunctionResult.v.ival = (SDWORD)psObj->z;
+		scrFunctionResult.v.ival = (SDWORD)psObj->pos.z;
 		break;
 	case OBJID_ID:
 		type = VAL_INT;
@@ -438,8 +438,8 @@ BOOL scrGroupObjGet(UDWORD index)
 		for(psCurr = psGroup->psList; psCurr; psCurr = psCurr->psGrpNext)
 		{
 			lgMembers += 1;
-			lgX += (SDWORD)psCurr->x;
-			lgY += (SDWORD)psCurr->y;
+			lgX += (SDWORD)psCurr->pos.x;
+			lgY += (SDWORD)psCurr->pos.y;
 			lgHealth += (SDWORD)((100 * psCurr->body)/psCurr->originalBody);
 		}
 		if (lgMembers > 0)
@@ -458,7 +458,7 @@ BOOL scrGroupObjGet(UDWORD index)
 		for(psCurr = psGroup->psList; psCurr; psCurr = psCurr->psGrpNext)
 		{
 			lgMembers += 1;
-			lgX += (SDWORD)psCurr->x;
+			lgX += (SDWORD)psCurr->pos.x;
 		}
 
 		if (lgMembers > 0)
@@ -474,7 +474,7 @@ BOOL scrGroupObjGet(UDWORD index)
 		for(psCurr = psGroup->psList; psCurr; psCurr = psCurr->psGrpNext)
 		{
 			lgMembers += 1;
-			lgY += (SDWORD)psCurr->y;
+			lgY += (SDWORD)psCurr->pos.y;
 		}
 
 		if (lgMembers > 0)
@@ -856,7 +856,7 @@ BOOL scrValDefSave(INTERP_VAL *psVal, char *pBuffer, UDWORD *pSize)
 	return TRUE;
 }
 
-// default value load routine
+/// default value load routine
 BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size)
 {
 	char			*pPos;
@@ -1082,16 +1082,23 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 			grpJoin((DROID_GROUP*)(psVal->v.oval), NULL);
 		}
 
-		if (version == 1)
+		switch (version)
 		{
-			members = size / sizeof(UDWORD);
-			pPos = pBuffer;
+			case 1:
+				members = size / sizeof(UDWORD);
+				break;
+			case 2:
+				members = (size - sizeof(SDWORD)*4) / sizeof(UDWORD);
+				break;
+			case 3:
+				members = (size - sizeof(SDWORD)*5) / sizeof(UDWORD);
+				break;
+			default:
+				debug( LOG_ERROR, "scrValDefLoad: unsupported version %i", version);
 		}
-		else if (version == 2)
+		pPos = pBuffer;
+		if (version >= 2)
 		{
-			members = (size - sizeof(SDWORD)*4) / sizeof(UDWORD);
-			pPos = pBuffer;
-
 			// load the retreat data
 			psGroup = (DROID_GROUP*)(psVal->v.oval);
 			endian_sdword((SDWORD*)pPos);
@@ -1107,28 +1114,11 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 			psGroup->sRunData.leadership = (UBYTE)(*((SDWORD *)pPos));
 			pPos += sizeof(SDWORD);
 		}
-		else
+		if (version >= 3)
 		{
-			members = (size - sizeof(SDWORD)*5) / sizeof(UDWORD);
-			pPos = pBuffer;
-
-			// load the retreat data
-			psGroup = (DROID_GROUP*)(psVal->v.oval);
 			endian_sdword((SDWORD*)pPos);
-			psGroup->sRunData.sPos.x = *((SDWORD *)pPos);
+			psGroup->sRunData.healthLevel = (UBYTE)(*((SDWORD *)pPos));
 			pPos += sizeof(SDWORD);
-			endian_sdword((SDWORD*)pPos);
-			psGroup->sRunData.sPos.y = *((SDWORD *)pPos);
-			pPos += sizeof(SDWORD);
-			endian_sdword((SDWORD*)pPos);
-			psGroup->sRunData.forceLevel = (UBYTE)(*((SDWORD *)pPos));
-			pPos += sizeof(SDWORD);
-			endian_sdword((SDWORD*)pPos);
-			psGroup->sRunData.leadership = (UBYTE)(*((SDWORD *)pPos));
-			pPos += sizeof(SDWORD);
-			endian_sdword((SDWORD*)pPos);
-   			psGroup->sRunData.healthLevel = (UBYTE)(*((SDWORD *)pPos));
-    		pPos += sizeof(SDWORD);
 		}
 
 		// load the droids

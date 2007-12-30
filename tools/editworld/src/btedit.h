@@ -21,6 +21,10 @@
 	$Id$
 	$HeadURL$
 */
+
+#ifndef __INCLUDED_BTEDIT_H__
+#define __INCLUDED_BTEDIT_H__
+
 // BTEdit.h : main header file for the BTEDIT application
 //
 
@@ -29,11 +33,9 @@
 #endif
 
 #include "resource.h"       // main symbols
+#include <string>
 
-/////////////////////////////////////////////////////////////////////////////
-// CBTEditApp:
-// See BTEdit.cpp for the implementation of this class
-//
+#define snprintf _snprintf
 
 class CBTEditCommandLineInfo : public CCommandLineInfo
 {
@@ -59,27 +61,6 @@ public:
 
 extern CBTEditCommandLineInfo g_cmdInfo;
 
-class CBTEditApp : public CWinApp
-{
-public:
-	CBTEditApp();
+extern std::string getCurrentDirectory();
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CBTEditApp)
-	public:
-	virtual BOOL InitInstance();
-	//}}AFX_VIRTUAL
-
-// Implementation
-
-	//{{AFX_MSG(CBTEditApp)
-	afx_msg void OnAppAbout();
-		// NOTE - the ClassWizard will add and remove member functions here.
-		//    DO NOT EDIT what you see in these blocks of generated code !
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
-};
-
-
-/////////////////////////////////////////////////////////////////////////////
+#endif // __INCLUDED_BTEDIT_H__

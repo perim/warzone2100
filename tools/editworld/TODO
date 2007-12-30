@@ -1,12 +1,10 @@
 * Port the following files from using MFC to wxWidgets instead:
 
- * aboutdialog.cpp
  * brushprop.cpp
  * btedit.cpp
  * bteditdoc.cpp
  * bteditview.cpp
  * expandlimitsdlg.cpp
- * exportinfo.cpp
  * mainfrm.cpp
  * mapprefs.cpp
  * objectproperties.cpp
@@ -19,10 +17,8 @@
 
 * Port the following dialogs from using MFC to wxWidgets instead:
 
- * IDD_ABOUTBOX          (aboutdialog.cpp)
  * IDD_EDGEBRUSH         (brushprop.cpp)
  * IDD_EXPANSIONLIMITS   (expandlimitsdlg.cpp)
- * IDD_INFO              (exportinfo.cpp)
  * IDD_MAPPREFS          (mapprefs.cpp)
  * IDD_OBJECTPROPERTIES  (objectproperties.cpp)
  * IDD_PASTEPREFS        (pasteprefs.cpp)

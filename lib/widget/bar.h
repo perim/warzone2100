@@ -35,8 +35,8 @@ typedef struct _w_bargraph
 	UWORD		minorSize;			// Percentage of the minor bar if there is one
 	UWORD		iRange;				// Maximum range
 	UWORD		iValue;				// Current value
-	UBYTE		majorCol;			// Colour for the major bar
-	UBYTE		minorCol;			// Colour for the minor bar
+	PIELIGHT	majorCol;			// Colour for the major bar
+	PIELIGHT	minorCol;			// Colour for the minor bar
 	const char	*pTip;				// The tool tip for the graph
 } W_BARGRAPH;
 
@@ -67,16 +67,13 @@ extern void barGraphHiLite(W_BARGRAPH *psWidget, W_CONTEXT *psContext);
 extern void barGraphHiLiteLost(W_BARGRAPH *psWidget);
 
 /* The bar graph display function */
-extern void barGraphDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
-							UDWORD *pColours);
+extern void barGraphDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours);
 
 /* The double bar graph display function */
-extern void barGraphDisplayDouble(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
-								  UDWORD *pColours);
+extern void barGraphDisplayDouble(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours);
 
 /* The trough bar graph display function */
-extern void barGraphDisplayTrough(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
-							UDWORD *pColours);
+extern void barGraphDisplayTrough(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours);
 
 #endif
 

@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "lib/framework/frame.h"
+#include "lib/sound/audio.h"
 #include "objects.h"
 #include "deliverance.h"
 #include "lib/gamelib/gtime.h"
@@ -119,7 +120,11 @@ static void objmemDestroy(BASE_OBJECT *psObj)
 		default:
 			ASSERT(!"unknown object type", "objmemDestroy: unknown object type in destroyed list at 0x%p", psObj);
 	}
+	// Make sure to get rid of some final references in the sound code to this object first
+	audio_RemoveObj(psObj);
+
 	free(psObj);
+	debug(LOG_MEMORY, "objmemDestroy: BASE_OBJECT* 0x%p is freed.", psObj);
 }
 
 /* General housekeeping for the object system */
@@ -855,88 +860,7 @@ UDWORD getRepairIdFromFlag(FLAG_POSITION *psFlag)
 // check a base object exists for an ID
 BOOL checkValidId(UDWORD id)
 {
-	unsigned int i;
-	UDWORD			player;
-	BASE_OBJECT		*psObj;
-	DROID			*psTrans;
-
-	for(i = 0; i < 7; ++i)
-	{
-		for(player = 0; player < MAX_PLAYERS; ++player)
-		{
-			switch (i)
-			{
-				case 0:
-					psObj=(BASE_OBJECT *)apsDroidLists[player];
-					break;
-				case 1:
-					psObj=(BASE_OBJECT *)apsStructLists[player];
-					break;
-				case 2:
-					if (player == 0)
-					{
-						psObj=(BASE_OBJECT *)apsFeatureLists[0];
-					}
-					else
-					{
-						psObj = NULL;
-					}
-					break;
-				case 3:
-					psObj=(BASE_OBJECT *)mission.apsDroidLists[player];
-					break;
-				case 4:
-					psObj=(BASE_OBJECT *)mission.apsStructLists[player];
-					break;
-				case 5:
-					if (player == 0)
-					{
-						psObj=(BASE_OBJECT *)mission.apsFeatureLists[0];
-					}
-					else
-					{
-						psObj = NULL;
-					}
-					break;
-				case 6:
-					if (player == 0)
-					{
-						psObj=(BASE_OBJECT *)apsLimboDroids[0];
-					}
-					else
-					{
-						psObj = NULL;
-					}
-					break;
-				default:
-					psObj = NULL;
-					break;
-			}
-
-			while (psObj)
-			{
-				if (psObj->id == id)
-				{
-					return TRUE;
-				}
-			 	// if transporter check any droids in the grp
-				if ((psObj->type == OBJ_DROID) && (((DROID*)psObj)->droidType == DROID_TRANSPORTER))
-				{
-					for(psTrans = ((DROID*)psObj)->psGroup->psList; psTrans != NULL; psTrans = psTrans->psGrpNext)
-					{
-						if (psTrans->id == id)
-						{
-							return TRUE;
-						}
-					}
-				}
-				psObj = psObj->psNext;
-			}
-		}
-	}
-	ASSERT(!"invalid ID for BASE_OBJ", "checkValidId() failed for id %d", id);
-
-	return FALSE;
+	return getBaseObjFromId(id) != NULL;
 }
 
 

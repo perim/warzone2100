@@ -27,7 +27,7 @@
 #include "stdafx.h"
 #include "btedit.h"
 #include "grdland.h"
-#include "mainfrm.h"
+#include "mainframe.h"
 #include "bteditdoc.h"
 #include "mapprefs.h"
 #include "textureprefs.h"
@@ -38,9 +38,9 @@
 #include "bteditview.h"
 #include "savesegmentdialog.hpp"
 #include "limitsdialog.hpp"
-#include "initiallimitsdlg.hpp"
+#include "initiallimitsdialog.hpp"
 #include "expandlimitsdlg.h"
-#include "exportinfo.h"
+#include "infodialog.hpp"
 #include "playermap.h"
 #include "gateway.hpp"
 #include "pasteprefs.h"
@@ -48,10 +48,12 @@
 
 #include <string>
 
+using std::string;
+
 #define MAX_FILESTRING 512
 
-extern char g_HomeDirectory[1024];
-extern char g_WorkDirectory[1024];
+extern string g_HomeDirectory;
+extern string g_WorkDirectory;
 extern BOOL g_OverlayTypes;
 extern BOOL g_OverlayZoneIDs;
 
@@ -638,7 +640,7 @@ void CBTEditDoc::InitialiseData(void)
 
 //	m_DirectDrawView->SetFilter(TRUE);
 	
-	GetCurrentDirectory(sizeof(g_WorkDirectory),g_WorkDirectory);
+	g_WorkDirectory = getCurrentDirectory();
 
 //	m_DirectDrawView = new CDirectDraw(NULL,NULL,FALSE,
 //				&DesiredProfile);
@@ -699,14 +701,14 @@ void CBTEditDoc::InitialiseData(void)
 
 // Read in all the objects.
 //	char Name[256];
-//	strcpy(Name,g_HomeDirectory);
+//	strcpy(Name,g_HomeDirectory.c_str());
 //	strcat(Name,"\\Data\\Startup.txt");
 //	m_HeightMap->ReadObjects(Name);
 
 	m_HeightMap->GetTextureSize(&m_TextureHeight,&m_TextureWidth);
 
 //	char Name[256];
-//	strcpy(Name,g_HomeDirectory);
+//	strcpy(Name,g_HomeDirectory.c_str());
 //	strcat(Name,"\\Data\\Structures.txt");
 //	if(!m_HeightMap->ReadStructureStats(Name)) {		// Temp to test structure file parser.
 //		MessageBox(NULL,"Error parsing file.","Structures.txt",MB_OK);
@@ -1584,7 +1586,7 @@ BOOL CBTEditDoc::WriteProject(char *FileName)
 void CBTEditDoc::DisplayExportSummary(void)
 {
 	CWorldInfo *Info = m_HeightMap->GetWorldInfo();
-	char *String = new char[1024];
+	char String[1024];
 	char *Tmp = String;
 	DWORD TotalStructures = 0;
 	DWORD TotalWalls = 0;
@@ -1617,11 +1619,7 @@ void CBTEditDoc::DisplayExportSummary(void)
 	sprintf(Tmp,"\r\nFeatures %d\r\n",Info->NumFeatures);
 	Tmp += strlen(Tmp);
 
-	CExportInfo ResDlg;
-	ResDlg.m_Text = String;
-	ResDlg.DoModal();
-
-	delete String;
+	InfoDialog(String).DoModal();
 }
 
 // Proxy class that serves as InputIterator (as defined by the C++ standard in
@@ -2436,8 +2434,8 @@ BOOL CBTEditDoc::GetFilePath(char *FilterList,char *ExtType,char *Filter,BOOL Op
 			strcpy(FullPath,Tmp.GetBuffer(0));
 		}
 
-		GetCurrentDirectory(sizeof(g_WorkDirectory),g_WorkDirectory);
-		DebugPrint("New working directory %s\n",g_WorkDirectory);
+		g_WorkDirectory = getCurrentDirectory();
+		DebugPrint("New working directory %s\n", g_WorkDirectory.c_str());
 
 		SetButtonLapse();
 
@@ -5650,7 +5648,7 @@ std::string EditorDataFileName(const std::string& fileName)
 
 	// Try the data directory.
 	_splitpath(fileName.c_str(), Drive, Dir, FName, Ext);
-	sprintf(AltName, "%s\\data\\%s%s", g_HomeDirectory, FName, Ext);
+	snprintf(AltName, sizeof(AltName), "%s\\data\\%s%s", g_HomeDirectory.c_str(), FName, Ext);
 
 	return std::string(AltName);
 }

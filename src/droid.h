@@ -126,6 +126,9 @@ extern UDWORD calcDroidWeight(DROID_TEMPLATE *psTemplate);
 /* Calculate the power points required to build/maintain a droid */
 extern UDWORD calcDroidPower(DROID *psDroid);
 
+// Calculate the number of points required to build a droid
+extern UDWORD calcDroidPoints(DROID *psDroid);
+
 /* Calculate the body points of a droid from it's template */
 extern UDWORD calcTemplateBody(DROID_TEMPLATE *psTemplate, UBYTE player);
 
@@ -151,7 +154,7 @@ BOOL templateIsIDF(DROID_TEMPLATE *psTemplate);
 BOOL idfDroid(DROID *psDroid);
 
 /* Do damage to a droid */
-extern SDWORD droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass,UDWORD weaponSubClass, HIT_SIDE impactSide);
+extern float droidDamage(DROID *psDroid, UDWORD damage, UDWORD weaponClass,UDWORD weaponSubClass, HIT_SIDE impactSide);
 
 /* The main update routine for all droids */
 extern void droidUpdate(DROID *psDroid);
@@ -245,6 +248,7 @@ extern BOOL selectDroidByID(UDWORD id, UDWORD player);
 
 /* Droid experience stuff */
 extern UDWORD	getDroidLevel(DROID *psDroid);
+extern UDWORD	getDroidEffectiveLevel(DROID *psDroid);
 extern const char *getDroidLevelName(DROID *psDroid);
 
 // Get a droid's name.
@@ -444,6 +448,8 @@ static inline void _setDroidTarget(DROID *psDroid, BASE_OBJECT *psNewTarget, int
 {
 	psDroid->psTarget = psNewTarget;
 	ASSERT(psNewTarget == NULL || !psNewTarget->died, "setDroidTarget: Set dead target");
+	ASSERT(psNewTarget == NULL || !psNewTarget->died || (psNewTarget->died == NOT_CURRENT_LIST && psDroid->died == NOT_CURRENT_LIST),
+	       "setDroidTarget: Set dead target");
 #ifdef DEBUG
 	psDroid->targetLine = line;
 	strlcpy(psDroid->targetFunc, func, MAX_EVENT_NAME_LEN);
@@ -454,7 +460,8 @@ static inline void _setDroidTarget(DROID *psDroid, BASE_OBJECT *psNewTarget, int
 static inline void _setDroidActionTarget(DROID *psDroid, BASE_OBJECT *psNewTarget, UWORD idx, int line, const char *func)
 {
 	psDroid->psActionTarget[idx] = psNewTarget;
-	ASSERT(psNewTarget == NULL || !psNewTarget->died, "setDroidActionTarget: Set dead target");
+	ASSERT(psNewTarget == NULL || !psNewTarget->died || (psNewTarget->died == NOT_CURRENT_LIST && psDroid->died == NOT_CURRENT_LIST),
+	       "setDroidActionTarget: Set dead target");
 #ifdef DEBUG
 	psDroid->actionTargetLine[idx] = line;
 	strlcpy(psDroid->actionTargetFunc[idx], func, MAX_EVENT_NAME_LEN);

@@ -26,7 +26,7 @@
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-DDEBUG" />
-					<Add option='-DVERSION=\\&quot;TRUNK\\&quot;' />
+					<Add option='-DPACKAGE_VERSION=\\&quot;TRUNK\\&quot;' />
 					<Add option='-DLOCALEDIR=\\&quot;\\&quot;' />
 					<Add option='-DPACKAGE=\\&quot;warzone2100\\&quot;' />
 					<Add option='-D_GNU_SOURCE=1' />
@@ -53,7 +53,7 @@
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
-					<Add option='-DVERSION=\\&quot;TRUNK\\&quot;' />
+					<Add option='-DPACKAGE_VERSION=\\&quot;TRUNK\\&quot;' />
 					<Add option='-DLOCALEDIR=\\&quot;\\&quot;' />
 					<Add option='-DPACKAGE=\\&quot;warzone2100\\&quot;' />
 					<Add option='-D_GNU_SOURCE=1' />
@@ -81,7 +81,7 @@
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-DDEBUG" />
-					<Add option='-DVERSION=\&quot;TRUNK\&quot;' />
+					<Add option='-DPACKAGE_VERSION=\&quot;TRUNK\&quot;' />
 					<Add option='-DLOCALEDIR=\&quot;\&quot;' />
 					<Add option='-DPACKAGE=\&quot;warzone2100\&quot;' />
 					<Add option="-DWIN32" />
@@ -119,7 +119,7 @@
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
-					<Add option='-DVERSION=\&quot;TRUNK\&quot;' />
+					<Add option='-DPACKAGE_VERSION=\&quot;TRUNK\&quot;' />
 					<Add option='-DLOCALEDIR=\&quot;\&quot;' />
 					<Add option='-DPACKAGE=\&quot;warzone2100\&quot;' />
 					<Add option="-DWIN32" />
@@ -982,47 +982,14 @@
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sequence/adpcm.c">
+		<Unit filename="lib/sequence/sequence.c">
 			<Option compilerVar="CC" />
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sequence/adpcm.h">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sequence/dec130.c">
-			<Option compilerVar="CC" />
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sequence/rpl_reader.c">
-			<Option compilerVar="CC" />
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sequence/rpl_reader.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
 		<Unit filename="lib/sequence/sequence.h">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sequence/sequence_stub.c">
-			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
@@ -1498,19 +1465,6 @@
 			<Option target="NDBGWindows" />
 		</Unit>
 		<Unit filename="src/anim_id.h">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="src/arrow.c">
-			<Option compilerVar="CC" />
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="src/arrow.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
@@ -2548,19 +2502,6 @@
 			<Option target="NDBGWindows" />
 		</Unit>
 		<Unit filename="src/oprint.h">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="src/optimisepath.c">
-			<Option compilerVar="CC" />
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="src/optimisepath.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />

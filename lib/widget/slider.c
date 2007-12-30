@@ -362,8 +362,7 @@ void sliderHiLiteLost(W_SLIDER *psWidget)
 }
 
 /* The slider display function */
-void sliderDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
-						  UDWORD *pColours)
+void sliderDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours)
 {
 	W_SLIDER	*psSlider;
 	SWORD		x0,y0, x1,y1;
@@ -388,7 +387,7 @@ void sliderDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 		y0 = (SWORD)(y0 + psSlider->y + yOffset);
 		x1 = (SWORD)(x0 + width);
 		y1 = (SWORD)(y0 + height);
-		pie_BoxFillIndex(x0,y0, x1,y1,WCOL_BKGRND);
+		pie_BoxFill(x0, y0, x1, y1, pColours[WCOL_BKGRND]);
 		iV_Line(x0,y0, x1,y0, pColours[WCOL_LIGHT]);
 		iV_Line(x0,y0, x0,y1, pColours[WCOL_LIGHT]);
 		iV_Line(x1,y0, x1,y1, pColours[WCOL_DARK]);
@@ -409,7 +408,7 @@ void sliderDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 		y0 = (SWORD)(y0 + psSlider->y + yOffset);
 		x1 = (SWORD)(x0 + width);
 		y1 = (SWORD)(y0 + height);
-		pie_BoxFillIndex(x0,y0, x1,y1,WCOL_BKGRND);
+		pie_BoxFill(x0, y0, x1, y1, pColours[WCOL_BKGRND]);
 		iV_Line(x0,y0, x1,y0, pColours[WCOL_LIGHT]);
 		iV_Line(x0,y0, x0,y1, pColours[WCOL_LIGHT]);
 		iV_Line(x1,y0, x1,y1, pColours[WCOL_DARK]);
