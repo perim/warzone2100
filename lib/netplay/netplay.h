@@ -68,11 +68,11 @@ typedef struct {
 	uint16_t	size;			// used size of body
 	uint8_t		type;			// type of packet
 	uint8_t		destination;		// player to send to, or NET_ALL_PLAYERS
+	uint8_t		source;			// player it is sent from
 	char 		body[MaxMsgSize];
 	BOOL		status;			// If the packet compiled or not (this is _not_ sent!)
 } NETMSG;
 
-#define		AUDIOMSG		255	// an audio packet (special message);
 #define		FILEMSG			254	// a file packet
 
 // ////////////////////////////////////////////////////////////////////////

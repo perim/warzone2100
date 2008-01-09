@@ -30,19 +30,19 @@ enum internal_types
 // A definition group
 struct define
 {
-	int16_t vm;
-	uint8_t element;
-	char vr[2];
-	struct define *parent;	// parent group
-	struct define *group;	// child group
-	struct define *next;	// sibling group
-	struct define *current; // where in the sibling list we currently are
-	bool defaultval;
+	int16_t vm; //! value multiple
+	uint8_t element; //! tag number
+	char vr[2]; //! value representation (type)
+	struct define *parent;	//! parent group
+	struct define *group;	//! child group
+	struct define *next;	//! sibling group
+	struct define *current; //! where in the sibling list we currently are
+	bool defaultval; //! default value
 	union {
 		uint32_t uint32_tval;
 		int32_t int32_tval;
 		float floatval;
-	} val;
+	} val; //! actual data
 	// debugging temp variables below
 	int countItems; // check group items against number of separators given
 	int expectedItems; // group items expected in current group
@@ -85,12 +85,16 @@ do { \
 	         (unsigned int)tag, _name, current->vr[0], current->vr[1]); \
 } while(0)
 
+#define CHECK_VALID_TAG(_tag) \
+do { \
+	assert(tag != TAG_SEPARATOR && tag != TAG_GROUP_END); \
+} while(0)
+
+
 // function to printf into errbuf the calling strack for nested groups on error
-#define PRNG_LEN 40 // low value to avoid stack overflow
 static void print_nested_groups(struct define *group)
 {
 	struct define *parent;
-	char groupdesc[PRNG_LEN];
 
 	if (group == NULL)
 	{
@@ -100,11 +104,10 @@ static void print_nested_groups(struct define *group)
 
 	if (parent != NULL)
 	{
-		snprintf(groupdesc, PRNG_LEN, "\nNested inside element %x", (unsigned int)parent->element);
-		strlcat(errbuf, groupdesc, sizeof(errbuf));
+		slcatprintf(errbuf, sizeof(errbuf), "\nNested inside element %x", (unsigned int)parent->element);
 		print_nested_groups(parent);
 	}
-	if (parent == NULL)
+	else
 	{
 		strlcat(errbuf, "\n", sizeof(errbuf));
 	}
@@ -293,7 +296,7 @@ static bool init(const char *definition, const char *datafile, bool write)
 	}
 	if (!fp)
 	{
-		TF_ERROR("Error opening data file %s: %s", definition, PHYSFS_getLastError());
+		TF_ERROR("Error opening data file %s: %s", datafile, PHYSFS_getLastError());
 		return false;
 	}
 	readmode = !write;
@@ -320,7 +323,7 @@ static void remove_defines(struct define *df)
 	{
 		struct define *del = iter;
 
-		if (iter->group)
+		if (iter->group) // Also remove subgroups
 		{
 			remove_defines(iter->group);
 		}
@@ -389,13 +392,13 @@ static bool scanforward(element_t tag)
 		return false;
 	}
 
-	// Skip in this group until we have reached destination tag
+	// Skip in this group-definition until we have reached destination tag
 	if (!scan_to(tag) || PHYSFS_eof(handle))
 	{
 		return false; // error, or try default value
 	}
 	readsize = PHYSFS_read(handle, &read_tag, 1, 1);
-	while (readsize == 1)
+	while (readsize == 1) // Read from file till we've reached the destination
 	{
 		if (read_tag == tag)
 		{
@@ -978,7 +981,7 @@ static bool write_tag(element_t tag)
 	return true;
 }
 
-bool tagWriteSeparator()
+bool tagWriteNext()
 {
 	if (tag_error || !write_tag(TAG_SEPARATOR))
 	{
@@ -1000,7 +1003,7 @@ bool tagWriteSeparator()
 
 bool tagWriteEnter(element_t tag, uint16_t elements)
 {
-	assert(tag != TAG_SEPARATOR && tag != TAG_GROUP_END);
+	CHECK_VALID_TAG(tag);
 	if (tag_error || !write_tag(tag) || !scan_to(tag))
 	{
 		return false;
@@ -1021,7 +1024,7 @@ bool tagWriteEnter(element_t tag, uint16_t elements)
 
 bool tagWriteLeave(element_t tag)
 {
-	assert(tag != TAG_SEPARATOR && tag != TAG_GROUP_END);
+	CHECK_VALID_TAG(tag);
 	if (tag_error || !write_tag(TAG_GROUP_END) || !scan_to(TAG_GROUP_END))
 	{
 		return false;
@@ -1052,7 +1055,7 @@ bool tagWriteLeave(element_t tag)
 
 bool tagWrite(element_t tag, uint32_t val)
 {
-	assert(tag != TAG_SEPARATOR && tag != TAG_GROUP_END);
+	CHECK_VALID_TAG(tag);
 	if (!scan_to(tag))
 	{
 		return false;
@@ -1086,7 +1089,7 @@ bool tagWrite(element_t tag, uint32_t val)
 
 bool tagWrites(element_t tag, int32_t val)
 {
-	assert(tag != TAG_SEPARATOR && tag != TAG_GROUP_END);
+	CHECK_VALID_TAG(tag);
 	if (!scan_to(tag))
 	{
 		return false;
@@ -1120,7 +1123,7 @@ bool tagWrites(element_t tag, int32_t val)
 
 bool tagWritef(element_t tag, float val)
 {
-	assert(tag != TAG_SEPARATOR && tag != TAG_GROUP_END);
+	CHECK_VALID_TAG(tag);
 	if (!scan_to(tag))
 	{
 		return false;
@@ -1141,7 +1144,7 @@ bool tagWritef(element_t tag, float val)
 
 bool tagWriteBool(element_t tag, bool val)
 {
-	assert(tag != TAG_SEPARATOR && tag != TAG_GROUP_END);
+	CHECK_VALID_TAG(tag);
 	if (!scan_to(tag))
 	{
 		return false;
@@ -1160,11 +1163,11 @@ bool tagWriteBool(element_t tag, bool val)
 	return true;
 }
 
-bool tagWritefv(element_t tag, uint16_t count, float *vals)
+bool tagWritefv(element_t tag, uint16_t count, const float *vals)
 {
 	int i;
 
-	assert(tag != TAG_SEPARATOR && tag != TAG_GROUP_END);
+	CHECK_VALID_TAG(tag);
 	if (!scan_to(tag) || !write_tag(tag))
 	{
 		return false;
@@ -1179,11 +1182,11 @@ bool tagWritefv(element_t tag, uint16_t count, float *vals)
 	return true;
 }
 
-bool tagWrite8v(element_t tag, uint16_t count, uint8_t *vals)
+bool tagWrite8v(element_t tag, uint16_t count, const uint8_t *vals)
 {
 	int i;
 
-	assert(tag != TAG_SEPARATOR && tag != TAG_GROUP_END);
+	CHECK_VALID_TAG(tag);
 	if (!scan_to(tag) || !write_tag(tag))
 	{
 		return false;
@@ -1198,11 +1201,11 @@ bool tagWrite8v(element_t tag, uint16_t count, uint8_t *vals)
 	return true;
 }
 
-bool tagWrite16v(element_t tag, uint16_t count, uint16_t *vals)
+bool tagWrite16v(element_t tag, uint16_t count, const uint16_t *vals)
 {
 	int i;
 
-	assert(tag != TAG_SEPARATOR && tag != TAG_GROUP_END);
+	CHECK_VALID_TAG(tag);
 	if (!scan_to(tag) || !write_tag(tag))
 	{
 		return false;
@@ -1217,11 +1220,11 @@ bool tagWrite16v(element_t tag, uint16_t count, uint16_t *vals)
 	return true;
 }
 
-bool tagWrites32v(element_t tag, uint16_t count, int32_t *vals)
+bool tagWrites32v(element_t tag, uint16_t count, const int32_t *vals)
 {
 	int i;
 
-	assert(tag != TAG_SEPARATOR && tag != TAG_GROUP_END);
+	CHECK_VALID_TAG(tag);
 	if (!scan_to(tag) || !write_tag(tag))
 	{
 		return false;
@@ -1240,7 +1243,7 @@ bool tagWriteString(element_t tag, const char *buffer)
 {
 	size_t size;
 
-	assert(tag != TAG_SEPARATOR && tag != TAG_GROUP_END);
+	CHECK_VALID_TAG(tag);
 	if (!scan_to(tag) || !write_tag(tag))
 	{
 		return false;
@@ -1249,7 +1252,7 @@ bool tagWriteString(element_t tag, const char *buffer)
 
 	// find size of string
 	size = strlen(buffer) + 1;
-	if (size > current->vm)
+	if (size > current->vm && current->vm != 0)
 	{
 		TF_ERROR("Given string is too long (size %d > limit %d)", (int)size, (int)current->vm);
 		return false;
@@ -1268,22 +1271,26 @@ bool tagWriteString(element_t tag, const char *buffer)
 // unit test function
 void tagTest()
 {
-	const char *writename = "test.wzs";
-	const char *cformat = "WZTAGFILE1";
+	static const char virtual_definition[] = "tagdefinitions/tagfile_virtual.def";
+	static const char basic_definition[]   = "tagdefinitions/tagfile_basic.def";
+	static const char writename[] = "test.wzs";
+	static const char cformat[] = "WZTAGFILE1";
 	char format[300], *formatdup;
 	uint16_t droidpos[3];
 	uint8_t blob[BLOB_SIZE];
 	float fv[3];
 
+	// Set our testing blob to a bunch of 0x01 bytes
 	memset(blob, 1, BLOB_SIZE); // 1111111...
 
-	tagOpenWrite("testdata/tagfile_virtual.def", writename);
+	
+	tagOpenWrite(virtual_definition, writename);
 	tagWrites(0x05, 11);
 	tagWriteString(0x06, cformat);
 	ASSERT(!tagGetError(), "Error 1: %s", tagGetErrorString());
 	tagClose();
 
-	tagOpenRead("testdata/tagfile_virtual.def", "test.wzs");
+	tagOpenRead(virtual_definition, writename);
 	assert(tagRead(0x01) == 1);
 	assert(tagReads(0x02) == 2);
 	assert(tagReadf(0x03) == 3);
@@ -1296,7 +1303,7 @@ void tagTest()
 	ASSERT(!tagGetError(), "Error 2: %s", tagGetErrorString());
 	tagClose();
 
-	tagOpenWrite("testdata/tagfile_basic.def", writename);
+	tagOpenWrite(basic_definition, writename);
 	ASSERT(!tagGetError(), "Error 3: %s", tagGetErrorString());
 	tagWriteString(0x01, cformat);
 	tagWriteEnter(0x02, 1);
@@ -1325,7 +1332,7 @@ void tagTest()
 	memset(droidpos, 0, 6);
 	memset(fv, 0, 6);
 	memset(blob, 0, BLOB_SIZE);
-	tagOpenRead("testdata/tagfile_basic.def", writename);
+	tagOpenRead(basic_definition, writename);
 	tagReadString(0x01, 200, format);
 	assert(strncmp(format, cformat, 9) == 0);
 	tagReadEnter(0x02);

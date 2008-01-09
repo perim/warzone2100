@@ -109,8 +109,12 @@ BOOL loadConfig(void)
 	}
 	else
 	{
+#ifdef DEBUG
+		bAllowDebugMode = TRUE;
+#else
 		bAllowDebugMode = FALSE;
-		setWarzoneKeyNumeric("debugmode", FALSE);
+#endif
+		setWarzoneKeyNumeric("debugmode", bAllowDebugMode);
 	}
 
 	if (getWarzoneKeyNumeric("framerate", &val))

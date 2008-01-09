@@ -79,6 +79,9 @@ static void offscreenUpdate		(DROID *pDroid,UDWORD dam,
 								 UWORD dir,
 								 DROID_ORDER order);
 
+static BOOL sendPowerCheck(void);
+static UDWORD averagePing(void);
+
 // ////////////////////////////////////////////////////////////////////////////
 // Defined numeric values
 #define AV_PING_FREQUENCY	45000					// how often to update average pingtimes. in approx millisecs.
@@ -97,12 +100,7 @@ static UDWORD				PingSend[MAX_PLAYERS];	//stores the time the ping was called.
 static BOOL okToSend(void)
 {
 	//update checks	& go no further if any exceeded.
-	if((NETgetRecentBytesSent() + NETgetRecentBytesRecvd()) >= game.bytesPerSec)
-	{
-		return FALSE;
-	}
-
-	if( NETgetRecentPacketsSent() >= game.packetsPerSec )
+	if (NETgetRecentBytesSent() + NETgetRecentBytesRecvd() >= MAX_BYTESPERSEC)
 	{
 		return FALSE;
 	}
@@ -129,18 +127,18 @@ BOOL sendCheck(void)
 			return TRUE;
 		}
 	}
+
+	sendPing();
+
 	// send Checks. note each send has it's own send criteria, so might not send anything.
-	if(okToSend())
-	{
-		sendPing();
-	}
+
 	if(okToSend())
 	{
 		sendStructureCheck();
 	}
 	if(okToSend())
 	{
-		sendPowerCheck(FALSE);
+		sendPowerCheck();
 	}
 	if(okToSend())
 	{
@@ -222,7 +220,7 @@ static BOOL sendDroidCheck(void)
 	uint8_t			i, count;
 	static UDWORD	lastSent = 0;		// Last time a struct was sent.
 	UDWORD			toSend = 6;
-	
+
 	if (lastSent > gameTime)
 	{
 		lastSent= 0;
@@ -233,6 +231,8 @@ static BOOL sendDroidCheck(void)
 	{
 		return TRUE;
 	}
+
+	debug(LOG_MULTISYNC, "sendDroidCheck at tick %u", (unsigned int)gameTime);
 
 	lastSent = gameTime;
 
@@ -323,17 +323,10 @@ static void packageCheck(DROID *pD)
 // receive a check and update the local world state accordingly
 BOOL recvDroidCheck()
 {
-	float			fx = 0, fy = 0;
-	DROID_ORDER		order = 0;
-	BOOL			onscreen;
-	DROID			*pD;
-	BASE_OBJECT		*psTarget;
-	int				i;
-	uint8_t			count;
-	uint8_t			player;
-	float			direction, experience;
-	uint16_t		x = 0, y = 0, tx, ty;
-	uint32_t		ref, body, target = 0, secondaryOrder;
+	uint8_t		count;
+	int		i;
+
+	debug(LOG_MULTISYNC, "recvDroidCheck");
 
 	NETbeginDecode();
 
@@ -342,6 +335,16 @@ BOOL recvDroidCheck()
 		
 		for (i = 0; i < count; i++)
 		{
+			DROID		*pD;
+			BASE_OBJECT	*psTarget = NULL;
+			float		fx = 0, fy = 0;
+			DROID_ORDER	order = 0;
+			BOOL		onscreen;
+			uint8_t		player;
+			float		direction, experience;
+			uint16_t	x = 0, y = 0, tx, ty;
+			uint32_t	ref, body, target = 0, secondaryOrder;
+
 			// Fetch the player
 			NETuint8_t(&player);
 			
@@ -436,6 +439,10 @@ BOOL recvDroidCheck()
 				offscreenUpdate(pD, body, x, y, fx, fy, direction, order);
 			}
 			
+			debug(LOG_MULTISYNC, "difference in position for droid %u; was (%d, %d); did %s update",
+			      (unsigned int)pD->id, (int)x - pD->pos.x, (int)y - pD->pos.y,
+			      onscreen ? "onscreen" : "offscreen");
+
 			// If our version is similar to the actual one make a note of it
 			if (abs(x - pD->pos.x) < TILE_UNITS * 2
 			 || abs(y - pD->pos.y) < TILE_UNITS * 2)
@@ -763,7 +770,7 @@ BOOL recvStructureCheck()
 		
 		// If the structure exists our job is easy
 		pS = IdToStruct(ref, player);
-		if (!pS)
+		if (pS)
 		{
 			pS->body = body;
 			pS->direction = direction;
@@ -900,24 +907,21 @@ BOOL recvStructureCheck()
 // ////////////////////////////////////////////////////////////////////////
 // ////////////////////////////////////////////////////////////////////////
 // Power Checking. Send a power level check every now and again.
-BOOL sendPowerCheck(BOOL now)
+static BOOL sendPowerCheck()
 {
 	static UDWORD	lastsent = 0;
 	uint8_t			player = selectedPlayer;
 	uint32_t		power = asPower[player]->currentPower;
 
-	if (!now)
+	if (lastsent > gameTime)
 	{
-		if (lastsent > gameTime)
-		{
-			lastsent = 0;
-		}
-		
-		// Only send if not done recently
-		if (gameTime - lastsent < POWER_FREQUENCY)
-		{
-			return TRUE;
-		}
+		lastsent = 0;
+	}
+
+	// Only send if not done recently
+	if (gameTime - lastsent < POWER_FREQUENCY)
+	{
+		return TRUE;
 	}
 
 	lastsent = gameTime;
@@ -1061,7 +1065,7 @@ BOOL recvScoreSubmission()
 // ////////////////////////////////////////////////////////////////////////
 // Pings
 
-UDWORD averagePing(void)
+static UDWORD averagePing(void)
 {
 	UDWORD i,count,total;
 
@@ -1099,7 +1103,6 @@ BOOL sendPing(void)
 	}
 	
 	lastPing = gameTime;
-
 
 	// If host, also update the average ping stat for joiners
 	if (NetPlay.bHost)
@@ -1179,7 +1182,7 @@ BOOL recvPing()
 	else
 	{
 		// Work out how long it took them to respond
-		ingame.PingTimes[sender] = (gameTime2 = PingSend[sender]) / 2;
+		ingame.PingTimes[sender] = (gameTime2 - PingSend[sender]) / 2;
 		
 		// Note that we have received it
 		PingSend[sender] = 0;

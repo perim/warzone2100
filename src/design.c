@@ -2864,7 +2864,7 @@ static void intSetWeaponStats(WEAPON_STATS *psStats)
 	/* range */
 	widgSetBarSize(psWScreen, IDDES_WEAPRANGE, proj_GetLongRange(psStats));
 	/* rate of fire */
-	widgSetBarSize(psWScreen, IDDES_WEAPROF, weaponROF(psStats));
+	widgSetBarSize(psWScreen, IDDES_WEAPROF, weaponROF(psStats, (SBYTE)selectedPlayer));
 	/* damage */
 	widgSetBarSize(psWScreen, IDDES_WEAPDAMAGE, (UWORD)weaponDamage(psStats,
 		(UBYTE)selectedPlayer));
@@ -2885,7 +2885,7 @@ static void intSetWeaponShadowStats(WEAPON_STATS *psStats)
 		/* range */
 		widgSetMinorBarSize(psWScreen, IDDES_WEAPRANGE, proj_GetLongRange(psStats));
 		/* rate of fire */
-		widgSetMinorBarSize(psWScreen, IDDES_WEAPROF, weaponROF(psStats));
+		widgSetMinorBarSize(psWScreen, IDDES_WEAPROF, weaponROF(psStats, (SBYTE)selectedPlayer));
 		/* damage */
 		widgSetMinorBarSize(psWScreen, IDDES_WEAPDAMAGE, (UWORD)weaponDamage(
 			psStats, (UBYTE)selectedPlayer));
@@ -4528,7 +4528,7 @@ static void intDisplayStatForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 	/* inc rotation if highlighted */
 	if ( Form->state & WCLICK_HILITE )
 	{
-		iRY += (BUTTONOBJ_ROTSPEED*frameTime2) / GAME_TICKS_PER_SEC;
+		iRY += timeAdjustedIncrement(BUTTONOBJ_ROTSPEED, FALSE);
 		iRY %= 360;
 	}
 
@@ -4574,7 +4574,7 @@ static void intDisplayViewForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 		Rotation.z = 0;
 
 		/* inc rotation */
-		iRY += (BUTTONOBJ_ROTSPEED*frameTime2) / GAME_TICKS_PER_SEC;
+		iRY += timeAdjustedIncrement(BUTTONOBJ_ROTSPEED, FALSE);
 		iRY %= 360;
 
 		//fixed depth scale the pie

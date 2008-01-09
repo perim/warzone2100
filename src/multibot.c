@@ -655,16 +655,17 @@ BOOL SendGroupOrderGroup(const DROID_GROUP* psGroup, DROID_ORDER order, uint32_t
 // receive a group order.
 BOOL recvGroupOrder()
 {
+	DROID_ORDER order;
+	BOOL subType, cmdOrder;
+
+	uint32_t destId, x, y;
+	OBJECT_TYPE destType;
+
+	uint8_t droidCount, i;
+	uint32_t* droidIDs;
+
 	NETbeginDecode();
 	{
-		DROID_ORDER order;
-		BOOL subType, cmdOrder;
-
-		uint32_t destId, x, y;
-		OBJECT_TYPE destType;
-
-		uint8_t droidCount;
-
 		NETenum(&order);
 		NETbool(&cmdOrder);
 		NETbool(&subType);
@@ -685,58 +686,65 @@ BOOL recvGroupOrder()
 		// Get the droid count
 		NETuint8_t(&droidCount);
 
-		// Retrieve the droids from the message
-		for (; droidCount; --droidCount)
-		{
-			uint32_t id;
-			DROID* psDroid;
+		// Allocate some space on the stack to hold the droid IDs
+		droidIDs = alloca(droidCount * sizeof(uint32_t));
 
+		// Retrieve the droids from the message
+		for (i = 0; i < droidCount; ++i)
+		{
 			// Retrieve the id number for the current droid
-			if (!NETuint32_t(&id))
+			if (!NETuint32_t(&droidIDs[i]))
 			{
 				// If somehow we fail assume the message got truncated prematurely
 				debug(LOG_NET, "recvGroupOrder: error retrieving droid ID number; while there are (supposed to be) still %u droids left",
-				      (unsigned int)droidCount);
+				      (unsigned int)(droidCount - i));
 				NETend();
 				return FALSE;
-			}
-
-			if (!IdToDroid(id, ANYPLAYER, &psDroid))
-			{
-				// If the droid's not found, request it
-				NETend();
-				sendRequestDroid(id);
-				return FALSE;
-			}
-
-			/*
-			 * If the current order not is a command order and we are not a
-			 * commander yet are in the commander group remove us from it.
-			 */
-			if (!cmdOrder && psDroid->droidType != DROID_COMMAND
-			 && psDroid->psGroup != NULL && psDroid->psGroup->type == GT_COMMAND)
-			{
-				grpLeave(psDroid->psGroup, psDroid);
-			}
-
-			// Process the droid's order
-			if (subType)
-			{
-				/* If they are being ordered to `goto' an object then we don't
-				 * have any X and Y coordinate.
-				 */
-				ProcessDroidOrder(psDroid, order, 0, 0, destType, destId);
-			}
-			else
-			{
-				/* Otherwise if the droids are being ordered to `goto' a
-				 * specific position. Then we don't have any destination info
-				 */
-				ProcessDroidOrder(psDroid, order, x, y, 0, 0);
 			}
 		}
 	}
 	NETend();
+
+	// Process the given order for all droids we've retrieved
+	for (i = 0; i < droidCount; ++i)
+	{
+		DROID* psDroid;
+
+		// Retrieve the droid associated with the current ID
+		if (!IdToDroid(droidIDs[i], ANYPLAYER, &psDroid))
+		{
+			// If the droid's not found, request it...
+			sendRequestDroid(droidIDs[i]);
+			// and continue working on the next droid
+			continue;
+		}
+
+		/*
+		 * If the current order not is a command order and we are not a
+		 * commander yet are in the commander group remove us from it.
+		 */
+		if (!cmdOrder && psDroid->droidType != DROID_COMMAND
+		 && psDroid->psGroup != NULL && psDroid->psGroup->type == GT_COMMAND)
+		{
+			grpLeave(psDroid->psGroup, psDroid);
+		}
+
+		// Process the droid's order
+		if (subType)
+		{
+			/* If they are being ordered to `goto' an object then we don't
+			 * have any X and Y coordinate.
+			 */
+			ProcessDroidOrder(psDroid, order, 0, 0, destType, destId);
+		}
+		else
+		{
+			/* Otherwise if the droids are being ordered to `goto' a
+			 * specific position. Then we don't have any destination info
+			 */
+			ProcessDroidOrder(psDroid, order, x, y, 0, 0);
+		}
+	}
 
 	return TRUE;
 }
@@ -920,13 +928,16 @@ static void ProcessDroidOrder(DROID *psDroid, DROID_ORDER order, uint32_t x, uin
 BOOL SendDestroyDroid(const DROID* psDroid)
 {
 	if (!bMultiPlayer)
+	{
 		return TRUE;
+	}
 
 	NETbeginEncode(NET_DROIDDEST, NET_ALL_PLAYERS);
 	{
 		uint32_t id = psDroid->id;
 
 		// Send the droid's ID
+		debug(LOG_DEATH, "Requested all players to destroy droid %u", (unsigned int)id);
 		NETuint32_t(&id);
 	}
 	return NETend();
@@ -955,6 +966,7 @@ BOOL recvDestroyDroid()
 	if(!psDroid->died)
 	{
 		turnOffMultiMsg(TRUE);
+		debug(LOG_DEATH, "Killing droid %d on request from player %d", psDroid->id, NETgetSource());
 		destroyDroid(psDroid);
 		turnOffMultiMsg(FALSE);
 	}

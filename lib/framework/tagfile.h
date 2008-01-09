@@ -69,16 +69,16 @@ bool tagWriteEnter(element_t tag, uint16_t elements);
 bool tagWriteLeave(element_t tag);
 
 /** Start writing a new instance of a group. */
-bool tagWriteSeparator();
+bool tagWriteNext();
 
 /* Write methods */
 bool tagWrite(element_t tag, uint32_t val);
 bool tagWrites(element_t tag, int32_t val);
 bool tagWritef(element_t tag, float val);
-bool tagWritefv(element_t tag, uint16_t count, float *vals);
-bool tagWrite8v(element_t tag, uint16_t count, uint8_t *vals);
-bool tagWrite16v(element_t tag, uint16_t count, uint16_t *vals);
-bool tagWrites32v(element_t tag, uint16_t count, int32_t *vals);
+bool tagWritefv(element_t tag, uint16_t count, const float *vals);
+bool tagWrite8v(element_t tag, uint16_t count, const uint8_t *vals);
+bool tagWrite16v(element_t tag, uint16_t count, const uint16_t *vals);
+bool tagWrites32v(element_t tag, uint16_t count, const int32_t *vals);
 bool tagWriteString(element_t tag, const char *string);
 bool tagWriteBool(element_t tag, bool val);
 
@@ -104,6 +104,7 @@ uint8_t *tagRead8vDup(element_t tag, int *size);
 bool tagRead8v(element_t tag, uint16_t size, uint8_t *vals);
 bool tagRead16v(element_t tag, uint16_t size, uint16_t *vals);
 bool tagReads16v(element_t tag, uint16_t size, int16_t *vals);
+bool tagReads32v(element_t tag, uint16_t size, int32_t *vals);
 bool tagReadString(element_t tag, uint16_t size, char *buffer);
 char *tagReadStringDup(element_t tag);
 

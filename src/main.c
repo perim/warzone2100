@@ -38,7 +38,6 @@
 
 #include "lib/framework/configfile.h"
 #include "lib/framework/input.h"
-#include "lib/framework/SDL_framerate.h"
 #include "lib/framework/tagfile.h"
 
 #include "lib/gamelib/gtime.h"
@@ -69,6 +68,13 @@
 #include "main.h"
 #include "wrappers.h"
 #include "version.h"
+
+#if defined(WZ_OS_UNIX)
+# include <unistd.h>
+# include <errno.h>
+#elif defined(WZ_OS_WIN)
+# include <windows.h>
+#endif
 
 #ifndef DATADIR
 # define DATADIR "/usr/share/warzone2100/"
@@ -105,8 +111,6 @@ char	MultiPlayersPath[PATH_MAX];
 char	KeyMapPath[PATH_MAX];
 char	UserMusicPath[PATH_MAX];
 
-static FPSmanager wzFPSmanager;
-
 // Start game in title mode:
 static GS_GAMEMODE gameStatus = GS_TITLE_SCREEN;
 // Status of the gameloop
@@ -115,19 +119,6 @@ extern FOCUS_STATE focusState;
 
 extern void debug_callback_stderr( void**, const char * );
 extern void debug_callback_win32debug( void**, const char * );
-
-
-void setFramerateLimit(int fpsLimit)
-{
-	SDL_setFramerate( &wzFPSmanager, fpsLimit );
-}
-
-
-int getFramerateLimit(void)
-{
-	return SDL_getFramerate( &wzFPSmanager );
-}
-
 
 static BOOL inList( char * list[], const char * item )
 {
@@ -205,6 +196,60 @@ void printSearchPath( void )
 	PHYSFS_freeList( searchPath );
 }
 
+/** Retrieves the current working directory and copies it into the provided output buffer
+ *  \param[out] dest the output buffer to put the current working directory in
+ *  \param size the size (in bytes) of \c dest
+ *  \return true on success, false if an error occurred (and dest doesn't contain a valid directory)
+ */
+static bool getCurrentDir(char * const dest, size_t const size)
+{
+#if defined(WZ_OS_UNIX)
+	if (getcwd(dest, size) == NULL)
+	{
+		if (errno == ERANGE)
+		{
+			debug(LOG_ERROR, "getPlatformUserDir: The buffer to contain our current directory is too small (%u bytes and more needed)", (unsigned int)size);
+		}
+		else
+		{
+			debug(LOG_ERROR, "getPlatformUserDir: getcwd failed: %s", strerror(errno));
+		}
+		
+		return false;
+	}
+#elif defined(WZ_OS_WIN)
+	const int len = GetCurrentDirectoryA(size, dest);
+
+	if (len == 0)
+	{
+		// Retrieve Windows' error number
+		const int err = GetLastError();
+		char* err_string;
+
+		// Retrieve a string describing the error number (uses LocalAlloc() to allocate memory for err_string)
+		FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, err, 0, (char*)&err_string, 0, NULL);
+
+		// Print an error message with the above description
+		debug(LOG_ERROR, "getPlatformUserDir: GetCurrentDirectoryA failed (error code: %d): %s", err, err_string);
+
+		// Free our chunk of memory FormatMessageA gave us
+		LocalFree(err_string);
+			
+		return false;
+	}
+	else if (len > size)
+	{
+		debug(LOG_ERROR, "getPlatformUserDir: The buffer to contain our current directory is too small (%u bytes and %d needed)", (unsigned int)size, len);
+		
+		return false;
+	}
+#else
+# error "Provide an implementation here to copy the current working directory in 'dest', which is 'size' bytes large."
+#endif
+
+	// If we got here everything went well
+	return true;
+}
 
 static void getPlatformUserDir(char * const tmpstr, size_t const size)
 {
@@ -229,7 +274,13 @@ static void getPlatformUserDir(char * const tmpstr, size_t const size)
 		strlcat(tmpstr, PHYSFS_getDirSeparator(), size);
 	else
 #endif
+	if (PHYSFS_getUserDir())
 		strlcpy(tmpstr, PHYSFS_getUserDir(), size); // Use PhysFS supplied UserDir (As fallback on Windows / Mac, default on Linux)
+	// If PhysicsFS fails (might happen if environment variable HOME is unset or wrong) then use the current working directory
+	else if (getCurrentDir(tmpstr, size))
+		strlcat(tmpstr, PHYSFS_getDirSeparator(), size);
+	else
+		abort();
 }
 
 static void initialize_ConfigDir(void)
@@ -752,8 +803,6 @@ static void mainLoop(void)
 
 			gameTimeUpdate(); // Update gametime. FIXME There is probably code duplicated with MaintainFrameStuff
 		}
-
-		SDL_framerateDelay(&wzFPSmanager);
 	}
 }
 
@@ -762,20 +811,6 @@ int main(int argc, char *argv[])
 {
 	PIELIGHT *psPaletteBuffer = NULL;
 	UDWORD pSize = 0;
-
-	/*** Initialize the debug subsystem ***/
-#if defined(WZ_CC_MSVC) && defined(DEBUG)
-	int tmpDbgFlag;
-	_CrtSetReportMode( _CRT_WARN, _CRTDBG_MODE_DEBUG ); // Output CRT info to debugger
-
-	tmpDbgFlag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG ); // Grab current flags
-# if defined(DEBUG_MEMORY)
-	tmpDbgFlag |= _CRTDBG_CHECK_ALWAYS_DF; // Check every (de)allocation
-# endif // DEBUG_MEMORY
-	tmpDbgFlag |= _CRTDBG_ALLOC_MEM_DF; // Check allocations
-	tmpDbgFlag |= _CRTDBG_LEAK_CHECK_DF; // Check for memleaks
-	_CrtSetDbgFlag( tmpDbgFlag );
-#endif // WZ_CC_MSVC && DEBUG
 
 	setupExceptionHandler(argv[0]);
 
@@ -834,9 +869,6 @@ int main(int argc, char *argv[])
 	setRegistryFilePath("config");
 	strlcpy(KeyMapPath, "keymap.map", sizeof(KeyMapPath));
 	strlcpy(UserMusicPath, "music", sizeof(UserMusicPath));
-
-	/* Initialize framerate handler */
-	SDL_initFramerate( &wzFPSmanager );
 
 	// initialise all the command line states
 	war_SetDefaultStates();

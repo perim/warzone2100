@@ -93,10 +93,6 @@ static  float	 radarX,radarY;
 /*	Where we were up to (pos and rot) last update - allows us to see whether
 	we are sufficently near our target to disable further tracking */
 static	Vector3i	oldPosition, oldRotation;
-
-/* The fraction of a second that the last game frame took */
-static	float	fraction;
-
 static BOOL OldViewValid;
 
 //-----------------------------------------------------------------------------------
@@ -295,11 +291,11 @@ static void setUpRadarTarget(SDWORD x, SDWORD y)
 	if ((x < 0) || (y < 0) || (x > (SDWORD)((mapWidth - 1) * TILE_UNITS))
 	    || (y > (SDWORD)((mapHeight - 1) * TILE_UNITS)))
 	{
-		radarTarget.pos.z = 128 * ELEVATION_SCALE;
+		radarTarget.pos.z = 128 * ELEVATION_SCALE + CAMERA_PIVOT_HEIGHT;
 	}
 	else
 	{
-		radarTarget.pos.z = map_Height(x,y);
+		radarTarget.pos.z = map_Height(x,y) + CAMERA_PIVOT_HEIGHT;
 	}
 	radarTarget.direction = calcDirection(player.p.x, player.p.z, x, y);
 	radarTarget.pitch = 0;
@@ -340,9 +336,6 @@ BOOL Status = TRUE;
 	{
 		return(TRUE);
 	}
-
-	/* Calculate fraction of a second for last game frame */
-	fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
 
 	/* Ensure that the camera only ever flips state within this routine! */
 	switch(trackingCamera.status)
@@ -873,26 +866,19 @@ SDWORD	angle;
 
 static void updateCameraVelocity(UBYTE update)
 {
-	/*	Get the time fraction of a second - the next two lines are present in 4
-		of the next six functions. All 4 of these functions are called every frame, so
-		it may be an idea to calculate these higher up and store them in a static but
-		I've left them in for clarity for now */
-
-	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
-
 	if(update & X_UPDATE)
 	{
-		trackingCamera.velocity.x += (trackingCamera.acceleration.x * fraction);
+		trackingCamera.velocity.x += timeAdjustedIncrement(trackingCamera.acceleration.x, FALSE);
 	}
 
 	if(update & Y_UPDATE)
 	{
-		trackingCamera.velocity.y += (trackingCamera.acceleration.y * fraction);
+		trackingCamera.velocity.y += timeAdjustedIncrement(trackingCamera.acceleration.y, FALSE);
 	}
 
 	if(update & Z_UPDATE)
 	{
-		trackingCamera.velocity.z += (trackingCamera.acceleration.z * fraction);
+		trackingCamera.velocity.z += timeAdjustedIncrement(trackingCamera.acceleration.z, FALSE);
 	}
 }
 
@@ -901,7 +887,6 @@ static void updateCameraVelocity(UBYTE update)
 static void	updateCameraPosition(UBYTE update)
 {
 BOOL	bFlying;
-float	fraction;
 DROID	*psDroid;
 PROPULSION_STATS	*psPropStats;
 
@@ -915,25 +900,23 @@ PROPULSION_STATS	*psPropStats;
 			bFlying = TRUE;
 		}
 	}
-	/* See above */
-	fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
 
 	if(update & X_UPDATE)
 	{
 		/* Need to update position along x axis */
-		trackingCamera.position.x += (trackingCamera.velocity.x * fraction);
+		trackingCamera.position.x += timeAdjustedIncrement(trackingCamera.velocity.x, FALSE);
 	}
 
 	if(update & Y_UPDATE)
 	{
-			/* Need to update position along y axis */
-			trackingCamera.position.y +=(trackingCamera.velocity.y * fraction);
+		/* Need to update position along y axis */
+		trackingCamera.position.y += timeAdjustedIncrement(trackingCamera.velocity.y, FALSE);
 	}
 
 	if(update & Z_UPDATE)
 	{
 		/* Need to update position along z axis */
-		trackingCamera.position.z += (trackingCamera.velocity.z * fraction);
+		trackingCamera.position.z += timeAdjustedIncrement(trackingCamera.velocity.z, FALSE);
 	}
 }
 
@@ -1043,13 +1026,17 @@ static void updateCameraRotationAcceleration( UBYTE update )
 				trackingCamera.rotation.x+=DEG(360);
 			}
 		worldAngle =  trackingCamera.rotation.x;
-		separation = fmodf(xConcern - worldAngle, DEG(360));
+		separation = xConcern - worldAngle;
 
-		// Make sure that rotations larger than 180 degrees are noted
-		// in the range of -180 - 0 degrees.
-		if (separation > DEG(180))
+		// Make sure that rotations are noted
+		// in the range of -180 - 180 degrees.
+		while (separation > DEG(180))
 		{
 			separation -= DEG(360);
+		}
+		while (separation < -DEG(180))
+		{
+			separation += DEG(360);
 		}
 
 		/* Make new acceleration */
@@ -1097,19 +1084,17 @@ static void updateCameraRotationAcceleration( UBYTE update )
 	calculated acceleration */
 static void updateCameraRotationVelocity( UBYTE update )
 {
-	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
-
 	if(update & Y_UPDATE)
 	{
-		trackingCamera.rotVel.y += ((float)trackingCamera.rotAccel.y * fraction);
+		trackingCamera.rotVel.y += timeAdjustedIncrement(trackingCamera.rotAccel.y, FALSE);
 	}
 	if(update & X_UPDATE)
 	{
-		trackingCamera.rotVel.x += ((float)trackingCamera.rotAccel.x * fraction);
+		trackingCamera.rotVel.x += timeAdjustedIncrement(trackingCamera.rotAccel.x, FALSE);
 	}
 	if(update & Z_UPDATE)
 	{
-		trackingCamera.rotVel.z += ((float)trackingCamera.rotAccel.z * fraction);
+		trackingCamera.rotVel.z += timeAdjustedIncrement(trackingCamera.rotAccel.z, FALSE);
 	}
 
 }
@@ -1118,31 +1103,19 @@ static void updateCameraRotationVelocity( UBYTE update )
 /* Move the camera around by adding the velocity */
 static void updateCameraRotationPosition( UBYTE update )
 {
-	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
-
  	if (update & Y_UPDATE)
 	{
-		trackingCamera.rotation.y += (trackingCamera.rotVel.y * fraction);
+		trackingCamera.rotation.y += timeAdjustedIncrement(trackingCamera.rotVel.y, FALSE);
 	}
 	if (update & X_UPDATE)
 	{
-		trackingCamera.rotation.x += (trackingCamera.rotVel.x * fraction);
+		trackingCamera.rotation.x += timeAdjustedIncrement(trackingCamera.rotVel.x, FALSE);
 	}
 	if (update & Z_UPDATE)
 	{
-		trackingCamera.rotation.z += (trackingCamera.rotVel.z * fraction);
+		trackingCamera.rotation.z += timeAdjustedIncrement(trackingCamera.rotVel.z, FALSE);
 	}
 }
-
-static bool nearEnough(void)
-{
-	const int xPos = player.p.x + world_coord(mapWidth) / 2;
-	const int yPos = player.p.z + world_coord(mapHeight) / 2;
-
-	return (abs(xPos - trackingCamera.target->pos.x) <= 256
-	     && abs(yPos - trackingCamera.target->pos.y) <= 256);
-}
-
 
 /* Returns how far away we are from our goal in a radar track */
 static UDWORD getPositionMagnitude( void )
@@ -1314,9 +1287,9 @@ BOOL	bFlying;
 		*/
 		if(getRotationMagnitude()<10000)
 		{
-			if(nearEnough() && getPositionMagnitude() < 60)
+			if(getPositionMagnitude() < 60)
 			{
-				camToggleStatus();
+				setWarCamActive(FALSE);
 			}
 		}
 	}

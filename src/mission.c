@@ -80,7 +80,6 @@
 #include "keymap.h"
 #include "lib/ivis_common/bitimage.h"
 
-#include "cdspan.h"
 
 //#include "texture.h"	   // ffs
 

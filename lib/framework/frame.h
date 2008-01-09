@@ -62,6 +62,7 @@
 #include "trig.h"
 #include <physfs.h>
 
+extern UDWORD selectedPlayer;
 
 /** Initialise the frame work library */
 extern BOOL frameInitialise(
@@ -78,13 +79,25 @@ extern BOOL frameInitialise(
  */
 extern void frameShutDown(void);
 
-
 typedef enum _focus_state
 {
 	FOCUS_OUT,		// Window does not have the focus
 	FOCUS_IN,		// Window has got the focus
 } FOCUS_STATE;
 
+/*!
+ * Set the framerate limit
+ *
+ * \param fpsLimit Desired framerate
+ */
+extern void setFramerateLimit(int fpsLimit);
+
+/*!
+ * Get the framerate limit
+ *
+ * \return Desired framerate
+ */
+extern int getFramerateLimit(void);
 
 /** Call this each cycle to allow the framework to deal with
  * windows messages, and do general house keeping.
@@ -207,6 +220,9 @@ static inline void endian_fract(float *fract) {
 #endif
 
 void setupExceptionHandler(const char * programCommand);
+
+#define PHYSFS_APPEND 1
+#define PHYSFS_PREPEND 0
 
 static inline bool PHYSFS_writeSBE8(PHYSFS_file* file, int8_t val)
 {

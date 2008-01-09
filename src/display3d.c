@@ -35,7 +35,6 @@
 #include "lib/ivis_common/piedef.h"
 #include "lib/ivis_common/tex.h"
 #include "lib/ivis_common/piestate.h"
-#include "lib/ivis_common/pieclip.h"
 #include "lib/ivis_common/piepalette.h"
 // FIXME Direct iVis implementation include!
 #include "lib/ivis_opengl/piematrix.h"
@@ -182,9 +181,6 @@ static TERRAIN_VERTEX tileScreenInfo[LAND_YGRD][LAND_XGRD];
 
 /* Records the present X and Y values for the current mouse tile (in tiles */
 SDWORD mouseTileX, mouseTileY;
-
-/* Offsets for the screen being shrunk/expanded - how far in, how far down */
-UDWORD xOffset = CLIP_BORDER, yOffset = CLIP_BORDER;
 
 /* Do we want the radar to be rendered */
 BOOL	radarOnScreen=FALSE;
@@ -452,9 +448,6 @@ static void displayTerrain(void)
 {
 	tileZ = 8000;
 
-	/* SetUpClipping window - to below the backdrop */
-	pie_Set2DClip( xOffset, yOffset, psRendSurface->width-xOffset, psRendSurface->height-yOffset );
-
 	/* We haven't yet located which tile mouse is over */
 	mouseLocated = FALSE;
 
@@ -567,7 +560,7 @@ static void drawTiles(iView *camera, iView *player)
 	// Animate the water texture, just cycles the V coordinate through half the tiles height.
 	if(!gamePaused())
 	{
-		waterRealValue += (WAVE_SPEED * frameTime2) / GAME_TICKS_PER_SEC;
+		waterRealValue += timeAdjustedIncrement(WAVE_SPEED, FALSE);
 		if (waterRealValue >= (1.0f / TILES_IN_PAGE_ROW) / 2)
 		{
 			waterRealValue = 0.0f;
@@ -1412,7 +1405,6 @@ void displayProximityMsgs( void )
 				y = ((BASE_OBJECT *)psProxDisp->psMessage->pViewData)->pos.y;
 			}
 			/* Is the Message worth rendering? */
-			//if(clipXY(pViewProximity->pos.x,pViewProximity->pos.y))
 			if(clipXY(x,y))
 			{
 				renderProximityMsg(psProxDisp);
@@ -2588,7 +2580,7 @@ static void drawWeaponReloadBar(BASE_OBJECT *psObj, WEAPON *psWeap, int weapon_s
 			firingStage = gameTime - psWeap->lastFired;
 			if (bSalvo)
 			{
-				interval = psStats->reloadTime;
+				interval = weaponReloadTime(psStats, psObj->player);
 			}
 			else
 			{
@@ -3595,7 +3587,7 @@ static void renderSurroundings(void)
 
 	if(!gamePaused())
 	{
-		wind += 0.5f * frameTime2/GAME_TICKS_PER_SEC;
+		wind += timeAdjustedIncrement(0.5f, FALSE);
 		if(wind >= 360.0f)
 		{
 			wind = 0.0f;
@@ -3996,18 +3988,14 @@ UDWORD	getSuggestedPitch( void )
 static void trackHeight( float desiredHeight )
 {
 	static float heightSpeed = 0.0f;
-	/* What fraction of a second did last game loop take */
-	float fraction = frameTime2 / (float)GAME_TICKS_PER_SEC;
-	/* How far are we from desired height? */
-	float separation = desiredHeight - player.p.y;
-	/* Work out accelertion... */
-	float acceleration = ACCEL_CONSTANT * separation - VELOCITY_CONSTANT * heightSpeed;
+	float separation = desiredHeight - player.p.y;	// How far are we from desired height?
+	float acceleration = ACCEL_CONSTANT * separation - VELOCITY_CONSTANT * heightSpeed; // Work out accelertion
 
 	/* ...and now speed */
-	heightSpeed += acceleration * fraction;
+	heightSpeed += timeAdjustedIncrement(acceleration, FALSE);
 
 	/* Adjust the height accordingly */
-	player.p.y += heightSpeed * fraction;
+	player.p.y += timeAdjustedIncrement(heightSpeed, FALSE);
 }
 
 

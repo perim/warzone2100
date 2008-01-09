@@ -49,7 +49,6 @@
 // FIXME Direct iVis implementation include!
 #include "lib/ivis_opengl/screen.h"
 
-
 #include "cheat.h"
 #include "e3demo.h"	// will this be on PSX?
 #include "lib/netplay/netplay.h"
@@ -60,7 +59,6 @@
 #include "advvis.h"
 #include "game.h"
 #include "difficulty.h"
-
 
 #include "intorder.h"
 #include "lib/widget/widget.h"
@@ -91,33 +89,6 @@
 #include "scriptfuncs.h"
 #include "clparse.h"
 
-#define	MAP_ZOOM_RATE	(1000)
-
-
-#define PITCH_SCALING	(360*DEG_1)
-#define	SECS_PER_PITCH	2
-#define MAP_PITCH_RATE	(SPIN_SCALING/SECS_PER_SPIN)
-
-#define MAX_TYPING_LENGTH	80
-
-
-
-BOOL		bAllowOtherKeyPresses = TRUE;
-STRUCTURE	*psOldRE = NULL;
-extern		void shakeStop(void);
-char	sTextToSend[MAX_CONSOLE_STRING_LENGTH];
-extern char	ScreenDumpPath[];
-char	sCurrentConsoleText[MAX_CONSOLE_STRING_LENGTH];			//remember what user types in console for beacon msg
-char	beaconMsg[MAX_PLAYERS][MAX_CONSOLE_STRING_LENGTH];		//beacon msg for each player
-
-int fogCol = 0;//start in nicks mode
-
-BOOL	processConsoleCommands( char *pName );
-
-/* Support functions to minimise code size */
-void	kfsf_SelectAllSameProp	( PROPULSION_TYPE propType );
-void	kfsf_SelectAllSameName	( char *droidName );
-void	kfsf_SetSelectedDroidsState( SECONDARY_ORDER sec, SECONDARY_STATE State );
 /*
 	KeyBind.c
 	Holds all the functions that can be mapped to a key.
@@ -125,12 +96,29 @@ void	kfsf_SetSelectedDroidsState( SECONDARY_ORDER sec, SECONDARY_STATE State );
 	Alex McLean, Pumpkin Studios, EIDOS Interactive.
 */
 
+#define	MAP_ZOOM_RATE	(1000)
+#define MAP_PITCH_RATE	(SPIN_SCALING/SECS_PER_SPIN)
+
+extern		void shakeStop(void);
+extern char	ScreenDumpPath[];
+
+BOOL		bAllowOtherKeyPresses = TRUE;
+char	sTextToSend[MAX_CONSOLE_STRING_LENGTH];
+char	beaconMsg[MAX_PLAYERS][MAX_CONSOLE_STRING_LENGTH];		//beacon msg for each player
+
+static STRUCTURE	*psOldRE = NULL;
+static char	sCurrentConsoleText[MAX_CONSOLE_STRING_LENGTH];			//remember what user types in console for beacon msg
+
+/* Support functions to minimise code size */
+static BOOL	processConsoleCommands( char *pName );
+static void kfsf_SetSelectedDroidsState( SECONDARY_ORDER sec, SECONDARY_STATE State );
+
 /** A function to determine wether we're running a multiplayer game, not just a
  *  single player campaign or a skirmish game.
  *  \return false if this is a skirmish or single player game, true if it is a
  *          multiplayer game.
  */
-static bool runningMultiplayer(void)
+bool runningMultiplayer(void)
 {
 	// NOTE: may want to only allow this for DEBUG builds?? -- Buginator
 	if (!bMultiPlayer || !NetPlay.bComms)
@@ -154,12 +142,6 @@ void	kf_ToggleRadarJump( void )
 {
 	setRadarJump(!getRadarJumpStatus());
 }
-// --------------------------------------------------------------------------
-void	kf_NoFaults( void )
-{
-	audio_QueueTrack( ID_SOUND_NOFAULTS );
-}
-// --------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------
 //===================================================
@@ -649,8 +631,8 @@ void	kf_SystemClose( void )
 /* Zooms out from display */
 void	kf_ZoomOut( void )
 {
-	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
-	float zoomInterval = fraction * (float)MAP_ZOOM_RATE;
+	float zoomInterval = timeAdjustedIncrement(MAP_ZOOM_RATE, FALSE);
+
 	distance += zoomInterval;
 	if(distance > MAXDISTANCE)
 	{
@@ -693,10 +675,9 @@ void	kf_RadarZoomOut( void )
 /* Zooms in the map */
 void	kf_ZoomIn( void )
 {
-	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
-	float zoomInterval = fraction * (float)MAP_ZOOM_RATE;
-	distance -= zoomInterval;
+	float zoomInterval = timeAdjustedIncrement(MAP_ZOOM_RATE, FALSE);
 
+	distance -= zoomInterval;
 	if (distance < MINDISTANCE)
 	{
 		distance = MINDISTANCE;
@@ -753,8 +734,8 @@ void	kf_ExpandScreen( void )
 /* Spins the world round left */
 void	kf_RotateLeft( void )
 {
-	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
-	float rotAmount = fraction * (float)MAP_SPIN_RATE;
+	float rotAmount = timeAdjustedIncrement(MAP_SPIN_RATE, FALSE);
+
 	player.r.y += rotAmount;
 }
 
@@ -762,8 +743,8 @@ void	kf_RotateLeft( void )
 /* Spins the world right */
 void	kf_RotateRight( void )
 {
-	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
-	float rotAmount = fraction * (float)MAP_SPIN_RATE;
+	float rotAmount = timeAdjustedIncrement(MAP_SPIN_RATE, FALSE);
+
 	player.r.y -= rotAmount;
 	if (player.r.y < 0)
 	{
@@ -780,8 +761,7 @@ void	kf_PitchBack( void )
 //SDWORD	angConcern;
 //#endif
 
-	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
-	float pitchAmount = fraction * (float)MAP_PITCH_RATE;
+	float pitchAmount = timeAdjustedIncrement(MAP_PITCH_RATE, FALSE);
 
 //#ifdef ALEXM
 //	pitch = getSuggestedPitch();
@@ -813,18 +793,13 @@ void	kf_PitchBack( void )
 /* Pitches camera foward */
 void	kf_PitchForward( void )
 {
-	float fraction = (float)frameTime2 / (float)GAME_TICKS_PER_SEC;
-	float pitchAmount = fraction * (float)MAP_PITCH_RATE;
+	float pitchAmount = timeAdjustedIncrement(MAP_PITCH_RATE, FALSE);
+
 	player.r.x -= pitchAmount;
-//#ifdef ALEXM
-//	if(getDebugMappingStatus() == FALSE)
-//#endif
-//	{
 	if (player.r.x < DEG(360 + MIN_PLAYER_X_ANGLE))
 	{
 		player.r.x = DEG(360 + MIN_PLAYER_X_ANGLE);
 	}
-//	}
 	setDesiredPitch(player.r.x / DEG_1);
 }
 
@@ -1162,7 +1137,6 @@ void	kf_TogglePauseMode( void )
 	// Bail out if we're running a _true_ multiplayer game (which cannot be paused)
 	if (runningMultiplayer())
 	{
-		noMPCheatMsg();
 		return;
 	}
 
@@ -1583,6 +1557,7 @@ void	kf_KillEnemy( void )
 	STRUCTURE	*psCStruct, *psNStruct;
 
 	CONPRINTF(ConsoleString, (ConsoleString, _("Enemy destroyed by cheating!")));
+	debug(LOG_DEATH, "kf_KillEnemy: Destroying enemy droids and structures");
 
 	for (player = 0; player < MAX_PLAYERS; player++)
 	{
@@ -1610,6 +1585,7 @@ void kf_KillSelected(void)
 	DROID		*psCDroid, *psNDroid;
 	STRUCTURE	*psCStruct, *psNStruct;
 
+	debug(LOG_DEATH, "kf_KillSelected: Destroying selected droids and structures");
 	for(psCDroid=apsDroidLists[selectedPlayer]; psCDroid; psCDroid=psNDroid)
 	{
 		psNDroid = psCDroid->psNext;
@@ -1687,7 +1663,6 @@ void kf_SendTextMessage(void)
 		// Kill if they hit return - it maxes out console or it's more than one line long
 	   	if ((ch == INPBUF_CR) || (strlen(sTextToSend)>=MAX_CONSOLE_STRING_LENGTH-16) // Prefixes with ERROR: and terminates with '?'
 		 || iV_GetTextWidth(sTextToSend) > (pie_GetVideoBufferWidth()-64))// sendit
-	   //	if((ch == INPBUF_CR) || (strlen(sTextToSend)==MAX_TYPING_LENGTH)
 		{
 			bAllowOtherKeyPresses = TRUE;
 		 //	flushConsoleMessages();
@@ -1868,72 +1843,48 @@ void	kf_ToggleConsole( void )
 		enableConsoleDisplay(TRUE);
 	}
 }
+
 // --------------------------------------------------------------------------
 void	kf_SelectAllOnScreenUnits( void )
 {
 
 	selDroidSelection(selectedPlayer, DS_ALL_UNITS, DST_UNUSED, TRUE);
-
-/*
-DROID	*psDroid;
-UDWORD	dX,dY;
-
-	for(psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
-	{
-		if (DrawnInLastFrame(psDroid->sDisplay.frameNumber)==TRUE)
-		{
-			dX = psDroid->sDisplay.screenX;
-			dY = psDroid->sDisplay.screenY;
-			if(dX>0 && dY>0 && dX<DISP_WIDTH && dY<DISP_HEIGHT)
-			{
-				psDroid->selected = TRUE;
-			}
-		}
-	}
-*/
 }
+
 // --------------------------------------------------------------------------
 void	kf_SelectAllUnits( void )
 {
 
 	selDroidSelection(selectedPlayer, DS_ALL_UNITS, DST_UNUSED, FALSE);
-
-/*
-DROID	*psDroid;
-	for(psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
-	{
-		psDroid->selected = TRUE;
-	}
-*/
 }
+
 // --------------------------------------------------------------------------
 void	kf_SelectAllVTOLs( void )
 {
-  //	kfsf_SelectAllSameProp(LIFT);
 	selDroidSelection(selectedPlayer,DS_BY_TYPE,DST_VTOL,FALSE);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SelectAllHovers( void )
 {
-//	kfsf_SelectAllSameProp(HOVER);
 	selDroidSelection(selectedPlayer,DS_BY_TYPE,DST_HOVER,FALSE);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SelectAllWheeled( void )
 {
-//	kfsf_SelectAllSameProp(WHEELED);
 	selDroidSelection(selectedPlayer,DS_BY_TYPE,DST_WHEELED,FALSE);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SelectAllTracked( void )
 {
-//	kfsf_SelectAllSameProp(TRACKED);
 	selDroidSelection(selectedPlayer,DS_BY_TYPE,DST_TRACKED,FALSE);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SelectAllHalfTracked( void )
 {
-//	kfsf_SelectAllSameProp(HALF_TRACKED);
 	selDroidSelection(selectedPlayer,DS_BY_TYPE,DST_HALF_TRACKED,FALSE);
 }
 
@@ -1941,107 +1892,34 @@ void	kf_SelectAllHalfTracked( void )
 void	kf_SelectAllDamaged( void )
 {
 	selDroidSelection(selectedPlayer,DS_BY_TYPE,DST_ALL_DAMAGED,FALSE);
-/*
-DROID	*psDroid;
-UDWORD	damage;
-
-	for(psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
-	{
-		damage = PERCENT(psDroid->body,psDroid->originalBody);
-		if(damage<REPAIRLEV_LOW)
-		{
-			psDroid->selected = TRUE;
-		}
-	}
-*/
 }
+
 // --------------------------------------------------------------------------
 void	kf_SelectAllCombatUnits( void )
 {
 	selDroidSelection(selectedPlayer,DS_BY_TYPE,DST_ALL_COMBAT,FALSE);
-
-/*
-DROID	*psDroid;
-	for(psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
-	{
-		if(psDroid->numWeaps)
-		{
-			psDroid->selected = TRUE;
-		}
-	}
-*/
 }
-// --------------------------------------------------------------------------
-void	kfsf_SelectAllSameProp( PROPULSION_TYPE propType )
-{
-	/*
-PROPULSION_STATS	*psPropStats;
-DROID	*psDroid;
 
-	for(psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
-	{
-		if(!psDroid->selected)
-		{
-			psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
-			ASSERT( psPropStats != NULL,
-					"moveUpdateDroid: invalid propulsion stats pointer" );
-			if ( psPropStats->propulsionType == propType )
-			{
-				psDroid->selected = TRUE;
-			}
-		}
-	}
-	*/
-}
 // --------------------------------------------------------------------------
 // this is worst case (size of apsDroidLists[selectedPlayer] squared).
 // --------------------------------------------------------------------------
 void	kf_SelectAllSameType( void )
 {
 	selDroidSelection(selectedPlayer,DS_BY_TYPE,DST_ALL_SAME,FALSE);
-	/*
-DROID	*psDroid;
-//PROPULSION_STATS	*psPropStats;
+}
 
-	for(psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
-	{
-		if(psDroid->selected)
-		{
-//			psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
-//			kfsf_SelectAllSameProp(psPropStats->propulsionType);	// non optimal - multiple assertion!?
-			kfsf_SelectAllSameName(psDroid->aName);
-		}
-	}
-	*/
-}
-// --------------------------------------------------------------------------
-void	kfsf_SelectAllSameName( char *droidName )
-{
-	/*
-DROID	*psDroid;
-	for(psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
-	{
-		// already selected - ignore
-		if(!psDroid->selected)
-		{
-			if(!strcmp(droidName,psDroid->aName))
-			{
-				psDroid->selected = TRUE;
-			}
-		}
-	}
-	*/
-}
 // --------------------------------------------------------------------------
 void	kf_SetDroidRangeShort( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_ATTACK_RANGE,DSS_ARANGE_SHORT);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SetDroidRangeDefault( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_ATTACK_RANGE,DSS_ARANGE_DEFAULT);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SetDroidRangeLong( void )
 {
@@ -2053,26 +1931,31 @@ void	kf_SetDroidRetreatMedium( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_REPAIR_LEVEL,DSS_REPLEV_LOW);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SetDroidRetreatHeavy( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_REPAIR_LEVEL,DSS_REPLEV_HIGH);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SetDroidRetreatNever( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_REPAIR_LEVEL,DSS_REPLEV_NEVER);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SetDroidAttackAtWill( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_ATTACK_LEVEL,DSS_ALEV_ALWAYS);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SetDroidAttackReturn( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_ATTACK_LEVEL,DSS_ALEV_ATTACKED);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SetDroidAttackCease( void )
 {
@@ -2084,31 +1967,37 @@ void	kf_SetDroidMoveHold( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_HALTTYPE,DSS_HALT_HOLD);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SetDroidMovePursue( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_HALTTYPE,DSS_HALT_PERSUE);	// ASK?
 }
+
 // --------------------------------------------------------------------------
 void	kf_SetDroidMovePatrol( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_PATROL,DSS_PATROL_SET);	// ASK
 }
+
 // --------------------------------------------------------------------------
 void	kf_SetDroidReturnToBase( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_RETURN_TO_LOC,DSS_RTL_BASE);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SetDroidGoForRepair( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_RETURN_TO_LOC,DSS_RTL_REPAIR);
 }
+
 // --------------------------------------------------------------------------
 void	kf_SetDroidRecycle( void )
 {
 	kfsf_SetSelectedDroidsState(DSO_RECYCLE,DSS_RECYCLE_SET);
 }
+
 // --------------------------------------------------------------------------
 void	kf_ToggleVisibility( void )
 {
@@ -2122,25 +2011,21 @@ void	kf_ToggleVisibility( void )
 	}
 
 }
+
 // --------------------------------------------------------------------------
-void	kfsf_SetSelectedDroidsState( SECONDARY_ORDER sec, SECONDARY_STATE state )
+static void kfsf_SetSelectedDroidsState( SECONDARY_ORDER sec, SECONDARY_STATE state )
 {
-DROID	*psDroid;
+	DROID	*psDroid;
 
 	for(psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
 	{
 		if(psDroid->selected)
 		{
 			secondarySetState(psDroid,sec,state);
-			/* Kick him out of group if he's going for repair */	  // Now done in secondarySetState
-		   //	if ((sec == DSO_RETURN_TO_LOC) && (state == DSS_RTL_REPAIR))
-		   //	{
-		   //		psDroid->group = UBYTE_MAX;
-		   //		psDroid->selected = FALSE;
-		   //	}
 		}
 	}
 }
+
 // --------------------------------------------------------------------------
 void	kf_TriggerRayCast( void )
 {
@@ -2167,13 +2052,15 @@ DROID	*psOther;
 //		getBlockHeightDirToEdgeOfGrid(mouseTileX*TILE_UNITS,mouseTileY*TILE_UNITS,getTestAngle(),&height,&dist);
 	}
 }
-// --------------------------------------------------------------------------
 
+// --------------------------------------------------------------------------
 void	kf_ScatterDroids( void )
 {
 	// to be written!
 	addConsoleMessage("Scatter droids - not written yet!",LEFT_JUSTIFY);
-}// --------------------------------------------------------------------------
+}
+
+// --------------------------------------------------------------------------
 void	kf_CentreOnBase( void )
 {
 STRUCTURE	*psStruct;
@@ -2214,7 +2101,6 @@ UDWORD		xJump = 0, yJump = 0;
 }
 
 // --------------------------------------------------------------------------
-
 void kf_ToggleFormationSpeedLimiting( void )
 {
 	// Bail out if we're running a _true_ multiplayer game

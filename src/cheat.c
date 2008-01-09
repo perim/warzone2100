@@ -66,7 +66,6 @@ static CHEAT_ENTRY cheatCodes[] =
 	{"build info", kf_BuildInfo},	// tells you when the game was built
 	{"time toggle", kf_ToggleMissionTimer},
 	{"work harder", kf_FinishResearch},
-	{"no faults", kf_NoFaults},//carol vorderman
 	{"tileinfo", kf_TileInfo}, // output debug info about a tile
 	{"showfps", kf_ToggleFPS},	//displays your average FPS
 	{"showsamples", kf_ToggleSamples}, //displays the # of Sound samples in Queue & List
@@ -76,7 +75,6 @@ static CHEAT_ENTRY cheatCodes[] =
 BOOL attemptCheatCode(const char* cheat_name)
 {
 	UDWORD	index;
-	char	errorString[255];
 
 	index = 0;
 
@@ -91,10 +89,15 @@ BOOL attemptCheatCode(const char* cheat_name)
 		}
 		index++;
 	}
-	/* We didn't find it */
-	strlcpy(errorString, cheat_name, sizeof(errorString));
-	strlcat(errorString, "?", sizeof(errorString));
+	/* We didn't find it. Report only for single player games. */
+	if (!runningMultiplayer())
+	{
+		char	errorString[255];
 
-	addConsoleMessage(errorString,LEFT_JUSTIFY);
+		strlcpy(errorString, cheat_name, sizeof(errorString));
+		strlcat(errorString, "?", sizeof(errorString));
+
+		addConsoleMessage(errorString, LEFT_JUSTIFY);
+	}
 	return(FALSE);
 }

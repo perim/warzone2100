@@ -58,7 +58,13 @@ BOOL NETend(void)
 {
 	assert(NETgetPacketDir() != PACKET_INVALID);
 
-	// If the packet is not being sent or failed to compile
+	// If we are decoding just return TRUE
+	if (NETgetPacketDir() == PACKET_DECODE)
+	{
+		return TRUE;
+	}
+
+	// If the packet is invalid or failed to compile
 	if (NETgetPacketDir() != PACKET_ENCODE || !NetMsg.status)
 	{
 		return FALSE;
@@ -372,4 +378,9 @@ void NETtest()
 	memcpy(&cmp, &NetMsg, sizeof(cmp));
 	NETcoder(PACKET_DECODE);
 	ASSERT(memcmp(&cmp, &NetMsg, sizeof(cmp)) == 0, "nettypes unit test failed");
+}
+
+int NETgetSource()
+{
+	return NetMsg.source;
 }

@@ -405,7 +405,7 @@ static WZ_DECL_CONST const char* getLanguage(void)
  * check if given file exists in a locale dependend subdir
  * if so, modify given fileName to hold the locale dep. file,
  * else do not change given fileName
- * \param fileName[out] must be at least MAX_PATH bytes large
+ * \param[out] fileName must be at least MAX_PATH bytes large
  */
 static void makeLocaleFile(char fileName[])  // given string must have MAX_PATH size
 {
@@ -640,6 +640,52 @@ BOOL resGetHashfromData(const char *pType, const void *pData, UDWORD *pHash)
 	return TRUE;
 }
 
+const char* resGetNamefromData(const char* type, const void *data)
+{
+	RES_TYPE	*psT;
+	RES_DATA	*psRes;
+	UDWORD   HashedType;
+
+	if (type == NULL || data == NULL)
+	{
+		return "";
+	}
+
+	// Find the correct type
+	HashedType = HashString(type);
+
+	// Find the resource table for the given type
+	for (psT = psResTypes; psT != NULL; psT = psT->psNext)
+	{
+		if (psT->HashedType == HashedType)
+		{
+			break;
+		}
+	}
+
+	if (psT == NULL)
+	{
+		ASSERT( FALSE, "resGetHashfromData: Unknown type: %x", HashedType );
+		return "";
+	}
+
+	// Find the resource in the resource table
+	for(psRes = psT->psRes; psRes; psRes = psRes->psNext)
+	{
+		if (psRes->pData == data)
+		{
+			break;
+		}
+	}
+
+	if (psRes == NULL)
+	{
+		ASSERT( FALSE, "resGetHashfromData:: couldn't find data for type %x\n", HashedType );
+		return "";
+	}
+
+	return psRes->aID;
+}
 
 /* Simply returns true if a resource is present */
 BOOL resPresent(const char *pType, const char *pID)

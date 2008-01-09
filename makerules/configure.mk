@@ -50,7 +50,7 @@ endif
 
 # Setup paths and static values
 
-CFLAGS+=-DPACKAGE_VERSION=\"$(VERSION)\" -DYY_STATIC -DLOCALEDIR=\"$(LOCALEDIR)\" -DPACKAGE=\"$(PACKAGE)\" -I.. -I../.. -I$(DEVDIR)/include -I$(DEVDIR)/include/SDL
+CFLAGS+=-DPACKAGE_VERSION=\"$(VERSION)\" -DYY_STATIC -DLOCALEDIR=\"$(LOCALEDIR)\" -DPACKAGE=\"$(PACKAGE)\" -I.. -I../.. -I$(DEVDIR)/include/SDL -I$(DEVDIR)/include/libpng12 -I$(DEVDIR)/include
 LDFLAGS+=-L$(DEVDIR)/lib
 
 
@@ -105,13 +105,17 @@ LDFLAGS+=-lSDL -lSDL_net -lpng -lphysfs -lz -lvorbisfile -lvorbis -logg -lpopt -
 # Additional platform-dependend libs
 
 ifeq ($(strip $(PLATFORM)),windows)
-LDFLAGS+=-ldbghelp -lshfolder -lwinmm -lwsock32 -lglc32 -lglu32 -lopengl32 -lopenal32
+LDFLAGS+=-lGLC -lglu32 -lopengl32 -lopenal32 -ldbghelp -lshfolder -lwinmm -lwsock32
 else
 ifeq ($(strip $(PLATFORM)),mingw32)
-LDFLAGS+=-L. -ldbghelp -lshfolder -lwinmm -lwsock32 -lglc32 -lglu32 -lopengl32 -lopenal32
+LDFLAGS+=-lglc32 -lglu32 -lopengl32 -lopenal32 -ldbghelp -lshfolder -lwinmm -lwsock32
 else
 LDFLAGS+=-lGLC -lGLU -lGL -lopenal
 endif
 endif
+
+# Additionaly link against the deps of our deps
+
+LDFLAGS+=-liconv -lz -lfreetype -lfontconfig -lexpat
 
 include $(MAKERULES)/common.mk

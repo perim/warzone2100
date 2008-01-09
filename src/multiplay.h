@@ -104,29 +104,29 @@ typedef struct {
 	char		name[128];					// game name   (to be used)
 	BOOL		fog;
 	uint32_t    power;						// power level for arena game
-//	uint32_t    techLevel;					// tech levels to use . 0= all levels.
 	uint8_t		base;						// clean/base/base&defence
 	uint8_t		alliance;					// no/yes/AIs vs Humans
 	uint8_t		limit;						// limit no/time/frag
-	uint16_t    bytesPerSec;				// maximum bitrate achieved before dropping checks.
-	uint8_t		packetsPerSec;				// maximum packets to send before dropping checks.
-	uint8_t		encryptKey;					// key to use for encryption.
-//	uint8_t		skirmishPlayers[MAX_PLAYERS];// players to use in skirmish game.
 	uint8_t		skDiff[MAX_PLAYERS];			// skirmish game difficulty settings.
-
 } MULTIPLAYERGAME, *LPMULTIPLAYERGAME;
+
+typedef struct
+{
+	UBYTE		id;
+	UBYTE		limit;
+} MULTISTRUCTLIMITS;
 
 // info used inside games.
 typedef struct {
-	UDWORD		PingTimes[MAX_PLAYERS];				// store for pings.
-	BOOL		localOptionsReceived;				// used to show if we have game options yet..
-	BOOL		localJoiningInProgress;				// used before we know our player number.
-	BOOL		JoiningInProgress[MAX_PLAYERS];
-	BOOL		bHostSetup;
-	UDWORD		startTime;
-	UDWORD		modem;								// modem to use.
-	UDWORD		numStructureLimits;					// number of limits
-	UBYTE		*pStructureLimits;					// limits chunk.
+	UDWORD				PingTimes[MAX_PLAYERS];				// store for pings.
+	BOOL				localOptionsReceived;				// used to show if we have game options yet..
+	BOOL				localJoiningInProgress;				// used before we know our player number.
+	BOOL				JoiningInProgress[MAX_PLAYERS];
+	BOOL				bHostSetup;
+	UDWORD				startTime;
+	UDWORD				modem;								// modem to use.
+	UDWORD				numStructureLimits;					// number of limits
+	MULTISTRUCTLIMITS	*pStructureLimits;					// limits chunk.
 
 	UDWORD		skScores[MAX_PLAYERS][2];			// score+kills for local skirmish players.
 
@@ -148,10 +148,9 @@ extern UBYTE				bDisplayMultiJoiningStatus;	// draw load progress?
 // ////////////////////////////////////////////////////////////////////////////
 // defines
 
-// Max bit-rate/packet count, set for a 14.4KB modem (we have hardcore fans!)
+// Max bit-rate, set for a 28.8KB/s modem (we have hardcore fans!)
 
-#define MAX_BYTESPERSEC			1200
-#define MAX_PACKETSPERSEC		6
+#define MAX_BYTESPERSEC			3400
 
 #define ANYPLAYER				99
 #define ONEPLAYER				98
@@ -196,12 +195,12 @@ extern UBYTE				bDisplayMultiJoiningStatus;	// draw load progress?
 
 // functions
 
-extern BASE_OBJECT		*IdToPointer(UDWORD id,UDWORD player);
-extern STRUCTURE		*IdToStruct	(UDWORD id,UDWORD player);
-extern BOOL				IdToDroid	(UDWORD id, UDWORD player, DROID **psDroid);
-extern FEATURE			*IdToFeature(UDWORD id,UDWORD player);
-extern DROID_TEMPLATE	*IdToTemplate(UDWORD tempId,UDWORD player);
-extern DROID_TEMPLATE	*NameToTemplate(const char *sName,UDWORD player);
+extern WZ_DECL_WARN_UNUSED_RESULT BASE_OBJECT		*IdToPointer(UDWORD id,UDWORD player);
+extern WZ_DECL_WARN_UNUSED_RESULT STRUCTURE		*IdToStruct(UDWORD id,UDWORD player);
+extern WZ_DECL_WARN_UNUSED_RESULT BOOL			IdToDroid(UDWORD id, UDWORD player, DROID **psDroid);
+extern WZ_DECL_WARN_UNUSED_RESULT FEATURE		*IdToFeature(UDWORD id,UDWORD player);
+extern WZ_DECL_WARN_UNUSED_RESULT DROID_TEMPLATE	*IdToTemplate(UDWORD tempId,UDWORD player);
+extern WZ_DECL_WARN_UNUSED_RESULT DROID_TEMPLATE	*NameToTemplate(const char *sName,UDWORD player);
 
 extern char *getPlayerName	(UDWORD player);
 extern BOOL setPlayerName		(UDWORD player, const char *sName);
@@ -256,7 +255,6 @@ extern BOOL sendDroidSecondary	(const DROID* psDroid, SECONDARY_ORDER sec, SECON
 extern BOOL sendDroidSecondaryAll(const DROID* psDroid);
 extern BOOL sendDroidEmbark     (const DROID* psDroid);
 extern BOOL sendDroidDisEmbark  (const DROID* psDroid);
-extern BOOL sendDestroyExtra	(BASE_OBJECT *psKilled,BASE_OBJECT *psKiller);
 extern BOOL sendHappyVtol		(const DROID* psDroid);
 
 // Startup. mulitopt
@@ -280,9 +278,7 @@ extern BOOL addTemplate			(UDWORD	player,DROID_TEMPLATE *psNew);
 // syncing.
 extern BOOL sendCheck			(void);							//send/recv  check info
 extern BOOL sendScoreCheck		(void);							//score check only(frontend)
-extern BOOL sendPowerCheck		(BOOL now);
 extern BOOL sendPing			(void);							// allow game to request pings.
-extern UDWORD averagePing		(void);
 
 // multijoin
 extern void modifyResources		(POWER_GEN_FUNCTION* psFunction);

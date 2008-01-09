@@ -143,7 +143,7 @@ extern BOOL statsAllocRepair(UDWORD numEntries);
 /*Allocate Construct Stats*/
 extern BOOL statsAllocConstruct(UDWORD numEntries);
 
-extern UWORD weaponROF(WEAPON_STATS *psStat);
+extern UWORD weaponROF(WEAPON_STATS *psStat, SBYTE player);
 
 /*******************************************************************************
 *		Load stats functions
@@ -297,9 +297,10 @@ extern PROPULSION_TYPE getPropulsionType(const char *pType);
 /*returns the weapon effect based on the string name passed in */
 extern WEAPON_EFFECT getWeaponEffect(const char *pWeaponEffect);
 
-extern UWORD weaponROF(WEAPON_STATS *psStat);
+extern UWORD weaponROF(WEAPON_STATS *psStat, SBYTE player);
 /*Access functions for the upgradeable stats of a weapon*/
 extern UDWORD	weaponFirePause(WEAPON_STATS *psStats, UBYTE player);
+extern UDWORD	weaponReloadTime(WEAPON_STATS *psStats, UBYTE player);
 extern UDWORD	weaponShortHit(WEAPON_STATS *psStats, UBYTE player);
 extern UDWORD	weaponLongHit(WEAPON_STATS *psStats, UBYTE player);
 extern UDWORD	weaponDamage(WEAPON_STATS *psStats, UBYTE player);
@@ -339,6 +340,8 @@ extern UDWORD getMaxWeaponRange(void);
 extern UDWORD getMaxWeaponDamage(void);
 extern UDWORD getMaxWeaponROF(void);
 extern UDWORD getMaxPropulsionSpeed(void);
+
+extern BOOL objHasWeapon(BASE_OBJECT *psObj);
 
 #endif
 

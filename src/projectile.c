@@ -110,62 +110,66 @@ BOOL gfxVisible(PROJECTILE *psObj)
 {
 	BOOL bVisible = FALSE;
 
-	// already know it is visible
+	// Already know it is visible
 	if (psObj->bVisible)
 	{
 		return TRUE;
 	}
 
-	// you fired it
-	if(psObj->player == selectedPlayer)
+	// You fired it
+	if (psObj->player == selectedPlayer)
 	{
 		return TRUE;
 	}
 
-	// always see in this mode
-	if(godMode)
+	// Always see in this mode
+	if (godMode)
 	{
 		return TRUE;
 	}
 
-	// you can see the source
-	if( (psObj->psSource!=NULL) &&
-		(!psObj->psSource->died) &&
-		(psObj->psSource->visible[selectedPlayer]) )
+	// You can see the source
+	if (psObj->psSource != NULL
+	 && !psObj->psSource->died
+	 && psObj->psSource->visible[selectedPlayer])
 	{
 		bVisible = TRUE;
 	}
 
-	// you can see the destination
-	if( (psObj->psDest!=NULL) &&
-		(!psObj->psDest->died) &&
-		(psObj->psDest->visible[selectedPlayer]) )
+	// You can see the destination
+	if (psObj->psDest != NULL
+	 && !psObj->psDest->died
+	 && psObj->psDest->visible[selectedPlayer])
 	{
 		bVisible = TRUE;
 	}
 
-	// someone elses structure firing at something you can't see
-	if ( psObj->psSource != NULL &&
-		!psObj->psSource->died &&
-		psObj->psSource->type == OBJ_STRUCTURE &&
-		psObj->psSource->player!=selectedPlayer &&
-		( psObj->psDest == NULL || psObj->psDest->died || !psObj->psDest->visible[selectedPlayer] ) )
+	// Someone elses structure firing at something you can't see
+	if (psObj->psSource != NULL
+	 && !psObj->psSource->died
+	 && psObj->psSource->type == OBJ_STRUCTURE
+	 && psObj->psSource->player != selectedPlayer
+	 && (psObj->psDest == NULL
+	  || psObj->psDest->died
+	  || !psObj->psDest->visible[selectedPlayer]))
 	{
 		bVisible = FALSE;
 	}
 
-	// something you cannot see firing at a structure that isn't yours
-	if ( psObj->psDest != NULL &&
-		!psObj->psDest->died &&
-		psObj->psDest->type == OBJ_STRUCTURE &&
-		psObj->psDest->player != selectedPlayer &&
-		( psObj->psSource == NULL || !psObj->psSource->visible[selectedPlayer] ) )
+	// Something you cannot see firing at a structure that isn't yours
+	if (psObj->psDest != NULL
+	 && !psObj->psDest->died
+	 && psObj->psDest->type == OBJ_STRUCTURE
+	 && psObj->psDest->player != selectedPlayer
+	 && (psObj->psSource == NULL
+	  || !psObj->psSource->visible[selectedPlayer]))
 	{
 		bVisible = FALSE;
 	}
 
-	return(bVisible);
+	return bVisible;
 }
+
 /***************************************************************************/
 
 BOOL
@@ -273,11 +277,10 @@ static void proj_UpdateKills(PROJECTILE *psObj, float experienceInc)
 		return;
 	}
 
-	// If percentDamage is negative then the target was killed
+	// If experienceInc is negative then the target was killed
 	if (bMultiPlayer && experienceInc < 0.0f)
 	{
-		sendDestroyExtra(psObj->psDest,psObj->psSource);
-		updateMultiStatsKills(psObj->psDest,psObj->psSource->player);
+		updateMultiStatsKills(psObj->psDest, psObj->psSource->player);
 	}
 
 	// Since we are no longer interested if it was killed or not, abs it
@@ -1771,7 +1774,7 @@ proj_checkBurnDamage( BASE_OBJECT *apsList, PROJECTILE *psProj,
 	WEAPON_STATS	*psStats;
 	UDWORD			damageSoFar;
 	SDWORD			damageToDo;
-	SDWORD			percentDamage;
+	float			relativeDamage;
 
 	CHECK_PROJECTILE(psProj);
 
@@ -1829,11 +1832,11 @@ proj_checkBurnDamage( BASE_OBJECT *apsList, PROJECTILE *psProj,
 								damageToDo, psCurr->id, psCurr->player);
 
 						//Watermelon:just assume the burn damage is from FRONT
-	  					percentDamage = objectDamage(psCurr, damageToDo, psStats->weaponClass,psStats->weaponSubClass, 0);
+	  					relativeDamage = objectDamage(psCurr, damageToDo, psStats->weaponClass,psStats->weaponSubClass, 0);
 
 						psCurr->burnDamage += damageToDo;
 
-						proj_UpdateKills(psProj, percentDamage);
+						proj_UpdateKills(psProj, relativeDamage);
 					}
 					/* The damage could be negative if the object
 					   is being burn't by another fire

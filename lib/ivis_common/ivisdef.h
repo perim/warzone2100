@@ -43,8 +43,6 @@
 #define iV_SCANTABLE_MAX	1024
 
 // texture animation defines
-#define iV_IMD_ANIM_LOOP	0
-#define iV_IMD_ANIM_RUN		1
 #define iV_IMD_ANIM_FRAMES	8
 
 
@@ -146,38 +144,19 @@ typedef struct iIMDShape {
 //*************************************************************************
 
 typedef struct {
-	uint16_t Version;
-	uint16_t NumImages;
-	uint16_t BitDepth;
-	uint16_t NumTPages;
-	char     TPageFiles[16][16];
-} IMAGEHEADER;
-
-
-typedef struct {
-	uint16_t TPageID;
-	uint16_t Tu;
-	uint16_t Tv;
-	uint16_t Width;
-	uint16_t Height;
-	int16_t XOffset;
-	int16_t YOffset;
+	unsigned int TPageID;   /**< Which associated file to read our info from */
+	unsigned int Tu;        /**< First vertex coordinate */
+	unsigned int Tv;        /**< Second vertex coordinate */
+	unsigned int Width;     /**< Width of image */
+	unsigned int Height;    /**< Height of image */
+	int XOffset;            /**< X offset into source position */
+	int YOffset;            /**< Y offset into source position */
 } IMAGEDEF;
 
-
 typedef struct {
-	IMAGEHEADER Header;
-	iTexture *TexturePages;
-	unsigned short NumCluts;
-	unsigned short TPageIDs[16];
-	unsigned short ClutIDs[48];
-	IMAGEDEF *ImageDefs;
+	int NumImages;          /**< Number of images contained here */
+	int TPageIDs[16];       /**< OpenGL Texture IDs */
+	IMAGEDEF *ImageDefs;    /**< Stored images */
 } IMAGEFILE;
-
-/***************************************************************************/
-/*
- *	Global Variables
- */
-/***************************************************************************/
 
 #endif // _ivisdef_h

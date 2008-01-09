@@ -110,8 +110,8 @@ extern PLAYER_RESEARCH*		asPlayerResList[MAX_PLAYERS];
 // Local Prototypes
 
 static BOOL recvBeacon(NETMSG *pMsg);
-static BOOL recvDestroyTemplate(NETMSG *pMsg);
-static BOOL recvResearch(NETMSG *pMsg);
+static BOOL recvDestroyTemplate(void);
+static BOOL recvResearch(void);
 
 // ////////////////////////////////////////////////////////////////////////////
 // temporarily disable multiplayer mode.
@@ -150,7 +150,6 @@ BOOL multiplayerWinSequence(BOOL firstCall)
 	static Vector3i pos;
 	Vector3i pos2;
 	static UDWORD last=0;
-	float		fraction;
 	float		rotAmount;
 	STRUCTURE	*psStruct;
 
@@ -178,8 +177,7 @@ BOOL multiplayerWinSequence(BOOL firstCall)
 	// rotate world
 	if(!getWarCamStatus())
 	{
-		fraction = (float)frameTime / (float)GAME_TICKS_PER_SEC;
-		rotAmount = fraction * MAP_SPIN_RATE / 12;
+		rotAmount = timeAdjustedIncrement(MAP_SPIN_RATE / 12, TRUE);
 		player.r.y += rotAmount;
 	}
 
@@ -630,9 +628,6 @@ BOOL recvMessage(void)
 		{
 			switch(msg.type)
 			{
-			case AUDIOMSG:
-				recvAudioMsg(&msg);
-				break;
 			case NET_DROID:						// new droid of known type
 				recvDroid();
 				break;
@@ -641,9 +636,6 @@ BOOL recvMessage(void)
 				break;
 			case NET_DROIDDEST:					// droid destroy
 				recvDestroyDroid();
-				break;
-			case NET_DESTROYXTRA:
-				recvDestroyExtra(&msg);			// a generic destroy, complete wiht killer info.
 				break;
 			case NET_DROIDMOVE:					// move a droid to x,y command.
 				recvDroidMove();
@@ -720,10 +712,10 @@ BOOL recvMessage(void)
 			recvTemplate(&msg);
 			break;
 		case NET_TEMPLATEDEST:				// template destroy
-			recvDestroyTemplate(&msg);
+			recvDestroyTemplate();
 			break;
 		case NET_FEATUREDEST:				// feature destroy
-			recvDestroyFeature(&msg);
+			recvDestroyFeature();
 			break;
 		case NET_PING:						// diagnostic ping msg.
 			recvPing();
@@ -732,7 +724,7 @@ BOOL recvMessage(void)
 			recvDemolishFinished();
 			break;
 		case NET_RESEARCH:					// some research has been done.
-			recvResearch(&msg);
+			recvResearch();
 			break;
 		case NET_LEAVING:					// player leaving nicely
 			NetGet((&msg),0,dp);
@@ -742,7 +734,7 @@ BOOL recvMessage(void)
 			receiveWholeDroid(&msg);
 			break;
 		case NET_OPTIONS:
-			recvOptions(&msg);
+			recvOptions();
 			break;
 		case NET_VERSION:
 			recvVersionCheck(&msg);
@@ -760,6 +752,9 @@ BOOL recvMessage(void)
 		case NET_ARTIFACTS:
 			recvMultiPlayerRandomArtifacts();
 			break;
+		case NET_FEATURES:
+			recvMultiPlayerFeature();
+			break;
 		case NET_ALLIANCE:
 			recvAlliance(TRUE);
 			break;
@@ -773,7 +768,7 @@ BOOL recvMessage(void)
 		case NET_FIREUP:				// frontend only
 			break;
 		case NET_RESEARCHSTATUS:
-			recvResearchStatus(&msg);
+			recvResearchStatus();
 			break;
 		default:
 			break;
@@ -786,75 +781,84 @@ BOOL recvMessage(void)
 
 // ////////////////////////////////////////////////////////////////////////////
 // Research Stuff. Nat games only send the result of research procedures.
-BOOL SendResearch(UBYTE player,UDWORD index)
+BOOL SendResearch(uint8_t player, uint32_t index)
 {
-	NETMSG m;
 	UBYTE i;
 	PLAYER_RESEARCH *pPlayerRes;
 
+	// Send the player that is researching the topic and the topic itself
+	NETbeginEncode(NET_RESEARCH, NET_ALL_PLAYERS);
+		NETuint8_t(&player);
+		NETuint32_t(&index);
+	NETend();
 
-	NetAdd(m,0,player);						// player researching
-	NetAdd(m,1,index);								// reference into topic.
-
-	m.size =5;
-	m.type = NET_RESEARCH;
-
+	/*
+	 * Since we are called when the state of research changes (completed,
+	 * stopped &c) we also need to update our onw local copy of what our allies
+	 * are doing/have done.
+	 */
 	if (game.type == SKIRMISH)
-	{
-		pPlayerRes = asPlayerResList[player];
-		pPlayerRes += index;
-		for(i=0;i<MAX_PLAYERS;i++)
+	{		
+		for (i = 0; i < MAX_PLAYERS; i++)
 		{
-			if(alliances[i][player] == ALLIANCE_FORMED)
+			if (alliances[i][player] == ALLIANCE_FORMED)
 			{
-				pPlayerRes = asPlayerResList[i];
-				pPlayerRes += index;
-				if(IsResearchCompleted(pPlayerRes)==FALSE)
+				pPlayerRes = asPlayerResList[i] + index;
+				
+				// If we have it but they don't
+				if (!IsResearchCompleted(pPlayerRes))
 				{
-					MakeResearchCompleted(pPlayerRes);		// do the research for that player
-					researchResult(index, i,FALSE,NULL);
+					// Do the research for that player
+					MakeResearchCompleted(pPlayerRes);
+					researchResult(index, i, FALSE, NULL);
 				}
 			}
 		}
 	}
 
-	return( NETbcast(&m,FALSE) );
+	return TRUE;
 }
 
 // recv a research topic that is now complete.
-static BOOL recvResearch(NETMSG *m)
+static BOOL recvResearch()
 {
-	UBYTE			player,i;
-	UDWORD			index;
-	PLAYER_RESEARCH *pPlayerRes;
+	uint8_t			player;
+	uint32_t		index;
+	int				i;
+	PLAYER_RESEARCH	*pPlayerRes;
 	RESEARCH		*pResearch;
 
-	player = m->body[0];
-	NetGet(m,1,index);								// get the index
+	NETbeginDecode();
+		NETuint8_t(&player);
+		NETuint32_t(&index);
+	NETend();
 
-	pPlayerRes = asPlayerResList[player];
-	pPlayerRes += index;
-	if(IsResearchCompleted(pPlayerRes)==FALSE)
+	pPlayerRes = asPlayerResList[player] + index;
+	
+	// If they have completed the research
+	if (IsResearchCompleted(pPlayerRes))
 	{
 		MakeResearchCompleted(pPlayerRes);
 		researchResult(index, player, FALSE, NULL);
 
-		//take off the power if available.
+		// Take off the power if available
 		pResearch = asResearch + index;
 		usePower(player, pResearch->researchPower);
 	}
 
+	// Update allies research accordingly
 	if (game.type == SKIRMISH)
 	{
-		for(i=0;i<MAX_PLAYERS;i++)
+		for (i = 0; i < MAX_PLAYERS; i++)
 		{
-			if(alliances[i][player] == ALLIANCE_FORMED)
+			if (alliances[i][player] == ALLIANCE_FORMED)
 			{
-				pPlayerRes = asPlayerResList[i];
-				pPlayerRes += index;
-				if(IsResearchCompleted(pPlayerRes)==FALSE)
+				pPlayerRes = asPlayerResList[i] + index;
+				
+				if (!IsResearchCompleted(pPlayerRes))
 				{
-					MakeResearchCompleted(pPlayerRes);		// do the research for that player
+					// Do the research for that player
+					MakeResearchCompleted(pPlayerRes);
 					researchResult(index, i, FALSE, NULL);
 				}
 			}
@@ -868,79 +872,89 @@ static BOOL recvResearch(NETMSG *m)
 // ////////////////////////////////////////////////////////////////////////////
 // New research stuff, so you can see what others are up to!
 // inform others that I'm researching this.
-BOOL sendReseachStatus(STRUCTURE *psBuilding ,UDWORD index, UBYTE player, BOOL bStart)
-{
-	NETMSG m;
-	UDWORD nil =0;
-	UWORD start = (UBYTE)bStart;
-	if(!myResponsibility(player) || gameTime <5 )
+BOOL sendReseachStatus(STRUCTURE *psBuilding, uint32_t index, uint8_t player, BOOL bStart)
+{	
+	if (!myResponsibility(player) || gameTime < 5)
 	{
 		return TRUE;
 	}
+	
+	NETbeginEncode(NET_RESEARCHSTATUS, NET_ALL_PLAYERS);
+		NETuint8_t(&player);
+		NETbool(&bStart);
+		
+		// If we know the building researching it then send its ID
+		if (psBuilding)
+		{
+			NETuint32_t(&psBuilding->id);
+		}
+		else
+		{
+			NETnull();
+		}
+		
+		// Finally the topic in question
+		NETuint32_t(&index);
+	NETend();
 
-	NetAdd(m,0,player);				// player researching
-	NetAdd(m,1,start);	// start stop..
-	if(psBuilding)
-	{
-		NetAdd(m,2,psBuilding->id);	// res lab.
-	}
-	else
-	{
-		NetAdd(m,2,nil);			// res lab.
-	}
-	NetAdd(m,6,index);				// topic.
-
-	m.size = 10;
-	m.type = NET_RESEARCHSTATUS;
-
-	return( NETbcast(&m,FALSE) );
+	return TRUE;
 }
 
-
-BOOL recvResearchStatus(NETMSG *pMsg)
+BOOL recvResearchStatus()
 {
 	STRUCTURE			*psBuilding;
 	PLAYER_RESEARCH		*pPlayerRes;
 	RESEARCH_FACILITY	*psResFacilty;
 	RESEARCH			*pResearch;
-	UBYTE				player,bStart;
-	UDWORD				index,buildingId;
+	uint8_t				player;
+	BOOL				bStart;
+	uint32_t			index, structRef;
 
-	NetGet(pMsg,0,player);				// player researching
-	NetGet(pMsg,1,bStart);				// start stop..
-	NetGet(pMsg,2,buildingId);			// res lab.
-	NetGet(pMsg,6,index);				// topic.
+	NETbeginDecode();
+		NETuint8_t(&player);
+		NETbool(&bStart);
+		NETuint32_t(&structRef);
+		NETuint32_t(&index);
+	NETend();
 
 	pPlayerRes = asPlayerResList[player] + index;
 
-	// psBuilding may be null if finishing.
-	if(bStart)							//starting research
+	// psBuilding may be null if finishing
+	if (bStart)							// Starting research
 	{
-		psBuilding = IdToStruct( buildingId, player);
-		if(psBuilding)					// set that facility to research
+		psBuilding = IdToStruct(structRef, player);
+		
+		// Set that facility to research
+		if (psBuilding)
 		{
-
-			psResFacilty =	(RESEARCH_FACILITY*)psBuilding->pFunctionality;
-			if(psResFacilty->psSubject != NULL)
+			psResFacilty = (RESEARCH_FACILITY *) psBuilding->pFunctionality;
+			
+			if (psResFacilty->psSubject)
 			{
 				cancelResearch(psBuilding);
 			}
-			pResearch				= (asResearch+index);
-			psResFacilty->psSubject = (BASE_STATS*)pResearch;		  //set the subject up
+			
+			// Set the subject up
+			pResearch				= asResearch + index;
+			psResFacilty->psSubject = (BASE_STATS *) pResearch;
 
+			// If they have previously started but cancelled there is no need to accure power
 			if (IsResearchCancelled(pPlayerRes))
 			{
-				psResFacilty->powerAccrued	= pResearch->researchPower;//set up as if all power available for cancelled topics
+				psResFacilty->powerAccrued	= pResearch->researchPower;
 			}
 			else
 			{
 				psResFacilty->powerAccrued	= 0;
 			}
 
+			// Start the research
 			MakeResearchStarted(pPlayerRes);
 			psResFacilty->timeStarted		= ACTION_START_TIME;
 			psResFacilty->timeStartHold		= 0;
-			psResFacilty->timeToResearch	= pResearch->researchPoints / 	psResFacilty->researchPoints;
+			psResFacilty->timeToResearch	= pResearch->researchPoints / psResFacilty->researchPoints;
+			
+			// A failsafe of some sort
 			if (psResFacilty->timeToResearch == 0)
 			{
 				psResFacilty->timeToResearch = 1;
@@ -948,18 +962,25 @@ BOOL recvResearchStatus(NETMSG *pMsg)
 		}
 
 	}
-	else								// finished/cancelled research
+	// Finished/cancelled research
+	else
 	{
-		if(buildingId == 0)				// find the centre doing this research.(set building
+		// If they completed the research, we're done
+		if (IsResearchCompleted(pPlayerRes))
 		{
-			// go through the structs to find the centre that's doing this topic)
-			for(psBuilding = apsStructLists[player];psBuilding;psBuilding = psBuilding->psNext)
+			return TRUE;
+		}
+		
+		// If they did not say what facility it was, look it up orselves
+		if (!structRef)
+		{
+			// Go through the structs to find the one doing this topic
+			for (psBuilding = apsStructLists[player]; psBuilding; psBuilding = psBuilding->psNext)
 			{
-				if(   psBuilding->pStructureType->type == REF_RESEARCH
-				   && psBuilding->status == SS_BUILT
-				   && ((RESEARCH_FACILITY *)psBuilding->pFunctionality)->psSubject
-				   && ((RESEARCH_FACILITY *)psBuilding->pFunctionality)->psSubject->ref - REF_RESEARCH_START == index
-				  )
+				if (psBuilding->pStructureType->type == REF_RESEARCH
+				 && psBuilding->status == SS_BUILT
+				 && ((RESEARCH_FACILITY *) psBuilding->pFunctionality)->psSubject
+				 && ((RESEARCH_FACILITY *) psBuilding->pFunctionality)->psSubject->ref - REF_RESEARCH_START == index)
 				{
 					break;
 				}
@@ -967,22 +988,17 @@ BOOL recvResearchStatus(NETMSG *pMsg)
 		}
 		else
 		{
-			psBuilding = IdToStruct( buildingId, player);
+			psBuilding = IdToStruct(structRef, player);
 		}
-
-		if(IsResearchCompleted(pPlayerRes))
-		{
-			return TRUE;
-		}
-
-		// stop that facility doing any research.
-		if(psBuilding)
+		
+		// Stop the facility doing any research
+		if (psBuilding)
 		{
 			cancelResearch(psBuilding);
 		}
 	}
+	
 	return TRUE;
-
 }
 
 
@@ -1348,50 +1364,57 @@ BOOL recvTemplate(NETMSG * m)
 
 BOOL SendDestroyTemplate(DROID_TEMPLATE *t)
 {
-	NETMSG m;
+	uint8_t player = selectedPlayer;
+	
+	NETbeginEncode(NET_TEMPLATEDEST, NET_ALL_PLAYERS);
+		NETuint8_t(&player);
+		NETuint32_t(&t->multiPlayerID);
+	NETend();
 
-	m.body[0] = (char) selectedPlayer;			// send player number
-
-	// send id of template to destroy
-	NetAdd(m,1,(t->multiPlayerID));
-	m.size = 5;
-
-	m.type=NET_TEMPLATEDEST;
-
-	return( NETbcast(&m,FALSE)	);
+	return TRUE;
 }
 
 // acknowledge another player no longer has a template
-static BOOL recvDestroyTemplate(NETMSG * m)
+static BOOL recvDestroyTemplate()
 {
-	UDWORD			player,targetref;
-	DROID_TEMPLATE	*psTempl, *psTempPrev;
-
-	player	= m->body[0];								// decode the message
-	NetGet(m,1,targetref);
-
-	psTempPrev = NULL;									// first find it.
-	for(psTempl = apsDroidTemplates[player]; psTempl;psTempl = psTempl->psNext)
+	uint8_t			player;
+	uint32_t		templateID;
+	DROID_TEMPLATE	*psTempl, *psTempPrev = NULL;
+	
+	NETbeginDecode();
+		NETuint8_t(&player);
+		NETuint32_t(&templateID);
+	NETend();
+	
+	// Find the template in the list
+	for (psTempl = apsDroidTemplates[player]; psTempl; psTempl = psTempl->psNext)
 	{
-		if( psTempl->multiPlayerID == targetref )
+		if (psTempl->multiPlayerID == templateID)
 		{
 			break;
 		}
+		
 		psTempPrev = psTempl;
 	}
 
-	if (psTempl)										// if we found itthen delete it.
+	// If we found it then delete it
+	if (psTempl)
 	{
-		if(psTempPrev)									// Update list pointers.
+		// Update the linked list
+		if (psTempPrev)
 		{
-			psTempPrev->psNext = psTempl->psNext;		// It's down the list somewhere ?
-		} else
-		{
-			apsDroidTemplates[player] = psTempl->psNext;// It's at the root ?
+			psTempPrev->psNext = psTempl->psNext;
 		}
-		free(psTempl);									// Delete the template.
+		else
+		{
+			apsDroidTemplates[player] = psTempl->psNext;
+		}
+		
+		// Delete the template
+		free(psTempl);
 	}
-	return (TRUE);
+	
+	return TRUE;
 }
 
 
@@ -1402,131 +1425,37 @@ static BOOL recvDestroyTemplate(NETMSG * m)
 // send a destruct feature message.
 BOOL SendDestroyFeature(FEATURE *pF)
 {
-	NETMSG m;
-
-	// only send the destruction if the feature is our responsibility
-	NetAdd(m,0,pF->id);
-	m.size = sizeof(pF->id);
-	m.type = NET_FEATUREDEST;
-
-	return( NETbcast(&m,TRUE) );
+	// Only send if it is our responsibility
+	if (myResponsibility(pF->player))
+		return TRUE;
+	
+	NETbeginEncode(NET_FEATUREDEST, NET_ALL_PLAYERS);
+		NETuint32_t(&pF->id);
+	return NETend();
 }
 
 // process a destroy feature msg.
-BOOL recvDestroyFeature(NETMSG *pMsg)
+BOOL recvDestroyFeature()
 {
-	FEATURE *pF;
-	UDWORD	id;
+	FEATURE		*pF;
+	uint32_t	id;
+	
+	NETbeginDecode();
+		NETuint32_t(&id);
+	NETend();
 
-	NetGet(pMsg,0,id);														// get feature id
-
-	//	for(pF = apsFeatureLists[0]; pF && (pF->id  != id);	pF = pF->psNext);	// find the feature
 	pF = IdToFeature(id,ANYPLAYER);
 
-	if(  (pF == NULL)  )													// if already a gonner.
+	if (pF == NULL)
 	{
-		return FALSE;														// feature wasnt found anyway.
+		return FALSE;
 	}
 
-	bMultiPlayer = FALSE;													// remove, don't broadcast.
-	removeFeature(pF);
-	bMultiPlayer = TRUE;
+	// Remove the feature locally
+	turnOffMultiMsg(TRUE);
+		removeFeature(pF);
+	turnOffMultiMsg(FALSE);
 
-	return TRUE;
-}
-
-// ////////////////////////////////////////////////////////////////////////////
-// a generic destroy function, with killer info included.
-BOOL sendDestroyExtra(BASE_OBJECT *psKilled,BASE_OBJECT *psKiller)
-{
-	NETMSG		m;
-	UDWORD		n=0;
-
-/*	if(psKilled != NULL)
-	{
-		NetAdd(m,4,psKilled->id);	// id of thing killed
-	}
-	else
-	{
-		NetAdd(m,4,n);
-	}
-*/
-	if(psKiller != NULL)
-	{
-		NetAdd(m,0,psKiller->id);	// id of killer.
-	}
-	else
-	{
-		NetAdd(m,0,n);
-	}
-
-
-	m.type = NET_DESTROYXTRA;
-	m.size = 4;
-
-	return 	NETbcast(&m,FALSE);
-}
-
-// ////////////////////////////////////////////////////////////////////////////
-BOOL recvDestroyExtra(NETMSG *pMsg)
-{
-//	BASE_OBJECT	*psKilled;
-//	UDWORD		 killedId;
-
-	BASE_OBJECT	*psSrc;
-	UDWORD		srcId;
-
-	DROID		*psKiller;
-/*
-	NetGet(pMsg,0,killedId);					// remove as normal
-	if(killedId !=0)
-	{
-		psKilled = IdToPointer(killedId,ANYPLAYER);
-		if(psKilled)
-		{
-			switch(psKilled->type)
-			{
-			case OBJ_DROID:
-				recvDestroyDroid(pMsg);
-				break;
-			case OBJ_STRUCTURE:
-				recvDestroyStructure(pMsg);
-				break;
-			case OBJ_FEATURE:
-				recvDestroyFeature(pMsg);
-				break;
-			}
-		}
-	}
-*/
-	NetGet(pMsg,0,srcId);
-	if(srcId != 0)
-	{
-		psSrc = IdToPointer(srcId,ANYPLAYER);
-
-		if(psSrc && (psSrc->type == OBJ_DROID) )		// process extra bits.
-		{
-			psKiller = 	(DROID*)psSrc;
-#if 0
-			// FIXME: this code *and* the code that sends this message needs to be modified
-			//        in such a way that they update psKiller->experience with the percentage
-			//        of damage dealt rather than just a kill count.
-			if(psKiller)
-			{
-				psKiller->experience++;
-			}
-			cmdDroidUpdateKills(psKiller);
-#endif
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
-
-// ////////////////////////////////////////////////////////////////////////////
-// Network Audio packet processor.
-BOOL recvAudioMsg(NETMSG *pMsg)
-{
 	return TRUE;
 }
 

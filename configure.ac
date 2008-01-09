@@ -50,9 +50,7 @@ case ${host_os} in
 	*mingw32*)
 		host_os_mingw32=yes
 		AC_CHECK_TOOL([WINDRES], [windres], AC_MSG_ERROR([windres not found]))
-		WIN32_PRE_LIBS='-lmingw32 -lSDLmain'
-		AC_SUBST([WIN32_PRE_LIBS], [${WIN32_PRE_LIBS}])
-		WIN32_LIBS='-lz -lintl -liconv -lfreetype -lfontconfig -lexpat -ldbghelp -lshfolder -lgdi32 -lwinmm -lwsock32'
+		WIN32_LIBS='-lintl -ldbghelp -lshfolder -lwinmm -lwsock32'
 		AC_SUBST([WIN32_LIBS], [${WIN32_LIBS}])
 		;;
 	*)
@@ -165,7 +163,7 @@ if test "x$enable_debug" = "xyes" ; then
 	if test "x$cc_icc" = "xyes" ; then
 		WZ_CFLAGS="${WZ_CFLAGS} -O0 -g -DDEBUG -Wcheck -Werror"
 	else
-		WZ_CFLAGS="${WZ_CFLAGS} -O0 -g -DDEBUG -Wall -Werror -Wno-unused-label -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast"
+		WZ_CFLAGS="${WZ_CFLAGS} -O0 -g -DDEBUG -Wall -Werror -Wno-unused-label -Wno-pointer-to-int-cast"
 	fi
 elif test "x$enable_debug" = "xrelaxed" ; then
 	WZ_CFLAGS="${WZ_CFLAGS} -g -DDEBUG -Wall -Wextra"
@@ -177,19 +175,20 @@ fi
 # Checks for modules:
 
 PKG_CHECK_MODULES([SDL], [sdl >= 1.2])
+PKG_CHECK_MODULES([OPENAL], [openal >= 0.0.8])
 PKG_CHECK_MODULES([PNG], [libpng >= 1.2])
-PKG_CHECK_MODULES([OGGVORBIS], [ogg >= 1.1 vorbis >= 1.1 vorbisfile >= 1.1])
+PKG_CHECK_MODULES([OGGVORBIS], [vorbisfile >= 1.1])
 
 
 # Checks for libraries:
 
 # Look for Popt
 AC_CHECK_HEADER(popt.h, , AC_MSG_ERROR([Popt header not found.]))
-AC_CHECK_LIB(popt, poptGetContext, AC_SUBST([POPT_LIBS], [-lpopt]), AC_MSG_ERROR([Popt not found.]), [${WIN32_LIBS}])
+AC_CHECK_LIB(popt, poptGetContext, AC_SUBST([POPT_LIBS], [-lpopt]), AC_MSG_ERROR([Popt not found.]))
 
 # Look for PhysicsFS
 AC_CHECK_HEADER(physfs.h, , AC_MSG_ERROR([PhysicsFS header not found.]))
-AC_CHECK_LIB(physfs, PHYSFS_init, AC_SUBST([PHYSFS_LIBS], [-lphysfs]), AC_MSG_ERROR([PhysicsFS not found.]), [${WIN32_LIBS}])
+AC_CHECK_LIB(physfs, PHYSFS_init, AC_SUBST([PHYSFS_LIBS], [-lphysfs]), AC_MSG_ERROR([PhysicsFS not found.]))
 
 # Look for SDL_net
 AC_CHECK_HEADER(SDL/SDL_net.h, , AC_MSG_ERROR([SDL_net header not found.]))
@@ -220,24 +219,14 @@ AC_CHECK_LIB(GLC, main,
 		AC_MSG_ERROR([OpenGLC library not found. Please install QuesoGLC: http://quesoglc.sourceforge.net/])))
 AC_SUBST([OPENGLC_LIBS], [${OPENGLC_LIBS}])
 
-# Look for OpenAL
-AC_CHECK_HEADER(AL/al.h, ,
-	AC_MSG_ERROR([OpenAL header not found.]))
-AC_CHECK_LIB(openal, main,
-	OPENAL_LIBS="-lopenal",
-	AC_CHECK_LIB(openal32, main,
-		OPENAL_LIBS="-lopenal32",
-		AC_MSG_ERROR([OpenAL library not found.])))
-AC_SUBST([OPENAL_LIBS], [${OPENAL_LIBS}])
-
 
 WZ_CFLAGS="${WZ_CFLAGS} -DDATADIR=\"\\\"\${datadir}/\${PACKAGE}\\\"\""
 WZ_CFLAGS="${WZ_CFLAGS} -DLOCALEDIR=\"\\\"\${localedir}\\\"\""
 
 
 # add some required C flags here
-# -DYY_STATIC is required by flex
-WZ_CFLAGS="${WZ_CFLAGS} -DYY_STATIC"
+#  YY_NO_INPUT to prevent Flex from defining input(): We use our own YY_INPUT instead.
+WZ_CFLAGS="${WZ_CFLAGS} -DYY_NO_INPUT"
 
 
 CPPFLAGS="${CPPFLAGS} -I\$(top_srcdir)"
