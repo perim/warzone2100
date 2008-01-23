@@ -255,7 +255,7 @@ static void getPlatformUserDir(char * const tmpstr, size_t const size)
 {
 #if defined(WZ_OS_WIN)
 	ASSERT(size >= MAX_PATH, "size (%u) is smaller than the required minimum of MAX_PATH (%u)", size, (size_t)MAX_PATH);
-	if ( SUCCEEDED( SHGetFolderPathA( NULL, CSIDL_PERSONAL|CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, tmpstr ) ) )
+	if ( SUCCEEDED( SHGetFolderPathA( NULL, CSIDL_LOCAL_APPDATA|CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, tmpstr ) ) )
 		strlcat(tmpstr, PHYSFS_getDirSeparator(), size);
 	else
 #elif defined(WZ_OS_MAC)
@@ -809,9 +809,6 @@ static void mainLoop(void)
 
 int main(int argc, char *argv[])
 {
-	PIELIGHT *psPaletteBuffer = NULL;
-	UDWORD pSize = 0;
-
 	setupExceptionHandler(argv[0]);
 
 	debug_init();
@@ -860,6 +857,8 @@ int main(int argc, char *argv[])
 	/*** Initialize directory structure ***/
 	make_dir(ScreenDumpPath, "screendumps", NULL);
 	make_dir(SaveGamePath, "savegame", NULL);
+	PHYSFS_mkdir("maps");		// MUST have this to prevent crashes when getting map
+	PHYSFS_mkdir("music");
 	make_dir(MultiPlayersPath, "multiplay", NULL);
 	make_dir(MultiPlayersPath, "multiplay", "players");
 	make_dir(MultiForcesPath, "multiplay", "forces");
@@ -911,21 +910,7 @@ int main(int argc, char *argv[])
 	pie_SetFogStatus(FALSE);
 	pie_ScreenFlip(CLEAR_BLACK);
 
-	//load palette
-	psPaletteBuffer = malloc(256 * sizeof(PIELIGHT) + 1);
-	if (psPaletteBuffer == NULL)
-	{
-		debug( LOG_ERROR, "Out of memory" );
-		return -1;
-	}
-	if ( !loadFileToBuffer("palette.bin", (char*)psPaletteBuffer, ( 256 * sizeof(PIELIGHT) + 1 ), &pSize) )
-	{
-		debug( LOG_ERROR, "Couldn't load palette data" );
-		return -1;
-	}
-	pal_AddNewPalette(psPaletteBuffer);
-	free(psPaletteBuffer);
-	psPaletteBuffer = NULL;
+	pal_Init();
 	atexit(pal_ShutDown);
 
 	pie_LoadBackDrop(SCREEN_RANDOMBDROP);

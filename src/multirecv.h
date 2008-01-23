@@ -37,12 +37,12 @@ extern BOOL recvDestroyStructure	(void);
 extern BOOL recvBuildStarted		(void);
 extern BOOL recvBuildFinished		(void);
 //extern BOOL receiveWholeStructure	(NETMSG *pMsg);
-extern BOOL recvTemplate			(NETMSG *pMsg);
+extern BOOL recvTemplate			(void);
 extern BOOL recvDestroyFeature		(void);
 extern BOOL recvDemolishFinished	(void);
 extern BOOL recvPing				(void);
 extern BOOL	recvRequestDroid		(void);
-extern BOOL recvTextMessage			(NETMSG *pMsg);
+extern BOOL recvTextMessage			(void);
 extern BOOL recvDroidSecondary		(void);
 extern BOOL recvDroidSecondaryAll	(void);
 extern BOOL recvDroidEmbark         (void);
@@ -62,9 +62,9 @@ extern BOOL recvScoreSubmission		(void);
 extern BOOL recvHappyVtol			(void);
 extern BOOL recvResearchStatus		(void);
 extern BOOL recvLasSat				(void);
-extern BOOL	recvMapFileData				(NETMSG *pMsg);
-extern BOOL	recvMapFileRequested		(NETMSG *pMsg);
+extern BOOL	recvMapFileData				(void);
+extern BOOL	recvMapFileRequested		(void);
 
 
-extern BOOL recvTextMessageAI		(NETMSG *pMsg);		//AI multiplayer message
+extern BOOL recvTextMessageAI		(void);		//AI multiplayer message
 extern BOOL	recvTeamRequest			(NETMSG *pMsg);

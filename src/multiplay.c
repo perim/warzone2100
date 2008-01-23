@@ -109,7 +109,7 @@ extern PLAYER_RESEARCH*		asPlayerResList[MAX_PLAYERS];
 // ////////////////////////////////////////////////////////////////////////////
 // Local Prototypes
 
-static BOOL recvBeacon(NETMSG *pMsg);
+static BOOL recvBeacon();
 static BOOL recvDestroyTemplate(void);
 static BOOL recvResearch(void);
 
@@ -615,8 +615,6 @@ Vector3i cameraToHome(UDWORD player,BOOL scroll)
 BOOL recvMessage(void)
 {
 	NETMSG msg;
-	UDWORD dp;
-	UDWORD a;
 
 	while(NETrecv(&msg) == TRUE)			// for all incoming messages.
 	{
@@ -653,13 +651,13 @@ BOOL recvMessage(void)
 				recvPowerCheck();
 				break;
 			case NET_TEXTMSG:					// simple text message
-				recvTextMessage(&msg);
+				recvTextMessage();
 				break;
 			case NET_AITEXTMSG:					//multiplayer AI text message
-				recvTextMessageAI(&msg);
+				recvTextMessageAI();
 				break;
 			case NET_BEACONMSG:					//beacon (blip) message
-				recvBeacon(&msg);
+				recvBeacon();
 				break;
 			case NET_BUILD:						// a build order has been sent.
 				recvBuildStarted();
@@ -689,7 +687,7 @@ BOOL recvMessage(void)
 //				multiPlayerRequest(&msg);
 //				break;
 			case NET_GIFT:						// an alliance gift from one player to another.
-				recvGift(&msg);
+				recvGift();
 				break;
 			case NET_SCORESUBMIT:				//  a score update from another player
 				recvScoreSubmission();
@@ -709,7 +707,7 @@ BOOL recvMessage(void)
 		switch(msg.type)
 		{
 		case NET_TEMPLATE:					// new template
-			recvTemplate(&msg);
+			recvTemplate();
 			break;
 		case NET_TEMPLATEDEST:				// template destroy
 			recvDestroyTemplate();
@@ -727,9 +725,23 @@ BOOL recvMessage(void)
 			recvResearch();
 			break;
 		case NET_LEAVING:					// player leaving nicely
-			NetGet((&msg),0,dp);
-			MultiPlayerLeave(dp);
+		{
+			uint32_t player_id;
+			BOOL host;
+
+			NETbeginDecode();
+				NETuint32_t(&player_id);
+				NETbool(&host);                 // Added to check for host quit here -- Buggy
+			NETend();
+			MultiPlayerLeave(player_id);
+			if (host)                               // host has quit, need to quit too.
+			{
+				//stopJoining();		//NOT defined here, checking if we need it or not.
+				debug(LOG_NET, "***Need to call stopJoining()");
+				addConsoleMessage(_("The host has left the game!"), LEFT_JUSTIFY);
+			}
 			break;
+		}
 		case NET_WHOLEDROID:				// a complete droid description has arrived.
 			receiveWholeDroid(&msg);
 			break;
@@ -740,9 +752,18 @@ BOOL recvMessage(void)
 			recvVersionCheck(&msg);
 			break;
 		case NET_PLAYERRESPONDING:			// remote player is now playing
-			NetGet((&msg),0,a);
-			ingame.JoiningInProgress[a] = FALSE;	// player is with us!
+		{
+			uint32_t player_id;
+
+			NETbeginDecode();
+				// the player that has just responded
+				NETuint32_t(&player_id);
+			NETend();
+
+			// This player is now with us!
+			ingame.JoiningInProgress[player_id] = FALSE;
 			break;
+		}
 		case NET_COLOURREQUEST:
 			recvColourRequest(&msg);
 			break;
@@ -759,12 +780,19 @@ BOOL recvMessage(void)
 			recvAlliance(TRUE);
 			break;
 		case NET_KICK:
-			NetGet((&msg),0,dp);
-			if(NetPlay.dpidPlayer == dp)	// we've been told to leave.
+		{
+			uint32_t player_id;
+
+			NETbeginDecode();
+				NETuint32_t(&player_id);
+			NETend();
+
+			if (NetPlay.dpidPlayer == player_id)  // we've been told to leave.
 			{
 				setPlayerHasLost(TRUE);
 			}
 			break;
+		}
 		case NET_FIREUP:				// frontend only
 			break;
 		case NET_RESEARCHSTATUS:
@@ -1006,99 +1034,113 @@ BOOL recvResearchStatus()
 // ////////////////////////////////////////////////////////////////////////////
 // Text Messaging between players. proceed string with players to send to.
 // eg "123 hi there" sends "hi there" to players 1,2 and 3.
-BOOL sendTextMessage(const char *pStr,BOOL all)
+BOOL sendTextMessage(const char *pStr, BOOL all)
 {
-	NETMSG	m;
 	BOOL	normal = TRUE;
 	BOOL	sendto[MAX_PLAYERS];
 	UDWORD	i;
 	char	display[MAX_CONSOLE_STRING_LENGTH];
+	char	msg[MAX_CONSOLE_STRING_LENGTH];
+	uint8_t netplayer = 0;
 
-	if(!ingame.localOptionsReceived)
+	if (!ingame.localOptionsReceived)
 	{
 		return TRUE;
 	}
 
-	for(i=0;i<MAX_PLAYERS;i++)
-	{
-		sendto[i]=0;
-	}
-
-	for(i=0; ((pStr[i] >= '0' ) && (pStr[i] <= '8' )) ; i++ )		// for each numeric char encountered..
+	memset(display,0x0, sizeof(display));	//clear buffer
+	memset(msg,0x0, sizeof(display));		//clear buffer
+	memset(sendto,0x0, sizeof(sendto));		//clear private flag
+	strlcpy(msg, pStr, sizeof(msg));
+	for(i = 0; ((pStr[i] >= '0' ) && (pStr[i] <= '8' )  && (i < MAX_PLAYERS )); i++)		// for each numeric char encountered..
 	{
 		sendto[ pStr[i]-'0' ] = TRUE;
 		normal = FALSE;
 	}
 
-	NetAdd(m,0,NetPlay.dpidPlayer);
-	memcpy(&(m.body[4]),&(pStr[i]), strlen( &(pStr[i]) )+1);		// copy message in.
-	m.size = (UWORD)( strlen( &(pStr[i]) )+5);						// package the message up and send it.
-	m.type = NET_TEXTMSG;
-
-	if(all)
+	if (!all && !normal)	// lets user know it is a private message
 	{
-		NETbcast(&m,FALSE);
+		strlcpy(display,"(private)",sizeof(display));
+		strlcat(display,pStr,sizeof(display));
 	}
-	else if(normal)
+
+	if (all)	//broadcast
 	{
-		for(i=0;i<MAX_PLAYERS;i++)
+		NETbeginEncode(NET_TEXTMSG, NET_ALL_PLAYERS);
+			NETuint32_t(&NetPlay.dpidPlayer);		// who this msg is from
+			NETstring(msg,MAX_CONSOLE_STRING_LENGTH);	// the message to send
+		NETend();
+	}
+	else if (normal)
+	{
+		for (i = 0; i < MAX_PLAYERS; i++)
 		{
-			if(i != selectedPlayer && openchannels[i])
+			if (i != selectedPlayer && openchannels[i])
 			{
-				if(isHumanPlayer(i) )
+				if (isHumanPlayer(i))
 				{
-					NETsend(&m,player2dpid[i],FALSE);
+					netplayer = player2dpid[i];
+					NETbeginEncode(NET_TEXTMSG,netplayer);
+						NETuint32_t(&NetPlay.dpidPlayer);		// who this msg is from
+						NETstring(msg,MAX_CONSOLE_STRING_LENGTH);	// the message to send
+					NETend();
 				}
 				else	//also send to AIs now (non-humans), needed for AI
 				{
-					sendAIMessage(&(m.body[4]), selectedPlayer, i);
+					sendAIMessage(msg, selectedPlayer, i);
 				}
 			}
 		}
 	}
-	else
+	else	//private msg
 	{
-		for(i=0;i<MAX_PLAYERS;i++)
+		for (i = 0; i < MAX_PLAYERS; i++)
 		{
-			if(sendto[i])
+			if (sendto[i])
 			{
-				if(isHumanPlayer(i))
+				if (isHumanPlayer(i))
 				{
-					NETsend(&m,player2dpid[i],FALSE);
+					netplayer = player2dpid[i];
+						NETbeginEncode(NET_TEXTMSG, netplayer);
+						NETuint32_t(&NetPlay.dpidPlayer);				// who this msg is from
+						NETstring(display, MAX_CONSOLE_STRING_LENGTH);	// the message to send
+					NETend();
 				}
 				else	//also send to AIs now (non-humans), needed for AI
 				{
-					sendAIMessage(&(m.body[4]), selectedPlayer, i);
+					sendAIMessage(display, selectedPlayer, i);
 				}
 			}
 		}
+		sprintf(display,"(private)");		 
 	}
 
+	//This is for local display
 	for(i = 0; NetPlay.players[i].dpid != NetPlay.dpidPlayer; i++);	//findplayer
-	strcpy(display,NetPlay.players[i].name);						// name
-	strcat(display," : ");											// seperator
-	strcat(display,pStr);											// add message
-	addConsoleMessage(display,DEFAULT_JUSTIFY);						// display
+	strlcat(display, NetPlay.players[i].name, sizeof(display));		// name
+	strlcat(display, ": ", sizeof(display));						// seperator
+	strlcat(display, pStr, sizeof(display));						// add message
+	addConsoleMessage(display, DEFAULT_JUSTIFY);					// display
 
 	return TRUE;
 }
 
 //AI multiplayer message, send from a certain player index to another player index
-BOOL sendAIMessage(char *pStr, SDWORD player, SDWORD to)
+BOOL sendAIMessage(char *pStr, UDWORD player, UDWORD to)
 {
-	NETMSG	m;
-	SDWORD	sendPlayer;
+	UDWORD	sendPlayer;		//dpidPlayer is a uint32_t, not int32_t!
+	uint8_t netplayer=0;
 
 	//check if this is one of the local players, don't need net send then
-	if(to == selectedPlayer || myResponsibility(to))	//(the only) human on this machine or AI on this machine
+	if (to == selectedPlayer || myResponsibility(to))	//(the only) human on this machine or AI on this machine
 	{
-		//Just show him the message
+		//Just show "him" the message
 		displayAIMessage(pStr, player, to);
 
 		//Received a console message from a player callback
 		//store and call later
 		//-------------------------------------------------
-		if(!msgStackPush(CALL_AI_MSG,player,to,pStr,-1,-1,NULL))
+		if (!msgStackPush(CALL_AI_MSG,player,to,pStr,-1,-1,NULL))
 		{
 			debug(LOG_ERROR, "sendAIMessage() - msgStackPush - stack failed");
 			return FALSE;
@@ -1106,62 +1148,46 @@ BOOL sendAIMessage(char *pStr, SDWORD player, SDWORD to)
 	}
 	else		//not a local player (use multiplayer mode)
 	{
-		if(!ingame.localOptionsReceived)
+		if (!ingame.localOptionsReceived)
 		{
 			return TRUE;
 		}
 
-		NetAdd(m,0,player);			//save the actual sender
-
-		//save the actual player that is to get this msg on the source machine (source can host many AIs)
-		NetAdd(m,4,to);			//save the actual receiver (might not be the same as the one we are actually sending to, in case of AIs)
-
-		memcpy(&(m.body[8]),&(pStr[0]), strlen( &(pStr[0]) )+1);		// copy message in.
-
-		m.size = (UWORD)( strlen( &(pStr[0]) )+9);						// package the message up and send it.
-		m.type = NET_AITEXTMSG;		//new type
-
 		//find machine that is hosting this human or AI
 		sendPlayer = whosResponsible(to);
 
-		if(sendPlayer >= MAX_PLAYERS)
+		if (sendPlayer >= MAX_PLAYERS)
 		{
 			debug(LOG_ERROR, "sendAIMessage() - sendPlayer >= MAX_PLAYERS");
 			return FALSE;
 		}
 
-		if(!isHumanPlayer(sendPlayer))		//NETsend can't send to non-humans
+		if (!isHumanPlayer(sendPlayer))		//NETsend can't send to non-humans
 		{
 			debug(LOG_ERROR, "sendAIMessage() - player is not human.");
 			return FALSE;
 		}
-
-		NETsend(&m,player2dpid[sendPlayer],FALSE);		//send to the player who is hosting 'to' player (might be himself if human and not AI)
+		netplayer = player2dpid[sendPlayer];
+		
+		//send to the player who is hosting 'to' player (might be himself if human and not AI)
+		NETbeginEncode(NET_AITEXTMSG, netplayer);
+			NETuint32_t(&player);			//save the actual sender
+			//save the actual player that is to get this msg on the source machine (source can host many AIs)
+			NETuint32_t(&to);				//save the actual receiver (might not be the same as the one we are actually sending to, in case of AIs)
+			NETstring(pStr, MAX_CONSOLE_STRING_LENGTH);		// copy message in.
+		NETend();
 	}
 
 	return TRUE;
 }
 
-BOOL sendBeaconToPlayerNet(SDWORD locX, SDWORD locY, SDWORD forPlayer, SDWORD sender, char *pStr)
+//
+// At this time, we do NOT support messages for beacons
+//
+BOOL sendBeacon(int32_t locX, int32_t locY, int32_t forPlayer, int32_t sender, const char* pStr)
 {
-	NETMSG	m;
-	SDWORD	sendPlayer;
-
-	//debug(LOG_WZ, "sendBeaconToPlayerNet: '%s'",pStr);
-
-	NetAdd(m,0,sender);			//save the actual sender
-
-	//save the actual player that is to get this msg on the source machine (source can host many AIs)
-	NetAdd(m,4,forPlayer);			//save the actual receiver (might not be the same as the one we are actually sending to, in case of AIs)
-
-	//save location
-	NetAdd(m,8,locX);
-	NetAdd(m,12,locY);
-
-	memcpy(&(m.body[16]),&(pStr[0]), strlen( &(pStr[0]) )+1);		// copy message in.
-
-	m.size = (UWORD)( strlen( &(pStr[0]) )+17);						// package the message up and send it.
-	m.type = NET_BEACONMSG;		//new type
+	int sendPlayer;
+	//debug(LOG_WZ, "sendBeacon: '%s'",pStr);
 
 	//find machine that is hosting this human or AI
 	sendPlayer = whosResponsible(forPlayer);
@@ -1172,7 +1198,19 @@ BOOL sendBeaconToPlayerNet(SDWORD locX, SDWORD locY, SDWORD forPlayer, SDWORD se
 		return FALSE;
 	}
 
-	NETsend(&m,player2dpid[sendPlayer],FALSE);		//send to the player who is hosting 'to' player (might be himself if human and not AI)
+	// I assume this is correct, looks like it sends it to ONLY that person, and the routine
+	// kf_AddHelpBlip() itterates for each player it needs.
+	NETbeginEncode(NET_BEACONMSG, player2dpid[sendPlayer]);     // send to the player who is hosting 'to' player (might be himself if human and not AI)
+		NETint32_t(&sender);                                // save the actual sender
+
+		// save the actual player that is to get this msg on the source machine (source can host many AIs)
+		NETint32_t(&forPlayer);                             // save the actual receiver (might not be the same as the one we are actually sending to, in case of AIs)
+		NETint32_t(&locX);                                  // save location
+		NETint32_t(&locY);
+
+		// const_cast: need to cast away constness because of the const-incorrectness of NETstring (const-incorrect when sending/encoding a packet)
+		NETstring((char*)pStr, MAX_CONSOLE_STRING_LENGTH);  // copy message in.
+	NETend();
 
 	return TRUE;
 }
@@ -1181,32 +1219,41 @@ void displayAIMessage(char *pStr, SDWORD from, SDWORD to)
 {
 	char tmp[255];
 
-	if(isHumanPlayer(to))		//display text only if receiver is the (human) host machine itself
+	if (isHumanPlayer(to))		//display text only if receiver is the (human) host machine itself
 	{
-		//addConsoleMessage(pStr,DEFAULT_JUSTIFY);
-		//console("%d: %s", from, pStr);
-		strcpy(tmp,getPlayerName(from));
-		strcat(tmp," : ");											// seperator
-		strcat(tmp,pStr);											// add message
-		addConsoleMessage(tmp,DEFAULT_JUSTIFY);
+		strcpy(tmp, getPlayerName(from));
+		strcat(tmp, ": ");											// seperator
+		strcat(tmp, pStr);											// add message
+		addConsoleMessage(tmp, DEFAULT_JUSTIFY);
 	}
 }
 
 // Write a message to the console.
-BOOL recvTextMessage(NETMSG *pMsg)
+BOOL recvTextMessage()
 {
-	SDWORD	dpid;
+	UDWORD	dpid;		
 	UDWORD	i;
 	char	msg[MAX_CONSOLE_STRING_LENGTH];
+	char newmsg[MAX_CONSOLE_STRING_LENGTH];
 	UDWORD  player=MAX_PLAYERS,j;		//console callback - player who sent the message
 
-	NetGet(pMsg,0,dpid);
-	for(i = 0; NetPlay.players[i].dpid != dpid; i++);		//findplayer
+	memset(msg, 0x0, sizeof(msg));
+	memset(newmsg, 0x0, sizeof(newmsg));
+
+	NETbeginDecode();
+		// Who this msg is from
+		NETuint32_t(&dpid);
+		// The message to send
+		NETstring(newmsg, MAX_CONSOLE_STRING_LENGTH);
+	NETend();
+
+
+	for (i = 0; NetPlay.players[i].dpid != dpid; i++);		//findplayer
 
 	//console callback - find real number of the player
-	for(j = 0; i<MAX_PLAYERS;j++)
+	for (j = 0; i < MAX_PLAYERS; j++)
 	{
-		if(dpid == player2dpid[j])
+		if (dpid == player2dpid[j])
 		{
 			player = j;
 			break;
@@ -1215,28 +1262,28 @@ BOOL recvTextMessage(NETMSG *pMsg)
 
 	ASSERT(player != MAX_PLAYERS, "recvTextMessage: failed to find owner of dpid %d", dpid);
 
-	//sprintf(msg, "%d", i);
 	strlcpy(msg, NetPlay.players[i].name, sizeof(msg));
-	strlcat(msg, " : ", sizeof(msg));                    // seperator
-	//strlcat(msg, &(pMsg->body[4]), sizeof(msg));         // add message
-	strlcat(msg, &(pMsg->body[4]), sizeof(msg));         // add message
-	addConsoleMessage((char *)&msg,DEFAULT_JUSTIFY);
+	// Seperator
+	strlcat(msg, ": ", sizeof(msg));
+	// Add message
+	strlcat(msg, newmsg, sizeof(msg));
+	
+	addConsoleMessage(msg, DEFAULT_JUSTIFY);
 
-	//multiplayer message callback
-	//Received a console message from a player, save
-	//----------------------------------------------
+	// Multiplayer message callback
+	// Received a console message from a player, save
 	MultiMsgPlayerFrom = player;
 	MultiMsgPlayerTo = selectedPlayer;
 
-	strlcpy(MultiplayMsg, &(pMsg->body[4]), sizeof(MultiplayMsg));
+	strlcpy(MultiplayMsg, newmsg, sizeof(MultiplayMsg));
 	eventFireCallbackTrigger((TRIGGER_TYPE)CALL_AI_MSG);
 
 	// make some noise!
-	if(titleMode == MULTIOPTION || titleMode == MULTILIMIT)
+	if (titleMode == MULTIOPTION || titleMode == MULTILIMIT)
 	{
 		audio_PlayTrack(FE_AUDIO_MESSAGEEND);
 	}
-	else if(!ingame.localJoiningInProgress)
+	else if (!ingame.localJoiningInProgress)
 	{
 		audio_PlayTrack(ID_SOUND_MESSAGEEND);
 	}
@@ -1245,18 +1292,21 @@ BOOL recvTextMessage(NETMSG *pMsg)
 }
 
 //AI multiplayer message - received message from AI (from scripts)
-BOOL recvTextMessageAI(NETMSG *pMsg)
+BOOL recvTextMessageAI()
 {
-	SDWORD	sender, receiver;
-
+	UDWORD	sender, receiver;
 	char	msg[MAX_CONSOLE_STRING_LENGTH];
+	char	newmsg[MAX_CONSOLE_STRING_LENGTH];
 
-	NetGet(pMsg,0,sender);			//in-game player index ('normal' one)
-	NetGet(pMsg,4,receiver);		//in-game player index
+	NETbeginDecode();
+		NETuint32_t(&sender);			//in-game player index ('normal' one)
+		NETuint32_t(&receiver);			//in-game player index
+		NETstring(newmsg,MAX_CONSOLE_STRING_LENGTH);		
+	NETend();
 
 	//strlcpy(msg, getPlayerName(sender), sizeof(msg));  // name
 	//strlcat(msg, " : ", sizeof(msg));                  // seperator
-	strlcpy(msg, &(pMsg->body[8]), sizeof(msg));
+	strlcpy(msg, newmsg, sizeof(msg));
 
 	//Display the message and make the script callback
 	displayAIMessage(msg, sender, receiver);
@@ -1279,73 +1329,82 @@ BOOL recvTextMessageAI(NETMSG *pMsg)
 // send a newly created template to other players
 BOOL sendTemplate(DROID_TEMPLATE *pTempl)
 {
-	NETMSG m;
-	UDWORD count = 0, i;
+	int i;
+	uint8_t player = selectedPlayer;
 
 	ASSERT(pTempl != NULL, "sendTemplate: Old Pumpkin bug");
 	if (!pTempl) return TRUE; /* hack */
 
-	// I hate adding more of this hideous code, but it is necessary for now - Per
-	NetAddUint8(m, count, selectedPlayer);			count += sizeof(Uint8);
-	NetAddUint32(m, count, pTempl->ref);			count += sizeof(Uint32);
-	NetAdd(m, count, pTempl->aName);			count += DROID_MAXNAME;
-	NetAddUint8(m, count, pTempl->NameVersion);		count += sizeof(Uint8);
-	for (i = 0; i < DROID_MAXCOMP; i++)
-	{
-		// signed, but sent as a bunch of bits...
-		NetAddUint32(m, count, pTempl->asParts[i]);	count += sizeof(Uint32);
-	}
-	NetAddUint32(m, count, pTempl->buildPoints);		count += sizeof(Uint32);
-	NetAddUint32(m, count, pTempl->powerPoints);		count += sizeof(Uint32);
-	NetAddUint32(m, count, pTempl->storeCount);		count += sizeof(Uint32);
-	NetAddUint32(m, count, pTempl->numWeaps);		count += sizeof(Uint32);
-	for (i = 0; i < DROID_MAXWEAPS; i++)
-	{
-		NetAddUint32(m, count, pTempl->asWeaps[i]);	count += sizeof(Uint32);
-	}
-	NetAddUint32(m, count, pTempl->droidType);		count += sizeof(Uint32);
-	NetAddUint32(m, count, pTempl->multiPlayerID);		count += sizeof(Uint32);
+	NETbeginEncode(NET_TEMPLATE, NET_ALL_PLAYERS);
+		NETuint8_t(&player);
+		NETuint32_t(&pTempl->ref);
+		NETstring(pTempl->aName, DROID_MAXNAME);
+		NETuint8_t(&pTempl->NameVersion);
 
-	m.type = NET_TEMPLATE;
-	m.size = count;
-	return(  NETbcast(&m,FALSE)	);
+		for (i = 0; i < DROID_MAXCOMP; i++)
+		{
+			// signed, but sent as a bunch of bits...
+			NETint32_t(&pTempl->asParts[i]);
+		}
+		
+		NETuint32_t(&pTempl->buildPoints);
+		NETuint32_t(&pTempl->powerPoints);
+		NETuint32_t(&pTempl->storeCount);
+		NETuint32_t(&pTempl->numWeaps);
+
+		for (i = 0; i < DROID_MAXWEAPS; i++)
+		{
+			NETuint32_t(&pTempl->asWeaps[i]);
+		}
+		
+		NETuint32_t(&pTempl->droidType);
+		NETuint32_t(&pTempl->multiPlayerID);
+
+	return NETend();
 }
 
 // receive a template created by another player
-BOOL recvTemplate(NETMSG * m)
+BOOL recvTemplate()
 {
-	UBYTE			player;
+	uint8_t			player;
 	DROID_TEMPLATE	*psTempl;
 	DROID_TEMPLATE	t, *pT = &t;
-	unsigned int i;
-	unsigned int count = 0;
+	int				i;
 
-	NetGetUint8(m, count, player);				count += sizeof(Uint8);
-	ASSERT( player < MAX_PLAYERS, "recvtemplate: invalid player size: %d", player );
+	NETbeginDecode();
+		NETuint8_t(&player);
+		ASSERT(player < MAX_PLAYERS, "recvtemplate: invalid player size: %d", player);
 
-	NetGetUint32(m, count, pT->ref);			count += sizeof(Uint32);
-	NetGet(m, count, pT->aName);				count += DROID_MAXNAME;
-	NetGetUint8(m, count, pT->NameVersion);			count += sizeof(Uint8);
-	for (i = 0; i < DROID_MAXCOMP; i++)
-	{
-		// signed, but sent as a bunch of bits...
-		NetGetUint32(m, count, pT->asParts[i]);		count += sizeof(Uint32);
-	}
-	NetGetUint32(m, count, pT->buildPoints);		count += sizeof(Uint32);
-	NetGetUint32(m, count, pT->powerPoints);		count += sizeof(Uint32);
-	NetGetUint32(m, count, pT->storeCount);			count += sizeof(Uint32);
-	NetGetUint32(m, count, pT->numWeaps);			count += sizeof(Uint32);
-	for (i = 0; i < DROID_MAXWEAPS; i++)
-	{
-		NetGetUint32(m, count, pT->asWeaps[i]);		count += sizeof(Uint32);
-	}
-	NetGetUint32(m, count, pT->droidType);			count += sizeof(Uint32);
-	NetGetUint32(m, count, pT->multiPlayerID);		count += sizeof(Uint32);
-
+		NETuint32_t(&pT->ref);
+		NETstring(pT->aName, DROID_MAXNAME);
+		NETuint8_t(&pT->NameVersion);
+		
+		for (i = 0; i < DROID_MAXCOMP; i++)
+		{
+			// signed, but sent as a bunch of bits...
+			NETint32_t(&pT->asParts[i]);	
+		}
+		
+		NETuint32_t(&pT->buildPoints);
+		NETuint32_t(&pT->powerPoints);
+		NETuint32_t(&pT->storeCount);
+		NETuint32_t(&pT->numWeaps);
+				
+		for (i = 0; i < DROID_MAXWEAPS; i++)
+		{
+			NETuint32_t(&pT->asWeaps[i]);
+		}
+		
+		NETuint32_t(&pT->droidType);
+		NETuint32_t(&pT->multiPlayerID);
+	NETend();
+	
 	t.psNext = NULL;
 
 	psTempl = IdToTemplate(t.multiPlayerID,player);
-	if(psTempl)												// already exists.
+	
+	// Already exists
+	if (psTempl)
 	{
 		t.psNext = psTempl->psNext;
 		memcpy(psTempl, &t, sizeof(DROID_TEMPLATE));
@@ -1353,8 +1412,9 @@ BOOL recvTemplate(NETMSG * m)
 	else
 	{
 		addTemplate(player,&t);
-		apsDroidTemplates[player]->ref = REF_TEMPLATE_START;	// templates are the odd one out!
+		apsDroidTemplates[player]->ref = REF_TEMPLATE_START;
 	}
+	
 	return TRUE;
 }
 
@@ -1428,7 +1488,7 @@ BOOL SendDestroyFeature(FEATURE *pF)
 	// Only send if it is our responsibility
 	if (myResponsibility(pF->player))
 		return TRUE;
-	
+
 	NETbeginEncode(NET_FEATUREDEST, NET_ALL_PLAYERS);
 		NETuint32_t(&pF->id);
 	return NETend();
@@ -1437,7 +1497,7 @@ BOOL SendDestroyFeature(FEATURE *pF)
 // process a destroy feature msg.
 BOOL recvDestroyFeature()
 {
-	FEATURE		*pF;
+	FEATURE *pF;
 	uint32_t	id;
 	
 	NETbeginDecode();
@@ -1453,7 +1513,7 @@ BOOL recvDestroyFeature()
 
 	// Remove the feature locally
 	turnOffMultiMsg(TRUE);
-		removeFeature(pF);
+	removeFeature(pF);
 	turnOffMultiMsg(FALSE);
 
 	return TRUE;
@@ -1461,7 +1521,7 @@ BOOL recvDestroyFeature()
 
 // ////////////////////////////////////////////////////////////////////////////
 // Network File packet processor.
-BOOL recvMapFileRequested(NETMSG *pMsg)
+BOOL recvMapFileRequested()
 {
 	char mapStr[256],mapName[256],fixedname[256];
 
@@ -1478,8 +1538,7 @@ BOOL recvMapFileRequested(NETMSG *pMsg)
 		memset(mapName,0,256);
 		memset(fixedname,0,256);
 		bSendingMap = TRUE;
-		addConsoleMessage("SENDING MAP!",DEFAULT_JUSTIFY);
-		addConsoleMessage("FIX FOR LINUX!",DEFAULT_JUSTIFY);
+		addConsoleMessage("Map was requested: SENDING MAP!",DEFAULT_JUSTIFY);
 
 		strlcpy(mapName, game.map, sizeof(mapName));
 		// chop off the -T1
@@ -1528,11 +1587,11 @@ UBYTE sendMap(void)
 }
 
 // another player is broadcasting a map, recv a chunk
-BOOL recvMapFileData(NETMSG *pMsg)
+BOOL recvMapFileData()
 {
 	UBYTE done;
 
-	done =  NETrecvFile(pMsg);
+	done =  NETrecvFile();
 	if(done == 100)
 	{
 		addConsoleMessage("MAP DOWNLOADED!",DEFAULT_JUSTIFY);
@@ -1541,7 +1600,9 @@ BOOL recvMapFileData(NETMSG *pMsg)
 		// clear out the old level list.
 		levShutDown();
 		levInitialise();
-		if (!buildMapList()) {
+		rebuildSearchPath(mod_multiplay, TRUE);	// MUST rebuild search path for the new maps we just got!
+		if (!buildMapList())
+		{
 			return FALSE;
 		}
 	}
@@ -1806,25 +1867,25 @@ BOOL msgStackFireTop(void)
 	return TRUE;
 }
 
-static BOOL recvBeacon(NETMSG *pMsg)
+static BOOL recvBeacon()
 {
-	SDWORD	sender, receiver,locX, locY;
+	int32_t sender, receiver,locX, locY;
+	char    msg[MAX_CONSOLE_STRING_LENGTH];
 
-	char	msg[MAX_CONSOLE_STRING_LENGTH];
-
-	NetGet(pMsg,0,sender);
-	NetGet(pMsg,4,receiver);
-	NetGet(pMsg,8,locX);
-	NetGet(pMsg,12,locY);
+	NETbeginDecode();
+	    NETint32_t(&sender);            // the actual sender
+	    NETint32_t(&receiver);          // the actual receiver (might not be the same as the one we are actually sending to, in case of AIs)
+	    NETint32_t(&locX);
+	    NETint32_t(&locY);
+	    NETstring(msg, sizeof(msg));    // Receive the actual message
+	NETend();
 
 	debug(LOG_WZ, "Received beacon for player: %d, from: %d",receiver, sender);
 
-	strcpy(msg, &(pMsg->body[16]));
-	strcat(msg, NetPlay.players[sender].name);		// name
+	strlcat(msg, NetPlay.players[sender].name, sizeof(msg));    // name
+	strlcpy(beaconReceiveMsg[sender], msg, sizeof(beaconReceiveMsg));
 
-	strcpy(beaconReceiveMsg[sender], msg);
-
-	return addHelpBlip(locX,locY,receiver,sender,beaconReceiveMsg[sender]);
+	return addHelpBlip(locX, locY, receiver, sender, beaconReceiveMsg[sender]);
 }
 
 static const char* playerColors[] =

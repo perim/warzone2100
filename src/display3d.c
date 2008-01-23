@@ -157,6 +157,8 @@ static BOOL	bDrawBlips=TRUE;
 static BOOL	bDrawProximitys=TRUE;
 BOOL	godMode;
 
+static char skyboxPageName[PATH_MAX] = "page-25";
+
 static float waterRealValue = 0.0f;
 #define WAVE_SPEED 0.015f
 
@@ -230,7 +232,6 @@ static UDWORD	destTileX=0,destTileY=0;
 #define	TARGET_TO_SENSOR_TIME	((4*(GAME_TICKS_PER_SEC))/5)
 #define	DEST_TARGET_TIME	(GAME_TICKS_PER_SEC/4)
 #define STRUCTURE_ANIM_RATE 4
-#define ELEC_DAMAGE_DURATION	(GAME_TICKS_PER_SEC/5)
 
 /* Colour strobe values for the strobing drag selection box */
 #define BOX_PULSE_SIZE  10
@@ -897,6 +898,8 @@ BOOL init3DView(void)
 	targetInitialise();
 
 	memset(directionSet, FALSE, sizeof(directionSet));
+
+	pie_PrepareSkybox(skyboxPageName);
 
 	return TRUE;
 }
@@ -1931,21 +1934,11 @@ void	renderStructure(STRUCTURE *psStructure)
 		{
 			buildingBrightness = pal_SetBrightness(150);
 		}
+	}
 
-		if (strImd != NULL && bHitByElectronic)
-		{
-			// Get a copy of the points
-			memcpy(alteredPoints, strImd->points, strImd->npoints * sizeof(Vector3i));
-			for (i = 0; i < strImd->npoints; i++)
-			{
-				SDWORD yVar = (10 - rand() % 20);
-
-				alteredPoints[i].x += yVar - (rand() % 2 * yVar);
-				alteredPoints[i].z += yVar - (rand() % 2 * yVar);
-			}
-			temp = strImd->points;
-			strImd->points = alteredPoints;
-		}
+	if (bHitByElectronic)
+	{
+		objectShimmy((BASE_OBJECT *)psStructure);
 	}
 
 	//first check if partially built - ANOTHER HACK!
@@ -1960,7 +1953,7 @@ void	renderStructure(STRUCTURE *psStructure)
 		}
 		pie_Draw3DShape(strImd, 0, playerFrame, buildingBrightness, WZCOL_BLACK, pie_HEIGHT_SCALED | pie_SHADOW,
 		                (SDWORD)(structHeightScale(psStructure) * pie_RAISE_SCALE));
-		if (bHitByElectronic || defensive)
+		if (defensive)
 		{
 			strImd->points = temp;
 		}
@@ -1973,7 +1966,7 @@ void	renderStructure(STRUCTURE *psStructure)
 			strImd->points = alteredPoints;
 		}
 		pie_Draw3DShape(strImd, animFrame, 0, buildingBrightness, WZCOL_BLACK, pie_STATIC_SHADOW, 0);
-		if (bHitByElectronic || defensive)
+		if (defensive)
 		{
 			strImd->points = temp;
 		}
@@ -3583,15 +3576,11 @@ static void renderSurroundings(void)
 	pie_TRANSLATE(0, -skybox_scale/8, 0);
 
 	// Set the texture page
-	pie_SetTexturePage( iV_GetTexture(SKY_TEXPAGE) );
+	pie_SetTexturePage(iV_GetTexture(skyboxPageName));
 
 	if(!gamePaused())
 	{
-		wind += timeAdjustedIncrement(0.5f, FALSE);
-		if(wind >= 360.0f)
-		{
-			wind = 0.0f;
-		}
+		wind = wrapf(wind + timeAdjustedIncrement(0.5f, FALSE), 360.0f);
 	}
 	pie_DrawSkybox(skybox_scale, 0, 128, 256, 128);
 

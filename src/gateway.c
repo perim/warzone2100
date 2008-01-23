@@ -366,9 +366,9 @@ void gwCheckZoneSizes(void)
 				cy = y;
 			}
 
-			if (inzone > FPATH_NODEINIT)
+			if (inzone > FPATH_LOOP_LIMIT)
 			{
-				debug( LOG_ERROR, "gwCheckZoneSizes: warning zone %d at (%d,%d) is too large %d tiles (max %d)\n",	zone, cx, cy, inzone, FPATH_NODEINIT );
+				debug(LOG_ERROR, "gwCheckZoneSizes: warning zone %d at (%d,%d) is too large %d tiles (max %d)", zone, cx, cy, inzone, FPATH_LOOP_LIMIT);
 			}
 		}
 	}
@@ -399,7 +399,7 @@ BOOL gwGenerateLinkGates(void)
 			{
 				return FALSE;
 			}
-			debug( LOG_MOVEMENT, "\nnew water link gateway at (%d,%d) for zone %d ", cx,cy, zone);
+			debug(LOG_GATEWAY, "new water link gateway at (%d,%d) for zone %d", cx, cy, zone);
 		}
 	}
 

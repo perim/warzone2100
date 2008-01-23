@@ -625,7 +625,7 @@ void CBTEditDoc::InitialiseData(void)
 
 //	m_DirectDrawView->SetFilter(TRUE);
 	
-	g_WorkDirectory = getCurrentDirectory();
+	g_WorkDirectory = Win::GetCurrentDirectory();
 
 //	m_DirectDrawView = new CDirectDraw(NULL,NULL,FALSE,
 //				&DesiredProfile);
@@ -2388,7 +2388,7 @@ BOOL CBTEditDoc::GetFilePath(char *FilterList,char *ExtType,char *Filter,BOOL Op
 			strcpy(FullPath,Tmp.GetBuffer(0));
 		}
 
-		g_WorkDirectory = getCurrentDirectory();
+		g_WorkDirectory = Win::GetCurrentDirectory();
 		DebugPrint("New working directory %s\n", g_WorkDirectory.c_str());
 
 		SetButtonLapse();
@@ -5128,7 +5128,7 @@ void CBTEditDoc::OnMapExportmapasbitmap()
 		BMPHandler *Bmp = new BMPHandler;
 		Bmp->Create(BigWidth, BigHeight, 16);
 		// Create a device context for the BMP so we can blit into it.
-		HDC BmpHdc = (HDC)Bmp->CreateDC((void*)m_3DWnd);
+		HDC BmpHdc = Bmp->CreateDC(m_3DWnd);
 
 		// Now step through the map one screen at a time
 		for(int i=0; i<NumZ; i++) {
@@ -5157,7 +5157,7 @@ void CBTEditDoc::OnMapExportmapasbitmap()
 		}
 
 		// All done so delete the BMP's device context
-		Bmp->DeleteDC((void*)BmpHdc);				  
+		Bmp->DeleteDC(BmpHdc);				  
 		// save it to disk.
    		Bmp->WriteBMP(FullPath);
 		// and delete the BMP.

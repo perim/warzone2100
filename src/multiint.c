@@ -1311,15 +1311,12 @@ static void SendFireUp(void)
 }
 
 // host kick a player from a game.
-void kickPlayer(UDWORD dpid)
+void kickPlayer(uint32_t player_id)
 {
-	NETMSG m;
 	// send a kick msg
-	m.type  = NET_KICK;
-	m.size  = 4;
-	NetAdd(m,0,dpid);
-	NETbcast(&m,TRUE);
-	return;
+	NETbeginEncode(NET_KICK, NET_ALL_PLAYERS);
+		NETuint32_t(&player_id);
+	NETend();
 }
 
 
@@ -1950,7 +1947,17 @@ static void processMultiopWidgets(UDWORD id)
 			{
 				if(mouseDown(MOUSE_RMB)) // both buttons....
 				{
-					kickPlayer(NetPlay.players[id-MULTIOP_PLAYER_START].dpid);	// kick out that player.
+					int victim = NetPlay.players[id - MULTIOP_PLAYER_START].dpid;	// who to kick out
+					int j = 0;
+					char *msg;
+
+					while (player2dpid[j] != victim && j < MAX_PLAYERS)
+					{
+						j++; // find out ID of player
+					}
+					sasprintf(&msg, _("The host has kicked %s from the game!"), getPlayerName(j));
+					sendTextMessage(msg, TRUE);
+					kickPlayer(victim);
 				}
 			}
 		}
@@ -2010,9 +2017,6 @@ static void processMultiopWidgets(UDWORD id)
 void frontendMultiMessages(void)
 {
 	NETMSG			msg;			// a blank msg.
-	UDWORD			i;
-	UDWORD			dp;
-	UBYTE			bTemp;
 
 	while(NETrecv(&msg))
 	{
@@ -2022,10 +2026,10 @@ void frontendMultiMessages(void)
 		switch(msg.type)
 		{
 		case NET_REQUESTMAP:
-			recvMapFileRequested(&msg);
+			recvMapFileRequested();
 			break;
 		case FILEMSG:
-			recvMapFileData(&msg);
+			recvMapFileData();
 			break;
 
 
@@ -2058,20 +2062,35 @@ void frontendMultiMessages(void)
 			break;
 
 		case NET_LEAVING:					// remote player leaving.
-			NetGet((&msg),0,dp);
-			NetGet((&msg),4,bTemp);
-			MultiPlayerLeave(dp);
-			if(bTemp)					// host has quit, need to quit too.
+		{
+			BOOL host;
+			uint32_t player_id;
+
+			NETbeginDecode();
+			{
+				NETuint32_t(&player_id);
+				NETbool(&host);
+			}
+			NETend();
+			MultiPlayerLeave(player_id);
+			if (host)					// host has quit, need to quit too.
 			{
 				stopJoining();
 			}
 			break;
-
+		}
 		case NET_PLAYERRESPONDING:			// remote player is now playing.
-			NetGet((&msg),0,i);
-			ingame.JoiningInProgress[i] = FALSE;
-			break;
+		{
+			uint32_t player_id;
 
+			NETbeginDecode();
+				// the player that has just responded
+				NETuint32_t(&player_id);
+			NETend();
+
+			ingame.JoiningInProgress[player_id] = FALSE;
+			break;
+		}
 		case NET_FIREUP:					// campaign game started.. can fire the whole shebang up...
 			if(ingame.localOptionsReceived)
 			{
@@ -2088,17 +2107,23 @@ void frontendMultiMessages(void)
 			}
 
 		case NET_KICK:						// player is forcing someone to leave
-			NetGet((&msg),0,dp);
-			if(NetPlay.dpidPlayer == dp)	// we've been told to leave.
+		{
+			uint32_t player_id;
+
+			NETbeginDecode();
+				NETuint32_t(&player_id);
+			NETend();
+
+			if (NetPlay.dpidPlayer == player_id)	// we've been told to leave.
 			{
 				stopJoining();
 			}
 			break;
-
+		}
 		case NET_TEXTMSG:					// Chat message
 			if(ingame.localOptionsReceived)
 			{
-				recvTextMessage(&msg);
+				recvTextMessage();
 			}
 			break;
 		}

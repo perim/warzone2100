@@ -1946,13 +1946,6 @@
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="src/gatewaysup.c">
-			<Option compilerVar="CC" />
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
 		<Unit filename="src/geometry.c">
 			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />

@@ -203,9 +203,10 @@ BOOL startLimitScreen(void)
 	sFormInit.majorOffset = OBJ_TABOFFSET;
 	sFormInit.tabVertOffset = (OBJ_TABHEIGHT/2);			//(DES_TAB_HEIGHT/2)+2;
 	sFormInit.tabMajorThickness = OBJ_TABHEIGHT;
-	sFormInit.pFormDisplay = intDisplayObjectForm;
 	sFormInit.pUserData = &StandardTab;
 	sFormInit.pTabDisplay = intDisplayTab;
+
+	// TABFIXME --unsure if needs fixing yet.
 	for (i=0; i< sFormInit.numMajor; i++)
 	{
 		sFormInit.aNumMinors[i] = 1;
@@ -331,6 +332,7 @@ void createLimitSet(void)
 	// Count the number of changes
 	for (i = 0; i < numStructureStats; i++)
 	{
+		// If the limit differs from the default
 		if (asStructLimits[0][i].limit != LOTS_OF)
 		{
 			numchanges++;
@@ -368,9 +370,9 @@ void applyLimitSet(void)
 	}
 
 	// Get the limits and decode
-	for (i = 0;i < ingame.numStructureLimits; i++)
-	{
-		UBYTE id = pEntry[i].id;
+	for (i = 0; i < ingame.numStructureLimits; i++)
+ 	{
+		unsigned int id = pEntry[i].id;
 		
 		// So long as the ID is valid
 		if (id < numStructureStats)

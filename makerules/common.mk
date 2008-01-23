@@ -5,7 +5,7 @@
 	$(CC) $(CFLAGS) $(CCFLAGS) -c -o$@ $<
 
 %.o: %.cpp
-	$(CC) $(CFLAGS) $(CXXFLAGS) -c -o$@ $<
+	$(CXX) $(CXXFLAGS) -c -o$@ $<
 
 %.lex.c: %.l
 	$(FLEX) $(FLEXFLAGS) -o$@ $<

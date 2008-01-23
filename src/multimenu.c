@@ -419,19 +419,24 @@ void addMultiRequest(const char* searchDir, const char* fileExtension, UDWORD mo
 	sFormInit.height = M_REQUEST_H-4;
 
 	sFormInit.numMajor = numForms(numButtons, butPerForm);
-	if (sFormInit.numMajor > 8)
-	{
-		sFormInit.numMajor = 8;
-	}
+
 	sFormInit.majorPos = WFORM_TABTOP;
 	sFormInit.minorPos = WFORM_TABNONE;
 	sFormInit.majorSize = OBJ_TABWIDTH+2;
 	sFormInit.majorOffset = OBJ_TABOFFSET;
 	sFormInit.tabVertOffset = (OBJ_TABHEIGHT/2);
 	sFormInit.tabMajorThickness = OBJ_TABHEIGHT;
-	sFormInit.pFormDisplay = intDisplayObjectForm;
 	sFormInit.pUserData = &StandardTab;
 	sFormInit.pTabDisplay = intDisplayTab;
+
+	// TABFIXME: 
+	// This appears to be the map pick screen, when we have lots of maps
+	// this will need to change.
+	if (sFormInit.numMajor > MAX_TAB_STD_SHOWN)
+	{
+		sFormInit.numMajor = MAX_TAB_STD_SHOWN;
+	}
+
 	for (i = 0; i < sFormInit.numMajor; ++i)
 	{
 		sFormInit.aNumMinors[i] = 2;
@@ -749,11 +754,16 @@ void displayExtraGubbins(UDWORD height)
 	}
 
 #ifdef DEBUG
-	sprintf(str,"Traf:%d/%d",NETgetBytesSent(),NETgetBytesRecvd());
-	iV_DrawText(str, MULTIMENU_FORM_X, MULTIMENU_FORM_Y+MULTIMENU_FORM_H);
+	{
+		unsigned int width;
 
-	sprintf(str,"Pack:%d/%d",NETgetPacketsSent(), NETgetPacketsRecvd());
-	iV_DrawText(str, MULTIMENU_FORM_X+80, MULTIMENU_FORM_Y+MULTIMENU_FORM_H);
+		sprintf(str,"Traf: %u/%u", NETgetBytesSent(), NETgetBytesRecvd());
+		width = iV_GetTextWidth(str);
+		iV_DrawText(str, MULTIMENU_FORM_X, MULTIMENU_FORM_Y + MULTIMENU_FORM_H);
+
+		sprintf(str,"Pack: %u/%u", NETgetPacketsSent(), NETgetPacketsRecvd());
+		iV_DrawText(str, MULTIMENU_FORM_X + 20 + width, MULTIMENU_FORM_Y + MULTIMENU_FORM_H);
+	}
 #endif
 	return;
 }

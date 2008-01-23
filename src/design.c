@@ -978,9 +978,21 @@ static BOOL _intAddTemplateForm(DROID_TEMPLATE *psSelected)
 	sFormInit.majorOffset = DES_TAB_LEFTOFFSET;
 	sFormInit.tabVertOffset = (DES_TAB_HEIGHT/2);			//(DES_TAB_HEIGHT/2)+2;
 	sFormInit.tabMajorThickness = DES_TAB_HEIGHT;
-	sFormInit.pFormDisplay = intDisplayObjectForm;
 	sFormInit.pUserData = &StandardTab;
 	sFormInit.pTabDisplay = intDisplayTab;
+	if (sFormInit.numMajor > MAX_TAB_STD_SHOWN)
+	{
+		// we do NOT want more than this amount of tabs on design screen.
+		// 40 templates should be more than enough.
+		sFormInit.numMajor = MAX_TAB_STD_SHOWN;
+		// If we were to change this in future then :
+		//Just switching from normal sized tabs to smaller ones to fit more in form.
+		//		sFormInit.pUserData = &SmallTab;
+		//		sFormInit.majorSize /= 2;
+		// Change MAX_TAB_STD_SHOWN to ..SMALL_SHOWN, this will give us 80 templates max.
+	}
+
+
 	for (i=0; i< sFormInit.numMajor; i++)
 	{
 		sFormInit.aNumMinors[i] = 1;
@@ -2096,9 +2108,13 @@ static BOOL intAddComponentForm(UDWORD numButtons)
 	sFormInit.majorOffset = DES_TAB_LEFTOFFSET;
 	sFormInit.tabVertOffset = (DES_TAB_HEIGHT/2);
 	sFormInit.tabMajorThickness = DES_TAB_HEIGHT;
-	sFormInit.pFormDisplay = intDisplayObjectForm;
 	sFormInit.pUserData = &StandardTab;
 	sFormInit.pTabDisplay = intDisplayTab;
+	if (sFormInit.numMajor > MAX_TAB_STD_SHOWN)
+	{	// StandardTab can't have more than 4 tabs.  Being extra safe here, since
+		// we do NOT use scrolltabs & not smallTab icons either (which allow max 8)
+		sFormInit.numMajor = MAX_TAB_STD_SHOWN;
+	}
 	for (i=0; i< sFormInit.numMajor; i++)
 	{
 		sFormInit.aNumMinors[i] = 1;
@@ -4562,7 +4578,7 @@ static void intDisplayViewForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 	y1 = y0 + Form->height;
 
 
-	RenderWindowFrame(&FrameNormal,x0,y0,x1-x0,y1-y0);
+	RenderWindowFrame(FRAME_NORMAL, x0, y0, x1 - x0, y1 - y0);
 
 	if(CurrentStatsTemplate) {
 
@@ -4625,8 +4641,7 @@ void intDisplayDesignForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIEL
 
 	//AdjustTabFormSize(Form,&x0,&y0,&x1,&y1);
 
-	//RenderWindowFrame(&FrameDesignView,x0,y0,x1-x0,y1-y0);
-	RenderWindowFrame(&FrameNormal,x0,y0,x1-x0,y1-y0);
+	RenderWindowFrame(FRAME_NORMAL, x0, y0, x1 - x0, y1 - y0);
 }
 
 

@@ -579,15 +579,19 @@ BOOL intAddTransButtonForm(void)
 	sFormInit.numMajor = numForms((OBJ_BUTWIDTH + OBJ_GAP) * numButtons,
 								  OBJ_WIDTH - OBJ_GAP);
 
+	sFormInit.pUserData = &StandardTab;
+	sFormInit.pTabDisplay = intDisplayTab;
+
+	if (sFormInit.numMajor > MAX_TAB_STD_SHOWN)
+	{	// we do NOT use smallTab icons here, so be safe and only display max # of
+		// standard sized tab icons.  
+		sFormInit.numMajor = MAX_TAB_STD_SHOWN;
+	}
 	//set minor tabs to 1
 	for (i=0; i< sFormInit.numMajor; i++)
 	{
 		sFormInit.aNumMinors[i] = 1;
 	}
-
-	sFormInit.pFormDisplay = intDisplayObjectForm;
-	sFormInit.pUserData = &StandardTab;
-	sFormInit.pTabDisplay = intDisplayTab;
 
 	if (!widgAddForm(psWScreen, &sFormInit))
 	{
@@ -719,6 +723,8 @@ BOOL intAddTransContentsForm(void)
 	//set the number of tabs required
 	//sFormInit.numMajor = numForms((OBJ_BUTWIDTH + OBJ_GAP) * numButtons,
 	//							  OBJ_WIDTH - OBJ_GAP);
+
+	// TABFIXME: Looks like 10 units is max for this?
 	sFormInit.numMajor = 1;
 
 	//set minor tabs to 1
@@ -727,7 +733,6 @@ BOOL intAddTransContentsForm(void)
 		sFormInit.aNumMinors[i] = 1;
 	}
 
-	sFormInit.pFormDisplay = intDisplayObjectForm;
 	sFormInit.pUserData = &StandardTab;
 	sFormInit.pTabDisplay = intDisplayTab;
 
@@ -916,14 +921,16 @@ BOOL intAddDroidsAvailForm(void)
 						(OBJ_BUTHEIGHT + OBJ_GAP));
 
 	sFormInit.numMajor = numForms(numButtons, butPerForm);
-
+	if (sFormInit.numMajor > MAX_TAB_SMALL_SHOWN)
+	{	// we DO use smallTab icons here, so be safe and only display max # of
+		// small sized tab icons. No scrolltabs here.
+		sFormInit.numMajor = MAX_TAB_SMALL_SHOWN;
+	}
 	//set minor tabs to 1
 	for (i=0; i< sFormInit.numMajor; i++)
 	{
 		sFormInit.aNumMinors[i] = 1;
 	}
-
-	sFormInit.pFormDisplay = intDisplayObjectForm;
 
 	sFormInit.pUserData = &SmallTab;
 

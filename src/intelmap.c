@@ -336,15 +336,19 @@ static BOOL intAddMessageForm(BOOL playCurrent)
 	sFormInit.numMajor = numForms((OBJ_BUTWIDTH + OBJ_GAP) * numButtons,
 								  (OBJ_WIDTH - OBJ_GAP)*2);
 
+	sFormInit.pUserData = &StandardTab;
+	sFormInit.pTabDisplay = intDisplayTab;
+
+	if (sFormInit.numMajor > MAX_TAB_STD_SHOWN)
+	{	// we do NOT use smallTab icons here, so be safe and only display max # of
+		// standard sized tab icons.
+		sFormInit.numMajor = MAX_TAB_STD_SHOWN;
+	}
 	//set minor tabs to 1
 	for (i=0; i< sFormInit.numMajor; i++)
 	{
 		sFormInit.aNumMinors[i] = 1;
 	}
-
-	sFormInit.pFormDisplay = intDisplayObjectForm;
-	sFormInit.pUserData = &StandardTab;
-	sFormInit.pTabDisplay = intDisplayTab;
 
 	if (!widgAddForm(psWScreen, &sFormInit))
 	{
@@ -566,7 +570,6 @@ BOOL intAddMessageView(MESSAGE * psMessage)
 						  sFormInit.width, sFormInit.height,
 						  FALSE, &cur_seq, &cur_seqpage));
 
-		sFormInit.pFormDisplay = intDisplayObjectForm;
 		sFormInit.pUserData = &StandardTab;
 		sFormInit.pTabDisplay = intDisplayTab;
 
@@ -769,7 +772,7 @@ static void intDisplaySeqTextView(WIDGET *psWidget,
 	x0 = xOffset + Form->x;
 	y0 = yOffset + Form->y;
 
-	RenderWindowFrame(&FrameNormal, x0, y0, Form->width, Form->height);
+	RenderWindowFrame(FRAME_NORMAL, x0, y0, Form->width, Form->height);
 
 	/* work out where we're up to in the text */
 	cur_seq = cur_seqpage = 0;
@@ -1257,10 +1260,8 @@ void intDisplayPIEView(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGH
 		x1 = x0 + Form->width;
 		y1 = y0 + Form->height;
 
-
 		//moved from after close render
-		RenderWindowFrame(&FrameNormal,x0-1,y0-1,x1-x0+2,y1-y0+2);
-
+		RenderWindowFrame(FRAME_NORMAL, x0 - 1, y0 - 1, x1 - x0 + 2, y1 - y0 + 2);
 
 		OpenButtonRender((UWORD)(xOffset+Form->x), (UWORD)(yOffset+Form->y),
 			Form->width, Form->height);
@@ -1348,8 +1349,7 @@ void intDisplayTEXTView(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIG
 	y1 = y0 + Form->height;
 	ty = y0;
 
-
-	RenderWindowFrame(&FrameNormal,x0,y0,x1-x0,y1-y0);
+	RenderWindowFrame(FRAME_NORMAL, x0, y0, x1 - x0, y1 - y0);
 
 	if (psMessage)
 	{

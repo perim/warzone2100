@@ -96,6 +96,8 @@ BOOL loadMultiStats(char *sPlayerName, PLAYERSTATS *st)
 	UDWORD				size;
 	char				*pFileData;
 
+	memset(st, 0, sizeof(PLAYERSTATS));	// clear in case we don't get to load
+
 	// Prevent an empty player name (where the first byte is a 0x0 terminating char already)
 	if (!*sPlayerName)
 	{
@@ -120,14 +122,14 @@ BOOL loadMultiStats(char *sPlayerName, PLAYERSTATS *st)
 
 		loadFile(fileName,&pFileData,&size);
 
-		if (strncmp(pFileData, "WZ.STA.v2", 9) != 0)
+		if (strncmp(pFileData, "WZ.STA.v3", 9) != 0)
 		{
 			return FALSE; // wrong version or not a stats file
 		}
 
-		num = sscanf(pFileData, "WZ.STA.v2\n%s %u %u %u %u %u",
-		             sPlayerName, &st->wins, &st->losses, &st->totalKills, &st->totalScore, &st->played);
-		if (num < 6)
+		num = sscanf(pFileData, "WZ.STA.v3\n%u %u %u %u %u",
+		             &st->wins, &st->losses, &st->totalKills, &st->totalScore, &st->played);
+		if (num < 5)
 		{
 			st->played = 0;	// must be old, buggy format still
 		}
@@ -158,8 +160,8 @@ BOOL saveMultiStats(const char *sFileName, const char *sPlayerName, const PLAYER
 	char buffer[MAX_STA_SIZE];
 	char fileName[255] = "";
 
-	snprintf(buffer, MAX_STA_SIZE, "WZ.STA.v2\n%s %u %u %u %u %u",
-		sPlayerName, st->wins, st->losses, st->totalKills, st->totalScore, st->played);
+	snprintf(buffer, MAX_STA_SIZE, "WZ.STA.v3\n%u %u %u %u %u",
+	         st->wins, st->losses, st->totalKills, st->totalScore, st->played);
 
 	snprintf(fileName, sizeof(fileName), "%s%s.sta", MultiPlayersPath, sFileName);
 

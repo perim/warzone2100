@@ -48,8 +48,14 @@ extern int asprintf(char** strp, const char* format, ...) WZ_DECL_FORMAT(printf,
 
 #if defined(WZ_CC_MSVC)
 // Make sure that these functions are available, and work according to the C99 spec on MSVC also
-extern int vsnprintf(char* str, size_t size, const char* format, va_list ap);
-extern int snprintf(char* str, size_t size, const char* format, ...);
+extern int wz_vsnprintf(char* str, size_t size, const char* format, va_list ap);
+extern int wz_snprintf(char* str, size_t size, const char* format, ...);
+
+// Necessary to prevent conflicting symbols with MSVC's own (incorrect!) implementations of these functions
+# define vsnprintf wz_vsnprintf
+# define snprintf  wz_snprintf
+#elif !defined(WZ_C99)
+# error "This code depends on a C99-compliant implementation of snprintf and vsnprintf; please compile as C99 or provide a compliant implementation!"
 #endif
 
 // A stack-allocating variant of sprintf

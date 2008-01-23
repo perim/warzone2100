@@ -308,7 +308,6 @@ static BOOL formCreateTabbed(W_TABFORM **ppsWidget, W_FORMINIT *psInit)
 	(*ppsWidget)->majorPos = psInit->majorPos;
 	(*ppsWidget)->minorPos = psInit->minorPos;
 	(*ppsWidget)->pTabDisplay = psInit->pTabDisplay;
-	(*ppsWidget)->pFormDisplay = psInit->pFormDisplay;
 	(*ppsWidget)->TabMultiplier = psInit->TabMultiplier;
 	(*ppsWidget)->numButtons = psInit->numButtons;
 	(*ppsWidget)->numStats = psInit->numStats;
@@ -780,9 +779,29 @@ static BOOL formPickHTab(TAB_POS *psTabPos,
 
 	x = x0;
 	y1 = y0 + height;
-	// We need to filter out some tabs, since we can only display 7 at a time.
-	number=  (number - (( psTabPos->TabMultiplier -1) * TAB_SEVEN));
-	if (number > TAB_SEVEN) number = TAB_SEVEN;	//7 = max tabs we can display.
+	
+	// We need to filter out some tabs, since we can only display 7 at a time, with
+	// the scroll tabs in place, and 8 without. MAX_TAB_SMALL_SHOWN (currently 8) is the case
+	// when we do NOT want scrolltabs, and are using smallTab icons.
+	// Also need to check if the TabMultiplier is set or not, if not then it means 
+	// we have not yet added the code to display/handle the tab scroll buttons.
+	// At this time, I think only the design screen has this limitation of only 8 tabs.
+	if (number > MAX_TAB_SMALL_SHOWN  && psTabPos->TabMultiplier) // of course only do this if we actually need >8 tabs.
+	{
+		number -= (psTabPos->TabMultiplier - 1) * TAB_SEVEN;
+		if (number > TAB_SEVEN)	// is it still > than TAB_SEVEN?
+		{
+			number = TAB_SEVEN;
+		}
+	}
+	else if (number > MAX_TAB_SMALL_SHOWN)
+	{
+		// we need to clip the tab count to max amount *without* the scrolltabs visible.
+		// The reason for this, is that in design screen & 'feature' debug & others(?),
+		// we can get over max # of tabs that the game originally supported.
+		// This made it look bad.
+		number = MAX_TAB_SMALL_SHOWN;
+	}
 
 	for (i=0; i < number; i++)
 	{
@@ -1314,7 +1333,7 @@ static void formDisplayTTabs(W_TABFORM *psForm,SDWORD x0, SDWORD y0,
 	x = x0 + 2;
 	x1 = x + width - 2;
 	y1 = y0 + height;
-	if (number > MAXTABSSHOWN)	//we can display 7 (currently) tabs fine.
+	if (number > MAX_TAB_SMALL_SHOWN)	//we can display 8 tabs fine with no extra voodoo.
 	{	// We do NOT want to draw all the tabs once we have drawn 7 tabs
 		// Both selected & hilite are converted from virtual tab range, to a range
 		// that is seen on the form itself.  This would be 0-6 (7 tabs)
@@ -1572,38 +1591,6 @@ void formDisplayTabbed(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGH
 		y1 -= psForm->tabMajorThickness - psForm->tabVertOffset;
 	} else if(psForm->minorPos == WFORM_TABBOTTOM) {
 		y1 -= psForm->tabMinorThickness - psForm->tabVertOffset;
-	}
-
-	/* Adjust for where the tabs are */
-//	if (psForm->majorPos == WFORM_TABLEFT || psForm->minorPos == WFORM_TABLEFT)
-//	{
-//		x0 += psForm->tabThickness - psForm->tabHorzOffset;
-//	}
-//	if (psForm->majorPos == WFORM_TABRIGHT || psForm->minorPos == WFORM_TABRIGHT)
-//	{
-//		x1 -= psForm->tabThickness - psForm->tabHorzOffset;
-//	}
-//	if (psForm->majorPos == WFORM_TABTOP || psForm->minorPos == WFORM_TABTOP)
-//	{
-//		y0 += psForm->tabThickness - psForm->tabVertOffset;
-//	}
-//	if (psForm->majorPos == WFORM_TABBOTTOM || psForm->minorPos == WFORM_TABBOTTOM)
-//	{
-//		y1 -= psForm->tabThickness - psForm->tabVertOffset;
-//	}
-
-	if(psForm->pFormDisplay) {
-		psForm->pFormDisplay((WIDGET *)psForm, xOffset, yOffset, psForm->aColours);
-	} else {
-		/* Draw the form outline */
-		if (!(psForm->style & WFORM_INVISIBLE))
-		{
-			pie_BoxFill(x0, y0, x1, y1, pColours[WCOL_BKGRND]);
-			iV_Line(x0,y1,x0,y0, pColours[WCOL_LIGHT]);
-			iV_Line(x0,y0,x1,y0, pColours[WCOL_LIGHT]);
-			iV_Line(x1,y0,x1,y1, pColours[WCOL_DARK]);
-			iV_Line(x1,y1,x0,y1, pColours[WCOL_DARK]);
-		}
 	}
 
 	/* Draw the major tabs */

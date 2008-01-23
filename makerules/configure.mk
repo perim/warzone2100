@@ -51,16 +51,21 @@ endif
 # Setup paths and static values
 
 CFLAGS+=-DPACKAGE_VERSION=\"$(VERSION)\" -DYY_STATIC -DLOCALEDIR=\"$(LOCALEDIR)\" -DPACKAGE=\"$(PACKAGE)\" -I.. -I../.. -I$(DEVDIR)/include/SDL -I$(DEVDIR)/include/libpng12 -I$(DEVDIR)/include
+CXXFLAGS+=-DPACKAGE_VERSION=\"$(VERSION)\" -DYY_STATIC -DLOCALEDIR=\"$(LOCALEDIR)\" -DPACKAGE=\"$(PACKAGE)\" -I.. -I../.. -I$(DEVDIR)/include/SDL -I$(DEVDIR)/include/libpng12 -I$(DEVDIR)/include
 LDFLAGS+=-L$(DEVDIR)/lib
 
+# Use C99
+CFLAGS+=-std=gnu99
 
 # Setup build environment with config values
 
 ifeq ($(strip $(MODE)),debug)
 CCFLAGS+=-Werror-implicit-function-declaration
 CFLAGS+=-g -O0 -DDEBUG -Wall
+CXXFLAGS+=-g -O0 -DDEBUG -Wall
 else
 CFLAGS+=-DNDEBUG
+CXXFLAGS+=-DNDEBUG
 endif
 
 CXXFLAGS+=-fexceptions
@@ -75,8 +80,10 @@ RMF=del /F
 EXEEXT=.exe
 AR=ar
 CC=gcc
+CXX=g++
 WINDRES=windres
 CFLAGS+=-mwindows -DWIN32
+CXXFLAGS+=-mwindows -DWIN32
 LDFLAGS+=-lmingw32 -lSDLmain
 else
 ifeq ($(strip $(PLATFORM)),mingw32)
@@ -85,8 +92,10 @@ RMF=rm -f
 EXEEXT=.exe
 AR=mingw32-ar
 CC=mingw32-gcc
+CXX=mingw32-g++
 WINDRES=mingw32-windres
 CFLAGS+=-mwindows -DWIN32
+CXXFLAGS+=-mwindows -DWIN32
 LDFLAGS+=-lmingw32 -lSDLmain
 else
 DIRSEP=/
@@ -94,13 +103,14 @@ RMF=rm -f
 EXEEXT=
 AR=ar
 CC=gcc
+CXX=g++
 WINDRES=
 endif
 endif
 
 # Generic libs
 
-LDFLAGS+=-lSDL -lSDL_net -lpng -lphysfs -lz -lvorbisfile -lvorbis -logg -lpopt -lintl -lstdc++
+LDFLAGS+=-lSDL -lSDL_net -lpng12 -lphysfs -lz -lvorbisfile -lvorbis -logg -lpopt -lintl -lstdc++
 
 # Additional platform-dependend libs
 
@@ -108,7 +118,7 @@ ifeq ($(strip $(PLATFORM)),windows)
 LDFLAGS+=-lGLC -lglu32 -lopengl32 -lopenal32 -ldbghelp -lshfolder -lwinmm -lwsock32
 else
 ifeq ($(strip $(PLATFORM)),mingw32)
-LDFLAGS+=-lglc32 -lglu32 -lopengl32 -lopenal32 -ldbghelp -lshfolder -lwinmm -lwsock32
+LDFLAGS+=-lGLC -lglu32 -lopengl32 -lopenal32 -ldbghelp -lshfolder -lwinmm -lwsock32
 else
 LDFLAGS+=-lGLC -lGLU -lGL -lopenal
 endif
