@@ -34,7 +34,7 @@
 #include "openal/device.hpp"
 #include "openal/context.hpp"
 #include "stream.hpp"
-#include "track.hpp"
+#include "sound/track.hpp"
 
 // C-interface helper utility classes
 #include "interface/stringarray.hpp"
