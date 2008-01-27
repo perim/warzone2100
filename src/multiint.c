@@ -164,10 +164,9 @@ static	void	decideWRF			(void);
 
 static void		closeColourChooser	(void);
 static void		closeTeamChooser	(void);
-static BOOL		SendColourRequest	(UDWORD player, UBYTE col,UBYTE chosenPlayer);
+static BOOL		SendColourRequest	(UBYTE player, UBYTE col,UBYTE chosenPlayer);
 static BOOL		safeToUseColour		(UDWORD player,UDWORD col);
 BOOL			chooseColour		(UDWORD);
-BOOL			recvColourRequest	(NETMSG *pMsg);
 
 // ////////////////////////////////////////////////////////////////////////////
 // map previews..
@@ -982,84 +981,60 @@ static void closeColourChooser(void)
 	widgDelete(psWScreen,MULTIOP_COLCHOOSER_FORM);
 }
 
-static BOOL SendTeamRequest(UDWORD player, UBYTE chosenTeam)
+static void changeTeam(UBYTE player, UBYTE team)
 {
-	NETMSG m;
+	playerTeamGUI[player] = team;
+	debug(LOG_WZ, "set %d as new team for player %d", team, player);
+	sendOptions(player2dpid[player], player);	// tell everyone && update requesting player.
+}
 
-	m.body[0] =	(UBYTE)player;
-	m.body[1] = (UBYTE)chosenTeam;
-	m.type    = NET_TEAMREQUEST;
-	m.size    = 2;
-
+static BOOL SendTeamRequest(UBYTE player, UBYTE chosenTeam)
+{
 	if(NetPlay.bHost)			// do or request the change.
 	{
-		recvTeamRequest(&m);	// do the change, remember only the host can do this to avoid confusion.
-		return TRUE;
+		changeTeam(player, chosenTeam);	// do the change, remember only the host can do this to avoid confusion.
 	}
 	else
 	{
-		return NETbcast(&m,TRUE);
+		NETbeginEncode(NET_TEAMREQUEST, NET_ALL_PLAYERS);
+
+		NETuint8_t(&player);
+		NETuint8_t(&chosenTeam);
+
+		NETend();
+
 	}
+	return TRUE;
 }
 
-BOOL recvTeamRequest(NETMSG *pMsg)
+BOOL recvTeamRequest()
 {
-	UDWORD	player,team;
+	UBYTE	player, team;
 
 	if(!NetPlay.bHost)							//only host should act.
 	{
 		return TRUE;
 	}
 
-	player			= (UDWORD) pMsg->body[0];
-	team			= (UDWORD) pMsg->body[1];
+	NETbeginDecode();
+	NETuint8_t(&player);
+	NETuint8_t(&team);
+	NETend();
 
-	playerTeamGUI[player] = team;
+	if (player > MAX_PLAYERS || team > MAX_PLAYERS)
+	{
+		debug(LOG_ERROR, "Invalid NET_TEAMREQUEST from player %d: Tried to change player %d (team %d)", 
+		      NETgetSource(), (int)player, (int)team);
+		return FALSE;
+	}
 
-	debug(LOG_WZ, "set %d as new team for player %d", team, player);
-
-	sendOptions(player2dpid[player],player);	// tell everyone && update requesting player.
+	changeTeam(player, team);
 
 	return TRUE;
 }
 
-static BOOL SendColourRequest(UDWORD player, UBYTE col,UBYTE chosenPlayer)
+static BOOL changeColour(UBYTE player, UBYTE col, UBYTE chosenPlayer)
 {
-	NETMSG m;
-
-	m.body[0] =	(UBYTE)player;
-	m.body[1] = (UBYTE)col;
-	m.body[2] = (UBYTE)chosenPlayer;
-	m.type    = NET_COLOURREQUEST;
-	m.size    = 3;
-
-	if(NetPlay.bHost)			// do or request the change.
-	{
-		recvColourRequest(&m);	// do the change, remember only the host can do this to avoid confusion.
-		return TRUE;
-	}
-	else
-	{
-		return NETbcast(&m,TRUE);
-	}
-}
-
-
-BOOL recvColourRequest(NETMSG *pMsg)
-{
-	UDWORD	player,col,oldcol;
-	UBYTE	chosenPlayer;
-	UDWORD	dpid;
-
-	if(!NetPlay.bHost)							//only host should act.
-	{
-		return TRUE;
-	}
-
-	player			= (UDWORD) pMsg->body[0];
-	col				= (UDWORD) pMsg->body[1];
-	chosenPlayer	= (UDWORD) pMsg->body[2];
-
 	if(chosenPlayer == UBYTE_MAX)
 	{	// colour change.
 		if(!safeToUseColour(player,col))
@@ -1067,11 +1042,14 @@ BOOL recvColourRequest(NETMSG *pMsg)
 			return FALSE;
 		}
 
-		setPlayerColour(player,col);
-		sendOptions(player2dpid[player],player);	// tell everyone && update requesting player.
+		setPlayerColour(player, col);
+		sendOptions(player2dpid[player], player);	// tell everyone && update requesting player.
 	}
 	else // base change.
 	{
+		UBYTE oldcol;
+		UDWORD dpid;
+
 		if(isHumanPlayer(chosenPlayer))
 		{
 			return FALSE;
@@ -1082,20 +1060,62 @@ BOOL recvColourRequest(NETMSG *pMsg)
 		ingame.JoiningInProgress[player] = FALSE;	// if they never joined, reset the flag
 
 		oldcol = getPlayerColour(chosenPlayer);
-		setPlayerColour	(chosenPlayer,getPlayerColour(player));// retain player colour
-		setPlayerColour	(player,oldcol);			// reset old colour
-//		chooseColour	(chosenPlayer);				// pick an unused colour.
-		setupNewPlayer	(dpid,chosenPlayer);		// setup all the guff for that player.
-		sendOptions		(dpid,chosenPlayer);
+		setPlayerColour(chosenPlayer, getPlayerColour(player));// retain player colour
+		setPlayerColour(player, oldcol);			// reset old colour
+//		chooseColour(chosenPlayer);				// pick an unused colour.
+		setupNewPlayer(dpid, chosenPlayer);		// setup all the guff for that player.
+		sendOptions(dpid, chosenPlayer);
 
-		NETplayerInfo();						// bring netplay up to date with changes.
+		NETplayerInfo();				// bring netplay up to date with changes.
 
-		if(player == selectedPlayer)// if host changing
+		if(player == selectedPlayer)			// if host changing
 		{
 			selectedPlayer = chosenPlayer;
 		}
 	}
 	return TRUE;
+}
+
+static BOOL SendColourRequest(UBYTE player, UBYTE col,UBYTE chosenPlayer)
+{
+	if(NetPlay.bHost)			// do or request the change.
+	{
+		return changeColour(player, col, chosenPlayer);
+	}
+	else
+	{
+		NETbeginEncode(NET_COLOURREQUEST, NET_ALL_PLAYERS);
+			NETuint8_t(&player);
+			NETuint8_t(&col);
+			NETuint8_t(&chosenPlayer);
+		NETend();
+	}
+	return TRUE;
+}
+
+BOOL recvColourRequest()
+{
+	UBYTE	player, col, chosenPlayer;
+
+	if(!NetPlay.bHost)							//only host should act.
+	{
+		return TRUE;
+	}
+
+	NETbeginDecode();
+		NETuint8_t(&player);
+		NETuint8_t(&col);
+		NETuint8_t(&chosenPlayer);
+	NETend();
+
+	if (player > MAX_PLAYERS || (chosenPlayer > MAX_PLAYERS && chosenPlayer != UBYTE_MAX))
+	{
+		debug(LOG_ERROR, "Invalid NET_COLOURREQUEST from player %d: Tried to change player %d to %d", 
+		      NETgetSource(), (int)player, (int)chosenPlayer);
+		return FALSE;
+	}
+
+	return changeColour(player, col, chosenPlayer);
 }
 
 
@@ -1303,11 +1323,9 @@ UDWORD addPlayerBox(BOOL players)
  */
 static void SendFireUp(void)
 {
-	NETMSG m;
-
-	m.type  = NET_FIREUP;
-	m.size  = 1;
-	NETbcast(&m,TRUE);
+	NETbeginEncode(NET_FIREUP, NET_ALL_PLAYERS);
+		// no payload necessary
+	NETend();
 }
 
 // host kick a player from a game.
@@ -2050,11 +2068,11 @@ void frontendMultiMessages(void)
 			break;
 
 		case NET_COLOURREQUEST:
-			recvColourRequest(&msg);
+			recvColourRequest();
 			break;
 
 		case NET_TEAMREQUEST:
-			recvTeamRequest(&msg);
+			recvTeamRequest();
 			break;
 
 		case NET_PING:						// diagnostic ping msg.

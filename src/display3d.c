@@ -99,11 +99,6 @@
 #include "anim_id.h"
 #include "cmddroid.h"
 
-// HACK to be able to use static shadows for walls
-// We just store a separate IMD for each direction
-static iIMDShape otherDirections[3];
-static BOOL directionSet[3] = {FALSE, FALSE, FALSE};
-
 #define WATER_ALPHA_LEVEL 255 //was 164	// Amount to alpha blend water.
 #define WATER_ZOFFSET 32		// Sorting offset for main water tile.
 #define WATER_EDGE_ZOFFSET 64	// Sorting offset for water edge tiles.
@@ -176,7 +171,7 @@ static iView	camera;
 static Vector3i	imdRot,imdRot2;
 
 /* How far away are we from the terrain */
-UDWORD		distance = START_DISTANCE;//(DISTANCE - (DISTANCE/6));
+UDWORD		distance;
 
 /* Stores the screen coordinates of the transformed terrain tiles */
 static TERRAIN_VERTEX tileScreenInfo[LAND_YGRD][LAND_XGRD];
@@ -897,9 +892,15 @@ BOOL init3DView(void)
 
 	targetInitialise();
 
-	memset(directionSet, FALSE, sizeof(directionSet));
-
 	pie_PrepareSkybox(skyboxPageName);
+	
+	player.r.z = 0; // roll
+	player.r.y = INITIAL_DESIRED_ROTATION; // rotation
+	player.r.x = DEG(360 + INITIAL_STARTING_PITCH); // angle
+
+	// and set the camera position
+	distance = START_DISTANCE; // distance	
+	player.p.y = 1000 + map_Height(player.r.x, player.r.z); // height
 
 	return TRUE;
 }
@@ -2253,7 +2254,6 @@ static BOOL	renderWallSection(STRUCTURE *psStructure)
 	Vector3i			dv;
 	UDWORD			i;
 	Vector3f			*temp;
-	iIMDShape *originalDirection = NULL;
 
 	if(psStructure->visible[selectedPlayer] || godMode || demoGetStatus())
 	{
@@ -2350,21 +2350,6 @@ static BOOL	renderWallSection(STRUCTURE *psStructure)
 		imd = psStructure->sDisplay.imd;
 		temp = imd->points;
 
-		// now check if we need to apply the wall hack
-		if ( psStructure->direction > 0 && psStructure->pStructureType->type == REF_WALL )
-		{
-			// switch them
-			originalDirection = imd;
-			imd = &otherDirections[(int)psStructure->direction / 90 - 1];
-			if(!directionSet[(int)psStructure->direction / 90 - 1])
-			{
-				// not yet initialised, so do that now
-				*imd = *originalDirection;
-				imd->shadowEdgeList = NULL;
-				directionSet[(int)psStructure->direction / 90 - 1] = TRUE;
-			}
-		}
-
 		flattenImd(imd, structX, structY, psStructure->direction );
 
 		/* Actually render it */
@@ -2378,15 +2363,17 @@ static BOOL	renderWallSection(STRUCTURE *psStructure)
 		}
 		else if(psStructure->status == SS_BUILT)
 		{
-			pie_Draw3DShape(imd, 0, getPlayerColour(psStructure->player), brightness, specular, pie_STATIC_SHADOW, 0);
+			if (psStructure->pStructureType->type == REF_WALL)
+			{
+				// draw walls with a dynamic shadow as they can be rotated, and can be tank traps
+				pie_Draw3DShape(imd, 0, getPlayerColour(psStructure->player), brightness, specular, pie_SHADOW, 0);
+			}
+			else
+			{
+				pie_Draw3DShape(imd, 0, getPlayerColour(psStructure->player), brightness, specular, pie_STATIC_SHADOW, 0);
+			}
 		}
 		imd->points = temp;
-
-		if ( psStructure->direction > 0 && psStructure->pStructureType->type == REF_WALL )
-		{
-			// switch back
-			imd = originalDirection;
-		}
 
 		{
 			Vector3i zero = {0, 0, 0};

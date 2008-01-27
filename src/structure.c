@@ -3680,13 +3680,14 @@ void structureUpdate(STRUCTURE *psBuilding)
 	UDWORD percentDamage, emissionInterval, iPointsToAdd, iPointsRequired;
 	Vector3i dv;
 
-	CHECK_STRUCTURE(psBuilding);
-
 	//update the manufacture/research of the building once complete
 	if (psBuilding->status == SS_BUILT)
 	{
 		aiUpdateStructure(psBuilding);
 	}
+
+	// must be after aiUpdateStructure because this is where we clean out dead targets
+	CHECK_STRUCTURE(psBuilding);
 
 	if(psBuilding->status!=SS_BUILT)
 	{
@@ -7514,8 +7515,7 @@ STRUCTURE * giftSingleStructure(STRUCTURE *psStructure, UBYTE attackPlayer, BOOL
 		//in this version of Warzone, the attack Player can NEVER be the selectedPlayer (unless from the script)
 		if (!bFromScript && selectedPlayer == 0 && attackPlayer == selectedPlayer)
 		{
-			ASSERT( FALSE,
-				"giftSingleStructure: EW attack by selectedPlayer on a structure" );
+			ASSERT(bFromScript || selectedPlayer != 0 || attackPlayer != selectedPlayer, "giftSingleStructure: EW attack by selectedPlayer on a structure");
 			return NULL;
 		}
 	}
