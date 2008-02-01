@@ -268,6 +268,7 @@ AC_CONFIG_FILES([Makefile
 		lib/sequence/Makefile
 		lib/sound/Makefile
 		lib/sound/general/Makefile
+		lib/sound/interface/Makefile
 		lib/widget/Makefile
 		src/Makefile])
 AC_OUTPUT

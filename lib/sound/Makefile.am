@@ -1,4 +1,4 @@
-SUBDIRS = general
+SUBDIRS = general interface
 
 noinst_LIBRARIES = libsound.a
 noinst_HEADERS = aud.h audio.h audio_id.h cdaudio.h mixer.h oggvorbis.h openal_error.h track.h tracklib.h
@@ -6,5 +6,6 @@ noinst_HEADERS = aud.h audio.h audio_id.h cdaudio.h mixer.h oggvorbis.h openal_e
 libsound_a_SOURCES = audio.c audio_id.c cdaudio.c oggvorbis.c openal_error.c openal_track.c playlist.c track.c
 
 libsound_a_LIBADD = $(top_builddir)/lib/sound/general/libgeneral.a \
+	$(top_builddir)/lib/sound/interface/libinterface.a \
 	$(top_builddir)/lib/gamelib/libgamelib.a \
 	$(top_builddir)/lib/framework/libframework.a
