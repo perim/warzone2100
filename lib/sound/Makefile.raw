@@ -1,7 +1,9 @@
 MAKERULES=../../makerules
 include $(MAKERULES)/configure.mk
 
-SRC=audio.c \
+SRC=general/databuffer.cpp \
+	general/raii_counter.cpp \
+	audio.c \
 	audio_id.c \
 	cdaudio.c \
 	oggvorbis.c \
