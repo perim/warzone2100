@@ -26,7 +26,6 @@
 
 #include <cassert>
 #include <algorithm>
-#include <stdexcept>
 
 namespace Sound
 {
@@ -87,10 +86,10 @@ namespace Sound
                     catch (...)
                     {
                         // Clean up the memory we've allocated already
-                        for (const char* i = _cArray[0]; i != *curString; ++i)
-                            delete [] i;
+                        for (const char** i = _cArray; i != curString; ++i)
+                            delete [] *i;
 
-                        delete [] curString;
+                        delete [] *curString;
                         delete [] _cArray;
 
                         // Rethrow the exception
