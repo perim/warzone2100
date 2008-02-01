@@ -22,45 +22,19 @@
 */
 
 #include "stringarray.hpp"
-#include "../templates.hpp"
 #include <algorithm>
 
 namespace Sound
 {
     namespace Interface
     {
-        static inline void _Append(const std::string& source, char*& target)
-        {
-            // Allocate memory
-            target = new char[source.length() + 1];
-
-            // Insert data
-            std::copy(source.begin(), source.end(), target);
-
-            // Mark the end of the C-string
-            target[source.length()] = '\0';
-        }
-
-        StringArray::StringArray(const std::vector<std::string>& _arr) :
-            _cArray(new const char*[_arr.size() + 1])
-        {
-            // Copy all strings from the vector into the string array
-            for_each2(_arr.begin(), _arr.end(),
-                      const_cast<char**> (&_cArray[0]), const_cast<char**> (&_cArray[_arr.size()]),
-                      _Append);
-
-            // Mark the end of the array
-            _cArray[_arr.size()] = NULL;
-        }
-
         StringArray::~StringArray()
         {
             // Run through list and delete its contents (i.e. free memory of its contents)
-            for (const char** iter = _cArray; *iter != NULL; ++iter)
+            for (const char** iter = _cArray; *iter; ++iter)
                 delete [] *iter;
 
             delete [] _cArray;
-            _cArray = 0;
         }
     }
 }
