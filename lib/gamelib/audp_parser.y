@@ -21,7 +21,7 @@
 
 #include "lib/framework/frame.h"
 #include "lib/gamelib/parser.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "lib/gamelib/anim.h"
 
 static int		g_iCurAnimID = 0;
@@ -82,16 +82,16 @@ audio_list:				audio_list audio_track |
 						audio_track
 						;
 	/*
-	 * unsigned int sound_SetTrackVals(const char* fileName, BOOL loop, unsigned int volume, unsigned int AudibleRadius)
+	 * unsigned int audio_SetTrackVals(const char* fileName, BOOL loop, unsigned int volume, unsigned int audibleRadius)
 	 */
 
 audio_track:			AUDIO QTEXT LOOP INTEGER INTEGER
 						{
-							sound_SetTrackVals( $2, TRUE, $4, $5 );
+							audio_SetTrackVals( $2, TRUE, $4, $5 );
 						}
 						| AUDIO QTEXT ONESHOT INTEGER INTEGER
 						{
-							sound_SetTrackVals( $2, FALSE, $4, $5 );
+							audio_SetTrackVals( $2, FALSE, $4, $5 );
 						}
 						;
 

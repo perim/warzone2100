@@ -29,9 +29,11 @@
 
 #include <assert.h>
 #include <stdlib.h>
+
+#include <math.h>
+
 #include "types.h"
 #include "debug.h"
-#include "fractions.h"
 #include "trig.h"
 
 /* Number of steps between -1 and 1 for the inverse tables */
@@ -53,7 +55,7 @@ static float aSqrt[SQRT_ACCURACY];
 /* Initialise the Trig tables */
 BOOL trigInitialise(void)
 {
-	float val = 0.0f, inc = 2.0f * (float)M_PI / TRIG_DEGREES;
+	float val = 0.0f, inc = 2.0f * M_PI / TRIG_DEGREES;
 	int i;
 
 	// Initialise the tables

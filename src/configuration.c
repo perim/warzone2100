@@ -30,7 +30,8 @@
 #include "lib/framework/configfile.h"
 #include "objmem.h"
 #include "display.h"	// gammaValue
-#include "lib/sound/sound.h"		// audio
+#include "lib/sound/track.h"		// audio
+#include "lib/sound/cdaudio.h"	// audio
 #include "lib/ivis_common/piestate.h"	// setgamma.
 #include "warzoneconfig.h"	// renderMode
 #include "component.h"
@@ -41,6 +42,7 @@
 #include "multiplay.h"
 #include "ai.h"
 #include "advvis.h"
+#include "lib/sound/mixer.h"
 #include "hci.h"
 #include "fpath.h"
 #include "radar.h"
@@ -226,8 +228,8 @@ BOOL loadConfig(void)
 	}
 	else
 	{
-		NETsetMasterserverPort(9998);
-		setWarzoneKeyNumeric("masterserver_port", 9998);
+		NETsetMasterserverPort(9997);
+		setWarzoneKeyNumeric("masterserver_port", 9997);
 	}
 
 	if (getWarzoneKeyNumeric("gameserver_port", &val))

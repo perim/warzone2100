@@ -28,7 +28,7 @@
 #include "power.h"
 #include "hci.h"
 #include "lib/gamelib/gtime.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "objmem.h"
 #include "frontend.h"
 

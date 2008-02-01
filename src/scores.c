@@ -27,6 +27,7 @@
 
 // --------------------------------------------------------------------
 #include "lib/framework/frame.h"
+#include "lib/framework/math-help.h"
 #include "lib/framework/strres.h"
 #include "lib/framework/tagfile.h"
 #include "lib/gamelib/gtime.h"
@@ -48,7 +49,7 @@
 #include "display3d.h"
 #include "mission.h"
 #include "game.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "intimage.h"
 

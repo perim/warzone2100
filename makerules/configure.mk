@@ -60,15 +60,12 @@ CFLAGS+=-std=gnu99
 # Setup build environment with config values
 
 ifeq ($(strip $(MODE)),debug)
-CCFLAGS+=-Werror-implicit-function-declaration
-CFLAGS+=-g -O0 -DDEBUG -Wall
+CFLAGS+=-g -O0 -DDEBUG -Wall -Werror-implicit-function-declaration
 CXXFLAGS+=-g -O0 -DDEBUG -Wall
 else
 CFLAGS+=-DNDEBUG
 CXXFLAGS+=-DNDEBUG
 endif
-
-CXXFLAGS+=-fexceptions
 
 ifeq ($(strip $(USE_GETTEXT)),yes)
 CFLAGS+=-DENABLE_NLS=1
@@ -110,7 +107,7 @@ endif
 
 # Generic libs
 
-LDFLAGS+=-lSDL -lSDL_net -lpng12 -lphysfs -lz -lvorbisfile -lvorbis -logg -lpopt -lintl -lstdc++
+LDFLAGS+=-lSDL -lSDL_net -lpng12 -lphysfs -lz -lvorbisfile -lvorbis -logg -lpopt -lintl
 
 # Additional platform-dependend libs
 

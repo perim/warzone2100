@@ -35,7 +35,7 @@
 #include "lib/gamelib/gtime.h"
 
 #include "cluster.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/aud.h"
 
 /***************************************************************************/
 

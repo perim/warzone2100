@@ -38,7 +38,7 @@
 #include "messagedef.h"
 #include "message.h"
 #include "researchdef.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 
 #include "multiplay.h"
@@ -789,7 +789,7 @@ BOOL scrGroupObjGet(UDWORD index)
 		scrFunctionResult.v.ival = psGroup->type;
 		break;
 	case GROUPID_CMD:
-		type = ST_DROID;
+		type = (INTERP_TYPE)ST_DROID;
 		scrFunctionResult.v.oval = psGroup->psCommander;
 		break;
 	default:

@@ -86,7 +86,6 @@
 					<Add option='-DPACKAGE=\&quot;warzone2100\&quot;' />
 					<Add option="-DWIN32" />
 					<Add option="-DYY_STATIC" />
-					<Add directory="$(#boost)" />
 					<Add directory="$(#warzone_devpkg.include)" />
 					<Add directory="$(#warzone_devpkg.include)/SDL" />
 				</Compiler>
@@ -102,7 +101,6 @@
 					<Add library="dbghelp" />
 					<Add library="winmm" />
 					<Add library="wsock32" />
-					<Add directory="$(#boost.lib)" />
 					<Add directory="$(#warzone_devpkg.lib)" />
 				</Linker>
 				<ExtraCommands>
@@ -124,7 +122,6 @@
 					<Add option='-DPACKAGE=\&quot;warzone2100\&quot;' />
 					<Add option="-DWIN32" />
 					<Add option="-DYY_STATIC" />
-					<Add directory="$(#boost)" />
 					<Add directory="$(#warzone_devpkg.include)" />
 					<Add directory="$(#warzone_devpkg.include)/SDL" />
 				</Compiler>
@@ -140,7 +137,6 @@
 					<Add library="dbghelp" />
 					<Add library="winmm" />
 					<Add library="wsock32" />
-					<Add directory="$(#boost.lib)" />
 					<Add directory="$(#warzone_devpkg.lib)" />
 					<Add option="-s" />
 				</Linker>
@@ -248,12 +244,6 @@
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/framework/fractions.h">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
 		<Unit filename="lib/framework/frame.c">
 			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
@@ -312,6 +302,12 @@
 			<Option target="NDBGWindows" />
 		</Unit>
 		<Unit filename="lib/framework/macros.h">
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="lib/framework/math-help.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
@@ -995,7 +991,27 @@
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/audio_id.cpp">
+		<Unit filename="lib/sound/aud.h">
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="lib/sound/audio.c">
+			<Option compilerVar="CC" />
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="lib/sound/audio.h">
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="lib/sound/audio_id.c">
+			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
@@ -1007,277 +1023,85 @@
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/audio_id.hpp">
+		<Unit filename="lib/sound/cdaudio.c">
+			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/constants.cpp">
+		<Unit filename="lib/sound/cdaudio.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/constants.hpp">
+		<Unit filename="lib/sound/mixer.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/decoding.cpp">
+		<Unit filename="lib/sound/oggvorbis.c">
+			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/decoding.hpp">
+		<Unit filename="lib/sound/oggvorbis.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/general/databuffer.cpp">
+		<Unit filename="lib/sound/openal_error.c">
+			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/general/databuffer.hpp">
+		<Unit filename="lib/sound/openal_error.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/general/geometry.hpp">
+		<Unit filename="lib/sound/openal_track.c">
+			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/general/physfs_stream.hpp">
+		<Unit filename="lib/sound/playlist.c">
+			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/general/raii_counter.cpp">
+		<Unit filename="lib/sound/playlist.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/general/raii_counter.hpp">
+		<Unit filename="lib/sound/track.c">
+			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/interface.cpp">
+		<Unit filename="lib/sound/track.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sound/interface/devicelist.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/interface/devicelist.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/interface/stringarray.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/interface/stringarray.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/openal/buffer.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/openal/buffer.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/openal/context.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/openal/context.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/openal/device.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/openal/device.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/openal/devicelist.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/openal/devicelist.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/openal/exception.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/openal/exception.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/openal/source.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/openal/source.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound.h">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/channel.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/channel.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/sample.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/source.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/source.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/source_lock.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/source_lock.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/source_pool.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/source_pool.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/track.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/track.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/track_sample.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/sound/track_sample.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/stream.cpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/stream.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/templates.hpp">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sound/types.h">
+		<Unit filename="lib/sound/tracklib.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />

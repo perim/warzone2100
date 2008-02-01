@@ -45,7 +45,7 @@
 #include "hci.h"
 #include "intelmap.h"
 #include "mapdisplay.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "console.h"
 #include "research.h"
 #include "lib/gamelib/gtime.h"
@@ -57,6 +57,7 @@
 #include "mission.h"
 
 #include "multiplay.h"
+#include "lib/sound/cdaudio.h"
 
 #include "scriptextern.h"
 

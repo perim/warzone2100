@@ -32,7 +32,7 @@
 #include "lib/gamelib/gtime.h"
 #include "research.h"
 #include "message.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "lib/script/script.h"
 #include "scripttabs.h"

@@ -47,7 +47,8 @@
 #include "lib/ivis_opengl/screen.h"
 #include "lib/netplay/netplay.h"
 #include "lib/script/script.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
+#include "lib/sound/cdaudio.h"
 #include "lib/widget/widget.h"
 
 #include "clparse.h"
@@ -722,6 +723,9 @@ static void handleActiveEvent(SDL_ActiveEvent * activeEvent)
 				gameTimeStart();
 				// Should be: audio_ResumeAll();
 			}
+
+			// Resume playing audio.
+			cdAudio_Resume();
 		}
 		else
 		{
@@ -736,6 +740,10 @@ static void handleActiveEvent(SDL_ActiveEvent * activeEvent)
 			}
 			/* Have to tell the input system that we've lost focus */
 			inputLooseFocus();
+
+			// Need to pause playing to prevent the audio code from
+			// thinking playing has finished.
+			cdAudio_Pause();
 		}
 	}
 }

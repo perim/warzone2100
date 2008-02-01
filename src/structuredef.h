@@ -17,14 +17,12 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * StructureDef.h
- *
- * Structure definitions for structures
- *
+/** \file
+ *  Definitions for structures.
  */
-#ifndef _structuredef_h
-#define _structuredef_h
+
+#ifndef __INCLUDED_STRUCTUREDEF_H__
+#define __INCLUDED_STRUCTUREDEF_H__
 
 #include "lib/gamelib/animobj.h"
 #include "statsdef.h"
@@ -149,8 +147,8 @@ typedef struct _structure_stats
 									  structure can resist an enemy takeover -
 									  0 = cannot be attacked electrically*/
 	UDWORD		sizeModifier;		/*The larger the target, the easier to hit*/
-	struct 	iIMDShape	*pIMD;		/*The IMD to draw for this structure */
-	struct 	iIMDShape	*pBaseIMD;	/*The base IMD to draw for this structure */
+	iIMDShape	*pIMD;		/*The IMD to draw for this structure */
+	iIMDShape	*pBaseIMD;	/*The base IMD to draw for this structure */
 	struct _ecm_stats	*pECM;		/*Which ECM is standard for the structure -
 									  if any*/
 	struct _sensor_stats *pSensor;	/*Which Sensor is standard for the structure -
@@ -385,4 +383,4 @@ typedef UPGRADE		REPAIR_FACILITY_UPGRADE;
 typedef UPGRADE		POWER_UPGRADE;
 typedef UPGRADE		REARM_UPGRADE;
 
-#endif
+#endif // __INCLUDED_STRUCTUREDEF_H__

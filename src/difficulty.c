@@ -29,6 +29,10 @@
 
 // ------------------------------------------------------------------------------------
 #include "lib/framework/frame.h"
+
+#include <math.h>
+#include "lib/framework/math-help.h"
+
 #include "difficulty.h"
 // ------------------------------------------------------------------------------------
 
@@ -91,8 +95,8 @@ DIFFICULTY_LEVEL	getDifficultyLevel( void )
 int modifyForDifficultyLevel(int basicVal, bool IsPlayer)
 {
 	if (IsPlayer)
-		return math_round(basicVal * fDifPlayerModifier);
+		return roundf(basicVal * fDifPlayerModifier);
 	else
-		return math_round(basicVal * fDifEnemyModifier);
+		return roundf(basicVal * fDifEnemyModifier);
 }
 // ------------------------------------------------------------------------------------

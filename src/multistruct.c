@@ -45,7 +45,7 @@
 #include "multigifts.h"
 #include "multirecv.h"
 #include "lib/sound/audio_id.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 
 // ////////////////////////////////////////////////////////////////////////////
 // structures

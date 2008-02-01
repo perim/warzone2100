@@ -42,7 +42,7 @@
 #include "component.h"
 #include "console.h"
 #include "multiplay.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "multijoin.h"
 #include "frontend.h"
 #include "levels.h"

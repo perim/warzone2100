@@ -16,27 +16,16 @@
 	You should have received a copy of the GNU General Public License
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
-
-	$Revision$
-	$Id$
-	$HeadURL$
 */
 
 #ifndef _AUDIO_ID_H_
 #define _AUDIO_ID_H_
 
-#include "types.h"
-
-#if defined(__cplusplus)
-extern "C"
-{
-#endif
-
 /* INGAME AUDIO */
 
 typedef enum
 {
-	NO_SOUND = 0,
+	NO_SOUND = -1,
 
 /* Beeps */
 
@@ -351,6 +340,7 @@ typedef enum
 /* SFX */
 
 	/* Weapon Sounds */
+
 	ID_SOUND_ROCKET,
 	ID_SOUND_ROTARY_LASER,
 	ID_SOUND_GAUSSGUN,
@@ -384,6 +374,7 @@ typedef enum
 	ID_SOUND_CONSTRUCTION_4,
 
 	/* Explosions */
+
 	ID_SOUND_EXPLOSION_SMALL,
 	ID_SOUND_EXPLOSION_LASER,
 	ID_SOUND_EXPLOSION,
@@ -432,6 +423,7 @@ typedef enum
 	ID_SOUND_FIRE_ROAR,
 
 	/* Misc */
+
 	ID_SOUND_BARB_SCREAM,
 	ID_SOUND_OF_SILENCE,
 
@@ -468,6 +460,7 @@ typedef enum
 	ID_SOUND_INCOMING_LASER_SAT_STRIKE,
 
 	/* Nexus */
+
 	ID_SOUND_NEXUS_DEFENCES_ABSORBED,
 	ID_SOUND_NEXUS_DEFENCES_NEUTRALISED,
 	ID_SOUND_NEXUS_LAUGH1,
@@ -482,6 +475,7 @@ typedef enum
 	ID_SOUND_NEXUS_UNIT_NEUTRALISED,
 
 	/* multiplayer sfx */
+
 	ID_SOUND_CYBORG_GROUND,
 	ID_SOUND_CYBORG_HEAVY,
 	ID_SOUND_EMP,
@@ -498,22 +492,6 @@ typedef enum
 }
 INGAME_AUDIO;
 
-/** Find an ID number for the specified fileName
- *  \param fileName the (audio) file for which to seek an ID number
- *  \return a default ID number for the track contained in fileName if one exists, otherwise return 0
- */
-sndTrackID audio_GetIDFromStr(const char* fileName);
+INGAME_AUDIO audio_GetIDFromStr(const char *pWavStr);
 
-/** Find an ID number for the specified filename.
- *  If none exists, generate one and map it to the filename.
- *  \param fileName the (audio) file for which to seek or produce an ID number
- *  \return an ID number for the track indicated by fileName.
- *          Return 0 when we've run out of useable ID numbers (we'll probably run out of memory for that happens).
- */
-sndTrackID sound_GetAvailableID(const char* fileName);
-
-#if defined(__cplusplus)
-}  // extern "C"
-#endif
-
-#endif  // _AUDIO_ID_H_
+#endif	// _AUDIO_ID_H_

@@ -30,6 +30,7 @@
 
 #include "lib/framework/frame.h"
 #include "lib/framework/strres.h"
+#include "lib/framework/math-help.h"
 
 #include "objmem.h"
 #include "statsdef.h"
@@ -49,7 +50,7 @@
 #include "hci.h"
 #include "component.h"
 #include "research.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "wrappers.h"
 #include "intimage.h"

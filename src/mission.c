@@ -53,7 +53,7 @@
 #include "loadsave.h"
 #include "lib/script/script.h"
 #include "scripttabs.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "cmddroid.h"
 #include "warcam.h"
@@ -80,6 +80,7 @@
 #include "keymap.h"
 #include "lib/ivis_common/bitimage.h"
 
+#include "lib/sound/cdaudio.h"
 
 //#include "texture.h"	   // ffs
 

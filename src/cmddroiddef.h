@@ -17,34 +17,30 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * CmdDroidDef.h
- *
- * Typedef's for command droids
- *
+/** \file
+ *  Definitions for command droids.
  */
-#ifndef _cmddroiddef_h
-#define _cmddroiddef_h
+
+#ifndef __INCLUDED_CMDDROIDDEF_H__
+#define __INCLUDED_CMDDROIDDEF_H__
 
 #include "statsdef.h"
+#include "droiddef.h"
 
 // the maximum number of command droids per side
 #define MAX_CMDDROIDS	5
 
 typedef struct _command_droid
 {
-	COMPONENT_STATS;		// define the command droid as a COMPONENT
-							// so it fits into the design screen
+	// define the command droid as a COMPONENT so it fits into the design screen
+	COMPONENT_STATS;
 
-	UDWORD			died;
-	SWORD			aggression;
-	SWORD			survival;
-	SWORD			nWeapStat;
-	UWORD			kills;
-	struct _droid	*psDroid;
+	UDWORD          died;
+	SWORD           aggression;
+	SWORD           survival;
+	SWORD           nWeapStat;
+	UWORD           kills;
+	DROID*          psDroid;
 } COMMAND_DROID;
 
-
-#endif
-
-
+#endif // __INCLUDED_CMDDROIDDEF_H__

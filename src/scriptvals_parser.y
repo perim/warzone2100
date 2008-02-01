@@ -38,7 +38,7 @@
 #include "src/droid.h"
 #include "src/structure.h"
 #include "src/message.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "src/levels.h"
 #include "src/research.h"
 

@@ -1,20 +1,14 @@
 MAKERULES=../../makerules
 include $(MAKERULES)/configure.mk
 
-SRC=general/databuffer.cpp \
-	openal/buffer.cpp \
-	openal/source.cpp \
-	openal/context.cpp \
-	openal/device.cpp \
-	openal/devicelist.cpp \
-	constants.cpp \
-	decoding.cpp \
-	stream.cpp \
-	track.cpp \
-	audio_id.cpp \
-	interface/stringarray.cpp \
-	interface/devicelist.cpp \
-	interface.cpp
+SRC=audio.c \
+	audio_id.c \
+	cdaudio.c \
+	oggvorbis.c \
+	openal_track.c \
+	openal_error.c \
+	playlist.c \
+	track.c
 
 LIB=sound
 

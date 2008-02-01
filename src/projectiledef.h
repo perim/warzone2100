@@ -17,65 +17,50 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/***************************************************************************/
-/*
- * BulletDef.h
- *
- * Structure Definitions for the bullet object.
- *
+/** \file
+ *  Definitions for projectiles.
  */
-/***************************************************************************/
 
-#ifndef _bulletdef_h
-#define _bulletdef_h
+#ifndef __INCLUDED_PROJECTILEDEF_H__
+#define __INCLUDED_PROJECTILEDEF_H__
 
-/***************************************************************************/
+#include "basedef.h"
 
 typedef enum PROJ_STATE
 {
 	PROJ_INFLIGHT,
 	PROJ_IMPACT,
 	PROJ_POSTIMPACT
-}
-PROJ_STATE;
-
-/***************************************************************************/
-
-struct PROJECTILE;
-
-typedef void (* PROJECTILE_FUNC) ( struct PROJECTILE *psObj );
+} PROJ_STATE;
 
 typedef struct PROJECTILE
 {
 	/* Use only simple object elements */
 	SIMPLE_ELEMENTS( struct PROJECTILE );
 
-	UBYTE			state;			/* current projectile state */
-	UBYTE			airTarget;		/* whether the projectile was fired at an airborn target */
-	
-	UBYTE			player;			/* needed because damage and radDamage vary 
-									from base stat per player because of upgrades*/
-	UBYTE			bVisible;		// whether the selected player should see the projectile
+	UBYTE           state;                  ///< current projectile state
+	UBYTE           airTarget;              ///< whether the projectile was fierd at an airborn target
 
-	WEAPON_STATS	*psWStats;		/* firing weapon stats */
-	
-	BASE_OBJECT		*psSource;		/* what fired the projectile */
-	BASE_OBJECT		*psDest;		/* projectile target */
-	BASE_OBJECT		*psDamaged;		/* Watermelon:the target it already damaged,dont damage the same target twice */
+	UBYTE           player;                 ///< needed because damange and radDamage vary from base stat per player because of upgrades
 
-	UDWORD			startX,startY;	/* Where projectile started */
-	UDWORD			tarX,tarY;		/* The target coordinates */
-	SDWORD			vXY, vZ;		/* axis velocities */
-	UDWORD			srcHeight;		/* Height of origin */
-	SDWORD			altChange;		/* Change in altitude */
-	UDWORD			born;
-	UDWORD			targetRadius;	// needed to backtrack the projectiles.
-	UDWORD			died;
-	
-	PROJECTILE_FUNC	pInFlightFunc;
-}
-PROJECTILE;
+	UBYTE           bVisible;               ///< whether the selected player should see the projectile
 
-/***************************************************************************/
+	WEAPON_STATS*   psWStats;               ///< firing weapon stats
 
-#endif
+	BASE_OBJECT*    psSource;               ///< what fired the projectile
+	BASE_OBJECT*    psDest;                 ///< target of this projectile
+	BASE_OBJECT*    psDamaged;              ///< the target it already dealt damage to (don't damage the same target twice)
+
+	UDWORD          startX, startY;         ///< Where projectile started
+	UDWORD          tarX, tarY;             ///< The target coordinates
+	SDWORD          vXY, vZ;                ///< axis velocities
+	UDWORD          srcHeight;              ///< Height of origin
+	SDWORD          altChange;              ///<  Change in altitude
+	UDWORD          born;
+	UDWORD          targetRadius;           ///< Needed to backtrack the projectiles
+	UDWORD          died;
+
+	void (*pInFlightFunc)(struct PROJECTILE* psObj);
+} PROJECTILE;
+
+#endif // __INCLUDED_PROJECTILEDEF_H__

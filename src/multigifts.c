@@ -37,7 +37,7 @@
 #include "scriptfuncs.h"		// for objectinrange.
 #include "lib/gamelib/gtime.h"
 #include "effects.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"			// for samples.
 #include "wrappers.h"			// for gameover..
 #include "lib/script/script.h"

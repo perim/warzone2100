@@ -27,6 +27,7 @@
 
 #include "lib/framework/frame.h"
 #include "lib/framework/input.h"
+#include "lib/framework/math-help.h"
 
 #include "objects.h"
 #include "order.h"
@@ -56,7 +57,7 @@
 #include "ai.h"
 #include "warcam.h"
 #include "lib/sound/audio_id.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "fpath.h"
 #include "display3d.h"
 #include "combat.h"

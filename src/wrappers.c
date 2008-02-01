@@ -48,7 +48,7 @@
 #include "console.h"
 #include "intimage.h"
 #include "intdisplay.h"	//for shutdown
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "lib/gamelib/gtime.h"
 #include "ingameop.h"
 #include "keymap.h"

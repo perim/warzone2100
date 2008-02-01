@@ -25,6 +25,7 @@
  */
 
 #include "lib/framework/frame.h"
+#include "lib/framework/math-help.h"
 
 #include "objects.h"
 #include "combat.h"
@@ -36,7 +37,7 @@
 #include "messagedef.h"
 #include "miscimd.h"
 #include "projectile.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "geometry.h"
 #include "cmddroid.h"
 #include "mapgrid.h"

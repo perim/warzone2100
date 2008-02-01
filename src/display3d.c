@@ -63,7 +63,7 @@
 #include "intdisplay.h"
 #include "radar.h"
 #include "display3d.h"
-#include "lib/framework/fractions.h"
+#include "lib/framework/math-help.h"
 #include "lighting.h"
 #include "console.h"
 #include "lib/gamelib/animobj.h"
@@ -85,7 +85,7 @@
 #include "gateway.h"
 #include "transporter.h"
 #include "warzoneconfig.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "action.h"
 #include "keybind.h"
@@ -118,7 +118,7 @@ static void	calcFlagPosScreenCoords(SDWORD *pX, SDWORD *pY, SDWORD *pR);
 static void	flipsAndRots(unsigned int tileNumber, unsigned int i, unsigned int j);
 static void	displayTerrain(void);
 static iIMDShape	*flattenImd(iIMDShape *imd, UDWORD structX, UDWORD structY, UDWORD direction);
-static void	drawTiles(iView *camera, iView *player);
+static void	drawTiles(iView *player);
 static void	display3DProjectiles(void);
 static void	drawDroidSelections(void);
 static void	drawStructureSelections(void);
@@ -165,7 +165,6 @@ BOOL	selectAttempt = FALSE;
 
 /* Vectors that hold the player and camera directions and positions */
 iView	player;
-static iView	camera;
 
 /* Temporary rotation vectors to store rotations for droids etc */
 static Vector3i	imdRot,imdRot2;
@@ -274,10 +273,6 @@ void draw3DScene( void )
 	// the world centre - used for decaying lighting etc
 	gridCentreX = player.p.x + world_coord(visibleTiles.x / 2);
 	gridCentreZ = player.p.z + world_coord(visibleTiles.y / 2);
-
-	camera.p.z = distance;
-	camera.p.y = 0;
-	camera.p.x = 0;
 
 	/* What frame number are we on? */
 	currentGameFrame = frameGetFrameNumber();
@@ -455,7 +450,7 @@ static void displayTerrain(void)
 	preprocessTiles();
 
 	/* Now, draw the terrain */
-	drawTiles(&camera, &player);
+	drawTiles(&player);
 
 	pie_PerspectiveEnd();
 
@@ -543,7 +538,7 @@ void setTileColour(int x, int y, PIELIGHT colour)
 	psTile->colour = colour;
 }
 
-static void drawTiles(iView *camera, iView *player)
+static void drawTiles(iView *player)
 {
 	UDWORD i, j;
 	SDWORD rx, rz;
@@ -590,7 +585,7 @@ static void drawTiles(iView *camera, iView *player)
 	pie_MatScale(pie_GetResScalingFactor());
 
 	/* Set the camera position */
-	pie_MATTRANS(camera->p.x, camera->p.y, camera->p.z);
+	pie_MATTRANS(0, 0, distance);
 
 	/* Rotate for the player */
 	pie_MatRotZ(player->r.z);
@@ -602,6 +597,7 @@ static void drawTiles(iView *camera, iView *player)
 
 	if (getDrawShadows())
 	{
+		Vector3f theSun = getTheSun();
 		// this also detemines the length of the shadows
 		pie_BeginLighting(&theSun);
 	}
@@ -621,7 +617,6 @@ static void drawTiles(iView *camera, iView *player)
 			tileScreenInfo[i][j].pos.x = world_coord(j - terrainMidX);
 			tileScreenInfo[i][j].pos.z = world_coord(terrainMidY - i);
 			tileScreenInfo[i][j].pos.y = 0;
-			tileScreenInfo[i][j].bWater = FALSE;
 
 			if( playerXTile+j < 0 ||
 				playerZTile+i < 0 ||
@@ -678,27 +673,6 @@ static void drawTiles(iView *camera, iView *player)
 					pushedDown = TRUE;
 				}
 
-				// If it's any water tile..
-				if (terrainType(psTile) == TER_WATER)
-				{
-					// If it's the main water tile then bring it back up because it was pushed down for the river bed calc.
-					int tmp_y = tileScreenInfo[i][j].pos.y;
-
-					if (pushedDown)
-					{
-						tileScreenInfo[i][j].pos.y += shiftVal;
-					}
-
-					tileScreenInfo[i][j].bWater = TRUE;
-					tileScreenInfo[i][j].water_height = tileScreenInfo[i][j].pos.y;
-					tileScreenInfo[i][j].pos.y = tmp_y;
-				}
-				else
-				{
-					// If it wasnt a water tile then need to ensure water.xyz are valid because
-					// a water tile might be sharing verticies with it.
-					tileScreenInfo[i][j].water_height = tileScreenInfo[i][j].pos.y;
-				}
 				setTileColour(playerXTile + j, playerZTile + i, TileIllum);
 			}
 			// hack since tileScreenInfo[i][j].screen is Vector3i and pie_RotateProject takes Vector2i as 2nd param
@@ -729,7 +703,6 @@ static void drawTiles(iView *camera, iView *player)
 		{
 			//get distance of furthest corner
 			int zMax = MAX(tileScreenInfo[i][j].screen.z, tileScreenInfo[i+1][j].screen.z);
-
 			zMax = MAX(zMax, tileScreenInfo[i + 1][j + 1].screen.z);
 			zMax = MAX(zMax, tileScreenInfo[i][j + 1].screen.z);
 
@@ -744,6 +717,24 @@ static void drawTiles(iView *camera, iView *player)
 	}
 	pie_DrawTerrainDone(MIN(visibleTiles.x, mapWidth),  MIN(visibleTiles.y, mapHeight));
 
+	// Update height for water
+	for (i = 0; i < visibleTiles.y + 1; i++)
+	{
+		/* Go through the x's */
+		for (j = 0; j < visibleTiles.x + 1; j++)
+		{
+			if (!(playerXTile + j < 0 || playerZTile + i < 0 || playerXTile + j > (SDWORD)(mapWidth - 1)
+			      || playerZTile + i > (SDWORD)(mapHeight - 1)))
+			{
+				tileScreenInfo[i][j].pos.y = map_TileHeight(playerXTile + j, playerZTile + i);
+			}
+			else
+			{
+				tileScreenInfo[i][j].pos.y = 0;
+			}
+		}
+	}
+
 	// Draw water edges
 	pie_SetDepthOffset(-2.0);
 	pie_SetAlphaTest(TRUE);
@@ -751,9 +742,16 @@ static void drawTiles(iView *camera, iView *player)
 	{
 		for (j = 0; j < MIN(visibleTiles.x, mapWidth); j++)
 		{
+			MAPTILE *psTile;
+
+			if (!tileOnMap(playerXTile + j, playerZTile + i))
+			{
+				continue;
+			}
+			psTile = mapTile(playerXTile + j, playerZTile + i);
+
 			// check if we need to draw a water edge
-			if (tileScreenInfo[i][j].bWater
-			    && TileNumber_tile(mapTile(playerXTile + j, playerZTile + i)->texture) != WATER_TILE)
+			if (terrainType(psTile) == TER_WATER && TileNumber_tile(psTile->texture) != WATER_TILE)
 			{
 				//get distance of furthest corner
 				int zMax = MAX(tileScreenInfo[i][j].screen.z, tileScreenInfo[i + 1][j].screen.z);
@@ -777,11 +775,19 @@ static void drawTiles(iView *camera, iView *player)
 	pie_SetRendMode(REND_ALPHA_TEX);
 	pie_SetAlphaTest(FALSE);
 	pie_SetDepthOffset(-1.0f);
-	for (i = 0; i < MIN(visibleTiles.y, mapHeight); i++)
+	for (i = 0; i < MIN(visibleTiles.y, mapHeight ); i++)
 	{
 		for (j = 0; j < MIN(visibleTiles.x, mapWidth); j++)
 		{
-			if (tileScreenInfo[i][j].bWater)
+			MAPTILE *psTile;
+
+			if (!tileOnMap(playerXTile + j, playerZTile + i))
+			{
+				continue;
+			}
+			psTile = mapTile(playerXTile + j, playerZTile + i);
+
+			if (terrainType(psTile) == TER_WATER)
 			{
 				//get distance of furthest corner
 				int zMax = MAX(tileScreenInfo[i][j].screen.z, tileScreenInfo[i + 1][j].screen.z);
@@ -849,6 +855,10 @@ static void drawTiles(iView *camera, iView *player)
 
 BOOL init3DView(void)
 {
+	/* Arbitrary choice - from direct read! */
+	Vector3f theSun = { 225.0f, -600.0f, 450.0f };
+	setTheSun( theSun );
+
 	// the world centre - used for decaying lighting etc
 	gridCentreX = player.p.x + world_coord(visibleTiles.x / 2);
 	gridCentreZ = player.p.z + world_coord(visibleTiles.y / 2);
@@ -858,11 +868,6 @@ BOOL init3DView(void)
 
 	/* There are no drag boxes */
 	dragBox3D.status = DRAG_INACTIVE;
-
-	/* Arbitrary choice - from direct read! */
-	theSun.x = 225.0f;
-	theSun.y = -600.0f;
-	theSun.z = 450.0f;
 
 	/* Make sure and change these to comply with map.c */
 	imdRot.x = -35;
@@ -893,13 +898,13 @@ BOOL init3DView(void)
 	targetInitialise();
 
 	pie_PrepareSkybox(skyboxPageName);
-	
+
 	player.r.z = 0; // roll
 	player.r.y = INITIAL_DESIRED_ROTATION; // rotation
 	player.r.x = DEG(360 + INITIAL_STARTING_PITCH); // angle
 
 	// and set the camera position
-	distance = START_DISTANCE; // distance	
+	distance = START_DISTANCE; // distance
 	player.p.y = 1000 + map_Height(player.r.x, player.r.z); // height
 
 	return TRUE;
@@ -3533,7 +3538,7 @@ static void renderSurroundings(void)
 	pie_MatScale(pie_GetResScalingFactor());
 
 	// Set the camera position
-	pie_MATTRANS(camera.p.x, camera.p.y, camera.p.z);
+	pie_MATTRANS(0, 0, distance);
 
 	// Rotate for the player and for the wind
 	pie_MatRotZ(player.r.z);
@@ -3778,29 +3783,16 @@ static void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 	vertices[1] = tileScreenInfo[i + 0][j + 1];
 	vertices[0].light = colour[0][0];
 	vertices[1].light = colour[0][1];
-	if (onWaterEdge)
-	{
-		vertices[0].pos.y = tileScreenInfo[i + 0][j + 0].water_height;
-		vertices[1].pos.y = tileScreenInfo[i + 0][j + 1].water_height;
-	}
 
 	if (psTile && TRI_FLIPPED(psTile))
 	{
 		vertices[2] = tileScreenInfo[i + 1][j + 0];
 		vertices[2].light = colour[1][0];
-		if (onWaterEdge)
-		{
-			vertices[2].pos.y = tileScreenInfo[i + 1][j + 0].water_height;
-		}
 	}
 	else
 	{
 		vertices[2] = tileScreenInfo[i + 1][j + 1];
 		vertices[2].light = colour[1][1];
-		if (onWaterEdge)
-		{
-			vertices[2].pos.y = tileScreenInfo[i + 1][j + 1].water_height;
-		}
 	}
 
 	if (onWaterEdge)
@@ -3817,30 +3809,17 @@ static void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 	{
 		vertices[0] = tileScreenInfo[i + 0][j + 1];
 		vertices[0].light = colour[0][1];
-		if (onWaterEdge)
-		{
-			vertices[0].pos.y = tileScreenInfo[i + 0][j + 1].water_height;
-		}
 	}
 	else
 	{
 		vertices[0] = tileScreenInfo[i + 0][j + 0];
 		vertices[0].light = colour[0][0];
-		if (onWaterEdge)
-		{
-			vertices[0].pos.y = tileScreenInfo[i + 0][j + 0].water_height;
-		}
 	}
 
 	vertices[1] = tileScreenInfo[i + 1][j + 1];
 	vertices[2] = tileScreenInfo[i + 1][j + 0];
 	vertices[1].light = colour[1][1];
 	vertices[2].light = colour[1][0];
-	if ( onWaterEdge )
-	{
-		vertices[1].pos.y = tileScreenInfo[i + 1][j + 1].water_height;
-		vertices[2].pos.y = tileScreenInfo[i + 1][j + 0].water_height;
-	}
 
 	if (onWaterEdge)
 	{
@@ -3910,17 +3889,14 @@ static void drawTerrainWaterTile(UDWORD i, UDWORD j)
 		tileScreenInfo[i+1][j+0].v = tileTexInfo[TileNumber_tile(tileNumber)].vOffset + (yMult - one);
 
 		vertices[0] = tileScreenInfo[i + 0][j + 0];
-		vertices[0].pos.y = tileScreenInfo[i + 0][j + 0].water_height;
 		vertices[0].light = colour[0][0];
 		vertices[0].light.byte.a = WATER_ALPHA_LEVEL;
 
 		vertices[1] = tileScreenInfo[i + 0][j + 1];
-		vertices[1].pos.y = tileScreenInfo[i + 0][j + 1].water_height;
 		vertices[1].light = colour[0][1];
 		vertices[1].light.byte.a = WATER_ALPHA_LEVEL;
 
 		vertices[2] = tileScreenInfo[i + 1][j + 1];
-		vertices[2].pos.y = tileScreenInfo[i + 1][j + 1].water_height;
 		vertices[2].light = colour[1][1];
 		vertices[2].light.byte.a = WATER_ALPHA_LEVEL;
 
@@ -3928,7 +3904,6 @@ static void drawTerrainWaterTile(UDWORD i, UDWORD j)
 
 		vertices[1] = vertices[2];
 		vertices[2] = tileScreenInfo[i + 1][j + 0];
-		vertices[2].pos.y = tileScreenInfo[i + 1][j + 0].water_height;
 		vertices[2].light = colour[1][0];
 		vertices[2].light.byte.a = WATER_ALPHA_LEVEL;
 

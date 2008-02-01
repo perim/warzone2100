@@ -40,12 +40,12 @@
 #include "edit3d.h"
 #include "geometry.h"
 #include "lib/gamelib/gtime.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "radar.h"
 #include "miscimd.h"
 #include "lighting.h"
-#include "lib/framework/fractions.h"
+#include "lib/framework/math-help.h"
 #include "console.h"
 #include "order.h"
 #include "wrappers.h"
@@ -1168,9 +1168,9 @@ void scroll(void)
 	sine = sinf(radians);
 
 	/* Get x component of movement */
-	xDif = math_round(cosine * scrollStepLeftRight + sine * scrollStepUpDown);
+	xDif = roundf(cosine * scrollStepLeftRight + sine * scrollStepUpDown);
 	/* Get y component of movement */
-	yDif = math_round(sine * scrollStepLeftRight - cosine * scrollStepUpDown);
+	yDif = roundf(sine * scrollStepLeftRight - cosine * scrollStepUpDown);
 
 	/* Adjust player's position by these components */
 	player.p.x += xDif;

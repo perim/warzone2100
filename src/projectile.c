@@ -27,6 +27,7 @@
 
 #include "lib/framework/frame.h"
 #include "lib/framework/trig.h"
+#include "lib/framework/math-help.h"
 
 #include "lib/gamelib/gtime.h"
 #include "objects.h"
@@ -36,7 +37,7 @@
 #include "effects.h"
 #include "map.h"
 #include "lib/sound/audio_id.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "anim_id.h"
 #include "projectile.h"
 #include "visibility.h"

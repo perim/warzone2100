@@ -33,7 +33,8 @@
 #include "lib/sequence/sequence.h"
 #include "loop.h"
 #include "hci.h"//for font
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
+#include "lib/sound/cdaudio.h"
 #include "warzoneconfig.h"
 // FIXME Direct iVis implementation include!
 #include "lib/ivis_opengl/screen.h"
@@ -180,7 +181,7 @@ static BOOL seq_StartFullScreenVideo(const char* videoName, const char* audioNam
 	{
 		static const float maxVolume = 1.f;
 
-		bAudioPlaying = audio_PlayStream(aAudioName, maxVolume, NULL, NULL);
+		bAudioPlaying = audio_PlayStream(aAudioName, maxVolume, NULL, NULL) ? TRUE : FALSE;
 		ASSERT(bAudioPlaying == TRUE, "seq_StartFullScreenVideo: unable to initialise sound %s", aAudioName);
 	}
 

@@ -38,7 +38,8 @@
 #include "lib/ivis_common/ivi.h"
 #include "lib/netplay/netplay.h"
 #include "lib/script/script.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/cdaudio.h"
+#include "lib/sound/mixer.h"
 
 #include "advvis.h"
 #include "astar.h"

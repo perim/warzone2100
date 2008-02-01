@@ -32,7 +32,7 @@
 #include "stats.h"
 #include "text.h"
 #include "console.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "hci.h"
 #include "lib/ivis_common/piedef.h"

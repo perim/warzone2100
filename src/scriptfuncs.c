@@ -43,7 +43,7 @@
 #include "structure.h"
 #include "display3d.h"
 #include "research.h"
-#include "lib/sound/sound.h"
+#include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "power.h"
 #include "console.h"
@@ -63,6 +63,7 @@
 #include "warzoneconfig.h"
 #include "lighting.h"
 #include "atmos.h"
+#include "lib/sound/cdaudio.h"
 #include "lib/netplay/netplay.h"
 #include "multiplay.h"
 #include "multigifts.h"
@@ -11286,7 +11287,7 @@ BOOL scrGetTileStructure(void)
 	}
 
 	scrFunctionResult.v.oval = getTileStructure(structureX, structureY);
-	if (!stackPushResult(ST_STRUCTURE, &scrFunctionResult))
+	if (!stackPushResult((INTERP_TYPE)ST_STRUCTURE, &scrFunctionResult))
 	{
 		debug(LOG_ERROR, "scrGetTileStructure(): failed to push result");
 		return FALSE;
