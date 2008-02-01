@@ -9,7 +9,7 @@ SRC=general/databuffer.cpp \
 	cdaudio.c \
 	oggvorbis.c \
 	openal_track.c \
-	openal_error.c \
+	openal_error.cpp \
 	playlist.c \
 	track.c
 
