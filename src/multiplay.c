@@ -253,7 +253,6 @@ BOOL multiPlayerLoop(void)
 		{
 			if(bDisplayMultiJoiningStatus)
 			{
-				sendVersionCheck();
 				bDisplayMultiJoiningStatus = 0;
 				setWidgetsStatus(TRUE);
 			}
@@ -683,9 +682,6 @@ BOOL recvMessage(void)
 			case NET_REQUESTDROID:				// player requires a droid that they dont have.
 				recvRequestDroid();
 				break;
-//			case NET_REQUESTPLAYER:				// a new player requires information
-//				multiPlayerRequest(&msg);
-//				break;
 			case NET_GIFT:						// an alliance gift from one player to another.
 				recvGift();
 				break;
@@ -747,9 +743,6 @@ BOOL recvMessage(void)
 			break;
 		case NET_OPTIONS:
 			recvOptions();
-			break;
-		case NET_VERSION:
-			recvVersionCheck(&msg);
 			break;
 		case NET_PLAYERRESPONDING:			// remote player is now playing
 		{

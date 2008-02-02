@@ -43,7 +43,7 @@ typedef enum _msgtype
 	NET_CHECK_DROID,		//9 check & update bot position and damage.
 	NET_CHECK_STRUCT,		//10 check & update struct damage.
 	NET_CHECK_POWER,		//11 power levels for a player.
-	NET_VERSION,			//12 VERSION data
+	__DEPRECATED__NET_VERSION__,			//12 was VERSION data; is unused now; but some code depends on this enum having these numbers (BAD!!!)
 	NET_BUILD,				//13 build a new structure
 	NET_STRUCTDEST,			//14 specify a strucutre to destroy
 	NET_BUILDFINISHED,		//15 a building is complete.
@@ -54,7 +54,7 @@ typedef enum _msgtype
 
 	// JOINING TYPES. these msgs are used when a player joins a game in progress.
 	NET_PLAYERCOMPLETE,		//20 All Setup information about player x has been sent
-	NET_REQUESTPLAYER,		//21 NOTUSED please send me info about a player
+	__DEPRECATED__NET_REQUESTPLAYER__,		//21 NOTUSED please send me info about a player; is unused now; but some code depends on this enum having these numbers (BAD!!!)
 	NET_STRUCT,				//22 a complete structure
 	NET_WHOLEDROID,			//23 a complete droid
 	NET_FEATURES,			//24 information regarding features.
