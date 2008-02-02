@@ -15,8 +15,8 @@ lib/sound/oggvorbis.c
 lib/sound/openal_track.cpp
 lib/sound/playlist.c
 lib/sound/track.c
-lib/sound/audio.c
-lib/sound/cdaudio.c
+lib/sound/audio.cpp
+lib/sound/cdaudio.cpp
 lib/sound/audio_id.c
 lib/ivis_common/imdload.c
 lib/ivis_common/imd.c
