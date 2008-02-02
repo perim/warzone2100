@@ -126,10 +126,14 @@ void	sound_SetTrackTimeLastFinished( SDWORD iTrack, UDWORD iTime );
 extern void sound_StopStream(AUDIO_STREAM* stream);
 extern void sound_PauseStream(AUDIO_STREAM* stream);
 extern void sound_ResumeStream(AUDIO_STREAM* stream);
-extern AUDIO_STREAM* sound_PlayStreamWithBuf(PHYSFS_file* fileHandle, float volume, void (*onFinished)(void*), void* user_data, size_t streamBufferSize, unsigned int buffer_count);
 
 #if defined(__cplusplus)
 }
+#endif
+
+// C++ only functions
+#if defined(__cplusplus)
+extern AUDIO_STREAM* sound_PlayStream(PHYSFS_file* fileHandle, float volume, void (*onFinished)(void*), void* user_data, size_t streamBufferSize = 16384, unsigned int buffer_count = 2);
 #endif
 
 #endif	// __INCLUDED_LIB_SOUND_TRACK_H__

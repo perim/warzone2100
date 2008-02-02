@@ -44,8 +44,6 @@ void	sound_StopSample(AUDIO_SAMPLE* psSample);
 void	sound_PauseSample( AUDIO_SAMPLE * psSample );
 void	sound_ResumeSample( AUDIO_SAMPLE * psSample );
 
-AUDIO_STREAM* sound_PlayStream(PHYSFS_file* PHYSFS_fileHandle, float volume, void (*onFinished)(void*), void* user_data);
-
 void	sound_SetSampleFreq( AUDIO_SAMPLE * psSample, SDWORD iFreq );
 void	sound_SetSampleVol( AUDIO_SAMPLE * psSample, SDWORD iVol,
 							BOOL bScale3D );

@@ -601,6 +601,8 @@ BOOL sound_Play3DSample( TRACK *psTrack, AUDIO_SAMPLE *psSample )
  *  \param volume the volume to play the audio at (in a range of 0.0 to 1.0)
  *  \param onFinished callback to invoke when we're finished playing
  *  \param user_data user-data pointer to pass to the \c onFinished callback
+ *  \param streamBufferSize the size to use for the decoded audio buffers
+ *  \param buffer_count the amount of audio buffers to use
  *  \return a pointer to the currently playing stream when playing started
  *          succesfully, NULL otherwise.
  *  \post When a non-NULL pointer is returned the audio stream system will
@@ -611,24 +613,7 @@ BOOL sound_Play3DSample( TRACK *psTrack, AUDIO_SAMPLE *psSample )
  *  \note You must _never_ manually free() the memory used by the returned
  *        pointer.
  */
-AUDIO_STREAM* sound_PlayStream(PHYSFS_file* fileHandle, float volume, void (*onFinished)(void*), void* user_data)
-{
-	// Default buffer size
-	static const size_t streamBufferSize = 16 * 1024;
-	// Default buffer count
-	static const unsigned int buffer_count = 2;
-
-	return sound_PlayStreamWithBuf(fileHandle, volume, onFinished, user_data, streamBufferSize, buffer_count);
-}
-
-/** Plays the audio data from the given file
- *  \param fileHandle,volume,onFinished,user_data see sound_PlayStream()
- *  \param streamBufferSize the size to use for the decoded audio buffers
- *  \param buffer_count the amount of audio buffers to use
- *  \see sound_PlayStream() for details about the rest of the function
- *       parameters and other details.
- */
-AUDIO_STREAM* sound_PlayStreamWithBuf(PHYSFS_file* fileHandle, float volume, void (*onFinished)(void*), void* user_data, size_t streamBufferSize, unsigned int buffer_count)
+AUDIO_STREAM* sound_PlayStream(PHYSFS_file* fileHandle, float volume, void (*onFinished)(void*), void* user_data, size_t streamBufferSize, unsigned int buffer_count)
 {
 	AUDIO_STREAM stream;
 	stream.fileHandle = fileHandle;

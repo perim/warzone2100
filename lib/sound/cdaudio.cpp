@@ -92,7 +92,7 @@ static bool cdAudio_OpenTrack(const char* filename)
 			return false;
 		}
 
-		cdStream = sound_PlayStreamWithBuf(music_file, music_volume, cdAudio_TrackFinished, NULL, bufferSize, buffer_count);
+		cdStream = sound_PlayStream(music_file, music_volume, cdAudio_TrackFinished, NULL, bufferSize, buffer_count);
 		if (cdStream == NULL)
 		{
 			PHYSFS_close(music_file);

@@ -4,9 +4,9 @@ include $(MAKERULES)/configure.mk
 SRC=general/databuffer.cpp \
 	general/raii_counter.cpp \
 	interface/stringarray.hpp \
-	audio.c \
+	audio.cpp \
 	audio_id.c \
-	cdaudio.c \
+	cdaudio.cpp \
 	oggvorbis.c \
 	openal_track.c \
 	openal_error.cpp \
