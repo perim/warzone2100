@@ -23,6 +23,9 @@
 
 // this has to be first
 #include <list>
+#include <boost/shared_ptr.hpp>
+#include "decoding.hpp"
+#include "stream.hpp"
 #include "lib/framework/frame.h"
 #include "lib/framework/frameresource.h"
 
@@ -48,6 +51,8 @@
 #include "mixer.h"
 
 using std::list;
+using boost::shared_ptr;
+using Sound::Stream;
 
 #define ATTENUATION_FACTOR	0.0003f
 
@@ -58,20 +63,20 @@ ALuint current_queue_sample = -1;
 struct __audio_stream
 {
 #ifndef WZ_NOSOUND
-	ALuint                  source;        // OpenAL name of the sound source
+	shared_ptr<Stream>      stream;
 #endif
-	struct OggVorbisDecoderState* decoder;
-	PHYSFS_file* fileHandle;
-	float                   volume;
-
 	// Callbacks
 	void                    (*onFinished)(void*);
 	void                    *user_data;
 
-	size_t                  bufferSize;
-
-	// Linked list pointer
-	struct __audio_stream   *next;
+	~__audio_stream()
+	{
+		// Now call the finished callback
+		if (onFinished)
+		{
+			onFinished(user_data);
+		}
+	}
 };
 
 typedef struct	SAMPLE_LIST
@@ -597,7 +602,7 @@ BOOL sound_Play3DSample( TRACK *psTrack, AUDIO_SAMPLE *psSample )
 }
 
 /** Plays the audio data from the given file
- *  \param fileHandle PhysicsFS file handle to stream the audio from
+ *  \param input istream to decode and stream the audio from
  *  \param volume the volume to play the audio at (in a range of 0.0 to 1.0)
  *  \param onFinished callback to invoke when we're finished playing
  *  \param user_data user-data pointer to pass to the \c onFinished callback
@@ -613,91 +618,25 @@ BOOL sound_Play3DSample( TRACK *psTrack, AUDIO_SAMPLE *psSample )
  *  \note You must _never_ manually free() the memory used by the returned
  *        pointer.
  */
-AUDIO_STREAM* sound_PlayStream(PHYSFS_file* fileHandle, float volume, void (*onFinished)(void*), void* user_data, size_t streamBufferSize, unsigned int buffer_count)
+AUDIO_STREAM* sound_PlayStream(boost::shared_ptr<std::istream> input, float volume, void (*onFinished)(void*), void* user_data, size_t streamBufferSize, unsigned int buffer_count)
 {
 	AUDIO_STREAM stream;
-	stream.fileHandle = fileHandle;
 
-	stream.decoder = sound_CreateOggVorbisDecoder(stream.fileHandle, FALSE);
-	if (stream.decoder == NULL)
-	{
-		debug(LOG_ERROR, "sound_PlayStream: Failed to open audio file for decoding");
-		return NULL;
-	}
+	// Set up the sound decoder
+	shared_ptr<Sound::Decoding> decoder(new Sound::Decoding(input, false));
 
-	stream.volume = volume;
-	stream.bufferSize = streamBufferSize;
+	// Create a streamer
+	stream.stream.reset(new Stream(decoder));
 
-	// Retrieve an OpenAL sound source
-	alGenSources(1, &(stream.source));
-	sound_GetError();
+	stream.stream->volume(volume);
+	stream.stream->setBufferSize(streamBufferSize);
 
 	// HACK: this is a workaround for a bug in the 64bit implementation of OpenAL on GNU/Linux
-	// The AL_PITCH value really should be 1.0.
-	alSourcef(stream.source, AL_PITCH, 1.001);
+	// The pitch value really should be 1.0.
+	stream.stream->pitch(1.001);
 
-	// Create some OpenAL buffers to store the decoded data in
-	ALuint        buffers[buffer_count];
-	alGenBuffers(buffer_count, buffers);
-	sound_GetError();
-
-	// Fill some buffers with audio data
-	unsigned int i;
-	for (i = 0; i < buffer_count; ++i)
-	{
-		// Decode some audio data
-		soundDataBuffer* soundBuffer = sound_DecodeOggVorbis(stream.decoder, stream.bufferSize);
-
-		// If we actually decoded some data
-		if (soundBuffer && soundBuffer->size > 0)
-		{
-			// Determine PCM data format
-			ALenum format = (soundBuffer->channelCount == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
-
-			// Copy the audio data into one of OpenAL's own buffers
-			alBufferData(buffers[i], format, soundBuffer->data, soundBuffer->size, soundBuffer->frequency);
-			sound_GetError();
-
-			// Clean up our memory
-			free(soundBuffer);
-		}
-		else
-		{
-			// If no data has been decoded we're probably at the end of our
-			// stream. So cleanup the excess stuff here.
-
-			// First remove the data buffer itself
-			free(soundBuffer);
-
-			// Then remove OpenAL's buffers
-			alDeleteBuffers(buffer_count - i, &buffers[i]);
-			sound_GetError();
-
-			break;
-		}
-	}
-
-	// Bail out if we didn't fill any buffers
-	if (i == 0)
-	{
-		// Destroy the decoder
-		sound_DestroyOggVorbisDecoder(stream.decoder);
-
-		// Destroy the OpenAL source
-		alDeleteSources(1, &stream.source);
-
-		return NULL;
-	}
-
-	// Attach the OpenAL buffers to our OpenAL source
-	// (i = the amount of buffers we worked on in the above for-loop)
-	alSourceQueueBuffers(stream.source, i, buffers);
-	sound_GetError();
-
-	// Start playing the source
-	alSourcePlay(stream.source);
-
-	sound_GetError();
+	// Start playing the stream
+	stream.stream->play();
 
 	// Set callback info
 	stream.onFinished = onFinished;
@@ -721,8 +660,7 @@ void sound_StopStream(AUDIO_STREAM* stream)
 	assert(stream != NULL);
 
 	// Tell OpenAL to stop playing on the given source
-	alSourceStop(stream->source);
-	sound_GetError();
+	stream->stream->stop();
 }
 
 /** Pauses playing of this stream until playing is resumed with
@@ -731,21 +669,17 @@ void sound_StopStream(AUDIO_STREAM* stream)
  */
 void sound_PauseStream(AUDIO_STREAM* stream)
 {
-	ALint state;
-
 	// To be sure we won't go mutilating this OpenAL source, check wether
 	// it's playing first.
-	alGetSourcei(stream->source, AL_SOURCE_STATE, &state);
-	sound_GetError();
+	OpenAL::Source::sourceState state = stream->stream->getState();
 
-	if (state != AL_PLAYING)
+	if (state != OpenAL::Source::playing)
 	{
 		return;
 	}
 
 	// Pause playing of this OpenAL source
-	alSourcePause(stream->source);
-	sound_GetError();
+	stream->stream->pause();
 }
 
 /** Resumes playing of a stream that's paused by means of sound_PauseStream().
@@ -753,128 +687,17 @@ void sound_PauseStream(AUDIO_STREAM* stream)
  */
 void sound_ResumeStream(AUDIO_STREAM* stream)
 {
-	ALint state;
-
 	// To be sure we won't go mutilating this OpenAL source, check wether
 	// it's paused first.
-	alGetSourcei(stream->source, AL_SOURCE_STATE, &state);
-	sound_GetError();
+	OpenAL::Source::sourceState state = stream->stream->getState();
 
-	if (state != AL_PAUSED)
+	if (state != OpenAL::Source::paused)
 	{
 		return;
 	}
 
 	// Resume playing of this OpenAL source
-	alSourcePlay(stream->source);
-	sound_GetError();
-}
-
-/** Update the given stream by making sure its buffers remain full
- *  \param stream the stream to update
- *  \return true when the stream is still playing, false when it has stopped
- */
-static bool sound_UpdateStream(AUDIO_STREAM& stream)
-{
-	ALint state, buffer_count;
-
-	alGetSourcei(stream.source, AL_SOURCE_STATE, &state);
-	sound_GetError();
-
-	if (state != AL_PLAYING && state != AL_PAUSED)
-	{
-		return false;
-	}
-
-	// Retrieve the amount of buffers which were processed and need refilling
-	alGetSourcei(stream.source, AL_BUFFERS_PROCESSED, &buffer_count);
-	sound_GetError();
-
-	// Refill and reattach all buffers
-	for (; buffer_count != 0; --buffer_count)
-	{
-		soundDataBuffer* soundBuffer;
-		ALuint buffer;
-
-		// Retrieve the buffer to work on
-		alSourceUnqueueBuffers(stream.source, 1, &buffer);
-		sound_GetError();
-
-		// Decode some data to stuff in our buffer
-		soundBuffer = sound_DecodeOggVorbis(stream.decoder, stream.bufferSize);
-
-		// If we actually decoded some data
-		if (soundBuffer && soundBuffer->size > 0)
-		{
-			// Determine PCM data format
-			ALenum format = (soundBuffer->channelCount == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
-
-			// Insert the data into the buffer
-			alBufferData(buffer, format, soundBuffer->data, soundBuffer->size, soundBuffer->frequency);
-			sound_GetError();
-
-			// Reattach the buffer to the source
-			alSourceQueueBuffers(stream.source, 1, &buffer);
-			sound_GetError();
-		}
-		else
-		{
-			// If no data has been decoded we're probably at the end of our
-			// stream. So cleanup this buffer.
-
-			// Then remove OpenAL's buffer
-			alDeleteBuffers(1, &buffer);
-			sound_GetError();
-		}
-
-		// Now remove the data buffer itself
-		free(soundBuffer);
-	}
-
-	return true;
-}
-
-/** Destroy the given stream and release its associated resources. This function
- *  also handles calling of the \c onFinished callback function and closing of
- *  the PhysicsFS file handle.
- *  \param stream the stream to destroy
- */
-static void sound_DestroyStream(AUDIO_STREAM& stream)
-{
-	ALint buffer_count;
-
-	// Stop the OpenAL source from playing
-	alSourceStop(stream.source);
-	sound_GetError();
-
-	// Retrieve the amount of buffers which were processed
-	alGetSourcei(stream.source, AL_BUFFERS_PROCESSED, &buffer_count);
-	sound_GetError();
-
-	// Detach all buffers and retrieve their ID numbers
-	ALuint buffers[buffer_count];
-	alSourceUnqueueBuffers(stream.source, buffer_count, buffers);
-	sound_GetError();
-
-	// Destroy all of these buffers
-	alDeleteBuffers(buffer_count, buffers);
-	sound_GetError();
-
-	// Destroy the OpenAL source
-	alDeleteSources(1, &stream.source);
-	sound_GetError();
-
-	// Destroy the sound decoder
-	sound_DestroyOggVorbisDecoder(stream.decoder);
-
-	// Now close the file
-	PHYSFS_close(stream.fileHandle);
-
-	// Now call the finished callback
-	if (stream.onFinished)
-	{
-		stream.onFinished(stream.user_data);
-	}
+	stream->stream->play();
 }
 
 /** Update all currently running streams and destroy them when they're finished.
@@ -885,7 +708,7 @@ static void sound_UpdateStreams()
 	     stream =  active_streams.begin();
 	     stream != active_streams.end();)
 	{
-		if (!sound_UpdateStream(*stream))
+		if (!stream->stream->update())
 		{
 			list<AUDIO_STREAM>::iterator toDelete = stream;
 
@@ -893,7 +716,6 @@ static void sound_UpdateStreams()
 			++stream;
 
 			// Remove the finished stream
-			sound_DestroyStream(*toDelete);
 			active_streams.erase(toDelete);
 
 			// Skip regular iterator incrementing

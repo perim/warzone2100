@@ -18,6 +18,8 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
+#include "general/physfs_stream.hpp"
+#include <boost/shared_ptr.hpp>
 #include <string.h>
 #include <physfs.h>
 
@@ -28,6 +30,8 @@
 #include "cdaudio.h"
 #include "mixer.h"
 #include "playlist.h"
+
+using boost::shared_ptr;
 
 static const size_t bufferSize = 16 * 1024;
 static const unsigned int buffer_count = 32;
@@ -84,18 +88,16 @@ static bool cdAudio_OpenTrack(const char* filename)
 #ifndef WZ_NOSOUND
 	if (strncasecmp(filename+strlen(filename)-4, ".ogg", 4) == 0)
 	{
-		PHYSFS_file* music_file = PHYSFS_openRead(filename);
-
-		if (music_file == NULL)
+		shared_ptr<PhysFS::ifstream> file(new PhysFS::ifstream(filename));
+		if (!file->is_open())
 		{
 			debug(LOG_ERROR, "cdAudio_OpenTrack: Failed opening file %s, with error %s", filename, PHYSFS_getLastError());
 			return false;
 		}
 
-		cdStream = sound_PlayStream(music_file, music_volume, cdAudio_TrackFinished, NULL, bufferSize, buffer_count);
+		cdStream = sound_PlayStream(file, music_volume, cdAudio_TrackFinished, NULL, bufferSize, buffer_count);
 		if (cdStream == NULL)
 		{
-			PHYSFS_close(music_file);
 			debug(LOG_ERROR, "Failed creating audio stream for %s", filename);
 			return false;
 		}

@@ -32,6 +32,16 @@
 # endif
 #endif
 
+typedef struct __audio_stream AUDIO_STREAM;
+
+// C++ only functions
+#if defined(__cplusplus)
+#include <istream>
+#include <boost/shared_ptr.hpp>
+
+extern AUDIO_STREAM* sound_PlayStream(boost::shared_ptr<std::istream> input, float volume, void (*onFinished)(void*), void* user_data, size_t streamBufferSize = 16384, unsigned int buffer_count = 2);
+#endif
+
 #if defined(__cplusplus)
 extern "C"
 {
@@ -47,7 +57,6 @@ extern "C"
  */
 
 typedef BOOL (* AUDIO_CALLBACK)  ( void *psObj );
-typedef struct __audio_stream AUDIO_STREAM;
 
 /* structs */
 
@@ -129,11 +138,6 @@ extern void sound_ResumeStream(AUDIO_STREAM* stream);
 
 #if defined(__cplusplus)
 }
-#endif
-
-// C++ only functions
-#if defined(__cplusplus)
-extern AUDIO_STREAM* sound_PlayStream(PHYSFS_file* fileHandle, float volume, void (*onFinished)(void*), void* user_data, size_t streamBufferSize = 16384, unsigned int buffer_count = 2);
 #endif
 
 #endif	// __INCLUDED_LIB_SOUND_TRACK_H__
