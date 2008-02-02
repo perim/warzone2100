@@ -23,6 +23,7 @@
 
 // this has to be first
 #include <list>
+#include <stdexcept>
 #include "lib/framework/frame.h"
 #include "lib/framework/frameresource.h"
 
@@ -57,6 +58,8 @@ ALuint current_queue_sample = -1;
 
 struct __audio_stream
 {
+	__audio_stream(PHYSFS_file* file, float vol, void (*finished)(void*), void* data, size_t streamBufferSize, unsigned int buffer_count);
+
 #ifndef WZ_NOSOUND
 	ALuint                  source;        // OpenAL name of the sound source
 #endif
@@ -69,9 +72,6 @@ struct __audio_stream
 	void                    *user_data;
 
 	size_t                  bufferSize;
-
-	// Linked list pointer
-	struct __audio_stream   *next;
 };
 
 typedef struct	SAMPLE_LIST
@@ -615,26 +615,36 @@ BOOL sound_Play3DSample( TRACK *psTrack, AUDIO_SAMPLE *psSample )
  */
 AUDIO_STREAM* sound_PlayStream(PHYSFS_file* fileHandle, float volume, void (*onFinished)(void*), void* user_data, size_t streamBufferSize, unsigned int buffer_count)
 {
-	AUDIO_STREAM stream;
-	stream.fileHandle = fileHandle;
+	// Construct the stream
+	AUDIO_STREAM stream(fileHandle, volume, onFinished, user_data, streamBufferSize, buffer_count);
 
-	stream.decoder = sound_CreateOggVorbisDecoder(stream.fileHandle, FALSE);
-	if (stream.decoder == NULL)
+	// Append this stream to the linked list
+	active_streams.push_back(stream);
+
+	return &active_streams.back();
+}
+
+__audio_stream::__audio_stream(PHYSFS_file* file, float vol, void (*finished)(void*), void* data, size_t streamBufferSize, unsigned int buffer_count) :
+	fileHandle(file),
+	volume(vol),
+	onFinished(finished),
+	user_data(data),
+	bufferSize(streamBufferSize)
+{
+	decoder = sound_CreateOggVorbisDecoder(fileHandle, FALSE);
+	if (decoder == NULL)
 	{
-		debug(LOG_ERROR, "sound_PlayStream: Failed to open audio file for decoding");
-		return NULL;
+		debug(LOG_ERROR, "__audio_stream::__audio_stream: Failed to open audio file for decoding");
+		throw std::runtime_error("Failed to open audio file for decoding");
 	}
 
-	stream.volume = volume;
-	stream.bufferSize = streamBufferSize;
-
 	// Retrieve an OpenAL sound source
-	alGenSources(1, &(stream.source));
+	alGenSources(1, &source);
 	sound_GetError();
 
 	// HACK: this is a workaround for a bug in the 64bit implementation of OpenAL on GNU/Linux
 	// The AL_PITCH value really should be 1.0.
-	alSourcef(stream.source, AL_PITCH, 1.001);
+	alSourcef(source, AL_PITCH, 1.001);
 
 	// Create some OpenAL buffers to store the decoded data in
 	ALuint        buffers[buffer_count];
@@ -646,7 +656,7 @@ AUDIO_STREAM* sound_PlayStream(PHYSFS_file* fileHandle, float volume, void (*onF
 	for (i = 0; i < buffer_count; ++i)
 	{
 		// Decode some audio data
-		soundDataBuffer* soundBuffer = sound_DecodeOggVorbis(stream.decoder, stream.bufferSize);
+		soundDataBuffer* soundBuffer = sound_DecodeOggVorbis(decoder, bufferSize);
 
 		// If we actually decoded some data
 		if (soundBuffer && soundBuffer->size > 0)
@@ -677,36 +687,15 @@ AUDIO_STREAM* sound_PlayStream(PHYSFS_file* fileHandle, float volume, void (*onF
 		}
 	}
 
-	// Bail out if we didn't fill any buffers
-	if (i == 0)
-	{
-		// Destroy the decoder
-		sound_DestroyOggVorbisDecoder(stream.decoder);
-
-		// Destroy the OpenAL source
-		alDeleteSources(1, &stream.source);
-
-		return NULL;
-	}
-
 	// Attach the OpenAL buffers to our OpenAL source
 	// (i = the amount of buffers we worked on in the above for-loop)
-	alSourceQueueBuffers(stream.source, i, buffers);
+	alSourceQueueBuffers(source, i, buffers);
 	sound_GetError();
 
 	// Start playing the source
-	alSourcePlay(stream.source);
+	alSourcePlay(source);
 
 	sound_GetError();
-
-	// Set callback info
-	stream.onFinished = onFinished;
-	stream.user_data = user_data;
-
-	// Append this stream to the linked list
-	active_streams.push_back(stream);
-
-	return &active_streams.back();
 }
 
 /** Stops the current stream from playing.
