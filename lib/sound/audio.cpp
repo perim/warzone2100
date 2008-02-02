@@ -17,9 +17,8 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-
-#include "general/physfs_stream.hpp"
-#include <boost/shared_ptr.hpp>
+//*
+//
 #include <stdio.h>
 #include <string.h>
 #include "lib/framework/frame.h"
@@ -30,8 +29,6 @@
 #include "audio_id.h"
 #include "lib/framework/trig.h"
 #include "lib/ivis_common/pietypes.h"
-
-using boost::shared_ptr;
 
 // defines
 #define NO_SAMPLE				- 2
@@ -816,6 +813,9 @@ BOOL audio_PlayObjDynamicTrack( void *psObj, int iTrack, AUDIO_CALLBACK pUserCal
  */
 AUDIO_STREAM* audio_PlayStream(const char* fileName, float volume, void (*onFinished)(void*), void* user_data)
 {
+	PHYSFS_file* fileHandle;
+	AUDIO_STREAM* stream;
+
 	// If audio is not enabled return false to indicate that the given callback
 	// will not be invoked.
 	if (g_bAudioEnabled == FALSE)
@@ -824,14 +824,21 @@ AUDIO_STREAM* audio_PlayStream(const char* fileName, float volume, void (*onFini
 	}
 
 	// Open up the file
-	shared_ptr<PhysFS::ifstream> file(new PhysFS::ifstream(fileName));
-	if (!file->is_open())
+	fileHandle = PHYSFS_openRead(fileName);
+	if (fileHandle == NULL)
 	{
 		debug(LOG_ERROR, "sound_LoadTrackFromFile: PHYSFS_openRead(\"%s\") failed with error: %s\n", fileName, PHYSFS_getLastError());
 		return NULL;
 	}
 
-	return sound_PlayStream(file, volume, onFinished, user_data);
+	stream = sound_PlayStream(fileHandle, volume, onFinished, user_data);
+	if (stream == NULL)
+	{
+		PHYSFS_close(fileHandle);
+		return NULL;
+	}
+
+	return stream;
 }
 
 //*
