@@ -1,4 +1,4 @@
 noinst_LIBRARIES = libinterface.a
-noinst_HEADERS = stringarray.hpp
+noinst_HEADERS = devicelist.hpp stringarray.hpp
 
-libinterface_a_SOURCES = stringarray.cpp
+libinterface_a_SOURCES = devicelist.cpp stringarray.cpp

@@ -3,6 +3,7 @@ include $(MAKERULES)/configure.mk
 
 SRC=general/databuffer.cpp \
 	general/raii_counter.cpp \
+	interface/devicelist.cpp \
 	interface/stringarray.hpp \
 	audio.cpp \
 	audio_id.c \
