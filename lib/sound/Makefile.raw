@@ -8,6 +8,10 @@ SRC=general/databuffer.cpp \
 	audio_id.c \
 	cdaudio.cpp \
 	oggvorbis.c \
+	openal/buffer.cpp \
+	openal/devicelist.cpp \
+	openal/exception.cpp \
+	openal/source.cpp \
 	openal_track.c \
 	openal_error.cpp \
 	playlist.c \

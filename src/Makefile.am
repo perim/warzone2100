@@ -52,8 +52,9 @@ warzone2100_LDADD = \
 	$(top_builddir)/lib/widget/libwidget.a \
 	$(top_builddir)/lib/sequence/libsequence.a \
 	$(top_builddir)/lib/sound/libsound.a \
-	$(top_builddir)/lib/sound/general/libgeneral.a \
+	$(top_builddir)/lib/sound/openal/libopenal.a \
 	$(top_builddir)/lib/sound/interface/libinterface.a \
+	$(top_builddir)/lib/sound/general/libgeneral.a \
 	$(top_builddir)/lib/script/libscript.a \
 	$(top_builddir)/lib/netplay/libnetplay.a \
 	$(top_builddir)/lib/ivis_opengl/libivis_opengl.a \

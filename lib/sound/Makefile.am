@@ -1,4 +1,4 @@
-SUBDIRS = general interface
+SUBDIRS = general interface openal
 
 noinst_LIBRARIES = libsound.a
 noinst_HEADERS = aud.h audio.h audio_id.h cdaudio.h mixer.h oggvorbis.h openal_error.h track.h tracklib.h
