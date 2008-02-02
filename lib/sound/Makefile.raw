@@ -18,6 +18,7 @@ SRC=general/databuffer.cpp \
 	openal_track.c \
 	openal_error.cpp \
 	playlist.c \
+	stream.cpp \
 	track.c
 
 LIB=sound
