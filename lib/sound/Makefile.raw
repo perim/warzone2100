@@ -8,6 +8,8 @@ SRC=general/databuffer.cpp \
 	audio.cpp \
 	audio_id.c \
 	cdaudio.cpp \
+	constants.cpp \
+	decoding.cpp \
 	oggvorbis.c \
 	openal/buffer.cpp \
 	openal/devicelist.cpp \
