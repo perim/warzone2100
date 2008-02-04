@@ -19,6 +19,7 @@
 */
 
 #include "playlist.hpp"
+#include <vector>
 #include <algorithm>
 #include <stdio.h>
 #include <physfs.h>
@@ -32,16 +33,17 @@
 # undef bool
 #endif
 
+using std::vector;
+
 #define BUFFER_SIZE 2048
 
 #define NB_TRACKS 3
 
-typedef struct {
-	char**		songs;
-	unsigned int	nb_songs;
-	unsigned int	list_size;
+struct WZ_TRACK
+{
+	vector<char*>   songs;
 	bool		shuffle;
-} WZ_TRACK;
+};
 
 static unsigned int current_track = 0;
 static unsigned int current_song = 0;
@@ -54,28 +56,17 @@ void PlayList_Init()
 
 	for (i = 0; i < NB_TRACKS; ++i)
 	{
-		playlist[i].songs = NULL;
-		playlist[i].list_size = 0;
-		playlist[i].nb_songs = 0;
+		playlist[i].songs.clear();
 	}
 }
 
 void PlayList_Quit()
 {
-	unsigned int i, j;
+	unsigned int i;
 
 	for(i = 0; i < NB_TRACKS; ++i)
 	{
-		for (j = 0; j < playlist[i].list_size; ++j )
-		{
-			free(playlist[i].songs[j]);
-		}
-
-		free(playlist[i].songs);
-
-		playlist[i].songs = NULL;
-		playlist[i].list_size = 0;
-		playlist[i].nb_songs = 0;
+		playlist[i].songs.clear();
 	}
 }
 
@@ -188,41 +179,7 @@ bool PlayList_Read(const char* path)
 			}
 			debug(LOG_SOUND, "playlist: adding song %s", filepath );
 
-			if (playlist[current_track].nb_songs == playlist[current_track].list_size)
-			{
-				char** songs;
-				unsigned int new_list_size = playlist[current_track].list_size * 2;
-				unsigned int i;
-
-				// Make sure that we always allocate _some_ memory.
-				if (new_list_size == 0)
-				{
-					new_list_size = 1;
-				}
-
-				songs = (char**)realloc(playlist[current_track].songs,
-				                        new_list_size * sizeof(char*));
-				if (songs == NULL)
-				{
-					debug(LOG_ERROR, "PlayList_Read: Out of memory!");
-					free(path_to_music);
-					PHYSFS_close(fileHandle);
-					abort();
-					return false;
-				}
-
-				// Initialize the new set of pointers to NULL. Since they don't point to
-				// allocated memory yet.
-				for (i = playlist[current_track].list_size; i < new_list_size; ++i)
-				{
-					songs[i] = NULL;
-				}
-
-				playlist[current_track].songs = songs;
-				playlist[current_track].list_size = new_list_size;
-			}
-
-			playlist[current_track].songs[playlist[current_track].nb_songs++] = filepath;
+			playlist[current_track].songs.push_back(filepath);
 		}
 	}
 
@@ -237,7 +194,7 @@ static void PlayList_Shuffle()
 {
 	if (playlist[current_track].shuffle)
 	{
-		for (unsigned int i = playlist[current_track].nb_songs - 1; i > 0; --i)
+		for (unsigned int i = playlist[current_track].songs.size() - 1; i > 0; --i)
 		{
 			unsigned int j = rand() % (i + 1);
 
@@ -263,7 +220,7 @@ void PlayList_SetTrack(unsigned int t)
 
 const char* PlayList_CurrentSong()
 {
-	if (current_song < playlist[current_track].nb_songs)
+	if (current_song < playlist[current_track].songs.size())
 	{
 		return playlist[current_track].songs[current_song];
 	}
@@ -274,7 +231,7 @@ const char* PlayList_CurrentSong()
 const char* PlayList_NextSong()
 {
 	// If we're at the end of the playlist
-	if (++current_song >= playlist[current_track].nb_songs)
+	if (++current_song >= playlist[current_track].songs.size())
 	{
 		// Shuffle the playlist (again)
 		PlayList_Shuffle();
@@ -283,7 +240,7 @@ const char* PlayList_NextSong()
 		current_song = 0;
 	}
 
-	if (playlist[current_track].nb_songs == 0)
+	if (playlist[current_track].songs.empty())
 	{
 		return NULL;
 	}
