@@ -20,6 +20,7 @@
 
 #include "playlist.hpp"
 #include <vector>
+#include <string>
 #include <algorithm>
 #include <stdio.h>
 #include <physfs.h>
@@ -33,6 +34,7 @@
 # undef bool
 #endif
 
+using std::string;
 using std::vector;
 
 #define BUFFER_SIZE 2048
@@ -41,7 +43,7 @@ using std::vector;
 
 struct WZ_TRACK
 {
-	vector<char*>   songs;
+	vector<string>  songs;
 	bool		shuffle;
 };
 
@@ -73,7 +75,7 @@ void PlayList_Quit()
 bool PlayList_Read(const char* path) 
 {
 	PHYSFS_file* fileHandle;
-	char* path_to_music = NULL;
+	string path_to_music;
 
 	char fileName[PATH_MAX];
 
@@ -90,100 +92,65 @@ bool PlayList_Read(const char* path)
 
 	while (!PHYSFS_eof(fileHandle))
 	{
-		char line_buf[BUFFER_SIZE];
-		size_t buf_pos = 0;
-		char* filename;
+		string line;
+		char char_buf;
 
-		while (buf_pos < sizeof(line_buf) - 1
-		    && PHYSFS_read(fileHandle, &line_buf[buf_pos], 1, 1)
-		    && line_buf[buf_pos] != '\n'
-		    && line_buf[buf_pos] != '\r')
+		// Read a line from the file
+		while (PHYSFS_read(fileHandle, &char_buf, 1, 1)
+		    && char_buf != '\n'
+		    && char_buf != '\r')
 		{
-			++buf_pos;
+			line += char_buf;
 		}
 
-		// Nul-terminate string
-		line_buf[buf_pos] = '\0';
-		buf_pos = 0;
-
-		if (strncmp(line_buf, "[game]", 6) == 0)
+		if (line.substr(0, 6) == "[game]")
 		{
 			current_track = 1;
-			free(path_to_music);
-			path_to_music = NULL;
+			path_to_music.clear();
 			playlist[current_track].shuffle = false;
 		}
-		else if (strncmp(line_buf, "[menu]", 6) == 0)
+		else if (line.substr(0, 6) == "[menu]")
 		{
 			current_track = 2;
-			free(path_to_music);
-			path_to_music = NULL;
+			path_to_music.clear();
 			playlist[current_track].shuffle = false;
 		}
-		else if (strncmp(line_buf, "path=", 5) == 0)
+		else if (line.substr(0, 5) == "path=")
 		{
-			free(path_to_music);
-			path_to_music = strtok(line_buf+5, "\n");
-			if (strcmp(path_to_music, ".") == 0)
+			path_to_music = line.substr(5);
+			if (path_to_music == ".")
 			{
-				path_to_music = strdup(path);
+				path_to_music = path;
 			}
-			else
-			{
-				path_to_music = strdup(path_to_music);
-			}
-			debug(LOG_SOUND, "playlist: path = %s", path_to_music );
+
+			debug(LOG_SOUND, "playlist: path = %s", path_to_music.c_str());
 		}
-		else if (strncmp(line_buf, "shuffle=", 8) == 0)
+		else if (line.substr(0, 8) == "shuffle=")
 		{
-			if (strcmp(strtok(line_buf+8, "\n"), "yes") == 0)
+			if (line.substr(8) == "yes")
 			{
 				playlist[current_track].shuffle = true;
 			}
 			debug( LOG_SOUND, "playlist: shuffle = yes" );
 		}
-		else if (line_buf[0] != '\0'
-		      && (filename = strtok(line_buf, "\n")) != NULL
-		      && strlen(filename) != 0)
+		else if (!line.empty())
 		{
-			char* filepath;
+			string filepath;
 
-			if (path_to_music == NULL)
+			if (path_to_music.empty())
 			{
-				filepath = strdup(filename);
-				if (filename == NULL)
-				{
-					debug(LOG_ERROR, "PlayList_Read: Out of memory!");
-					PHYSFS_close(fileHandle);
-					abort();
-					return false;
-				}
+				filepath = line;
 			}
 			else
 			{
-				// Determine the length of the string we're about to construct
-				size_t path_length = strlen(path_to_music) + 1 + strlen(filename) + 2;
-
-				// Allocate memory for our string
-				filepath = (char*)malloc(path_length);
-				if (filepath == NULL)
-				{
-					debug(LOG_ERROR, "PlayList_Read: Out of memory!");
-					free(path_to_music);
-					PHYSFS_close(fileHandle);
-					abort();
-					return false;
-				}
-
-				snprintf(filepath, path_length, "%s/%s", path_to_music, filename);
+				filepath = path_to_music + "/" + line;
 			}
-			debug(LOG_SOUND, "playlist: adding song %s", filepath );
+
+			debug(LOG_SOUND, "playlist: adding song %s", filepath.c_str());
 
 			playlist[current_track].songs.push_back(filepath);
 		}
 	}
-
-	free(path_to_music);
 
 	PHYSFS_close(fileHandle);
 
@@ -222,7 +189,7 @@ const char* PlayList_CurrentSong()
 {
 	if (current_song < playlist[current_track].songs.size())
 	{
-		return playlist[current_track].songs[current_song];
+		return playlist[current_track].songs[current_song].c_str();
 	}
 
 	return NULL;
@@ -245,5 +212,5 @@ const char* PlayList_NextSong()
 		return NULL;
 	}
 	
-	return playlist[current_track].songs[current_song];
+	return playlist[current_track].songs[current_song].c_str();
 }
