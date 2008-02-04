@@ -96,6 +96,12 @@ namespace Sound
             void allowsSeeking(const bool& bSeek);
 
         private:
+            // Private and undefined copy constructor and assignment operator,
+            // to prevent them from being used.
+            Decoding(const Decoding&);
+            Decoding& operator=(const Decoding&);
+
+        private:
             // Input stream to read input data from
             boost::shared_ptr<std::istream> _input;
 
