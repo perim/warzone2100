@@ -17,6 +17,8 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
+
+#include "playlist.hpp"
 #include <stdio.h>
 #include <physfs.h>
 #include <string.h>
@@ -24,7 +26,10 @@
 #include "lib/framework/frame.h"
 #include "lib/framework/wzglobal.h"
 
-#include "playlist.h"
+// bool is a real type in C++
+#ifdef bool
+# undef bool
+#endif
 
 #define BUFFER_SIZE 2048
 

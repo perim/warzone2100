@@ -829,9 +829,6 @@ void AUDIO_STREAM::destroy()
 	alDeleteSources(1, &source);
 	sound_GetError();
 
-	// Destroy the sound decoder
-	decoder.reset();
-
 	// Now call the finished callback
 	if (onFinished)
 	{

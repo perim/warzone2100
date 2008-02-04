@@ -18,25 +18,18 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
-#ifndef __INCLUDED_LIB_SOUND_PLAYLIST_H__
-#define __INCLUDED_LIB_SOUND_PLAYLIST_H__
+#ifndef __INCLUDED_LIB_SOUND_PLAYLIST_HPP__
+#define __INCLUDED_LIB_SOUND_PLAYLIST_HPP__
 
-#include "lib/framework/types.h"
-
-#if defined(__cplusplus)
-extern "C"
-{
+#if !defined(__cplusplus)
+# error "This header file is meant to be compiled as C++ only (i.e. not C)."
 #endif
 
-void PlayList_Init(void);
-void PlayList_Quit(void);
+void PlayList_Init();
+void PlayList_Quit();
 bool PlayList_Read(const char* path);
 void PlayList_SetTrack(unsigned int t);
-const char* PlayList_CurrentSong(void);
-const char* PlayList_NextSong(void);
+const char* PlayList_CurrentSong();
+const char* PlayList_NextSong();
 
-#if defined(__cplusplus)
-}
-#endif
-
-#endif // __INCLUDED_LIB_SOUND_PLAYLIST_H__
+#endif // __INCLUDED_LIB_SOUND_PLAYLIST_HPP__

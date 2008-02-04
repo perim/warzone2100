@@ -29,7 +29,11 @@
 #include "track.h"
 #include "cdaudio.h"
 #include "mixer.h"
-#include "playlist.h"
+
+#ifdef bool
+# undef bool
+#endif
+#include "playlist.hpp"
 
 using boost::shared_ptr;
 

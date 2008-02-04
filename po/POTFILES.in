@@ -12,7 +12,7 @@ lib/framework/trig.c
 lib/framework/input.c
 lib/framework/strres.c
 lib/sound/openal_track.cpp
-lib/sound/playlist.c
+lib/sound/playlist.cpp
 lib/sound/track.c
 lib/sound/audio.cpp
 lib/sound/cdaudio.cpp
