@@ -21,6 +21,11 @@
 #ifndef __INCLUDED_LIB_SOUND_TRACK_H__
 #define __INCLUDED_LIB_SOUND_TRACK_H__
 
+#if defined(__cplusplus)
+# include <boost/shared_ptr.hpp>
+# include <istream>
+#endif
+
 #include "lib/framework/frame.h"
 #include <physfs.h>
 
@@ -36,9 +41,6 @@ typedef struct __audio_stream AUDIO_STREAM;
 
 // C++ only functions
 #if defined(__cplusplus)
-#include <boost/shared_ptr.hpp>
-#include <istream>
-
 extern AUDIO_STREAM* sound_PlayStream(boost::shared_ptr<std::istream> file, float volume, void (*onFinished)(void*), void* user_data, size_t streamBufferSize = 16384, unsigned int buffer_count = 2);
 #endif
 
