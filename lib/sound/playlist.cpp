@@ -32,6 +32,8 @@
 #include "lib/framework/frame.h"
 #include "lib/framework/wzglobal.h"
 
+#include "cdaudio.h"
+
 // bool is a real type in C++
 #ifdef bool
 # undef bool
@@ -43,8 +45,6 @@ using std::string;
 using std::vector;
 
 #define BUFFER_SIZE 2048
-
-#define NB_TRACKS 3
 
 namespace Sound
 {
@@ -65,21 +65,21 @@ struct PlayList::Track
 PlayList::PlayList() :
 		_cur_track(0),
 		_cur_song(0),
-		_playlist(new Track[NB_TRACKS])
+		_playlist(new Track[playlist_last])
 {
 }
 
 PlayList::PlayList(const char* path) :
 		_cur_track(0),
 		_cur_song(0),
-		_playlist(new Track[NB_TRACKS])
+		_playlist(new Track[playlist_last])
 {
 }
 
 PlayList::PlayList(std::istream& file) :
 		_cur_track(0),
 		_cur_song(0),
-		_playlist(new Track[NB_TRACKS])
+		_playlist(new Track[playlist_last])
 {
 }
 
@@ -184,7 +184,7 @@ void PlayList::shuffle()
 
 void PlayList::track(unsigned int t)
 {
-	if (t < NB_TRACKS)
+	if (t < playlist_last)
 	{
 		_cur_track = t;
 	}
