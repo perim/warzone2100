@@ -24,6 +24,10 @@
 // this has to be first
 #include <list>
 #include <stdexcept>
+#include "decoding.hpp"
+#include "general/databuffer.hpp"
+#include "general/physfs_stream.hpp"
+#include <boost/shared_ptr.hpp>
 #include "lib/framework/frame.h"
 #include "lib/framework/frameresource.h"
 
@@ -49,6 +53,7 @@
 #include "mixer.h"
 
 using std::list;
+using boost::shared_ptr;
 
 #define ATTENUATION_FACTOR	0.0003f
 
@@ -369,34 +374,28 @@ BOOL sound_QueueSamplePlaying( void )
  *  \param PHYSFS_fileHandle file handle given by PhysicsFS to the opened file
  *  \return on success the psTrack pointer, otherwise it will be free'd and a NULL pointer is returned instead
  */
-static inline TRACK* sound_DecodeOggVorbisTrack(TRACK *psTrack, PHYSFS_file* PHYSFS_fileHandle)
+static inline TRACK* sound_DecodeOggVorbisTrack(TRACK *psTrack, shared_ptr<std::istream> input)
 {
 #ifndef WZ_NOSOUND
-	ALenum		format;
-	ALuint		buffer;
+	Sound::Decoding decoder(input, true);
+	
+	Sound::DataBuffer soundBuffer = decoder.decode();
 
-	struct OggVorbisDecoderState* decoder = sound_CreateOggVorbisDecoder(PHYSFS_fileHandle, TRUE);
-	soundDataBuffer* soundBuffer;
-
-	soundBuffer = sound_DecodeOggVorbis(decoder, 0);
-	sound_DestroyOggVorbisDecoder(decoder);
-
-	if (soundBuffer == NULL)
+	if (soundBuffer.empty())
 	{
 		free(psTrack);
 		return NULL;
 	}
 
 	// Determine PCM data format
-	format = (soundBuffer->channelCount == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
+	ALenum format = (soundBuffer.channelCount() == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
 
 	// Create an OpenAL buffer and fill it with the decoded data
+	ALuint buffer;
 	alGenBuffers(1, &buffer);
 	sound_GetError();
-	alBufferData(buffer, format, soundBuffer->data, soundBuffer->size, soundBuffer->frequency);
+	alBufferData(buffer, format, &soundBuffer[0], soundBuffer.size(), soundBuffer.frequency());
 	sound_GetError();
-
-	free(soundBuffer);
 
 	// save buffer name in track
 	psTrack->iBufferName = buffer;
@@ -412,12 +411,11 @@ static inline TRACK* sound_DecodeOggVorbisTrack(TRACK *psTrack, PHYSFS_file* PHY
 TRACK* sound_LoadTrackFromFile(const char *fileName)
 {
 	TRACK* pTrack;
-	PHYSFS_file* fileHandle;
 	size_t filename_size;
 
 	// Use PhysicsFS to open the file
-	fileHandle = PHYSFS_openRead(fileName);
-	if (fileHandle == NULL)
+	shared_ptr<PhysFS::ifstream> file(new PhysFS::ifstream(fileName));
+	if (!file->is_open())
 	{
 		debug(LOG_ERROR, "sound_LoadTrackFromFile: PHYSFS_openRead(\"%s\") failed with error: %s\n", fileName, PHYSFS_getLastError());
 		return NULL;
@@ -459,9 +457,8 @@ TRACK* sound_LoadTrackFromFile(const char *fileName)
 	}
 
 	// Now use sound_ReadTrackFromBuffer to decode the file's contents
-	pTrack = sound_DecodeOggVorbisTrack(pTrack, fileHandle);
+	pTrack = sound_DecodeOggVorbisTrack(pTrack, file);
 
-	PHYSFS_close(fileHandle);
 	return pTrack;
 }
 
