@@ -102,7 +102,7 @@ static bool cdAudio_OpenTrack(const char* filename)
 			return false;
 		}
 
-		cdStream = sound_PlayStream(file, music_volume, cdAudio_TrackFinished, NULL, bufferSize, buffer_count);
+		cdStream = sound_PlayStream(file, music_volume, cdAudio_TrackFinished, const_cast<char*>(filename), bufferSize, buffer_count);
 		if (cdStream == NULL)
 		{
 			debug(LOG_ERROR, "Failed creating audio stream for %s", filename);
@@ -118,7 +118,15 @@ static bool cdAudio_OpenTrack(const char* filename)
 
 static void cdAudio_TrackFinished(void* user_data)
 {
-	const char* filename = playlist->nextSong();
+	const char* filename;
+
+	// HACK: bail out when a song switch has taken place
+	if (user_data != playlist->currentSong())
+	{
+		return;
+	}
+
+	filename = playlist->nextSong();
 	
 	// This pointer is now officially invalidated; so set it to NULL
 	cdStream = NULL;
