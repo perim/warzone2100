@@ -72,6 +72,9 @@ struct __audio_stream
 	void                    *user_data;
 
 	size_t                  bufferSize;
+
+	bool update();
+	void destroy();
 };
 
 typedef struct	SAMPLE_LIST
@@ -760,14 +763,13 @@ void sound_ResumeStream(AUDIO_STREAM* stream)
 }
 
 /** Update the given stream by making sure its buffers remain full
- *  \param stream the stream to update
  *  \return true when the stream is still playing, false when it has stopped
  */
-static bool sound_UpdateStream(AUDIO_STREAM& stream)
+bool AUDIO_STREAM::update()
 {
 	ALint state, buffer_count;
 
-	alGetSourcei(stream.source, AL_SOURCE_STATE, &state);
+	alGetSourcei(source, AL_SOURCE_STATE, &state);
 	sound_GetError();
 
 	if (state != AL_PLAYING && state != AL_PAUSED)
@@ -776,7 +778,7 @@ static bool sound_UpdateStream(AUDIO_STREAM& stream)
 	}
 
 	// Retrieve the amount of buffers which were processed and need refilling
-	alGetSourcei(stream.source, AL_BUFFERS_PROCESSED, &buffer_count);
+	alGetSourcei(source, AL_BUFFERS_PROCESSED, &buffer_count);
 	sound_GetError();
 
 	// Refill and reattach all buffers
@@ -786,11 +788,11 @@ static bool sound_UpdateStream(AUDIO_STREAM& stream)
 		ALuint buffer;
 
 		// Retrieve the buffer to work on
-		alSourceUnqueueBuffers(stream.source, 1, &buffer);
+		alSourceUnqueueBuffers(source, 1, &buffer);
 		sound_GetError();
 
 		// Decode some data to stuff in our buffer
-		soundBuffer = sound_DecodeOggVorbis(stream.decoder, stream.bufferSize);
+		soundBuffer = sound_DecodeOggVorbis(decoder, bufferSize);
 
 		// If we actually decoded some data
 		if (soundBuffer && soundBuffer->size > 0)
@@ -803,7 +805,7 @@ static bool sound_UpdateStream(AUDIO_STREAM& stream)
 			sound_GetError();
 
 			// Reattach the buffer to the source
-			alSourceQueueBuffers(stream.source, 1, &buffer);
+			alSourceQueueBuffers(source, 1, &buffer);
 			sound_GetError();
 		}
 		else
@@ -826,23 +828,22 @@ static bool sound_UpdateStream(AUDIO_STREAM& stream)
 /** Destroy the given stream and release its associated resources. This function
  *  also handles calling of the \c onFinished callback function and closing of
  *  the PhysicsFS file handle.
- *  \param stream the stream to destroy
  */
-static void sound_DestroyStream(AUDIO_STREAM& stream)
+void AUDIO_STREAM::destroy()
 {
 	ALint buffer_count;
 
 	// Stop the OpenAL source from playing
-	alSourceStop(stream.source);
+	alSourceStop(source);
 	sound_GetError();
 
 	// Retrieve the amount of buffers which were processed
-	alGetSourcei(stream.source, AL_BUFFERS_PROCESSED, &buffer_count);
+	alGetSourcei(source, AL_BUFFERS_PROCESSED, &buffer_count);
 	sound_GetError();
 
 	// Detach all buffers and retrieve their ID numbers
 	ALuint buffers[buffer_count];
-	alSourceUnqueueBuffers(stream.source, buffer_count, buffers);
+	alSourceUnqueueBuffers(source, buffer_count, buffers);
 	sound_GetError();
 
 	// Destroy all of these buffers
@@ -850,19 +851,19 @@ static void sound_DestroyStream(AUDIO_STREAM& stream)
 	sound_GetError();
 
 	// Destroy the OpenAL source
-	alDeleteSources(1, &stream.source);
+	alDeleteSources(1, &source);
 	sound_GetError();
 
 	// Destroy the sound decoder
-	sound_DestroyOggVorbisDecoder(stream.decoder);
+	sound_DestroyOggVorbisDecoder(decoder);
 
 	// Now close the file
-	PHYSFS_close(stream.fileHandle);
+	PHYSFS_close(fileHandle);
 
 	// Now call the finished callback
-	if (stream.onFinished)
+	if (onFinished)
 	{
-		stream.onFinished(stream.user_data);
+		onFinished(user_data);
 	}
 }
 
@@ -874,7 +875,7 @@ static void sound_UpdateStreams()
 	     stream =  active_streams.begin();
 	     stream != active_streams.end();)
 	{
-		if (!sound_UpdateStream(*stream))
+		if (!stream->update())
 		{
 			list<AUDIO_STREAM>::iterator toDelete = stream;
 
@@ -882,7 +883,7 @@ static void sound_UpdateStreams()
 			++stream;
 
 			// Remove the finished stream
-			sound_DestroyStream(*toDelete);
+			toDelete->destroy();
 			active_streams.erase(toDelete);
 
 			// Skip regular iterator incrementing
