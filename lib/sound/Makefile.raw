@@ -10,7 +10,6 @@ SRC=general/databuffer.cpp \
 	cdaudio.cpp \
 	constants.cpp \
 	decoding.cpp \
-	oggvorbis.c \
 	openal/buffer.cpp \
 	openal/devicelist.cpp \
 	openal/exception.cpp \

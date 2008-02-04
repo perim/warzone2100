@@ -49,7 +49,6 @@
 #include "tracklib.h"
 #include "audio.h"
 #include "cdaudio.h"
-#include "oggvorbis.h"
 #include "openal_error.h"
 #include "mixer.h"
 
