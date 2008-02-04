@@ -19,6 +19,7 @@
 */
 
 #include "playlist.hpp"
+#include "general/physfs_stream.hpp"
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -74,7 +75,6 @@ void PlayList_Quit()
 
 bool PlayList_Read(const char* path) 
 {
-	PHYSFS_file* fileHandle;
 	string path_to_music;
 
 	char fileName[PATH_MAX];
@@ -83,25 +83,18 @@ bool PlayList_Read(const char* path)
 	snprintf(fileName, sizeof(fileName), "%s/music.wpl", path);
 
 	// Attempt to open the playlist file
-	fileHandle = PHYSFS_openRead(fileName);
-	if (fileHandle == NULL)
+	PhysFS::ifstream file(fileName);
+	if (!file.is_open())
 	{
 		debug(LOG_NEVER, "sound_LoadTrackFromFile: PHYSFS_openRead(\"%s\") failed with error: %s\n", fileName, PHYSFS_getLastError());
 		return false;
 	}
 
-	while (!PHYSFS_eof(fileHandle))
+	while (!file.eof())
 	{
-		string line;
-		char char_buf;
-
 		// Read a line from the file
-		while (PHYSFS_read(fileHandle, &char_buf, 1, 1)
-		    && char_buf != '\n'
-		    && char_buf != '\r')
-		{
-			line += char_buf;
-		}
+		string line;
+		std::getline(file, line);
 
 		if (line.substr(0, 6) == "[game]")
 		{
@@ -151,8 +144,6 @@ bool PlayList_Read(const char* path)
 			playlist[current_track].songs.push_back(filepath);
 		}
 	}
-
-	PHYSFS_close(fileHandle);
 
 	return true;
 }
