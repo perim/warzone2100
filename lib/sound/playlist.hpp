@@ -25,11 +25,36 @@
 # error "This header file is meant to be compiled as C++ only (i.e. not C)."
 #endif
 
-void PlayList_Init();
-void PlayList_Quit();
-bool PlayList_Read(const char* path);
-void PlayList_SetTrack(unsigned int t);
-const char* PlayList_CurrentSong();
-const char* PlayList_NextSong();
+#include <istream>
+
+namespace Sound
+{
+    class PlayList
+    {
+        public:
+            PlayList();
+            PlayList(const char* path);
+            PlayList(std::istream& file);
+            ~PlayList();
+
+            bool read(const char* base_path);
+            bool read(std::istream& file, const char* base_path);
+
+            void track(unsigned int t);
+
+            const char* currentSong() const;
+            const char* nextSong();
+
+        private:
+            void shuffle();
+
+        private:
+            unsigned int _cur_track;
+            unsigned int _cur_song;
+            
+            struct Track;
+            Track* _playlist;
+    };
+}
 
 #endif // __INCLUDED_LIB_SOUND_PLAYLIST_HPP__

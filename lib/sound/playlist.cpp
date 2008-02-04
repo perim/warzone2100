@@ -46,45 +46,54 @@ using std::vector;
 
 #define NB_TRACKS 3
 
-struct WZ_TRACK
+namespace Sound
 {
-	vector<string>  songs;
-	bool		shuffle;
+struct PlayList::Track
+{
+	/** Default constructor.
+	 *  Initialises all values to their defaults.
+	 */
+	Track() :
+		shuffle(false)
+	{
+	}
 
-	void clear();
+	vector<string>  songs;
+	bool            shuffle;
 };
 
-void WZ_TRACK::clear()
+PlayList::PlayList() :
+		_cur_track(0),
+		_cur_song(0),
+		_playlist(new Track[NB_TRACKS])
 {
-	songs.clear();
-	shuffle = false;
 }
 
-static unsigned int current_track = 0;
-static unsigned int current_song = 0;
-
-static array<WZ_TRACK, NB_TRACKS> playlist;
-
-void PlayList_Init()
+PlayList::PlayList(const char* path) :
+		_cur_track(0),
+		_cur_song(0),
+		_playlist(new Track[NB_TRACKS])
 {
-	// Call clear on all WZ_TRACKs
-	for_each(playlist.begin(), playlist.end(), boost::bind(&WZ_TRACK::clear, _1));
 }
 
-void PlayList_Quit()
+PlayList::PlayList(std::istream& file) :
+		_cur_track(0),
+		_cur_song(0),
+		_playlist(new Track[NB_TRACKS])
 {
-	// Call clear on all WZ_TRACKs
-	for_each(playlist.begin(), playlist.end(), boost::bind(&WZ_TRACK::clear, _1));
 }
 
-bool PlayList_Read(const char* path) 
+PlayList::~PlayList()
 {
-	string path_to_music;
+	delete [] _playlist;
+}
 
-	char fileName[PATH_MAX];
+bool PlayList::read(const char* base_path)
+{
+	char* fileName;
 
 	// Construct file name
-	snprintf(fileName, sizeof(fileName), "%s/music.wpl", path);
+	sasprintf(&fileName, "%s/music.wpl", base_path);
 
 	// Attempt to open the playlist file
 	PhysFS::ifstream file(fileName);
@@ -94,6 +103,13 @@ bool PlayList_Read(const char* path)
 		return false;
 	}
 
+	return read(file, base_path);
+}
+
+bool PlayList::read(std::istream& file, const char* base_path)
+{
+	string path_to_music;
+
 	while (!file.eof())
 	{
 		// Read a line from the file
@@ -102,22 +118,22 @@ bool PlayList_Read(const char* path)
 
 		if (line.substr(0, 6) == "[game]")
 		{
-			current_track = 1;
+			_cur_track = 1;
 			path_to_music.clear();
-			playlist[current_track].shuffle = false;
+			_playlist[_cur_track].shuffle = false;
 		}
 		else if (line.substr(0, 6) == "[menu]")
 		{
-			current_track = 2;
+			_cur_track = 2;
 			path_to_music.clear();
-			playlist[current_track].shuffle = false;
+			_playlist[_cur_track].shuffle = false;
 		}
 		else if (line.substr(0, 5) == "path=")
 		{
 			path_to_music = line.substr(5);
 			if (path_to_music == ".")
 			{
-				path_to_music = path;
+				path_to_music = base_path;
 			}
 
 			debug(LOG_SOUND, "playlist: path = %s", path_to_music.c_str());
@@ -126,9 +142,9 @@ bool PlayList_Read(const char* path)
 		{
 			if (line.substr(8) == "yes")
 			{
-				playlist[current_track].shuffle = true;
+				_playlist[_cur_track].shuffle = true;
 			}
-			debug( LOG_SOUND, "playlist: shuffle = yes" );
+			debug(LOG_SOUND, "playlist: shuffle = yes");
 		}
 		else if (!line.empty())
 		{
@@ -145,67 +161,68 @@ bool PlayList_Read(const char* path)
 
 			debug(LOG_SOUND, "playlist: adding song %s", filepath.c_str());
 
-			playlist[current_track].songs.push_back(filepath);
+			_playlist[_cur_track].songs.push_back(filepath);
 		}
 	}
 
 	return true;
 }
 
-static void PlayList_Shuffle()
+void PlayList::shuffle()
 {
-	if (playlist[current_track].shuffle)
-	{
-		for (unsigned int i = playlist[current_track].songs.size() - 1; i > 0; --i)
-		{
-			unsigned int j = rand() % (i + 1);
+	if (!_playlist[_cur_track].shuffle)
+		return;
 
-			if (i != j)
-				std::swap(playlist[current_track].songs[i], playlist[current_track].songs[j]);
-		}
+	for (unsigned int i = _playlist[_cur_track].songs.size() - 1; i > 0; --i)
+	{
+		unsigned int j = rand() % (i + 1);
+
+		if (i != j)
+			std::swap(_playlist[_cur_track].songs[i], _playlist[_cur_track].songs[j]);
 	}
 }
 
-void PlayList_SetTrack(unsigned int t)
+void PlayList::track(unsigned int t)
 {
 	if (t < NB_TRACKS)
 	{
-		current_track = t;
+		_cur_track = t;
 	}
 	else
 	{
-		current_track = 0;
+		_cur_track = 0;
 	}
-	PlayList_Shuffle();
-	current_song = 0;
+	shuffle();
+	_cur_song = 0;
 }
 
-const char* PlayList_CurrentSong()
+const char* PlayList::currentSong() const
 {
-	if (current_song < playlist[current_track].songs.size())
+	if (_cur_song < _playlist[_cur_track].songs.size())
 	{
-		return playlist[current_track].songs[current_song].c_str();
+		return _playlist[_cur_track].songs[_cur_song].c_str();
 	}
 
 	return NULL;
 }
 
-const char* PlayList_NextSong()
+const char* PlayList::nextSong()
 {
 	// If we're at the end of the playlist
-	if (++current_song >= playlist[current_track].songs.size())
+	if (++_cur_song >= _playlist[_cur_track].songs.size())
 	{
 		// Shuffle the playlist (again)
-		PlayList_Shuffle();
+		shuffle();
 
 		// Jump to the start of the playlist
-		current_song = 0;
+		_cur_song = 0;
 	}
 
-	if (playlist[current_track].songs.empty())
+	if (_playlist[_cur_track].songs.empty())
 	{
 		return NULL;
 	}
-	
-	return playlist[current_track].songs[current_song].c_str();
+
+	return _playlist[_cur_track].songs[_cur_song].c_str();
+}
 }

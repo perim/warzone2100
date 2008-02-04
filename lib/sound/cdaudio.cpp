@@ -18,8 +18,9 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
-#include <boost/shared_ptr.hpp>
 #include "general/physfs_stream.hpp"
+#include <boost/shared_ptr.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <string.h>
 #include <physfs.h>
 
@@ -36,22 +37,24 @@
 #include "playlist.hpp"
 
 using boost::shared_ptr;
+using boost::scoped_ptr;
 
 static const size_t bufferSize = 16 * 1024;
 static const unsigned int buffer_count = 32;
 static bool		music_initialized;
 static unsigned int	music_track = 0;
 static float		music_volume = 0.5;
+static scoped_ptr<Sound::PlayList> playlist;
 
 static AUDIO_STREAM* cdStream = NULL;
 
 BOOL cdAudio_Open(const char* user_musicdir)
 {
-	PlayList_Init();
+	playlist.reset(new Sound::PlayList);
 
 	if ((user_musicdir == NULL
-	  || !PlayList_Read(user_musicdir))
-	 && !PlayList_Read("music"))
+	  || !playlist->read(user_musicdir))
+	 && !playlist->read("music"))
 	{
 		return FALSE;
 	}
@@ -74,7 +77,7 @@ static void cdAudio_CloseTrack(void)
 void cdAudio_Close(void)
 {
 	cdAudio_CloseTrack();
-	PlayList_Quit();
+	playlist.reset();
 	music_initialized = false;
 }
 
@@ -115,7 +118,7 @@ static bool cdAudio_OpenTrack(const char* filename)
 
 static void cdAudio_TrackFinished(void* user_data)
 {
-	const char* filename = PlayList_NextSong();
+	const char* filename = playlist->nextSong();
 	
 	// This pointer is now officially invalidated; so set it to NULL
 	cdStream = NULL;
@@ -136,31 +139,21 @@ BOOL cdAudio_PlayTrack(SDWORD iTrack)
 {
 	cdAudio_CloseTrack();
 
-	PlayList_SetTrack(iTrack);
+	playlist->track(iTrack);
 
+	const char* filename = playlist->currentSong();
+
+	if (filename == NULL)
 	{
-		const char* filename = PlayList_CurrentSong();
-
-		for (;;)
-		{
-			if (filename == NULL)
-			{
-				music_track = 0;
-				return FALSE;
-			}
-			if (cdAudio_OpenTrack(filename))
-			{
-				music_track = iTrack;
-				break;
-			}
-			else
-			{
-				return FALSE; // break out to avoid infinite loops
-			}
-
-			filename = PlayList_NextSong();
-		}
+		music_track = 0;
+		return FALSE;
 	}
+	else if (!cdAudio_OpenTrack(filename))
+	{
+		return FALSE; // break out to avoid infinite loops
+	}
+
+	music_track = iTrack;
 
 	return TRUE;
 }
