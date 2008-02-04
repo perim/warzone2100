@@ -19,6 +19,7 @@
 */
 
 #include "playlist.hpp"
+#include <algorithm>
 #include <stdio.h>
 #include <physfs.h>
 #include <string.h>
@@ -232,25 +233,16 @@ bool PlayList_Read(const char* path)
 	return true;
 }
 
-static void swap_charp(char** a, char** b)
-{
-	char* tmp = *a;
-
-	*a = *b;
-	*b = tmp;
-}
-
 static void PlayList_Shuffle()
 {
 	if (playlist[current_track].shuffle)
 	{
-		unsigned int i;
-
-		for (i = playlist[current_track].nb_songs-1; i > 0; --i)
+		for (unsigned int i = playlist[current_track].nb_songs - 1; i > 0; --i)
 		{
 			unsigned int j = rand() % (i + 1);
 
-			swap_charp(&playlist[current_track].songs[i], &playlist[current_track].songs[j]);
+			if (i != j)
+				std::swap(playlist[current_track].songs[i], playlist[current_track].songs[j]);
 		}
 	}
 }
