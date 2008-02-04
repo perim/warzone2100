@@ -23,6 +23,8 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <boost/array.hpp>
+#include <boost/bind.hpp>
 #include <stdio.h>
 #include <physfs.h>
 #include <string.h>
@@ -35,6 +37,8 @@
 # undef bool
 #endif
 
+using boost::array;
+using std::for_each;
 using std::string;
 using std::vector;
 
@@ -46,31 +50,31 @@ struct WZ_TRACK
 {
 	vector<string>  songs;
 	bool		shuffle;
+
+	void clear();
 };
+
+void WZ_TRACK::clear()
+{
+	songs.clear();
+	shuffle = false;
+}
 
 static unsigned int current_track = 0;
 static unsigned int current_song = 0;
 
-static WZ_TRACK playlist[NB_TRACKS];
+static array<WZ_TRACK, NB_TRACKS> playlist;
 
 void PlayList_Init()
 {
-	unsigned int i;
-
-	for (i = 0; i < NB_TRACKS; ++i)
-	{
-		playlist[i].songs.clear();
-	}
+	// Call clear on all WZ_TRACKs
+	for_each(playlist.begin(), playlist.end(), boost::bind(&WZ_TRACK::clear, _1));
 }
 
 void PlayList_Quit()
 {
-	unsigned int i;
-
-	for(i = 0; i < NB_TRACKS; ++i)
-	{
-		playlist[i].songs.clear();
-	}
+	// Call clear on all WZ_TRACKs
+	for_each(playlist.begin(), playlist.end(), boost::bind(&WZ_TRACK::clear, _1));
 }
 
 bool PlayList_Read(const char* path) 
