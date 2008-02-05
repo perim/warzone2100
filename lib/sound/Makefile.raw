@@ -2,16 +2,12 @@ MAKERULES=../../makerules
 include $(MAKERULES)/configure.mk
 
 SRC=general/databuffer.cpp \
-	general/raii_counter.cpp \
-	interface/devicelist.cpp \
-	interface/stringarray.hpp \
 	audio.cpp \
 	audio_id.c \
 	cdaudio.cpp \
 	constants.cpp \
 	decoding.cpp \
 	openal/buffer.cpp \
-	openal/devicelist.cpp \
 	openal/exception.cpp \
 	openal/source.cpp \
 	openal_track.c \
