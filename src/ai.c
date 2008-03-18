@@ -17,8 +17,8 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * AI.c
+/**
+ * @file ai.c
  *
  * AI update functions for the different object types.
  *
@@ -92,7 +92,6 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 	BOOL				electronic = FALSE;
 	STRUCTURE			*targetStructure;
 	WEAPON_EFFECT		weaponEffect;
-	DROID				*friendlyDroid;
 
 	//don't bother looking if empty vtol droid
 	if (vtolEmpty(psDroid))
@@ -135,7 +134,7 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 			{
 				if(friendlyObj->type == OBJ_DROID)
 				{
-					friendlyDroid = ((DROID *)friendlyObj);
+					DROID	*friendlyDroid = (DROID *)friendlyObj;
 
 					/* See if friendly droid has a target */
 					tempTarget = friendlyDroid->psActionTarget[0];
@@ -147,11 +146,9 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 							// make sure this target wasn't assigned explicitly to this droid
 							if(friendlyDroid->order != DORDER_ATTACK)
 							{
-								//(WEAPON_STATS *)(asWeaponStats + ((DROID *)friendlyObj)->asWeaps[0].nStat)->;
-
 								// make sure target is near enough
-								if(dirtySqrt(psDroid->pos.x,psDroid->pos.y,tempTarget->pos.x,tempTarget->pos.y)
-									< (psDroid->sensorRange))
+								if (dirtySqrt(psDroid->pos.x, psDroid->pos.y, tempTarget->pos.x, tempTarget->pos.y)
+								    < droidSensorRange(psDroid))
 								{
 									targetInQuestion = tempTarget;		//consider this target
 								}
@@ -564,7 +561,7 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 	STRUCTURE		*psCStruct;
 	DROID			*psCommander;
 	BOOL			bCommanderBlock;
-	UDWORD			sensorRange;
+	UDWORD			sensorRange = objSensorRange(psObj);
 	SECONDARY_STATE	state;
 	SDWORD			curTargetWeight=-1,newTargetWeight;
 
@@ -583,8 +580,7 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 			// Can't attack without a weapon
 			return FALSE;
 		}
-		radSquared = ((DROID *)psObj)->sensorRange *
-					 ((DROID *)psObj)->sensorRange;
+		radSquared = sensorRange * sensorRange;
 		break;
 	case OBJ_STRUCTURE:
 		if (((STRUCTURE *)psObj)->numWeaps == 0 || ((STRUCTURE *)psObj)->asWeaps[0].nStat == 0)
@@ -592,7 +588,6 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 			// Can't attack without a weapon
 			return FALSE;
 		}
-		sensorRange = ((STRUCTURE *)psObj)->sensorRange;
 
 		// increase the sensor range for AA sites
 		// AA sites are defensive structures that can only shoot in the air
@@ -798,6 +793,7 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 /* See if there is a target in range for Sensor objects*/
 BOOL aiChooseSensorTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget)
 {
+	SDWORD	sensorRange = objSensorRange(psObj);
 	UDWORD	radSquared;
 	BASE_OBJECT		*psCurr,*psTemp = NULL;
 	BASE_OBJECT		*psTarget = NULL;
@@ -813,8 +809,7 @@ BOOL aiChooseSensorTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget)
 			// to be used for Turret Sensors only
 			return FALSE;
 		}
-		radSquared = ((DROID *)psObj)->sensorRange *
-					 ((DROID *)psObj)->sensorRange;
+		radSquared = sensorRange * sensorRange;
 		break;
 	case OBJ_STRUCTURE:
 		if (!(structStandardSensor((STRUCTURE *)psObj) ||
@@ -823,8 +818,7 @@ BOOL aiChooseSensorTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget)
 			// to be used for Standard and VTOL intercept Turret Sensors only
 			return FALSE;
 		}
-		radSquared = ((STRUCTURE *)psObj)->sensorRange *
-					 ((STRUCTURE *)psObj)->sensorRange;
+		radSquared = sensorRange * sensorRange;
 		break;
 	default:
 		radSquared = 0;

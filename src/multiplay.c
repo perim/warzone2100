@@ -613,17 +613,14 @@ Vector3i cameraToHome(UDWORD player,BOOL scroll)
 // Recv Messages. Get a message and dispatch to relevant function.
 BOOL recvMessage(void)
 {
-	NETMSG msg;
+	uint8_t type;
 
-	while(NETrecv(&msg) == TRUE)			// for all incoming messages.
+	while(NETrecv(&type))			// for all incoming messages.
 	{
-		// Cocpy the message to the global one used by the new NET API
-		NetMsg = msg;
-
 		// messages only in game.
 		if(!ingame.localJoiningInProgress)
 		{
-			switch(msg.type)
+			switch(type)
 			{
 			case NET_DROID:						// new droid of known type
 				recvDroid();
@@ -679,9 +676,6 @@ BOOL recvMessage(void)
 			case NET_DROIDDISEMBARK:
 				recvDroidDisEmbark();           //droid has disembarked from a Transporter
 				break;
-			case NET_REQUESTDROID:				// player requires a droid that they dont have.
-				recvRequestDroid();
-				break;
 			case NET_GIFT:						// an alliance gift from one player to another.
 				recvGift();
 				break;
@@ -700,7 +694,7 @@ BOOL recvMessage(void)
 		}
 
 		// messages usable all the time
-		switch(msg.type)
+		switch(type)
 		{
 		case NET_TEMPLATE:					// new template
 			recvTemplate();
@@ -725,10 +719,15 @@ BOOL recvMessage(void)
 			uint32_t player_id;
 			BOOL host;
 
-			NETbeginDecode();
+			NETbeginDecode(NET_LEAVING);
 				NETuint32_t(&player_id);
 				NETbool(&host);                 // Added to check for host quit here -- Buggy
 			NETend();
+			if (player_id >= MAX_PLAYERS)
+			{
+				debug(LOG_ERROR, "Bad NET_LEAVING received, player ID is %d", (int)player_id);
+				break;
+			}
 			MultiPlayerLeave(player_id);
 			if (host)                               // host has quit, need to quit too.
 			{
@@ -738,9 +737,6 @@ BOOL recvMessage(void)
 			}
 			break;
 		}
-		case NET_WHOLEDROID:				// a complete droid description has arrived.
-			receiveWholeDroid(&msg);
-			break;
 		case NET_OPTIONS:
 			recvOptions();
 			break;
@@ -748,11 +744,15 @@ BOOL recvMessage(void)
 		{
 			uint32_t player_id;
 
-			NETbeginDecode();
+			NETbeginDecode(NET_PLAYERRESPONDING);
 				// the player that has just responded
 				NETuint32_t(&player_id);
 			NETend();
-
+			if (player_id >= MAX_PLAYERS)
+			{
+				debug(LOG_ERROR, "Bad NET_PLAYERRESPONDING received, ID is %d", (int)player_id);
+				break;
+			}
 			// This player is now with us!
 			ingame.JoiningInProgress[player_id] = FALSE;
 			break;
@@ -776,7 +776,7 @@ BOOL recvMessage(void)
 		{
 			uint32_t player_id;
 
-			NETbeginDecode();
+			NETbeginDecode(NET_KICK);
 				NETuint32_t(&player_id);
 			NETend();
 
@@ -852,10 +852,16 @@ static BOOL recvResearch()
 	PLAYER_RESEARCH	*pPlayerRes;
 	RESEARCH		*pResearch;
 
-	NETbeginDecode();
+	NETbeginDecode(NET_RESEARCH);
 		NETuint8_t(&player);
 		NETuint32_t(&index);
 	NETend();
+
+	if (player >= MAX_PLAYERS || index >= numResearch)
+	{
+		debug(LOG_ERROR, "Bad NET_RESEARCH received, player is %d, index is %u", (int)player, index);
+		return FALSE;
+	}
 
 	pPlayerRes = asPlayerResList[player] + index;
 	
@@ -934,12 +940,18 @@ BOOL recvResearchStatus()
 	BOOL				bStart;
 	uint32_t			index, structRef;
 
-	NETbeginDecode();
+	NETbeginDecode(NET_RESEARCHSTATUS);
 		NETuint8_t(&player);
 		NETbool(&bStart);
 		NETuint32_t(&structRef);
 		NETuint32_t(&index);
 	NETend();
+
+	if (player >= MAX_PLAYERS || index >= numResearch)
+	{
+		debug(LOG_ERROR, "Bad NET_RESEARCHSTATUS received, player is %d, index is %u", (int)player, index);
+		return FALSE;
+	}
 
 	pPlayerRes = asPlayerResList[player] + index;
 
@@ -1236,7 +1248,7 @@ BOOL recvTextMessage()
 	memset(msg, 0x0, sizeof(msg));
 	memset(newmsg, 0x0, sizeof(newmsg));
 
-	NETbeginDecode();
+	NETbeginDecode(NET_TEXTMSG);
 		// Who this msg is from
 		NETuint32_t(&dpid);
 		// The message to send
@@ -1294,7 +1306,7 @@ BOOL recvTextMessageAI()
 	char	msg[MAX_CONSOLE_STRING_LENGTH];
 	char	newmsg[MAX_CONSOLE_STRING_LENGTH];
 
-	NETbeginDecode();
+	NETbeginDecode(NET_AITEXTMSG);
 		NETuint32_t(&sender);			//in-game player index ('normal' one)
 		NETuint32_t(&receiver);			//in-game player index
 		NETstring(newmsg,MAX_CONSOLE_STRING_LENGTH);		
@@ -1367,7 +1379,7 @@ BOOL recvTemplate()
 	DROID_TEMPLATE	t, *pT = &t;
 	int				i;
 
-	NETbeginDecode();
+	NETbeginDecode(NET_TEMPLATE);
 		NETuint8_t(&player);
 		ASSERT(player < MAX_PLAYERS, "recvtemplate: invalid player size: %d", player);
 
@@ -1437,7 +1449,7 @@ static BOOL recvDestroyTemplate()
 	uint32_t		templateID;
 	DROID_TEMPLATE	*psTempl, *psTempPrev = NULL;
 	
-	NETbeginDecode();
+	NETbeginDecode(NET_TEMPLATEDEST);
 		NETuint8_t(&player);
 		NETuint32_t(&templateID);
 	NETend();
@@ -1496,7 +1508,7 @@ BOOL recvDestroyFeature()
 	FEATURE *pF;
 	uint32_t	id;
 	
-	NETbeginDecode();
+	NETbeginDecode(NET_FEATUREDEST);
 		NETuint32_t(&id);
 	NETend();
 
@@ -1868,7 +1880,7 @@ static BOOL recvBeacon()
 	int32_t sender, receiver,locX, locY;
 	char    msg[MAX_CONSOLE_STRING_LENGTH];
 
-	NETbeginDecode();
+	NETbeginDecode(NET_BEACONMSG);
 	    NETint32_t(&sender);            // the actual sender
 	    NETint32_t(&receiver);          // the actual receiver (might not be the same as the one we are actually sending to, in case of AIs)
 	    NETint32_t(&locX);

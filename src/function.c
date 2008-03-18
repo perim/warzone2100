@@ -23,9 +23,6 @@
  * Store function stats for the Structures etc.
  *
  */
-#include <stdio.h>
-#include <string.h>
-
 #include "lib/framework/frame.h"
 #include "lib/framework/strres.h"
 
@@ -36,7 +33,6 @@
 #include "research.h"
 #include "droid.h"
 #include "group.h"
-
 
 #include "multiplay.h"
 
@@ -1248,12 +1244,11 @@ void structureECMUpgrade(STRUCTURE *psBuilding)
 	//reallocate the sensor range and power since the upgrade
 	if (psBuilding->pStructureType->pECM)
 	{
-		psBuilding->ecmPower = (UWORD)ecmPower(psBuilding->pStructureType->pECM,
-			psBuilding->player);
+		psBuilding->ECMMod = (UWORD)ecmPower(psBuilding->pStructureType->pECM, psBuilding->player);
 	}
 	else
 	{
-		psBuilding->ecmPower = 0;
+		psBuilding->ECMMod = 0;
 	}
 }
 
@@ -1535,13 +1530,6 @@ BOOL FunctionShutDown(void)
 	{
 		pFunction = *asFunctions;
 		free(pFunction->pName);
-
-#if !defined (RESOURCE_NAMES) && !defined(STORE_RESOURCE_ID)
-		if (pFunction->type == WALL_TYPE)
-		{
-			free(((WALL_FUNCTION *)pFunction)->pStructName);
-		}
-#endif
 		free(pFunction);
 		asFunctions++;
 	}

@@ -188,9 +188,10 @@ BASE_OBJECT * checkForRepairRange(DROID *psDroid,DROID *psTarget)
 	}
 
 	// if guarding a unit - always check that first
-	if (orderStateObj(psDroid, DORDER_GUARD, (BASE_OBJECT **)&psCurr) &&
-		(psCurr != NULL) && (psCurr->type == OBJ_DROID) &&
-		droidIsDamaged(psCurr))
+	psCurr = (DROID*)orderStateObj(psDroid, DORDER_GUARD);
+	if (psCurr != NULL
+	 && psCurr->type == OBJ_DROID
+	 && droidIsDamaged(psCurr))
 	{
 		return (BASE_OBJECT *)psCurr;
 	}
@@ -1004,7 +1005,7 @@ void orderUpdateDroid(DROID *psDroid)
 			{
 				DROID	*psSpotter = (DROID *)psDroid->psTarget;
 
-//				orderStateObj((DROID *)psDroid->psTarget, DORDER_OBSERVE, &psFireTarget);
+//				psFireTarget = orderStateObj((DROID *)psDroid->psTarget, DORDER_OBSERVE);
 				if (psSpotter->action == DACTION_OBSERVE
 				    || (psSpotter->droidType == DROID_COMMAND && psSpotter->action == DACTION_ATTACK))
 				{
@@ -1183,8 +1184,8 @@ void orderUpdateDroid(DROID *psDroid)
 			}
 
 			// make sure units in a command group are actually guarding the commander
-			if (!orderStateObj(psDroid, DORDER_GUARD, &psObj) ||
-				(psObj != (BASE_OBJECT *)psDroid->psGroup->psCommander))
+			if (!orderStateObj(psDroid, DORDER_GUARD)
+			 || psObj != (BASE_OBJECT *)psDroid->psGroup->psCommander)
 			{
 				orderDroidObj(psDroid, DORDER_GUARD, (BASE_OBJECT *)psDroid->psGroup->psCommander);
 			}
@@ -1305,10 +1306,11 @@ WZ_DECL_UNUSED static void orderCheckFireSupportPos(DROID *psSensor, DROID_ORDER
 	fsx = fsy = fsnum = 0;
 	for(psCurr=apsDroidLists[psSensor->player]; psCurr; psCurr=psCurr->psNext)
 	{
-		if (!vtolDroid(psCurr) &&
-			orderStateObj(psCurr, DORDER_FIRESUPPORT, &psTarget) &&
-			(psTarget == (BASE_OBJECT *)psSensor) &&
-			(secondaryGetState(psCurr, DSO_HALTTYPE, &state) && (state != DSS_HALT_HOLD)))
+		if (!vtolDroid(psCurr)
+		 && (psTarget = orderStateObj(psCurr, DORDER_FIRESUPPORT))
+		 && psTarget == (BASE_OBJECT *)psSensor
+		 && secondaryGetState(psCurr, DSO_HALTTYPE, &state)
+		 && state != DSS_HALT_HOLD)
 		{
 			// got a unit doing fire support
 			fsnum += 1;
@@ -1372,10 +1374,11 @@ done:
 	// now move the firesupport units
 	for(psCurr=apsDroidLists[psSensor->player]; psCurr; psCurr=psCurr->psNext)
 	{
-		if (!vtolDroid(psCurr) &&
-			orderStateObj(psCurr, DORDER_FIRESUPPORT, &psTarget) &&
-			(psTarget == (BASE_OBJECT *)psSensor) &&
-			(secondaryGetState(psCurr, DSO_HALTTYPE, &state) && (state != DSS_HALT_HOLD)))
+		if (!vtolDroid(psCurr)
+		 && (psTarget = orderStateObj(psCurr, DORDER_FIRESUPPORT))
+		 && psTarget == (BASE_OBJECT *)psSensor
+		 && secondaryGetState(psCurr, DSO_HALTTYPE, &state)
+		 && state != DSS_HALT_HOLD)
 		{
 			if (bRetreat)
 			{
@@ -2232,7 +2235,7 @@ void orderDroidObj(DROID *psDroid, DROID_ORDER order, BASE_OBJECT *psObj)
 
 
 /* Get the state of a droid order with an object */
-BOOL orderStateObj(DROID *psDroid, DROID_ORDER order, BASE_OBJECT **ppsObj)
+BASE_OBJECT* orderStateObj(DROID *psDroid, DROID_ORDER order)
 {
 	BOOL	match = FALSE;
 
@@ -2272,7 +2275,7 @@ BOOL orderStateObj(DROID *psDroid, DROID_ORDER order, BASE_OBJECT **ppsObj)
 
 	if (!match)
 	{
-		return FALSE;
+		return NULL;
 	}
 
 	// check the order is one with an object
@@ -2280,15 +2283,14 @@ BOOL orderStateObj(DROID *psDroid, DROID_ORDER order, BASE_OBJECT **ppsObj)
 	{
 	default:
 		// not an object order - return false
-		return FALSE;
+		return NULL;
 		break;
 	case DORDER_BUILD:
 	case DORDER_LINEBUILD:
 		if (psDroid->action == DACTION_BUILD ||
 			psDroid->action == DACTION_BUILDWANDER)
 		{
-			*ppsObj = psDroid->psTarget;
-			return TRUE;
+			return psDroid->psTarget;
 		}
 		break;
 	case DORDER_HELPBUILD:
@@ -2296,8 +2298,7 @@ BOOL orderStateObj(DROID *psDroid, DROID_ORDER order, BASE_OBJECT **ppsObj)
 			psDroid->action == DACTION_BUILDWANDER ||
 			psDroid->action == DACTION_MOVETOBUILD)
 		{
-			*ppsObj = psDroid->psTarget;
-			return TRUE;
+			return psDroid->psTarget;
 		}
 		break;
 	//case DORDER_HELPBUILD:
@@ -2310,12 +2311,11 @@ BOOL orderStateObj(DROID *psDroid, DROID_ORDER order, BASE_OBJECT **ppsObj)
 	case DORDER_DROIDREPAIR:
 	case DORDER_REARM:
 	case DORDER_GUARD:
-		*ppsObj = psDroid->psTarget;
-		return TRUE;
+		return psDroid->psTarget;
 		break;
 	}
 
-	return FALSE;
+	return NULL;
 }
 
 
@@ -3011,7 +3011,7 @@ DROID_ORDER chooseOrderObj(DROID *psDroid, BASE_OBJECT *psObj)
 				order = DORDER_REPAIR;
 			}
 			//check if can build a module
-			else if (buildModule(psDroid, psStruct,TRUE))
+			else if (buildModule(psStruct))
 			{
 				order = DORDER_BUILDMODULE;
 			}
@@ -4356,4 +4356,57 @@ void orderStructureObj(UDWORD player, BASE_OBJECT *psObj)
 			break;
         }
     }
+}
+
+const char* getDroidOrderName(DROID_ORDER order)
+{
+	static const char* name[] =
+	{
+		"DORDER_NONE",				// no order set
+		"DORDER_STOP",				// stop the current order
+		"DORDER_MOVE",				// 2 - move to a location
+		"DORDER_ATTACK",				// attack an enemy
+		"DORDER_BUILD",				// 4 - build a structure
+		"DORDER_HELPBUILD",			// help to build a structure
+		"DORDER_LINEBUILD",			// 6 - build a number of structures in a row (walls + bridges)
+		"DORDER_DEMOLISH",			// demolish a structure
+		"DORDER_REPAIR",				// 8 - repair a structure
+		"DORDER_OBSERVE",				// keep a target in sensor view
+		"DORDER_FIRESUPPORT",			// 10 - attack whatever the linked sensor droid attacks
+		"DORDER_RETREAT",				// return to the players retreat position
+		"DORDER_DESTRUCT",			// 12 - self destruct
+		"DORDER_RTB",					// return to base
+		"DORDER_RTR",					// 14 - return to repair at any repair facility
+		"DORDER_RUN",					// run away after moral failure
+		"DORDER_EMBARK",				// 16 - board a transporter
+		"DORDER_DISEMBARK",			// get off a transporter
+		"DORDER_ATTACKTARGET",		// 18 - a suggestion to attack something
+									// i.e. the target was chosen because the droid could see it
+		"DORDER_COMMAND",				// a command droid issuing orders to it's group
+		"DORDER_BUILDMODULE",			// 20 - build a module (power, research or factory)
+		"DORDER_RECYCLE",				// return to factory to be recycled
+		"DORDER_TRANSPORTOUT",		// 22 - offworld transporter order
+		"DORDER_TRANSPORTIN",			// onworld transporter order
+		"DORDER_TRANSPORTRETURN",		// 24 - transporter return after unloading
+		"DORDER_GUARD",				// guard a structure
+		"DORDER_DROIDREPAIR",			// 26 - repair a droid
+		"DORDER_RESTORE",				// restore resistance points for a structure
+		"DORDER_SCOUT",				// 28 - same as move, but stop if an enemy is seen
+		"DORDER_RUNBURN",				// run away on fire
+		"DORDER_CLEARWRECK",			// 30 - constructor droid to clear up building wreckage
+		"DORDER_PATROL",				// move between two way points
+		"DORDER_REARM",				// 32 - order a vtol to rearming pad
+		"DORDER_MOVE_ATTACKWALL",		// move to a location taking out a blocking wall on the way
+		"DORDER_SCOUT_ATTACKWALL",	// 34 - scout to a location taking out a blocking wall on the way
+		"DORDER_RECOVER",				// pick up an artifact
+		"DORDER_LEAVEMAP",			// 36 - vtol flying off the map
+		"DORDER_RTR_SPECIFIED",		// return to repair at a specified repair center
+		"DORDER_UNDEFINED",
+		"DORDER_UNDEFINED2",
+		"DORDER_CIRCLE"				// circles target location and engage
+	};
+
+	ASSERT(order < sizeof(name) / sizeof(name[0]), "DROID_ORDER out of range: %u", order);
+
+	return name[order];
 }

@@ -262,11 +262,12 @@ void structureInitVars(void)
 	researchModuleStat = 0;
 	lastMaxUnitMessage = 0;
 
-	for(i=0; i< MAX_PLAYERS; i++) {
+	for (i = 0; i < MAX_PLAYERS; i++)
+	{
 		asStructLimits[i] = NULL;
-		for (j=0; j < NUM_FLAG_TYPES; j++)
+		for (j = 0; j < NUM_FLAG_TYPES; j++)
 		{
-			factoryNumFlag[i][j] = (UBYTE)0;
+			factoryNumFlag[i][j] = 0;
 		}
 	}
 	for (i = 0; i < MAX_PLAYERS; i++)
@@ -851,8 +852,7 @@ BOOL loadStructureStats(const char *pStructData, UDWORD bufferSize)
 	//allocate the structureLimits structure
 	for (player = 0; player < MAX_PLAYERS; player++)
 	{
-		asStructLimits[player] = (STRUCTURE_LIMITS *)malloc(sizeof(STRUCTURE_LIMITS) *
-			numStructureStats);
+		asStructLimits[player] = malloc(sizeof(STRUCTURE_LIMITS) * numStructureStats);
 		if (asStructLimits[player] == NULL)
 		{
 			debug( LOG_ERROR, "Unable to allocate structure limits" );
@@ -879,16 +879,15 @@ BOOL loadStructureStats(const char *pStructData, UDWORD bufferSize)
 void initStructLimits(void)
 {
 	UDWORD				i, player;
-	STRUCTURE_LIMITS	*psStructLimits;
 
 	for (player = 0; player < MAX_PLAYERS; player++)
 	{
-		psStructLimits = asStructLimits[player];
+		STRUCTURE_LIMITS	*psStructLimits = asStructLimits[player];
+
 		for (i=0; i < numStructureStats; i++)
 		{
 			psStructLimits[i].limit = LOTS_OF;
 			psStructLimits[i].currentQuantity = 0;
-
 			psStructLimits[i].globalLimit = LOTS_OF;
 		}
 	}
@@ -898,12 +897,12 @@ void initStructLimits(void)
 void setCurrentStructQuantity(BOOL displayError)
 {
 	UDWORD		player, inc;
-	STRUCTURE	*psCurr;
-	STRUCTURE_LIMITS	*psStructLimits;
 
 	for (player = 0; player < MAX_PLAYERS; player++)
 	{
-		psStructLimits = asStructLimits[player];
+		STRUCTURE_LIMITS	*psStructLimits = asStructLimits[player];
+		STRUCTURE		*psCurr;
+
 		//initialise the current quantity for all structures
 		for (inc = 0; inc < numStructureStats; inc++)
 		{
@@ -934,7 +933,6 @@ BOOL loadStructureWeapons(const char *pWeaponData, UDWORD bufferSize)
 	const unsigned int NumToAlloc = numCR(pWeaponData, bufferSize);
 	UDWORD				i, incS, incW;
 	char				StructureName[MAX_NAME_SIZE];//, WeaponName[MAX_NAME_SIZE];
-	//Watermelon:weaponName array
 	char				WeaponName[STRUCT_MAXWEAPS][MAX_NAME_SIZE];
 	STRUCTURE_STATS		*pStructure = asStructureStats;
 	WEAPON_STATS		*pWeapon = asWeaponStats;
@@ -1181,9 +1179,6 @@ BOOL structureStatsShutDown(void)
 
 	for(inc=0; inc < numStructureStats; inc++, pStructure++)
 	{
-#if !defined(RESOURCE_NAMES) && !defined(STORE_RESOURCE_ID)
-		free(pStructure->pName);
-#endif
 		if (pStructure->numFuncs > 0)
 		{
 			free(pStructure->asFuncList);
@@ -1199,7 +1194,8 @@ BOOL structureStatsShutDown(void)
 	//free up the structLimits structure
 	for (inc = 0; inc < MAX_PLAYERS ; inc++)
 	{
-		if(asStructLimits[inc]) {
+		if (asStructLimits[inc])
+		{
 			free(asStructLimits[inc]);
 			asStructLimits[inc] = NULL;
 		}
@@ -1219,59 +1215,28 @@ BOOL structureStatsShutDown(void)
 float structureDamage(STRUCTURE *psStructure, UDWORD damage, UDWORD weaponClass,
                        UDWORD weaponSubClass, HIT_SIDE impactSide)
 {
-	// Do at least one point of damage
-	unsigned int actualDamage = 1;
-	float		body = (float) psStructure->body;
-	float		originalBody = (float) structureBody(psStructure);
+	float		relativeDamage;
 
 	CHECK_STRUCTURE(psStructure);
 
-	debug( LOG_ATTACK, "structureDamage(%d): body %d armour %d damage: %d\n",
+	debug(LOG_ATTACK, "structureDamage(%d): body %d armour %d damage: %d",
 	      psStructure->id, psStructure->body, psStructure->armour[impactSide][weaponClass], damage);
 
-	// EMP cannons do not work on Structures
-	if (weaponSubClass == WSC_EMP)
-	{
-		return 0;
-	}
+	relativeDamage = objDamage((BASE_OBJECT *)psStructure, damage, structureBody(psStructure), weaponClass, weaponSubClass, impactSide);
 
-	if(psStructure->player != selectedPlayer)
+	// If the shell did sufficient damage to destroy the structure
+	if (relativeDamage < 0.0f)
 	{
-		// Player inflicting damage on enemy.
-		damage = (UDWORD) modifyForDifficultyLevel( (SDWORD) damage,TRUE);
+		debug(LOG_ATTACK, "structureDamage(%d): DESTROYED", psStructure->id);
+		destroyStruct(psStructure);
+		return relativeDamage * -1.0f;
 	}
 	else
 	{
-		// Enemy inflicting damage on player.
-		damage = (UDWORD) modifyForDifficultyLevel( (SDWORD) damage,FALSE);
+		// Survived
+		CHECK_STRUCTURE(psStructure);
+		return relativeDamage;
 	}
-
-	// Store the time it was hit and by what kind of weapon it was hit with
-	psStructure->timeLastHit = gameTime;
-	psStructure->lastHitWeapon = weaponSubClass;
-
-	// Tell the cluster system it has been attacked
-	clustObjectAttacked((BASE_OBJECT *)psStructure);
-
-	if (damage > psStructure->armour[impactSide][weaponClass])
-	{
-		// Damage has penetrated the armour
-		actualDamage = damage - psStructure->armour[impactSide][weaponClass];
-		debug( LOG_ATTACK, "        penetrated: %d\n", actualDamage);
-	}
-
-	// If the shell did sufficient damage to destroy the structure
-	if (actualDamage >= psStructure->body)
-	{
-		debug( LOG_ATTACK, "        DESTROYED\n");
-		destroyStruct(psStructure);
-		return body / originalBody * -1.0f;
-	}
-
-	// Substract the dealt damage from the structure's remaining body points
-	psStructure->body -= actualDamage;
-
-	return (float) actualDamage / originalBody;
 }
 
 
@@ -1786,12 +1751,12 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 		//set up the ecm stat
 		if (psBuilding->pStructureType->pECM)
 		{
-			psBuilding->ecmPower = (UWORD)ecmPower(psBuilding->pStructureType->pECM,
+			psBuilding->ECMMod = (UWORD)ecmPower(psBuilding->pStructureType->pECM,
 				psBuilding->player);
 		}
 		else
 		{
-			psBuilding->ecmPower = 0;
+			psBuilding->ECMMod = 0;
 		}
 
 		/* Store the weapons */
@@ -2714,12 +2679,11 @@ static BOOL structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl,
 		{
 			assignFactoryCommandDroid(psStructure, psNewDroid);
 		}
-#ifdef SCRIPTS
 		if ( psNewDroid->player == selectedPlayer )
 		{
 			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DROIDBUILT);
 		}
-#endif
+
 		return TRUE;
 	}
 	else
@@ -3083,11 +3047,11 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 				mindist = SDWORD_MAX;
 				for(psDroid = apsDroidLists[psStructure->player]; psDroid; psDroid = psDroid->psNext)
 				{
-					BASE_OBJECT *psTarget;
+					BASE_OBJECT * const psTarget = orderStateObj(psDroid, DORDER_RTR);
 
-					if (orderStateObj(psDroid, DORDER_RTR, &psTarget) &&
-						(psTarget == (BASE_OBJECT *)psStructure) &&
-						psDroid->action == DACTION_WAITFORREPAIR)
+					if (psTarget
+					 && psTarget == (BASE_OBJECT *)psStructure
+					 && psDroid->action == DACTION_WAITFORREPAIR)
 					{
 						xdiff = (SDWORD)psDroid->pos.x - (SDWORD)psStructure->pos.x;
 						ydiff = (SDWORD)psDroid->pos.y - (SDWORD)psStructure->pos.y;
@@ -3888,8 +3852,7 @@ UDWORD fillStructureList(STRUCTURE_STATS **ppList, UDWORD selectedPlayer, UDWORD
 		if (apStructTypeLists[selectedPlayer][inc] & AVAILABLE)
 		{
 			//check not built the maximum allowed already
-			if (asStructLimits[selectedPlayer][inc].currentQuantity <
-					asStructLimits[selectedPlayer][inc].limit)
+			if (asStructLimits[selectedPlayer][inc].currentQuantity < asStructLimits[selectedPlayer][inc].limit)
 			{
 				psBuilding = asStructureStats + inc;
 
@@ -4838,8 +4801,7 @@ BOOL removeStruct(STRUCTURE *psDel, BOOL bDestroy)
 	if (asStructLimits[psDel->player][psDel->pStructureType - asStructureStats].
 		currentQuantity)
 	{
-		asStructLimits[psDel->player][psDel->pStructureType - asStructureStats].
-			currentQuantity--;
+		asStructLimits[psDel->player][psDel->pStructureType - asStructureStats].currentQuantity--;
 	}
 
 	//if it is a factory - need to reset the factoryNumFlag
@@ -5041,7 +5003,7 @@ BOOL destroyStruct(STRUCTURE *psDel)
 					if(TEST_TILE_VISIBLE(selectedPlayer,psTile))
 					{
 						psTile->illumination /= 2;
-						if(psTile->bMaxed && psTile->level!=UBYTE_MAX) //only do one's already seen
+						if(psTile->bMaxed && psTile->level > 0) //only do one's already seen
 						{
 							psTile->level/=2;
 						}
@@ -5926,7 +5888,7 @@ void printStructureInfo(STRUCTURE *psStructure)
 		{
 			CONPRINTF(ConsoleString, (ConsoleString, "%s - %d Units assigned - ID %d - sensor range %hu power %hu - ECM %u",
 			          getStatName(psStructure->pStructureType), countAssignedDroids(psStructure),
-			          psStructure->id, psStructure->sensorRange, psStructure->sensorPower, psStructure->ecmPower));
+			          psStructure->id, structSensorRange(psStructure), structSensorPower(psStructure), structConcealment(psStructure)));
 		}
 		else
 #endif
@@ -5948,7 +5910,7 @@ void printStructureInfo(STRUCTURE *psStructure)
 			CONPRINTF(ConsoleString, (ConsoleString, "%s - %d Units assigned - ID %d - armour %d|%d - sensor range %hu power %hu - ECM %u",
 				getStatName(psStructure->pStructureType), countAssignedDroids(psStructure),
 				psStructure->id, psStructure->armour[0][WC_KINETIC], psStructure->armour[0][WC_HEAT],
-			        psStructure->sensorRange, psStructure->sensorPower, psStructure->ecmPower));
+			        structSensorRange(psStructure), structSensorPower(psStructure), structConcealment(psStructure)));
 		}
 #endif
 		else

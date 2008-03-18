@@ -27,16 +27,11 @@
 /* Check the header files have been included from frame.h if they
  * are used outside of the framework library.
  */
-
 #if !defined(_frame_h) && !defined(FRAME_LIB_INCLUDE)
 # error Framework header files MUST be included from Frame.h ONLY.
 #endif
 
-#include <stdio.h>
 #include <assert.h>
-#include <stdarg.h>
-
-#include "types.h"
 
 #if defined(__cplusplus)
 extern "C"
@@ -188,5 +183,8 @@ static inline void objTraceDisable(void) { traceID = 0; }
 #if defined(__cplusplus)
 }
 #endif
+
+/** Dump last two debug log calls into given file descriptor. For exception handler. */
+void dumpLog(int filedesc);
 
 #endif // __INCLUDED_LIB_FRAMEWORK_DEBUG_H__

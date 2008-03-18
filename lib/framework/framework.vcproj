@@ -6,6 +6,7 @@
 	ProjectGUID="{33979915-684A-4885-BFEA-2A4CCC5A5FD6}"
 	RootNamespace="framework"
 	Keyword="Win32Proj"
+	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -50,7 +51,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\.."
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)\..&quot;;&quot;$(SolutionDir)\..\devpkg\include&quot;;&quot;$(SolutionDir)\..\devpkg\include\SDL&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;YY_STATIC;PACKAGE_VERSION=\&quot;TRUNK\&quot;;PACKAGE=\&quot;warzone2100\&quot;;LOCALEDIR=\&quot;\&quot;;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -120,7 +121,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\.."
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)\..&quot;;&quot;$(SolutionDir)\..\devpkg\include&quot;;&quot;$(SolutionDir)\..\devpkg\include\SDL&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;YY_STATIC;PACKAGE_VERSION=\&quot;TRUNK\&quot;;PACKAGE=\&quot;warzone2100\&quot;;LOCALEDIR=\&quot;\&quot;;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
@@ -187,6 +188,10 @@
 			</File>
 			<File
 				RelativePath=".\input.c"
+				>
+			</File>
+			<File
+				RelativePath=".\i18n.c"
 				>
 			</File>
 			<File
@@ -278,10 +283,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\math-help.h"
-				>
-			</File>
-			<File
 				RelativePath=".\frame.h"
 				>
 			</File>
@@ -302,11 +303,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\i18n.h"
+				>
+			</File>
+			<File
 				RelativePath=".\listmacs.h"
 				>
 			</File>
 			<File
 				RelativePath=".\macros.h"
+				>
+			</File>
+			<File
+				RelativePath=".\math-help.h"
 				>
 			</File>
 			<File

@@ -289,7 +289,7 @@ extern BOOL checkDroidsDemolishing(STRUCTURE *psStructure);
 
 /* checks the structure for type and capacity and orders the droid to build
 a module if it can - returns TRUE if order is set */
-extern BOOL buildModule(DROID *psDroid, STRUCTURE *psStruct,BOOL bCheckPower);
+extern BOOL buildModule(STRUCTURE *psStruct);
 
 /*Deals with building a module - checking if any droid is currently doing this
  - if so, helping to build the current one*/
@@ -402,6 +402,15 @@ extern BOOL cyborgDroid(DROID *psDroid);
 
 // check for illegal references to droid we want to release
 BOOL droidCheckReferences(DROID *psVictimDroid);
+
+/** Check if droid is in a legal world position and is not on its way to drive off the map. */
+BOOL droidOnMap(DROID *psDroid);
+
+#define droidSensorRange(_psDroid) objSensorRange((BASE_OBJECT *)_psDroid)
+#define droidSensorPower(_psDroid) objSensorPower((BASE_OBJECT *)_psDroid)
+#define droidJammerRange(_psDroid) objJammerRange((BASE_OBJECT *)_psDroid)
+#define droidJammerPower(_psDroid) objJammerPower((BASE_OBJECT *)_psDroid)
+#define droidConcealment(_psDroid) objConcealment((BASE_OBJECT *)_psDroid)
 
 /*
  * Component stat helper functions
@@ -520,8 +529,7 @@ do { \
 	assert(droid->numWeaps <= DROID_MAXWEAPS); \
 	assert(droid->listSize <= ORDER_LIST_MAX); \
 	assert(droid->player < MAX_PLAYERS); \
-	if (runningMultiplayer()) \
-	assert(worldOnMap(droid->sMove.fx, droid->sMove.fy)); \
+	assert(droidOnMap(droid)); \
 \
 	for (i = 0; i < DROID_MAXWEAPS; ++i) \
 		assert(droid->turretRotation[i] <= 360); \
@@ -533,5 +541,8 @@ do { \
 		if (droid->psActionTarget[i]) \
 			assert(droid->psActionTarget[i]->direction >= 0.0f); \
 } while (0)
+
+// Minimum damage a weapon will deal to its target
+#define	MIN_WEAPON_DAMAGE	1
 
 #endif

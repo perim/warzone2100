@@ -108,7 +108,7 @@ static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 		poly->flags = flags;
 		poly->npnts = npnts;
 
-		poly->pindex = (VERTEXID*)malloc(sizeof(VERTEXID) * poly->npnts);
+		poly->pindex = malloc(sizeof(*poly->pindex) * poly->npnts);
 		if (poly->pindex == NULL)
 		{
 			debug(LOG_ERROR, "(_load_polys) [poly %u] memory alloc fail (poly indices)", i);
@@ -128,8 +128,9 @@ static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 			poly->pindex[j] = vertexTable[newID];
 		}
 
+		assert(poly->npnts > 2);
+
 		// calc poly normal
-		if (poly->npnts > 2)
 		{
 			Vector3f p0, p1, p2;
 
@@ -148,21 +149,10 @@ static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 
 			poly->normal = pie_SurfaceNormal3fv(p0, p1, p2);
 		}
-		else
-		{
-			Vector3f_Set(&poly->normal, 0.0f, 0.0f, 0.0f);
-		}
 
 		if (poly->flags & iV_IMD_TEXANIM)
 		{
 			unsigned int nFrames, pbRate, tWidth, tHeight;
-
-			poly->pTexAnim = (iTexAnim*)malloc(sizeof(iTexAnim));
-			if (poly->pTexAnim == NULL)
-			{
-				debug(LOG_ERROR, "(_load_polys) [poly %u] memory alloc fail (iTexAnim struct)", i);
-				return FALSE;
-			}
 
 			// even the psx needs to skip the data
 			if (sscanf(pFileData, "%d %d %d %d%n", &nFrames, &pbRate, &tWidth, &tHeight, &cnt) != 4)
@@ -177,17 +167,17 @@ static BOOL _imd_load_polys( const char **ppFileData, iIMDShape *s )
 
 			/* Assumes same number of frames per poly */
 			s->numFrames = nFrames;
-			poly->pTexAnim->nFrames = nFrames;
-			poly->pTexAnim->playbackRate =pbRate;
+			poly->texAnim.nFrames = nFrames;
+			poly->texAnim.playbackRate =pbRate;
 
 			/* Uses Max metric playback rate */
 			s->animInterval = pbRate;
-			poly->pTexAnim->textureWidth = tWidth;
-			poly->pTexAnim->textureHeight = tHeight;
+			poly->texAnim.textureWidth = tWidth;
+			poly->texAnim.textureHeight = tHeight;
 		}
 		else
 		{
-			poly->pTexAnim = NULL;
+			poly->texAnim.nFrames = 0;
 		}
 
 		// PC texture coord routine
@@ -306,6 +296,8 @@ static BOOL _imd_load_points( const char **ppFileData, iIMDShape *s )
 	// Read in points and remove duplicates (!)
 	if ( ReadPoints( ppFileData, s ) == FALSE )
 	{
+		free(s->points);
+		s->points = NULL;
 		return FALSE;
 	}
 
@@ -418,7 +410,7 @@ static BOOL _imd_load_points( const char **ppFileData, iIMDShape *s )
 	ymax = MAX(s->max.y, -s->min.y);
 	zmax = MAX(s->max.z, -s->min.z);
 
-	s->radius = MAX(xmax, (MAX(ymax, zmax)));
+	s->radius = MAX(xmax, MAX(ymax, zmax));
 	s->sradius = sqrtf(xmax*xmax + ymax*ymax + zmax*zmax);
 
 // START: tight bounding sphere
@@ -786,7 +778,7 @@ iIMDShape *iV_ProcessIMD( const char **ppFileData, const char *FileDataEnd )
 
 	if (strncmp(buffer, "LEVEL", 5) != 0)
 	{
-		debug(LOG_ERROR, "iV_ProcessIMD(2): expecting 'LEVELS' directive (%s)", buffer);
+		debug(LOG_ERROR, "iV_ProcessIMD(2): expecting 'LEVEL' directive (%s)", buffer);
 		return NULL;
 	}
 

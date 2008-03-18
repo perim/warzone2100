@@ -53,19 +53,20 @@ typedef enum _object_type
 	SCREEN_DISP_DATA    sDisplay;                   /**< screen coordinate details */ \
 	UBYTE               player;                     /**< Which player the object belongs to */ \
 	UBYTE               group;                      /**< Which group selection is the droid currently in? */ \
-	UBYTE               selected;                   /**< Whether the object is selected */ \
-	                                                /* might want this elsewhere */ \
+	UBYTE               selected;                   /**< Whether the object is selected (might want this elsewhere) */ \
 	UBYTE               cluster;                    /**< Which cluster the object is a member of */ \
 	UBYTE               visible[MAX_PLAYERS];       /**< Whether object is visible to specific player */ \
 	UDWORD              died;                       /**< When an object was destroyed, if 0 still alive */ \
-	/*BOOL            (*damage)(pointerType* psObject, UDWORD damage, UDWORD weaponClass); - Damage function */ \
-	/*UDWORD              emissionInterval;*/           /**< How frequently does it puff out damage smoke? */ \
 	UDWORD              lastEmission;               /**< When did it last puff out smoke? */ \
-\
-	/* Data for fire damage */ \
+	UDWORD              lastHitWeapon;		/**< The weapon that last hit it */ \
+	UDWORD              timeLastHit;		/**< The time the structure was last attacked */ \
+	UDWORD              body;			/**< Hit points with lame name */ \
 	BOOL                inFire;                     /**< TRUE if the object is in a fire */ \
 	UDWORD              burnStart;                  /**< When the object entered the fire */ \
 	UDWORD              burnDamage;                 /**< How much damage has been done since the object entered the fire */ \
+	SDWORD              sensorPower;		/**< Active sensor power */ \
+	SDWORD              sensorRange;		/**< Range of sensor */ \
+	SDWORD              ECMMod;			/**< Ability to conceal oneself from sensors */ \
 	UDWORD              armour[NUM_HIT_SIDES][NUM_WEAPON_CLASS]
 
 #define NEXTOBJ(pointerType) \
@@ -82,7 +83,7 @@ typedef enum _object_type
 typedef struct _base_object
 {
 	BASE_ELEMENTS( struct _base_object );
-} BASE_OBJECT;
+} WZ_DECL_MAY_ALIAS BASE_OBJECT;
 
 typedef struct SIMPLE_OBJECT
 {

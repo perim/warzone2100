@@ -35,11 +35,6 @@
 	* STILL NEED TO REMOVE SOME MAGIC NUMBERS INTO #DEFINES!!! *
 	************************************************************
 */
-
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-
 #include "lib/framework/frame.h"
 #include "lib/framework/frameresource.h"
 #include "lib/framework/input.h"
@@ -51,19 +46,21 @@
 #include "lib/ivis_common/piepalette.h"
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_opengl/piematrix.h"
+#include "lib/ivis_common/piemode.h"
+
 #include "lib/gamelib/gtime.h"
+#include "lib/sound/audio.h"
+#include "lib/sound/audio_id.h"
+
 #include "display3d.h"
 #include "map.h"
 #include "bucket3d.h"
 
-#include "lib/ivis_common/piemode.h"
+#include "effects.h"
+
 #include "mission.h"
 
-/*Remove this one!!! :-( */
 #include "miscimd.h"
-#include "effects.h"
-#include "lib/sound/audio.h"
-#include "lib/sound/audio_id.h"
 #include "hci.h"
 #include "lighting.h"
 #include "console.h"
@@ -72,7 +69,75 @@
 #include "multiplay.h"
 #include "game.h"
 
+
+#define MAX_EFFECTS	2500
+
+#define	GRAVITON_GRAVITY	((float)-800)
+#define	EFFECT_X_FLIP		0x1
+#define	EFFECT_Y_FLIP		0x2
+#define	EFFECT_CYCLIC		0x4
+#define EFFECT_ESSENTIAL	0x8
+#define EFFECT_FACING		0x10
+#define	EFFECT_SCALED		0x20
+#define	EFFECT_LIT			0x40
+
+#define	TEST_FLIPPED_X(x)		(x->control & EFFECT_X_FLIP)
+#define	TEST_FLIPPED_Y(x)		(x->control & EFFECT_Y_FLIP)
+#define TEST_ESSENTIAL(x)		(x->control & EFFECT_ESSENTIAL)
+#define TEST_FACING(x)			(x->control & EFFECT_FACING)
+#define TEST_CYCLIC(x)			(x->control & EFFECT_CYCLIC)
+#define TEST_SCALED(x)			(x->control & EFFECT_SCALED)
+#define TEST_LIT(x)				(x->control & EFFECT_LIT)
+
+#define	SET_FLIPPED_X(x)		((x->control) = (UBYTE)(x->control | EFFECT_X_FLIP))
+#define	SET_FLIPPED_Y(x)		((x->control) = (UBYTE)(x->control | EFFECT_Y_FLIP))
+#define SET_ESSENTIAL(x)		((x->control) = (UBYTE)(x->control | EFFECT_ESSENTIAL))
+#define SET_FACING(x)			((x->control) = (UBYTE)(x->control | EFFECT_FACING))
+#define SET_CYCLIC(x)			((x->control) = (UBYTE)(x->control | EFFECT_CYCLIC))
+#define SET_SCALED(x)			((x->control) = (UBYTE)(x->control | EFFECT_SCALED))
+#define SET_LIT(x)				((x->control) = (UBYTE)(x->control | EFFECT_LIT))
+#define SET_LITABS(x)			((x.control) = (UBYTE)(x.control | EFFECT_LIT))
+
+#define MINIMUM_IMPACT_VELOCITY		(16)
+#define	NORMAL_SMOKE_LIFESPAN		(6000 + rand()%3000)
+#define SMALL_SMOKE_LIFESPAN		(3000 + rand()%3000)
+#define	TRAIL_SMOKE_LIFESPAN		(1200)
+#define	CONSTRUCTION_LIFESPAN		(5000)
+
+#define	SMOKE_FRAME_DELAY			(40 + rand()%30)
+#define	EXPLOSION_FRAME_DELAY		(25 + rand()%40)
+#define	EXPLOSION_TESLA_FRAME_DELAY	(65)
+#define	EXPLOSION_PLASMA_FRAME_DELAY	(45)
+#define	BLOOD_FRAME_DELAY			(150)
+#define DESTRUCTION_FRAME_DELAY		(200)
+
+#define	TESLA_SPEED					(170)// + (30 - rand()%60))
+#define	TESLA_SIZE					(100)// + (20 - rand()%40))
+
+#define GRAVITON_FRAME_DELAY		(100 + rand()%50)
+#define GRAVITON_BLOOD_DELAY		(200 + rand()%100)
+
+#define CONSTRUCTION_FRAME_DELAY	(40 + rand()%30)
+
+#define	EXPLOSION_SIZE				(110+(30-rand()%60))
+#define	LIMITED_EXPLOSION_SIZE		(100+(5-rand()%10))
+#define	BLOOD_SIZE					(100+(30-rand()%60))
+#define	BLOOD_FALL_SPEED			(-(20+rand()%20))
+
+#define GRAVITON_INIT_VEL_X			(float)(200 - rand() % 300)
+#define GRAVITON_INIT_VEL_Z			(float)(200 - rand() % 300)
+#define GRAVITON_INIT_VEL_Y			(float)(300 + rand() % 100)
+
+#define GIBLET_INIT_VEL_X			(float)(50 - rand() % 100)
+#define GIBLET_INIT_VEL_Z			(float)(50 - rand() % 100)
+#define GIBLET_INIT_VEL_Y			12.f
+
+#define	DROID_DESTRUCTION_DURATION		(3*GAME_TICKS_PER_SEC/2) // 1.5 seconds
+#define	STRUCTURE_DESTRUCTION_DURATION	((7*GAME_TICKS_PER_SEC)/2)	 // 3.5 seconds
+
+
 extern UWORD OffScreenEffects;
+
 
 /* Our list of all game world effects */
 static EFFECT        asEffectsList[MAX_EFFECTS];
@@ -365,7 +430,6 @@ void	addEffect(Vector3i *pos, EFFECT_GROUP group, EFFECT_TYPE type,BOOL specifie
 	}
 
 	/* Quick optimsation to reject every second non-essential effect if it's off grid */
-//	if(clipXY(pos->pos.x, pos->pos.z) == FALSE)
 	if(clipXY(pos->x, pos->z) == FALSE)
 	{
 		/* 	If effect is essentail - then let it through */
@@ -423,15 +487,14 @@ void	addEffect(Vector3i *pos, EFFECT_GROUP group, EFFECT_TYPE type,BOOL specifie
 	}
 
 	/* Store away it's position - into FRACTS */
-	asEffectsList[freeEffect].position.x = (float)pos->x;
-	asEffectsList[freeEffect].position.y = (float)pos->y;
-	asEffectsList[freeEffect].position.z = (float)pos->z;
-
+	asEffectsList[freeEffect].position.x = pos->x;
+	asEffectsList[freeEffect].position.y = pos->y;
+	asEffectsList[freeEffect].position.z = pos->z;
 
 
 	/* Now, note group and type */
-	asEffectsList[freeEffect].group =(UBYTE) group;
-	asEffectsList[freeEffect].type = (UBYTE) type;
+	asEffectsList[freeEffect].group = group;
+	asEffectsList[freeEffect].type = type;
 
 	/* Set when it entered the world */
 	asEffectsList[freeEffect].birthTime = asEffectsList[freeEffect].lastFrame = gameTime;
@@ -735,15 +798,9 @@ static void updateFirework(EFFECT *psEffect)
    					dv.y = psEffect->position.y + dif;
 					effectGiveAuxVar(100);
    					addEffect(&dv,EFFECT_FIREWORK, FIREWORK_TYPE_STARBURST,FALSE,NULL,0);
-
-					//   			dv.x = dv.x - (2*xDif);
-	//   			dv.z = dv.z - (2*yDif);	// buildings are level!
-	//			effectGiveAuxVar(100);
-	//   			addEffect(&dv,EFFECT_FIREWORK, FIREWORK_TYPE_STARBURST,FALSE,NULL,0);
 				}
 			}
 			killEffect(psEffect);
-
 		}
 		else
 		{
@@ -791,10 +848,7 @@ static void updateFirework(EFFECT *psEffect)
 				killEffect(psEffect);
 			}
 		}
-
-
 	}
-
 }
 
 // ----------------------------------------------------------------------------------------
@@ -2448,20 +2502,19 @@ void	effectGiveAuxVarSec( UDWORD var)
 /* Runs all the spot effect stuff for the droids - adding of dust and the like... */
 static void effectDroidUpdates(void)
 {
-	UDWORD	i;
-	DROID	*psDroid;
-	UDWORD	partition;
-	Vector3i pos;
-	SDWORD	xBehind,yBehind;
+	unsigned int i;
 
 	/* Go through all players */
-	for(i=0; i<MAX_PLAYERS; i++)
+	for (i = 0; i < MAX_PLAYERS; i++)
 	{
+		DROID *psDroid;
+
 		/* Now go through all their droids */
-		for(psDroid = apsDroidLists[i]; psDroid; psDroid = psDroid->psNext)
+		for (psDroid = apsDroidLists[i]; psDroid; psDroid = psDroid->psNext)
 		{
 			/* Gets it's group number */
-			partition = psDroid->id % EFFECT_DROID_DIVISION;
+			unsigned int partition = psDroid->id % EFFECT_DROID_DIVISION;
+
 			/* Right frame to process? */
 			if(partition == frameGetFrameNumber() % EFFECT_DROID_DIVISION && ONEINFOUR)
 			{
@@ -2476,13 +2529,17 @@ static void effectDroidUpdates(void)
 					*/
 					if( (SDWORD)psDroid->sMove.speed != 0 )
 					{
-				   		/* Present direction is important */
-						xBehind = ( ( 50 * iV_SIN( DEG( (int)psDroid->direction) ) ) >> FP12_SHIFT );
-						yBehind = ( ( 50 * iV_COS( DEG( (int)psDroid->direction) ) ) >> FP12_SHIFT );
-						pos.x = psDroid->pos.x - xBehind;
-						pos.z = psDroid->pos.y - yBehind;
+						/* Present direction is important */
+						Vector2i behind = {
+							( 50 * SIN( DEG( psDroid->direction) ) ) >> FP12_SHIFT,
+							( 50 * COS( DEG( psDroid->direction) ) ) >> FP12_SHIFT
+						};
+						Vector3i pos = {
+							psDroid->pos.x - behind.x,
+							0,
+							psDroid->pos.y - behind.y
+						};
 						pos.y = map_Height(pos.x, pos.z);
-//						addEffect(&pos,EFFECT_SMOKE,SMOKE_TYPE_TRAIL,FALSE,NULL);
 					}
 				}
 			}

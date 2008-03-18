@@ -17,41 +17,42 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
-	Display3D.c - draws the 3D terrain view. Both the 3D and pseudo-3D components:-
-	textured tiles.
+/**
+ * @file display3D.c
+ * Draws the 3D terrain view. Both the 3D and pseudo-3D components - textured tiles.
 
 	-------------------------------------------------------------------
 	-	Alex McLean & Jeremy Sallis, Pumpkin Studios, EIDOS INTERACTIVE -
 	-------------------------------------------------------------------
 */
-/* Generic includes */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
+#include "lib/framework/frame.h"
+#include "lib/framework/math-help.h"
 
 /* Includes direct access to render library */
 #include "lib/ivis_common/piedef.h"
 #include "lib/ivis_common/tex.h"
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/piepalette.h"
-// FIXME Direct iVis implementation include!
 #include "lib/ivis_opengl/piematrix.h"
 #include "lib/ivis_common/piemode.h"
 #include "lib/ivis_common/piefunc.h"
 #include "lib/ivis_common/rendmode.h"
+
+#include "lib/gamelib/gtime.h"
+#include "lib/gamelib/animobj.h"
+#include "lib/script/script.h"
+#include "lib/sound/audio.h"
+#include "lib/sound/audio_id.h"
+
 #include "e3demo.h"
 #include "loop.h"
 #include "atmos.h"
 #include "raycast.h"
 #include "levels.h"
-#include "lib/framework/frame.h"
 #include "map.h"
 #include "move.h"
 #include "visibility.h"
 #include "geometry.h"
-#include "lib/gamelib/gtime.h"
 #include "resource.h"
 #include "messagedef.h"
 #include "miscimd.h"
@@ -63,10 +64,8 @@
 #include "intdisplay.h"
 #include "radar.h"
 #include "display3d.h"
-#include "lib/framework/math-help.h"
 #include "lighting.h"
 #include "console.h"
-#include "lib/gamelib/animobj.h"
 #include "projectile.h"
 #include "bucket3d.h"
 #include "intelmap.h"
@@ -74,7 +73,6 @@
 #include "message.h"
 #include "component.h"
 #include "warcam.h"
-#include "lib/script/script.h"
 #include "scripttabs.h"
 #include "scriptextern.h"
 #include "scriptcb.h"
@@ -85,8 +83,6 @@
 #include "gateway.h"
 #include "transporter.h"
 #include "warzoneconfig.h"
-#include "lib/sound/audio.h"
-#include "lib/sound/audio_id.h"
 #include "action.h"
 #include "keybind.h"
 #include "combat.h"
@@ -98,6 +94,7 @@
 #include "texture.h"
 #include "anim_id.h"
 #include "cmddroid.h"
+
 
 #define WATER_ALPHA_LEVEL 255 //was 164	// Amount to alpha blend water.
 #define WATER_ZOFFSET 32		// Sorting offset for main water tile.
@@ -151,6 +148,7 @@ static SDWORD	rangeCenterX,rangeCenterY,rangeRadius;
 static BOOL	bDrawBlips=TRUE;
 static BOOL	bDrawProximitys=TRUE;
 BOOL	godMode;
+BOOL	showGateways = FALSE;
 
 static char skyboxPageName[PATH_MAX] = "page-25";
 
@@ -173,7 +171,7 @@ static Vector3i	imdRot,imdRot2;
 UDWORD		distance;
 
 /* Stores the screen coordinates of the transformed terrain tiles */
-static TERRAIN_VERTEX tileScreenInfo[LAND_YGRD][LAND_XGRD];
+static TERRAIN_VERTEX tileScreenInfo[VISIBLE_YTILES+1][VISIBLE_XTILES+1];
 
 /* Records the present X and Y values for the current mouse tile (in tiles */
 SDWORD mouseTileX, mouseTileY;
@@ -201,7 +199,7 @@ static Vector3f alteredPoints[iV_IMD_MAX_POINTS];
 
 //number of tiles visible
 // FIXME This should become dynamic! (A function of resolution, angle and zoom maybe.)
-const Vector2i visibleTiles = { VISIBLE_XTILES, VISIBLE_YTILES };
+Vector2i visibleTiles = { VISIBLE_XTILES, VISIBLE_YTILES };
 
 UDWORD	terrainMidX;
 UDWORD	terrainMidY;
@@ -494,9 +492,9 @@ static void calcAverageTerrainHeight(iView *player)
 		of the tiles directly underneath us
 	*/
 	averageCentreTerrainHeight = 0;
-	for (i = VISIBLE_YTILES / 2 - 4; i < VISIBLE_YTILES / 2 + 4; i++)
+	for (i = visibleTiles.y / 2 - 4; i < visibleTiles.y / 2 + 4; i++)
 	{
-		for (j = VISIBLE_XTILES / 2 - 4; j < VISIBLE_XTILES / 2 + 4; j++)
+		for (j = visibleTiles.x / 2 - 4; j < visibleTiles.x / 2 + 4; j++)
 		{
 			if (tileOnMap(playerXTile + j, playerZTile + i))
 			{
@@ -512,7 +510,7 @@ static void calcAverageTerrainHeight(iView *player)
 	 * above the terrain. */
 	if (numTilesAveraged) // might not be if off map
 	{
-		MAPTILE *psTile = mapTile(playerXTile + VISIBLE_XTILES / 2, playerZTile + VISIBLE_YTILES / 2);
+		MAPTILE *psTile = mapTile(playerXTile + visibleTiles.x / 2, playerZTile + visibleTiles.y / 2);
 
 		averageCentreTerrainHeight /= numTilesAveraged;
 		if (averageCentreTerrainHeight < psTile->height * ELEVATION_SCALE)
@@ -608,7 +606,7 @@ static void drawTiles(iView *player)
 	for (i = 0; i < visibleTiles.y+1; i++)
 	{
 		/* Go through the x's */
-		for (j = 0; j < (SDWORD)visibleTiles.x+1; j++)
+		for (j = 0; j < visibleTiles.x+1; j++)
 		{
 			Vector2i screen;
 			PIELIGHT TileIllum = WZCOL_BLACK;
@@ -618,10 +616,7 @@ static void drawTiles(iView *player)
 			tileScreenInfo[i][j].pos.z = world_coord(terrainMidY - i);
 			tileScreenInfo[i][j].pos.y = 0;
 
-			if( playerXTile+j < 0 ||
-				playerZTile+i < 0 ||
-				playerXTile+j > (SDWORD)(mapWidth-1) ||
-				playerZTile+i > (SDWORD)(mapHeight-1) )
+			if (!tileOnMap(playerXTile + j, playerZTile + i))
 			{
 				// Special past-edge-of-map tiles
 				tileScreenInfo[i][j].u = 0;
@@ -637,7 +632,7 @@ static void drawTiles(iView *player)
 
 				if (getRevealStatus() && !godMode)
 				{
-					TileIllum = pal_SetBrightness(psTile->level == UBYTE_MAX ? 1 : psTile->level);
+					TileIllum = pal_SetBrightness(psTile->level < 0 ? 1 : psTile->level);
 				}
 				else
 				{
@@ -673,6 +668,39 @@ static void drawTiles(iView *player)
 					pushedDown = TRUE;
 				}
 
+				// to prevent a sharp edge to the map, make sure the border is black
+				if (i == 0 || j == 0 || i == visibleTiles.y || j == visibleTiles.x)
+				{
+					TileIllum.byte.r = 0;
+					TileIllum.byte.g = 0;
+					TileIllum.byte.b = 0;
+				}
+				// and fade towards the black border gradually
+				if (j == 1)
+				{
+					TileIllum.byte.r = TileIllum.byte.r*(TILE_UNITS-rx)/TILE_UNITS;
+					TileIllum.byte.g = TileIllum.byte.g*(TILE_UNITS-rx)/TILE_UNITS;
+					TileIllum.byte.b = TileIllum.byte.b*(TILE_UNITS-rx)/TILE_UNITS;
+				}
+				if (j == visibleTiles.x-1)
+				{
+					TileIllum.byte.r = TileIllum.byte.r*(rx)/TILE_UNITS;
+					TileIllum.byte.g = TileIllum.byte.g*(rx)/TILE_UNITS;
+					TileIllum.byte.b = TileIllum.byte.b*(rx)/TILE_UNITS;
+				}
+				if (i == 1)
+				{
+					TileIllum.byte.r = TileIllum.byte.r*(TILE_UNITS-rz)/TILE_UNITS;
+					TileIllum.byte.g = TileIllum.byte.g*(TILE_UNITS-rz)/TILE_UNITS;
+					TileIllum.byte.b = TileIllum.byte.b*(TILE_UNITS-rz)/TILE_UNITS;
+				}
+				if (i == visibleTiles.y-1)
+				{
+					TileIllum.byte.r = TileIllum.byte.r*(rz)/TILE_UNITS;
+					TileIllum.byte.g = TileIllum.byte.g*(rz)/TILE_UNITS;
+					TileIllum.byte.b = TileIllum.byte.b*(rz)/TILE_UNITS;
+				}
+
 				setTileColour(playerXTile + j, playerZTile + i, TileIllum);
 			}
 			// hack since tileScreenInfo[i][j].screen is Vector3i and pie_RotateProject takes Vector2i as 2nd param
@@ -697,9 +725,9 @@ static void drawTiles(iView *player)
 	pie_SetAlphaTest(FALSE);
 	pie_SetFogStatus(TRUE);
 	pie_SetTexturePage(terrainPage);
-	for (i = 0; i < MIN(visibleTiles.y, mapHeight); i++)
+	for (i = 0; i < visibleTiles.y; i++)
 	{
-		for (j = 0; j < MIN(visibleTiles.x, mapWidth); j++)
+		for (j = 0; j < visibleTiles.x; j++)
 		{
 			//get distance of furthest corner
 			int zMax = MAX(tileScreenInfo[i][j].screen.z, tileScreenInfo[i+1][j].screen.z);
@@ -715,7 +743,7 @@ static void drawTiles(iView *player)
 			drawTerrainTile(i, j, FALSE);
 		}
 	}
-	pie_DrawTerrainDone(MIN(visibleTiles.x, mapWidth),  MIN(visibleTiles.y, mapHeight));
+	pie_DrawTerrain(visibleTiles.x,  visibleTiles.y);
 
 	// Update height for water
 	for (i = 0; i < visibleTiles.y + 1; i++)
@@ -857,7 +885,8 @@ BOOL init3DView(void)
 {
 	/* Arbitrary choice - from direct read! */
 	Vector3f theSun = { 225.0f, -600.0f, 450.0f };
-	setTheSun( theSun );
+
+	setTheSun(theSun);
 
 	// the world centre - used for decaying lighting etc
 	gridCentreX = player.p.x + world_coord(visibleTiles.x / 2);
@@ -871,6 +900,9 @@ BOOL init3DView(void)
 
 	/* Make sure and change these to comply with map.c */
 	imdRot.x = -35;
+
+	/* Initialize vertex arrays */
+	pie_TerrainInit(mapWidth, mapHeight);
 
 	/* Get all the init stuff out of here? */
 	initWarCam();
@@ -899,6 +931,9 @@ BOOL init3DView(void)
 
 	pie_PrepareSkybox(skyboxPageName);
 
+	// distance is not saved, so initialise it now
+	distance = START_DISTANCE; // distance
+
 	return TRUE;
 }
 
@@ -909,7 +944,7 @@ void disp3d_setView(iView *newView)
 	memcpy(&player,newView,sizeof(iView));
 }
 
-// reset the camera rotation
+// reset the camera rotation (used for save games <= 10)
 void disp3d_resetView()
 {
 	player.r.z = 0; // roll
@@ -917,7 +952,6 @@ void disp3d_resetView()
 	player.r.x = DEG(360 + INITIAL_STARTING_PITCH); // angle
 
 	// and set the camera position
-	distance = START_DISTANCE; // distance
 	player.p.y = START_HEIGHT; // height
 }
 
@@ -1014,8 +1048,7 @@ static void flipsAndRots(unsigned int tileNumber, unsigned int i, unsigned int j
 /* Clips anything - not necessarily a droid */
 BOOL clipXY(SDWORD x, SDWORD y)
 {
-	if (x > (SDWORD)player.p.x &&  x < (SDWORD)(player.p.x+(visibleTiles.x*
-		TILE_UNITS)) &&
+	if (x > (SDWORD)player.p.x &&  x < (SDWORD)(player.p.x+(visibleTiles.x * TILE_UNITS)) &&
 		y > (SDWORD)player.p.z && y < (SDWORD)(player.p.z+(visibleTiles.y*TILE_UNITS)))
 		return(TRUE);
 	else
@@ -1775,7 +1808,6 @@ void renderProximityMsg(PROXIMITY_DISPLAY *psProxDisp)
 	psProxDisp->screenX = x;
 	psProxDisp->screenY = y;
 	psProxDisp->screenR = r;
-	//storeProximityScreenCoords(psMessage, x, y);
 
 	iV_MatrixEnd();
 }
@@ -2884,14 +2916,14 @@ BASE_OBJECT		*psObj;
 		}
 	}
 
-	if (orderStateObj(psDroid, DORDER_FIRESUPPORT, &psObj))
+	psObj = orderStateObj(psDroid, DORDER_FIRESUPPORT);
+	if (psObj
+	 && psObj->selected)
 	{
-		if (psObj != NULL && psObj->selected)
-		{
-			retVal = TRUE;
-		}
+		retVal = TRUE;
 	}
-	return(retVal);
+
+	return retVal;
 }
 
 static void	drawDroidSelections( void )
@@ -3669,9 +3701,6 @@ static iIMDShape	*flattenImd(iIMDShape *imd, UDWORD structX, UDWORD structY, UDW
 	return imd;
 }
 
-//#define SHOW_ZONES
-//#define SHOW_GATEWAYS
-
 // -------------------------------------------------------------------------------------
 /* New improved (and much faster) tile drawer */
 // -------------------------------------------------------------------------------------
@@ -3683,9 +3712,6 @@ static void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 	BOOL bOutlined = FALSE;
 	UDWORD tileNumber = 0;
 	TERRAIN_VERTEX vertices[3];
-#if defined(SHOW_ZONES) || defined(SHOW_GATEWAYS)
-	SDWORD zone = 0;
-#endif
 	PIELIGHT colour[2][2];
 
 	colour[0][0] = WZCOL_BLACK;
@@ -3718,18 +3744,6 @@ static void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 		{
 			colour[1][1] = mapTile(actualX + 1, actualY + 1)->colour;
 		}
-#if defined(SHOW_ZONES)
-		if (!fpathBlockingTile(actualX, actualY) ||
-			terrainType(psTile) == TER_WATER)
-		{
-			zone = gwGetZone(actualX, actualY);
-		}
-#elif defined(SHOW_GATEWAYS)
-		if (psTile->tileInfoBits & BITS_GATEWAY)
-		{
-			zone = gwGetZone(actualX, actualY);
-		}
-#endif
 		if ( terrainType(psTile) != TER_WATER || onWaterEdge )
 		{
 			// what tile texture number is it?
@@ -3742,17 +3756,14 @@ static void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 		}
 	}
 
-#if defined(SHOW_ZONES)
-	if (zone != 0)
+	/* Show gateways */
+	if (psTile && psTile->tileInfoBits & BITS_GATEWAY && showGateways)
 	{
-		tileNumber = zone;
+		colour[0][0].byte.g = 255;
+		colour[1][0].byte.g = 255;
+		colour[0][1].byte.g = 255;
+		colour[1][1].byte.g = 255;
 	}
-#elif defined(SHOW_GATEWAYS)
-	if (psTile && psTile->tileInfoBits & BITS_GATEWAY)
-	{
-		tileNumber = 55;//zone;
-	}
-#endif
 
 	/* Is the tile highlighted? Perhaps because there's a building foundation on it */
 	if (psTile && !onWaterEdge && TILE_HIGHLIGHT(psTile))
@@ -3760,7 +3771,7 @@ static void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 		/* Clear it for next time round */
 		CLEAR_TILE_HIGHLIGHT(psTile);
 		bOutlined = TRUE;
-		if ( i < (LAND_XGRD-1) && j < (LAND_YGRD-1) ) // FIXME
+		if ( i < visibleTiles.x && j < visibleTiles.y ) // FIXME
 		{
 			if (outlineTile)
 			{
@@ -3805,7 +3816,7 @@ static void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 	}
 	else
 	{
-		pie_DrawTerrainTriangle(i * 2 + j * VISIBLE_XTILES * 2, vertices);
+		pie_DrawTerrainTriangle(i * 2 + j * visibleTiles.x * 2, vertices);
 	}
 
 	/* The second triangle */
@@ -3831,7 +3842,7 @@ static void drawTerrainTile(UDWORD i, UDWORD j, BOOL onWaterEdge)
 	}
 	else
 	{
-		pie_DrawTerrainTriangle(i * 2 + j * VISIBLE_XTILES * 2 + 1, vertices);
+		pie_DrawTerrainTriangle(i * 2 + j * visibleTiles.x * 2 + 1, vertices);
 	}
 }
 
@@ -4297,7 +4308,7 @@ static void	showSensorRange2(BASE_OBJECT *psObj)
 		else
 		{
 			psStruct = (STRUCTURE*)psObj;
-			sensorRange = psStruct->sensorRange;
+			sensorRange = structSensorRange(psStruct);
 			bBuilding = TRUE;
 		}
 		radius = sensorRange;

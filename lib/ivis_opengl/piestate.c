@@ -17,14 +17,9 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/***************************************************************************/
-/*
- * pieState.c
- *
- * renderer setup and state control routines for 3D rendering
- *
+/** \file
+ *  Renderer setup and state control routines for 3D rendering.
  */
-/***************************************************************************/
 
 #include "lib/framework/frame.h"
 
@@ -36,36 +31,37 @@
 #include "lib/ivis_common/tex.h"
 #include "lib/ivis_common/piepalette.h"
 
-/***************************************************************************/
 /*
  *	Global Variables
  */
-/***************************************************************************/
 
 extern RENDER_STATE	rendStates;
 
-/***************************************************************************/
 /*
  *	Source
  */
-/***************************************************************************/
 
-void pie_SetDepthBufferStatus(DEPTH_MODE depthMode) {
-	switch(depthMode) {
+void pie_SetDepthBufferStatus(DEPTH_MODE depthMode)
+{
+	switch(depthMode)
+	{
 		case DEPTH_CMP_LEQ_WRT_ON:
 			glEnable(GL_DEPTH_TEST);
 			glDepthFunc(GL_LEQUAL);
 			glDepthMask(GL_TRUE);
 			break;
+
 		case DEPTH_CMP_ALWAYS_WRT_ON:
 			glDisable(GL_DEPTH_TEST);
 			glDepthMask(GL_TRUE);
 			break;
+
 		case DEPTH_CMP_LEQ_WRT_OFF:
 			glEnable(GL_DEPTH_TEST);
 			glDepthFunc(GL_LEQUAL);
 			glDepthMask(GL_FALSE);
 			break;
+
 		case DEPTH_CMP_ALWAYS_WRT_OFF:
 			glDisable(GL_DEPTH_TEST);
 			glDepthMask(GL_FALSE);
@@ -95,13 +91,11 @@ void pie_UpdateFogDistance(float begin, float end)
 	glFogf(GL_FOG_END, end);
 }
 
-//***************************************************************************
 //
 // pie_SetFogStatus(BOOL val)
 //
 // Toggle fog on and off for rendering objects inside or outside the 3D world
 //
-//***************************************************************************
 
 void pie_SetFogStatus(BOOL val)
 {
@@ -141,21 +135,31 @@ void pie_SetFogStatus(BOOL val)
 	}
 }
 
-/***************************************************************************/
+/** Selects a texture page and binds it for the current texture unit
+ *  \param num a number indicating the texture page to bind. If this is a
+ *         negative value (doesn't matter what value) it will disable texturing.
+ */
 void pie_SetTexturePage(SDWORD num)
 {
-	if (num != rendStates.texPage) {
+	// If a negative value is passes _always_ disable texturing, even if
+	// rendStates.texPage indicates that we disabled it already.
+	if (num < 0)
+	{
 		rendStates.texPage = num;
-		if (num < 0) {
-			glDisable(GL_TEXTURE_2D);
-		} else {
-			glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D, _TEX_PAGE[num].id);
-		}
+
+		glDisable(GL_TEXTURE_2D);
+		return;
+	}
+	
+	// Only bind textures when they're not bound already
+	if (num != rendStates.texPage)
+	{
+		rendStates.texPage = num;
+
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, _TEX_PAGE[num].id);
 	}
 }
-
-/***************************************************************************/
 
 void pie_SetAlphaTest(BOOL keyingOn)
 {
@@ -173,26 +177,6 @@ void pie_SetAlphaTest(BOOL keyingOn)
 	}
 }
 
-/***************************************************************************/
-void pie_SetColourCombine(COLOUR_MODE colCombMode)
-{
-	if (colCombMode != rendStates.colourCombine) {
-		rendStates.colourCombine = colCombMode;
-		pieStateCount++;
-		switch (colCombMode) {
-			case COLOUR_FLAT_CONSTANT:
-			case COLOUR_FLAT_ITERATED:
-				pie_SetTexturePage(-1);
-				break;
-			case COLOUR_TEX_CONSTANT:
-			case COLOUR_TEX_ITERATED:
-			default:
-				break;
-		}
-	}
-}
-
-/***************************************************************************/
 void pie_SetTranslucencyMode(TRANSLUCENCY_MODE transMode)
 {
 	if (transMode != rendStates.transMode) {
@@ -206,10 +190,6 @@ void pie_SetTranslucencyMode(TRANSLUCENCY_MODE transMode)
 				glEnable(GL_BLEND);
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 				break;
-			case TRANS_FILTER:
-				glEnable(GL_BLEND);
-				glBlendFunc(GL_SRC_ALPHA, GL_SRC_COLOR);
-				break;
 			default:
 				rendStates.transMode = TRANS_DECAL;
 				glDisable(GL_BLEND);
@@ -218,7 +198,6 @@ void pie_SetTranslucencyMode(TRANSLUCENCY_MODE transMode)
 	}
 }
 
-/***************************************************************************/
 void pie_SetGammaValue(float val)
 {
 	debug(LOG_VIDEO, "%s(%f)", __FUNCTION__, val);

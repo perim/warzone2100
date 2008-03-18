@@ -1,9 +1,11 @@
-%.tab.h %.tab.c: %.y
+%.tab.h %.tab.c:: %.y
 	$(YACC) $(YFLAGS) $(AM_YFLAGS) -o$@ $<
 
-%.lex.c: %.l
+%.lex.c:: %.l
 	$(LEX) $(LFLAGS) $(AM_LFLAGS) -o$@ $<
 
+AM_CPPFLAGS = -DYY_NO_INPUT $(SDL_CFLAGS) $(SDL_NET_CFLAGS) $(PHYSFS_CFLAGS) $(PNG_CFLAGS) $(OGGVORBIS_CFLAGS) $(OPENAL_CFLAGS) $(OPENGLC_CFLAGS) $(OPENGL_CFLAGS) $(POPT_CFLAGS) $(WZ_CPPFLAGS)
+AM_CFLAGS = $(WZ_CFLAGS)
 AM_LFLAGS = $(FLEX_FLAGS)
 AM_YFLAGS = -d
 BUILT_SOURCES = level_lexer.lex.c scriptvals_lexer.lex.c scriptvals_parser.tab.c scriptvals_parser.tab.h
@@ -59,7 +61,8 @@ warzone2100_LDADD = \
 	$(top_builddir)/lib/ivis_opengl/libivis_opengl.a \
 	$(top_builddir)/lib/ivis_common/libivis_common.a \
 	$(top_builddir)/lib/gamelib/libgamelib.a \
-	$(top_builddir)/lib/framework/libframework.a
+	$(top_builddir)/lib/framework/libframework.a \
+	$(top_builddir)/lib/sqlite3/libsqlite3.a
 
 warzone2100_LDADD += $(SDL_LIBS) $(SDL_NET_LIBS) $(PHYSFS_LIBS) $(PNG_LIBS) $(OGGVORBIS_LIBS) $(OPENAL_LIBS) $(OPENGLC_LIBS) $(OPENGL_LIBS) $(POPT_LIBS)
 

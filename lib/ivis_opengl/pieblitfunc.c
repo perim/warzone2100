@@ -53,10 +53,6 @@
 #define pie_FILLBLUE	128
 #define pie_FILLTRANS	128
 
-#define RADARX 128
-#define RADARY 128
-
-static PIESTYLE rendStyle;
 static UDWORD radarTexture;
 
 /***************************************************************************/
@@ -64,9 +60,9 @@ static UDWORD radarTexture;
  *	Source
  */
 /***************************************************************************/
+
 void pie_Line(int x0, int y0, int x1, int y1, PIELIGHT colour)
 {
-	pie_SetRendMode(REND_FLAT);
 	pie_SetTexturePage(-1);
 	pie_SetAlphaTest(FALSE);
 
@@ -76,11 +72,51 @@ void pie_Line(int x0, int y0, int x1, int y1, PIELIGHT colour)
 	glVertex2f(x1, y1);
 	glEnd();
 }
+
+/**
+ *	Assumes render mode set up externally, draws filled rectangle.
+ */
+static void pie_DrawRect(SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1, PIELIGHT colour)
+{
+	if (x0 > psRendSurface->clip.right || x1 < psRendSurface->clip.left
+	    || y0 > psRendSurface->clip.bottom || y1 < psRendSurface->clip.top)
+	{
+		return;
+	}
+
+	if (x0 < psRendSurface->clip.left)
+	{
+		x0 = psRendSurface->clip.left;
+	}
+	if (x1 > psRendSurface->clip.right)
+	{
+		x1 = psRendSurface->clip.right;
+	}
+	if (y0 < psRendSurface->clip.top)
+	{
+		y0 = psRendSurface->clip.top;
+	}
+	if (y1 > psRendSurface->clip.bottom)
+	{
+		y1 = psRendSurface->clip.bottom;
+	}
+
+	pie_SetAlphaTest(FALSE);
+
+	glColor4ubv(colour.vector);
+	glBegin(GL_TRIANGLE_STRIP);
+		glVertex2i(x0, y0);
+		glVertex2i(x1, y0);
+		glVertex2i(x0, y1);
+		glVertex2i(x1, y1);
+	glEnd();
+}
+
+
 /***************************************************************************/
 
 void pie_Box(int x0,int y0, int x1, int y1, PIELIGHT colour)
 {
-	pie_SetRendMode(REND_FLAT);
 	pie_SetTexturePage(-1);
 	pie_SetAlphaTest(FALSE);
 
@@ -115,25 +151,9 @@ void pie_BoxFill(int x0,int y0, int x1, int y1, PIELIGHT colour)
 {
 	pie_SetRendMode(REND_FLAT);
 	pie_SetTexturePage(-1);
-
-	if (x0>psRendSurface->clip.right || x1<psRendSurface->clip.left ||
-		y0>psRendSurface->clip.bottom || y1<psRendSurface->clip.top)
-	{
-		return;
-	}
-
-	if (x0<psRendSurface->clip.left)
-		x0 = psRendSurface->clip.left;
-	if (x1>psRendSurface->clip.right)
-		x1 = psRendSurface->clip.right;
-	if (y0<psRendSurface->clip.top)
-		y0 = psRendSurface->clip.top;
-	if (y1>psRendSurface->clip.bottom)
-		y1 = psRendSurface->clip.bottom;
-
 	pie_DrawRect(x0, y0, x1, y1, colour);
-
 }
+
 /***************************************************************************/
 
 void pie_TransBoxFill(SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1)
@@ -148,23 +168,9 @@ void pie_TransBoxFill(SDWORD x0, SDWORD y0, SDWORD x1, SDWORD y1)
 }
 
 /***************************************************************************/
+
 void pie_UniTransBoxFill(SDWORD x0,SDWORD y0, SDWORD x1, SDWORD y1, PIELIGHT light)
 {
-	if (x0>psRendSurface->clip.right || x1<psRendSurface->clip.left ||
-		y0>psRendSurface->clip.bottom || y1<psRendSurface->clip.top)
-	{
-		return;
-	}
-
-	if (x0<psRendSurface->clip.left)
-		x0 = psRendSurface->clip.left;
-	if (x1>psRendSurface->clip.right)
-		x1 = psRendSurface->clip.right;
-	if (y0<psRendSurface->clip.top)
-		y0 = psRendSurface->clip.top;
-	if (y1>psRendSurface->clip.bottom)
-		y1 = psRendSurface->clip.bottom;
-
 	pie_SetTexturePage(-1);
 	pie_SetRendMode(REND_ALPHA_FLAT);
 	pie_DrawRect(x0, y0, x1, y1, light);
@@ -193,7 +199,7 @@ void pie_ImageFileID(IMAGEFILE *ImageFile, UWORD ID, int x, int y)
 	dest.y = y + Image->YOffset;
 	dest.w = Image->Width;
 	dest.h = Image->Height;
-	pie_DrawImage(&pieImage, &dest, &rendStyle);
+	pie_DrawImage(&pieImage, &dest);
 }
 
 void pie_ImageFileIDTile(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Width, int Height)
@@ -232,7 +238,7 @@ void pie_ImageFileIDTile(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Width
 
 		for (hRep = 0; hRep < Width/Image->Width; hRep++)
 		{
-			pie_DrawImage(&pieImage, &dest, &rendStyle);
+			pie_DrawImage(&pieImage, &dest);
 			dest.x += Image->Width;
 		}
 
@@ -241,7 +247,7 @@ void pie_ImageFileIDTile(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Width
 		{
 			pieImage.tw = hRemainder;
 			dest.w = hRemainder;
-			pie_DrawImage(&pieImage, &dest, &rendStyle);
+			pie_DrawImage(&pieImage, &dest);
 		}
 
 		dest.y += Image->Height;
@@ -260,7 +266,7 @@ void pie_ImageFileIDTile(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Width
 
 		for (hRep = 0; hRep < Width/Image->Width; hRep++)
 		{
-			pie_DrawImage(&pieImage, &dest, &rendStyle);
+			pie_DrawImage(&pieImage, &dest);
 			dest.x += Image->Width;
 		}
 
@@ -269,7 +275,7 @@ void pie_ImageFileIDTile(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Width
 		{
 			pieImage.tw = hRemainder;
 			dest.w = hRemainder;
-			pie_DrawImage(&pieImage, &dest, &rendStyle);
+			pie_DrawImage(&pieImage, &dest);
 		}
 	}
 }
@@ -293,10 +299,10 @@ BOOL pie_ShutdownRadar(void)
 	return TRUE;
 }
 
-void pie_DownLoadRadar(UDWORD *buffer)
+void pie_DownLoadRadar(UDWORD *buffer, int width, int height)
 {
 	pie_SetTexturePage(radarTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, wz_texture_compression, RADARX, RADARY, 0,
+	glTexImage2D(GL_TEXTURE_2D, 0, wz_texture_compression, width, height, 0,
 		     GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -305,7 +311,7 @@ void pie_DownLoadRadar(UDWORD *buffer)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 }
 
-void pie_RenderRadar( int x, int y )
+void pie_RenderRadar(int x, int y, int width, int height)
 {
 	PIEIMAGE pieImage;
 	PIERECT dest;
@@ -319,14 +325,19 @@ void pie_RenderRadar( int x, int y )
 	pieImage.th = 256;
 	dest.x = x;
 	dest.y = y;
-	dest.w = RADARX;
-	dest.h = RADARY;
-	pie_DrawImage(&pieImage, &dest, &rendStyle);
+	dest.w = width;
+	dest.h = height;
+
+	// enable alpha
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	pie_DrawImage(&pieImage, &dest);
 }
 
 void pie_LoadBackDrop(SCREENTYPE screenType)
 {
-	char	backd[128];
+	char backd[128];
 
 	//randomly load in a backdrop piccy.
 	srand( (unsigned)time(NULL) + 17 ); // Use offset since time alone doesn't work very well
@@ -334,10 +345,7 @@ void pie_LoadBackDrop(SCREENTYPE screenType)
 	switch (screenType)
 	{
 	case SCREEN_RANDOMBDROP:
-		if ( rand()%2 == 0 )
-			snprintf(backd, sizeof(backd), "texpages/bdrops/0%i-bdrop.png", rand() % 8); // Range: 0-7
-		else
-			snprintf(backd, sizeof(backd), "texpages/bdrops/wzlogo_%i.png", rand()%5); // Range: 0-4
+		snprintf(backd, sizeof(backd), "texpages/bdrops/backdrop%i.png", rand() % 7); // Range: 0-6
 		break;
 	case SCREEN_MISSIONEND:
 		snprintf(backd, sizeof(backd), "texpages/bdrops/missionend.png");

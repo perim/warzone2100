@@ -17,19 +17,20 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * Init.c
+/**
+ * @file init.c
  *
  * Game initialisation routines.
  *
  */
+#include "lib/framework/frame.h"
 
-#include <physfs.h>
 #include <string.h>
 
-#include "lib/framework/frame.h"
 #include "lib/framework/frameresource.h"
 #include "lib/framework/input.h"
+#include "lib/framework/file.h"
+#include "lib/framework/physfs_ext.h"
 #include "lib/framework/strres.h"
 #include "lib/ivis_common/piemode.h"
 #include "lib/ivis_common/piestate.h"
@@ -38,13 +39,15 @@
 #include "lib/ivis_common/ivi.h"
 #include "lib/netplay/netplay.h"
 #include "lib/script/script.h"
+#include "lib/sound/audio_id.h"
 #include "lib/sound/cdaudio.h"
 #include "lib/sound/mixer.h"
+
+#include "init.h"
 
 #include "advvis.h"
 #include "astar.h"
 #include "atmos.h"
-#include "lib/sound/audio_id.h"
 #include "cluster.h"
 #include "cmddroid.h"
 #include "component.h"
@@ -64,7 +67,6 @@
 #include "game.h"
 #include "gateway.h"
 #include "hci.h"
-#include "init.h"
 #include "intdisplay.h"
 #include "keymap.h"
 #include "levels.h"
@@ -412,8 +414,6 @@ BOOL systemInitialise(void)
 
 	buildMapList();
 
-	//loadLevels(DIR_CAMPAIGN);
-
 	// Initialize render engine
 	war_SetFog(FALSE);
 	if (!pie_Initialise()) {
@@ -435,11 +435,6 @@ BOOL systemInitialise(void)
 
 	if (war_GetPlayAudioCDs()) {
 		cdAudio_Open(UserMusicPath);
-	}
-
-	if (!bDisableLobby && !multiInitialise()) // ajl. Init net stuff
-	{
-		return FALSE;
 	}
 
 	if (!dataInitLoadFuncs()) // Pass all the data loading functions to the framework library
@@ -491,7 +486,7 @@ void systemShutdown(void)
 	// free up all the load functions (all the data should already have been freed)
 	resReleaseAll();
 
-	if (!bDisableLobby && !multiShutdown()) // ajl. init net stuff
+	if (!multiShutdown()) // ajl. init net stuff
 	{
 		return;
 	}
@@ -615,7 +610,7 @@ BOOL frontendInitialise(const char *ResourceFile)
 	}
 #endif
 
-	FrontImages = (IMAGEFILE*)resGetData("IMG", "frend.img");
+	FrontImages = (IMAGEFILE*)resGetData("IMG", "frontend.img");
    	/* Shift the interface initialisation here temporarily so that it
    		can pick up the stats after they have been loaded */
 	if (!intInitialise())
@@ -865,8 +860,6 @@ BOOL stageOneShutDown(void)
 	debug(LOG_TEXTURE, "=== stageOneShutDown ===");
 	pie_TexShutDown();
 	pie_TexInit(); // restart it
-
-	viewDataHeapShutDown();
 
 	initMiscVars();
 

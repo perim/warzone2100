@@ -17,8 +17,8 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * Power.c
+/**
+ * @file power.c
  *
  * Store PlayerPower and other power related stuff!
  *
@@ -49,9 +49,6 @@
 #define NORMAL_POWER_MOD    100
 #define HARD_POWER_MOD      90
 
-//arbitary high value - needs to allow all structures to be built at start of any game
-#define MAX_POWER	100000
-
 //flag used to check for power calculations to be done or not
 BOOL	powerCalculated;
 
@@ -74,8 +71,7 @@ BOOL allocPlayerPower(void)
 		asPower[player] = (PLAYER_POWER *) malloc(sizeof(PLAYER_POWER));
 		if (asPower[player] == NULL)
 		{
-			debug( LOG_ERROR, "Out of memory" );
-			abort();
+			ASSERT(FALSE, "Out of memory");
 			return FALSE;
 		}
 	}
@@ -123,25 +119,20 @@ void releasePlayerPower(void)
 /*check the current power - if enough return true, else return false */
 BOOL checkPower(UDWORD player, UDWORD quantity, BOOL playAudio)
 {
+	ASSERT(player < MAX_PLAYERS, "checkPower: Bad player");
+
 	//if not doing a check on the power - just return TRUE
 	if (!powerCalculated)
 	{
 		return TRUE;
 	}
 
+	ASSERT(asPower[player] != NULL, "asPower[player=%u] not allocated", player);
+
 	if (asPower[player]->currentPower >= quantity)
 	{
 		return TRUE;
 	}
-    //Not playing the power low message anymore - 6/1/99
-	/*else if (player == selectedPlayer)
-	{
-		if (playAudio && player == selectedPlayer)
-		{
-			audio_QueueTrack( ID_SOUND_POWER_LOW );
-			return FALSE;
-		}
-	}*/
 	return FALSE;
 }
 
@@ -150,11 +141,15 @@ BOOL checkPower(UDWORD player, UDWORD quantity, BOOL playAudio)
  false */
 BOOL usePower(UDWORD player, UDWORD quantity)
 {
+	ASSERT(player < MAX_PLAYERS, "usePower: Bad player");
+
 	//if not doing a check on the power - just return TRUE
 	if (!powerCalculated)
 	{
 		return TRUE;
 	}
+
+	ASSERT(asPower[player] != NULL, "asPower[player=%u] not allocated", player);
 
 	//check there is enough first
 	if (asPower[player]->currentPower >= quantity)
@@ -168,9 +163,6 @@ BOOL usePower(UDWORD player, UDWORD quantity)
 		{
 			return FALSE;
 		}
-
-        //Not playing the power low message anymore - 6/1/99
-		//audio_QueueTrack( ID_SOUND_POWER_LOW );
 	}
 	return FALSE;
 }
@@ -178,6 +170,9 @@ BOOL usePower(UDWORD player, UDWORD quantity)
 //return the power when a structure/droid is deliberately destroyed
 void addPower(UDWORD player, UDWORD quantity)
 {
+	ASSERT(player < MAX_PLAYERS, "addPower: Bad player (%u)", player);
+	ASSERT(asPower[player] != NULL, "asPower[player=%u] not allocated", player);
+
 	asPower[player]->currentPower += quantity;
 }
 
@@ -200,7 +195,7 @@ UDWORD updateExtractedPower(STRUCTURE	*psBuilding)
 {
 	RES_EXTRACTOR		*pResExtractor;
 	UDWORD				pointsToAdd, extractedPoints, timeDiff;
-    UBYTE               modifier;
+	UBYTE			modifier;
 
 	pResExtractor = (RES_EXTRACTOR *) psBuilding->pFunctionality;
 	extractedPoints = 0;
@@ -209,27 +204,26 @@ UDWORD updateExtractedPower(STRUCTURE	*psBuilding)
 	//and has got some power to extract
 	if (pResExtractor->active && pResExtractor->power)
 	{
-        timeDiff = gameTime - pResExtractor->timeLastUpdated;
-        //add modifier according to difficulty level
-        if (getDifficultyLevel() == DL_EASY)
-        {
-            modifier = EASY_POWER_MOD;
-        }
-        else if (getDifficultyLevel() == DL_HARD)
-        {
-            modifier = HARD_POWER_MOD;
-        }
-        else
-        {
-            modifier = NORMAL_POWER_MOD;
-        }
-        //include modifier as a %
+		timeDiff = gameTime - pResExtractor->timeLastUpdated;
+		// Add modifier according to difficulty level
+		if (getDifficultyLevel() == DL_EASY)
+		{
+			modifier = EASY_POWER_MOD;
+		}
+		else if (getDifficultyLevel() == DL_HARD)
+		{
+			modifier = HARD_POWER_MOD;
+		}
+		else
+		{
+			modifier = NORMAL_POWER_MOD;
+		}
+		// include modifier as a %
 		pointsToAdd = (modifier * EXTRACT_POINTS * timeDiff) / (GAME_TICKS_PER_SEC * 100);
 		if (pointsToAdd)
 		{
-            //lose a lot on rounding this way
+			// Lose a lot on rounding this way
 			pResExtractor->timeLastUpdated = gameTime;
-            //pResExtractor->timeLastUpdated = gameTime - (timeDiff - GAME_TICKS_PER_SEC);
 			if (pResExtractor->power > pointsToAdd)
 			{
 				extractedPoints += pointsToAdd;
@@ -243,7 +237,7 @@ UDWORD updateExtractedPower(STRUCTURE	*psBuilding)
 
 			if (pResExtractor->power == 0)
 			{
-                //if not having unlimited power, put the 2 lines below back in
+				// If not having unlimited power, put the 2 lines below back in
 				//set the extractor to be inactive
 				//pResExtractor->active = FALSE;
 				//break the link between the power gen and the res extractor
@@ -261,6 +255,7 @@ UDWORD updateExtractedPower(STRUCTURE	*psBuilding)
 //returns the relevant list based on OffWorld or OnWorld
 STRUCTURE* powerStructList(UBYTE player)
 {
+	ASSERT(player < MAX_PLAYERS, "powerStructList: Bad player");
 	if (offWorldKeepLists)
 	{
 		return (mission.apsStructLists[player]);
@@ -276,16 +271,8 @@ void updatePlayerPower(UDWORD player)
 {
 	STRUCTURE		*psStruct;//, *psList;
 
-	/*if (offWorldKeepLists)
-	{
-		psList = mission.apsStructLists[player];
-	}
-	else
-	{
-		psList = apsStructLists[player];
-	}*/
+	ASSERT(player < MAX_PLAYERS, "updatePlayerPower: Bad player");
 
-	//for (psStruct = psList; psStruct != NULL; psStruct = psStruct->psNext)
 	for (psStruct = powerStructList((UBYTE)player); psStruct != NULL; psStruct =
 		psStruct->psNext)
 	{
@@ -295,12 +282,14 @@ void updatePlayerPower(UDWORD player)
 			updateCurrentPower((POWER_GEN *)psStruct->pFunctionality, player);
 		}
 	}
-    //check that the psLastPowered hasn't died
-    if (asPower[player]->psLastPowered && asPower[player]->psLastPowered->died)
-    {
-        asPower[player]->psLastPowered = NULL;
-    }
 
+	ASSERT(asPower[player] != NULL, "asPower[player=%u] not allocated", player);
+
+	// Check that the psLastPowered hasn't died
+	if (asPower[player]->psLastPowered && asPower[player]->psLastPowered->died)
+	{
+		asPower[player]->psLastPowered = NULL;
+	}
 }
 
 /* Updates the current power based on the extracted power and a Power Generator*/
@@ -308,10 +297,10 @@ void updateCurrentPower(POWER_GEN *psPowerGen, UDWORD player)
 {
 	UDWORD		power, i, extractedPower;
 
+	ASSERT(player < MAX_PLAYERS, "updateCurrentPower: Bad player");
+
 	//each power gen can cope with its associated resource extractors
 	extractedPower = 0;
-	//for (i=0; i < (NUM_POWER_MODULES + 1); i++)
-	//each Power Gen can cope with 4 extractors now - 9/6/98 AB
 	for (i=0; i < NUM_POWER_MODULES; i++)
 	{
 		if (psPowerGen->apResExtractors[i])
@@ -328,6 +317,8 @@ void updateCurrentPower(POWER_GEN *psPowerGen, UDWORD player)
 		}
 	}
 
+	ASSERT(asPower[player] != NULL, "asPower[player=%u] not allocated", player);
+
 	asPower[player]->extractedPower += extractedPower ;
 	power = (asPower[player]->extractedPower * psPowerGen->multiplier) / 100;
 	if (power)
@@ -340,16 +331,26 @@ void updateCurrentPower(POWER_GEN *psPowerGen, UDWORD player)
 // only used in multiplayer games.
 void setPower(UDWORD player, UDWORD avail)
 {
-	asPower[player]->currentPower = avail;
+	ASSERT(player < MAX_PLAYERS, "setPower: Bad player (%u)", player);
+	ASSERT(asPower[player] != NULL, "asPower[player=%u] not allocated", player);
 
+	asPower[player]->currentPower = avail;
 }
 
+UDWORD getPower(UDWORD player)
+{
+	ASSERT(player < MAX_PLAYERS, "setPower: Bad player (%u)", player);
+	ASSERT(asPower[player] != NULL, "asPower[player=%u] not allocated", player);
 
+	return asPower[player]->currentPower;
+}
 
 /*sets the initial value for the power*/
 void setPlayerPower(UDWORD power, UDWORD player)
 {
-	//asPower[player]->initialPower = power;
+	ASSERT(player < MAX_PLAYERS, "setPlayerPower: Bad player (%u)", player);
+	ASSERT(asPower[player] != NULL, "asPower[player=%u] not allocated", player);
+
 	asPower[player]->currentPower = power;
 }
 
@@ -360,9 +361,7 @@ void newGameInitPower(void)
 
 	for (inc=0; inc < MAX_PLAYERS; inc++)
 	{
-		//setPlayerPower(400, inc);
-        //add as opposed to set
-        addPower(inc, 400);
+		addPower(inc, 400);
 	}
 }
 
@@ -375,28 +374,28 @@ BOOL accruePower(BASE_OBJECT *psObject)
 	SDWORD					powerDiff;
 	UDWORD					count;
 	BOOL					bPowerUsed = FALSE;
-    STRUCTURE               *psStructure;
-    DROID                   *psDroid, *psTarget;
+	STRUCTURE			*psStructure;
+	DROID				*psDroid, *psTarget;
 
-    switch(psObject->type)
-    {
-    case OBJ_STRUCTURE:
-        psStructure = (STRUCTURE *)psObject;
-	    //see if it needs power
-	    switch(psStructure->pStructureType->type)
-    	{
-	    case REF_FACTORY:
-	    case REF_CYBORG_FACTORY:
-    	case REF_VTOL_FACTORY:
-	    	psFactory = (FACTORY *)psStructure->pFunctionality;
-		    //check the factory is not on hold
-            if (psFactory->timeStartHold)
-            {
-                break;
-            }
-		    //check the factory is active
-		    if (psFactory->psSubject)
-		    {
+	switch(psObject->type)
+	{
+	case OBJ_STRUCTURE:
+		psStructure = (STRUCTURE *)psObject;
+		// See if it needs power
+		switch(psStructure->pStructureType->type)
+		{
+		case REF_FACTORY:
+		case REF_CYBORG_FACTORY:
+		case REF_VTOL_FACTORY:
+			psFactory = (FACTORY *)psStructure->pFunctionality;
+			// Check the factory is not on hold
+			if (psFactory->timeStartHold)
+			{
+				break;
+			}
+			// Check the factory is active
+			if (psFactory->psSubject)
+			{
 			    //check needs power
 			    powerDiff = ((DROID_TEMPLATE *)psFactory->psSubject)->powerPoints -
 				    psFactory->powerAccrued;
@@ -589,6 +588,9 @@ BOOL accruePower(BASE_OBJECT *psObject)
 //informs the power array that a object has been destroyed
 void powerDestroyObject(BASE_OBJECT *psObject)
 {
+	ASSERT(psObject != NULL, "invalid object");
+	ASSERT(asPower[psObject->player] != NULL, "asPower[player=%u] not allocated", psObject->player);
+
 	//check that this wasn't the last object that received the power
 	if (asPower[psObject->player]->psLastPowered == psObject)
 	{
@@ -599,7 +601,8 @@ void powerDestroyObject(BASE_OBJECT *psObject)
 /*checks if the Object to be powered next - returns TRUE if power*/
 BOOL getLastPowered(BASE_OBJECT *psObject)
 {
-	ASSERT( psObject != NULL, "getLastPowered - invalid object" );
+	ASSERT(psObject != NULL, "invalid object");
+	ASSERT(asPower[psObject->player] != NULL, "asPower[player=%u] not allocated", psObject->player);
 
 	if (asPower[psObject->player]->psLastPowered == NULL)
 	{
@@ -617,6 +620,11 @@ BOOL getLastPowered(BASE_OBJECT *psObject)
 /*inform the players power struct that the last object to receive power has changed*/
 void updateLastPowered(BASE_OBJECT *psObject, UBYTE player)
 {
+	ASSERT(player < MAX_PLAYERS, "updateLastPowered: Bad player (%u)", (unsigned int)player);
+	ASSERT(asPower[player] != NULL, "asPower[player=%u] not allocated", (unsigned int)player);
+	ASSERT(psObject == NULL || psObject->died == 0 || psObject->died == NOT_CURRENT_LIST,
+	       "updateLastPowered: Null or dead object");
+
 	asPower[player]->psLastPowered = psObject;
 }
 
@@ -687,8 +695,7 @@ BOOL droidUsesPower(DROID *psDroid)
 {
     BOOL    bUsesPower = FALSE;
 
-	ASSERT( psDroid != NULL,
-		"unitUsesPower: Invalid unit pointer" );
+	ASSERT(psDroid != NULL,	"droidUsesPower: Invalid unit pointer" );
 
     switch(psDroid->droidType)
     {
@@ -711,6 +718,9 @@ void powerCheck(BOOL bBeforePowerUsed, UBYTE player)
 {
     static  BASE_OBJECT     *psLastPowered = NULL;
     static  BOOL            bPowerBefore = FALSE;
+
+	ASSERT(player < MAX_PLAYERS, "powerCheck: Bad player (%u)", (unsigned int)player);
+	ASSERT(asPower[player] != NULL, "asPower[player=%u] not allocated", (unsigned int)player);
 
     if (bBeforePowerUsed)
     {

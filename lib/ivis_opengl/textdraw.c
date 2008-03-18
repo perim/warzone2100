@@ -47,9 +47,9 @@ static float font_size = 12.f;
 // Contains the font color in the following order: red, green, blue, alpha
 static float font_colour[4] = {1.f, 1.f, 1.f, 1.f};
 
-static GLint GLC_Context = 0;
-static GLint GLC_Font_Regular = 0;
-static GLint GLC_Font_Bold = 0;
+static GLint _glcContext = 0;
+static GLint _glcFont_Regular = 0;
+static GLint _glcFont_Bold = 0;
 
 /***************************************************************************/
 /*
@@ -89,35 +89,31 @@ static inline void iV_printFontList()
 
 static void iV_initializeGLC()
 {
-	if (GLC_Context)
+	if (_glcContext)
 	{
 		return;
 	}
 
-	GLC_Context = glcGenContext();
-	if (!GLC_Context)
+	_glcContext = glcGenContext();
+	if (!_glcContext)
 	{
 		debug(LOG_ERROR, "glcGenContext() failed");
 	}
 	else
 	{
-		debug(LOG_NEVER, "glcGenContext() succesful: GLC_Context = %d", GLC_Context);
+		debug(LOG_NEVER, "glcGenContext() succesful: _glcContext = %d", _glcContext);
 	}
 
-	glcContext(GLC_Context);
+	glcContext(_glcContext);
 
 	glcDisable(GLC_AUTO_FONT);
-#ifdef WZ_OS_MAC
-#warning Mac version still uses GLC_TRIANGLE instead of GLC_TEXTURE
-        glcRenderStyle(GLC_TRIANGLE);
-#else
 	glcRenderStyle(GLC_TEXTURE);
-#endif
+	glcStringType(GLC_UTF8_QSO); // Set GLC's string type to UTF-8 FIXME should be UCS4 to avoid conversions
 
-	GLC_Font_Regular = glcGenFontID();
-	GLC_Font_Bold = glcGenFontID();
+	_glcFont_Regular = glcGenFontID();
+	_glcFont_Bold = glcGenFontID();
 
-	if (!glcNewFontFromFamily(GLC_Font_Regular, font_family))
+	if (!glcNewFontFromFamily(_glcFont_Regular, font_family))
 	{
 		debug(LOG_ERROR, "iV_initializeGLC: Failed to select font family %s as regular font", font_family);
 	}
@@ -126,7 +122,7 @@ static void iV_initializeGLC()
 		debug(LOG_NEVER, "iV_initializeGLC: Successfully selected font family %s as regular font", font_family);
 	}
 
-	if (!glcFontFace(GLC_Font_Regular, font_face_regular))
+	if (!glcFontFace(_glcFont_Regular, font_face_regular))
 	{
 		debug(LOG_WARNING, "iV_initializeGLC: Failed to select the \"%s\" font face of font family %s", font_face_regular, font_family);
 	}
@@ -135,7 +131,7 @@ static void iV_initializeGLC()
 		debug(LOG_NEVER, "iV_initializeGLC: Successfully selected the \"%s\" font face of font family %s", font_face_regular, font_family);
 	}
 
-	if (!glcNewFontFromFamily(GLC_Font_Bold, font_family))
+	if (!glcNewFontFromFamily(_glcFont_Bold, font_family))
 	{
 		debug(LOG_ERROR, "iV_initializeGLC: Failed to select font family %s for the bold font", font_family);
 	}
@@ -144,7 +140,7 @@ static void iV_initializeGLC()
 		debug(LOG_NEVER, "iV_initializeGLC: Successfully selected font family %s for the bold font", font_family);
 	}
 
-	if (!glcFontFace(GLC_Font_Bold, font_face_bold))
+	if (!glcFontFace(_glcFont_Bold, font_face_bold))
 	{
 		debug(LOG_WARNING, "iV_initializeGLC: Failed to select the \"%s\" font face of font family %s", font_face_bold, font_family);
 	}
@@ -154,9 +150,6 @@ static void iV_initializeGLC()
 	}
 
 	debug(LOG_NEVER, "finished initializing GLC");
-
-	// Set GLC's string type to UTF-8
-	glcStringType(GLC_UTF8_QSO);
 }
 
 void iV_TextInit()
@@ -171,21 +164,21 @@ void iV_TextInit()
 
 void iV_TextShutdown()
 {
-	if (GLC_Font_Regular)
+	if (_glcFont_Regular)
 	{
-		glcDeleteFont(GLC_Font_Regular);
+		glcDeleteFont(_glcFont_Regular);
 	}
 
-	if (GLC_Font_Bold)
+	if (_glcFont_Bold)
 	{
-		glcDeleteFont(GLC_Font_Bold);
+		glcDeleteFont(_glcFont_Bold);
 	}
 
 	glcContext(0);
 
-	if (GLC_Context)
+	if (_glcContext)
 	{
-		glcDeleteContext(GLC_Context);
+		glcDeleteContext(_glcContext);
 	}
 }
 
@@ -195,12 +188,12 @@ void iV_SetFont(enum iV_fonts FontID)
 	{
 		case font_regular:
 			iV_SetTextSize(12.f);
-			glcFont(GLC_Font_Regular);
+			glcFont(_glcFont_Regular);
 			break;
 
 		case font_large:
 			iV_SetTextSize(21.f);
-			glcFont(GLC_Font_Bold);
+			glcFont(_glcFont_Bold);
 			break;
 	}
 }
@@ -416,23 +409,19 @@ static int ExtentsStartY;
 static int ExtentsEndX;
 static int ExtentsEndY;
 
-// Draws formatted text with word wrap, long word splitting, embedded
-// newlines ( uses @ rather than \n ) and colour mode toggle ( # ) which enables
-// or disables font colouring.
-//
-//	UBYTE *String		The string to display.
-//	UDWORD x			x coord of top left of formatted text window.
-//	UDWORD y			y coord of top left of formatted text window.
-//	UDWORD Width		Width of formatted text window.
-//	UDWORD Justify		Justify mode, one of the following:
-//							FTEXT_LEFTJUSTIFY
-//							FTEXT_CENTRE
-//							FTEXT_RIGHTJUSTIFY
-//	BOOL DrawBack		If TRUE then draws transparent box behind text.
-//
-// Returns y coord of next text line.
-//
-UDWORD iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width, UDWORD Justify)
+/** Draws formatted text with word wrap, long word splitting, embedded newlines
+ *  (uses '@' rather than '\n') and colour toggle mode ('#') which enables or
+ *  disables font colouring.
+ *
+ *  @param String   the string to display.
+ *  @param x,y      X and Y coordinates of top left of formatted text.
+ *  @param width    the maximum width of the formatted text (beyond which line
+ *                  wrapping is used).
+ *  @param justify  The alignment style to use, which is one of the following:
+ *                  FTEXT_LEFTJUSTIFY, FTEXT_CENTRE or FTEXT_RIGHTJUSTIFY.
+ *  @return the Y coordinate for the next text line.
+ */
+int iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width, UDWORD Justify)
 {
 	int i;
 	int jx = x;		// Default to left justify.
@@ -603,13 +592,14 @@ void iV_DrawTextRotated(const char* string, float XPos, float YPos, float rotati
 {
 	GLint matrix_mode = 0;
 
-	pie_SetTexturePage(-2);
+	pie_SetTexturePage(0);
 
 	glGetIntegerv(GL_MATRIX_MODE, &matrix_mode);
 	glMatrixMode(GL_TEXTURE);
 	glPushMatrix();
 	glLoadIdentity();
-	glMatrixMode(matrix_mode);
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
 
 	if (rotation != 0.f)
 	{
@@ -627,6 +617,7 @@ void iV_DrawTextRotated(const char* string, float XPos, float YPos, float rotati
 	glcRenderString(string);
 	glFrontFace(GL_CCW);
 
+	glPopMatrix();
 	glMatrixMode(GL_TEXTURE);
 	glPopMatrix();
 	glMatrixMode(matrix_mode);
@@ -662,7 +653,7 @@ void iV_DrawTextRotatedF(float x, float y, float rotation, const char* format, .
 void iV_DrawTextF(float x, float y, const char* format, ...)
 {
 	va_list ap;
-	
+
 	va_start(ap, format);
 		iV_DrawTextFv(x, y, format, ap);
 	va_end(ap);

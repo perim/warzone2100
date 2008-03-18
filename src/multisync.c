@@ -164,8 +164,7 @@ static DROID* pickADroid(void)
 	// Don't send stuff that isn't our problem
 	while (!myResponsibility(player))
 	{
-		++player;
-		player = player % MAX_PLAYERS;
+		player = (player + 1) % MAX_PLAYERS;
 		droidnum = 0;
 
 		// Bail out if we've tried for each available player already
@@ -177,22 +176,20 @@ static DROID* pickADroid(void)
 	}
 
 	// Find the 'droidnum'th droid for the current player
-	pD = apsDroidLists[player];
-	for (i = 0; i < droidnum && pD != NULL; ++i)
-	{
-		pD = pD->psNext;
-	}
+	for (i = 0, pD = apsDroidLists[player];
+		i < droidnum && pD != NULL;
+		++i, pD = pD->psNext)
+	{}
 
 	// If we've already dealt with the last droid for this player
-	if (pD == NULL)								// droid is no longer there or list end.
+	if (pD == NULL) // droid is no longer there or list end.
 	{
 		// Deal with the next player now
-		++player;
-		player = player % MAX_PLAYERS;
+		player = (player + 1) % MAX_PLAYERS;
 		droidnum = 0;
 
 		// Bail out if we've tried for each available player already
-		if (maxtrys >= MAX_PLAYERS)
+		if (++maxtrys >= MAX_PLAYERS)
 		{
 			maxtrys = 0;
 			return NULL;
@@ -221,7 +218,7 @@ static BOOL sendDroidCheck(void)
 	{
 		lastSent= 0;
 	}
-	
+
 	// Only send a struct send if not done recently.
 	if (gameTime - lastSent < DROID_FREQUENCY)
 	{
@@ -236,28 +233,28 @@ static BOOL sendDroidCheck(void)
 
 		// Allocate space for the list of droids to send
 		ppD = alloca(sizeof(DROID *) * toSend);
-		
+
 		// Get the list of droids to sent
 		for (i = 0, count = 0; i < toSend; i++)
 		{
 			pD = pickADroid();
-			
+
 			// If the droid is valid add it to the list
 			if (pD)
 			{
 				ppD[count++] = pD;
 			}
 		}
-		
+
 		// Send the number of droids to expect
 		NETuint8_t(&count);
-		
+
 		// Add the droids to the packet
 		for (i = 0; i < count; i++)
 		{
 			packageCheck(ppD[i]);
 		}
-	
+
 	return NETend();
 }
 
@@ -267,19 +264,19 @@ static void packageCheck(DROID *pD)
 {
 	// Send the player to which the droid belongs
 	NETuint8_t(&pD->player);
-	
+
 	// Now the droid's ID
 	NETuint32_t(&pD->id);
-	
+
 	// The droid's order
 	NETint32_t(&pD->order);
-	
+
 	// The droids secondary order
 	NETuint32_t(&pD->secondaryOrder);
-	
+
 	// Droid's current HP
 	NETuint32_t(&pD->body);
-	
+
 	// Direction it is going in
 	NETfloat(&pD->direction);
 
@@ -309,7 +306,7 @@ static void packageCheck(DROID *pD)
 		NETuint16_t(&pD->orderX);
 		NETuint16_t(&pD->orderY);
 	}
-	
+
 	// Last send the droid's experience
 	NETfloat(&pD->experience);
 }
@@ -324,11 +321,11 @@ BOOL recvDroidCheck()
 
 	debug(LOG_MULTISYNC, "recvDroidCheck");
 
-	NETbeginDecode();
+	NETbeginDecode(NET_CHECK_DROID);
 
 		// Get the number of droids to expect
 		NETuint8_t(&count);
-		
+
 		for (i = 0; i < count; i++)
 		{
 			DROID		*pD;
@@ -343,22 +340,22 @@ BOOL recvDroidCheck()
 
 			// Fetch the player
 			NETuint8_t(&player);
-			
+
 			// Fetch the droid being checked
 			NETuint32_t(&ref);
-			
+
 			// The droid's order
 			NETenum(&order);
-			
+
 			// Secondary order
 			NETuint32_t(&secondaryOrder);
-			
+
 			// HP
 			NETuint32_t(&body);
-			
+
 			// Direction
 			NETfloat(&direction);
-			
+
 			// Fractional move
 			if (order == DORDER_ATTACK
 			 || order == DORDER_MOVE
@@ -374,7 +371,7 @@ BOOL recvDroidCheck()
 				NETuint16_t(&x);
 				NETuint16_t(&y);
 			}
-			
+
 			// Find out what the droid is aiming at
 			if (order == DORDER_ATTACK)
 			{
@@ -386,14 +383,14 @@ BOOL recvDroidCheck()
 				NETuint16_t(&tx);
 				NETuint16_t(&ty);
 			}
-			
+
 			// Get the droid's experience
 			NETfloat(&experience);
-			
+
 			/*
 			 * Post processing
 			 */
-			
+
 			// Find the droid in question
 			if (!IdToDroid(ref, player, &pD))
 			{
@@ -401,13 +398,13 @@ BOOL recvDroidCheck()
 				debug(LOG_MULTISYNC, "Received checking info for an unknown (as yet) droid. player:%d ref:%d", player, ref);
 				continue;
 			}
-			
+
 			// If there is a target find it
 			if (target)
 			{
 				psTarget = IdToPointer(target, ANYPLAYER);
 			}
-			
+
 			/*
 			 * Decide how best to sync the droid. If it is onscreen and visible
 			 * and the player who owns the droid has a low ping then do an
@@ -424,7 +421,7 @@ BOOL recvDroidCheck()
 			{
 				onscreen = FALSE;
 			}
-			
+
 			// Update the droid
 			if (onscreen || vtolDroid(pD))
 			{
@@ -434,7 +431,7 @@ BOOL recvDroidCheck()
 			{
 				offscreenUpdate(pD, body, x, y, fx, fy, direction, order);
 			}
-			
+
 			debug(LOG_MULTISYNC, "difference in position for droid %u; was (%d, %d); did %s update",
 			      (unsigned int)pD->id, (int)x - pD->pos.x, (int)y - pD->pos.y,
 			      onscreen ? "onscreen" : "offscreen");
@@ -445,18 +442,18 @@ BOOL recvDroidCheck()
 			{
 				pD->lastSync = gameTime;
 			}
-			
+
 			// Update the higher level stuff
 			if (!vtolDroid(pD))
 			{
 				highLevelDroidUpdate(pD, x, y, secondaryOrder, order, psTarget, experience);
 			}
-			
+
 			// ...and repeat!
 		}
-	
+
 	NETend();
-	
+
 	return TRUE;
 }
 
@@ -693,12 +690,12 @@ static BOOL sendStructureCheck(void)
 	{
 		lastSent = 0;
 	}
-	
+
 	if ((gameTime - lastSent) < STRUCT_FREQUENCY)	// Only send a struct send if not done recently
 	{
 		return TRUE;
 	}
-	
+
 	lastSent = gameTime;
 
 
@@ -709,16 +706,16 @@ static BOOL sendStructureCheck(void)
 		NETbeginEncode(NET_CHECK_STRUCT, NET_ALL_PLAYERS);
 			NETuint8_t(&pS->player);
 			NETuint32_t(&pS->id);
-			NETuint16_t(&pS->body);
+			NETuint32_t(&pS->body);
 			NETuint32_t(&pS->pStructureType->ref);
 			NETuint16_t(&pS->pos.x);
 			NETuint16_t(&pS->pos.y);
 			NETuint16_t(&pS->pos.z);
 			NETfloat(&pS->direction);
-			
+
 			switch (pS->pStructureType->type)
 			{
-				
+
 				case REF_RESEARCH:
 					capacity = ((RESEARCH_FACILITY *) pS->pFunctionality)->capacity;
 					NETuint8_t(&capacity);
@@ -737,7 +734,7 @@ static BOOL sendStructureCheck(void)
 
 		NETend();
 	}
-	
+
 	return TRUE;
 }
 
@@ -749,12 +746,12 @@ BOOL recvStructureCheck()
 	BOOL			hasCapacity = TRUE;
 	int				i, j;
 	float			direction;
-	uint8_t			player, ourCapacity, actualCapacity;
+	uint8_t			player, ourCapacity;
 	uint16_t		body;
 	uint16_t		x, y, z;
 	uint32_t		ref, type;
-	
-	NETbeginDecode();
+
+	NETbeginDecode(NET_CHECK_STRUCT);
 		NETuint8_t(&player);
 		NETuint32_t(&ref);
 		NETuint16_t(&body);
@@ -763,7 +760,14 @@ BOOL recvStructureCheck()
 		NETuint16_t(&y);
 		NETuint16_t(&z);
 		NETfloat(&direction);
-		
+
+		if (player >= MAX_PLAYERS)
+		{
+			debug(LOG_ERROR, "Bad NET_CHECK_STRUCT received!");
+			NETend();
+			return FALSE;
+		}
+
 		// If the structure exists our job is easy
 		pS = IdToStruct(ref, player);
 		if (pS)
@@ -775,15 +779,15 @@ BOOL recvStructureCheck()
 		else
 		{
 			NETlogEntry("scheck:structure check failed, adding struct. val=type", 0, type - REF_STRUCTURE_START);
-	
+
 			for (i = 0; i < numStructureStats && asStructureStats[i].ref != type; i++);
 			psStats = &asStructureStats[i];
-	
+
 			// Check for similar buildings, to avoid overlaps
 			if (TILE_HAS_STRUCTURE(mapTile(map_coord(x), map_coord(y))))
 			{
 				NETlogEntry("scheck:Tile has structure val=player", 0, player);
-	
+
 				pS = getTileStructure(map_coord(x), map_coord(y));
 
 				// If correct type && player then complete & modify
@@ -793,13 +797,13 @@ BOOL recvStructureCheck()
 				{
 					pS->direction = direction;
 					pS->id = ref;
-					
+
 					if (pS->status != SS_BUILT)
 					{
 						pS->status = SS_BUILT;
 						buildingComplete(pS);
 					}
-					
+
 					NETlogEntry("scheck: fixed?", 0, player);
 				}
 				// Wall becoming a cornerwall
@@ -809,11 +813,11 @@ BOOL recvStructureCheck()
 					{
 						NETlogEntry("scheck: fixed wall->cornerwall", 0, 0);
 						removeStruct(pS, TRUE);
-	
+
 						powerCalc(FALSE);
 						pS = buildStructure((STRUCTURE_STATS * )psStats, x, y, player, TRUE);
 						powerCalc(TRUE);
-	
+
 						if (pS)
 						{
 							pS->id = ref;
@@ -835,13 +839,13 @@ BOOL recvStructureCheck()
 			else
 			{
 				NETlogEntry("scheck: didn't find structure at all, building it",0,0);
-	
+
 				powerCalc(FALSE);
 				pS = buildStructure((STRUCTURE_STATS *) psStats, x, y, player, TRUE);
 				powerCalc(TRUE);
 			}
 		}
-	
+
 		if (pS)
 		{
 			// Check its finished
@@ -852,7 +856,7 @@ BOOL recvStructureCheck()
 				pS->status = SS_BUILT;
 				buildingComplete(pS);
 			}
-			
+
 			// If the structure has a capacity
 			switch (pS->pStructureType->type)
 			{
@@ -873,17 +877,19 @@ BOOL recvStructureCheck()
 					hasCapacity = FALSE;
 					break;
 			}
-			
+
 			// So long as the struct has a capacity fetch it from the packet
 			if (hasCapacity)
 			{
+				uint8_t actualCapacity = 0;
+
 				NETuint8_t(&actualCapacity);
-				
+
 				// If our capacity is different upgrade ourself
 				for (; ourCapacity < actualCapacity; ourCapacity++)
 				{
 					buildStructure(&asStructureStats[j], pS->pos.x, pS->pos.y, pS->player, FALSE);
-					
+
 					// Check it is finished
 					if (pS && pS->status != SS_BUILT)
 					{
@@ -894,7 +900,7 @@ BOOL recvStructureCheck()
 				}
 			}
 		}
-	
+
 	NETend();
 	return TRUE;
 }
@@ -907,7 +913,7 @@ static BOOL sendPowerCheck()
 {
 	static UDWORD	lastsent = 0;
 	uint8_t			player = selectedPlayer;
-	uint32_t		power = asPower[player]->currentPower;
+	uint32_t		power = getPower(player);
 
 	if (lastsent > gameTime)
 	{
@@ -931,14 +937,26 @@ static BOOL sendPowerCheck()
 BOOL recvPowerCheck()
 {
 	uint8_t		player;
-	uint32_t	power;
+	uint32_t	power, power2;
 
-	NETbeginDecode();
+	NETbeginDecode(NET_CHECK_POWER);
 		NETuint8_t(&player);
 		NETuint32_t(&power);
 	NETend();
-	
-	setPower(player, power);
+
+	if (player >= MAX_PLAYERS)
+	{
+		debug(LOG_ERROR, "Bad NET_CHECK_POWER packet: player is %d", (int)player);
+		return FALSE;
+	}
+
+	power2 = getPower(player);
+	if (power != power2)
+	{
+		debug(LOG_NET, "NET_CHECK_POWER: Adjusting power for player %d from %u to %u",
+		      (int)player, power2, power);
+		setPower(player, power);
+	}
 	return TRUE;
 }
 
@@ -956,12 +974,12 @@ BOOL sendScoreCheck(void)
 	{
 		lastsent= 0;
 	}
-	
+
 	if (gameTime - lastsent < SCORE_FREQUENCY)
 	{
 		return TRUE;
 	}
-	
+
 	lastsent = gameTime;
 
 	// Update local score
@@ -972,13 +990,13 @@ BOOL sendScoreCheck(void)
 	stats.totalKills  += stats.killsToAdd;
 	stats.recentScore += stats.scoreToAdd;
 	stats.totalScore  += stats.scoreToAdd;
-	
+
 	// Zero them now added
 	stats.killsToAdd = stats.scoreToAdd = 0;
 
 	// Store local version
 	setMultiStats(player2dpid[selectedPlayer], stats, TRUE);
-	
+
 	// Send score to the ether
 	setMultiStats(player2dpid[selectedPlayer], stats, FALSE);
 
@@ -986,32 +1004,32 @@ BOOL sendScoreCheck(void)
 	if (titleMode != MULTIOPTION && titleMode != MULTILIMIT)
 	{
 		NETbeginEncode(NET_SCORESUBMIT, NET_ALL_PLAYERS);
-		
+
 		for (i = 0; i < MAX_PLAYERS; i++)
 		{
 			if (isHumanPlayer(i) && i != selectedPlayer)
 			{
 				stats = getMultiStats(i, TRUE);
-				
+
 				if (stats.killsToAdd || stats.scoreToAdd  )
 				{
 					NETuint8_t(&i);
-					
+
 					NETuint32_t(&stats.killsToAdd);
 					NETuint32_t(&stats.scoreToAdd);
-					
+
 					isData = TRUE;
 				}
 			}
 		}
-		
+
 		// If we added any data to the packet
 		if (isData)
 		{
 			// Terminate the message with ANYPLAYER
 			uint8_t player = ANYPLAYER;
 			NETuint8_t(&player);
-			
+
 			// Send the message
 			NETend();
 		}
@@ -1025,10 +1043,9 @@ BOOL sendScoreCheck(void)
 			setMultiStats(player2dpid[i], getMultiStats(i, FALSE), TRUE);
 		}
 	}
-	
+
 	return TRUE;
 }
-
 
 
 BOOL recvScoreSubmission()
@@ -1037,23 +1054,23 @@ BOOL recvScoreSubmission()
 	uint32_t	kills, score;
 	PLAYERSTATS	stats;
 
-	NETbeginDecode();
-	
+	NETbeginDecode(NET_SCORESUBMIT);
+
 	for (NETuint8_t(&player); player != ANYPLAYER; NETuint8_t(&player))
 	{
 		if (player == selectedPlayer)
 		{
 			NETuint32_t(&kills);
 			NETuint32_t(&score);
-			
+
 			stats = getMultiStats(player, TRUE);
 			stats.killsToAdd += kills;
 			stats.scoreToAdd += score;
-			
+
 			break;
 		}
 	}
-	
+
 	return TRUE;
 }
 
@@ -1092,12 +1109,12 @@ BOOL sendPing(void)
 	{
 		lastPing = 0;
 	}
-	
+
 	if (gameTime - lastPing < PING_FREQUENCY)
 	{
 		return TRUE;
 	}
-	
+
 	lastPing = gameTime;
 
 	// If host, also update the average ping stat for joiners
@@ -1107,7 +1124,7 @@ BOOL sendPing(void)
 		{
 			lastav = 0;
 		}
-		
+
 		if (gameTime - lastav > AV_PING_FREQUENCY)
 		{
 			NETsetGameFlags(2, averagePing());
@@ -1148,7 +1165,7 @@ BOOL sendPing(void)
 	{
 		PingSend[i] = gameTime2;
 	}
-	
+
 	return TRUE;
 }
 
@@ -1157,11 +1174,17 @@ BOOL recvPing()
 {
 	BOOL	isNew;
 	uint8_t	sender, us = selectedPlayer;
-	
-	NETbeginDecode();
+
+	NETbeginDecode(NET_PING);
 		NETuint8_t(&sender);
 		NETbool(&isNew);
 	NETend();
+
+	if (sender >= MAX_PLAYERS)
+	{
+		debug(LOG_ERROR, "Bad NET_PING packet, sender is %d", (int)sender);
+		return FALSE;
+	}
 
 	// If this is a new ping, respond to it
 	if (isNew)
@@ -1169,7 +1192,7 @@ BOOL recvPing()
 		NETbeginEncode(NET_PING, player2dpid[sender]);
 			// We are responding to a new ping
 			isNew = FALSE;
-			
+
 			NETuint8_t(&us);
 			NETbool(&isNew);
 		NETend();
@@ -1179,10 +1202,10 @@ BOOL recvPing()
 	{
 		// Work out how long it took them to respond
 		ingame.PingTimes[sender] = (gameTime2 - PingSend[sender]) / 2;
-		
+
 		// Note that we have received it
 		PingSend[sender] = 0;
 	}
-	
+
 	return TRUE;
 }

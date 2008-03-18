@@ -166,7 +166,7 @@ extern BOOL orderStateLoc(DROID *psDroid, DROID_ORDER order, UDWORD *pX, UDWORD 
 extern void orderDroidObj(DROID *psDroid, DROID_ORDER order, BASE_OBJECT *psObj);
 
 /* Get the state of a droid order with an object */
-extern BOOL orderStateObj(DROID *psDroid, DROID_ORDER order, BASE_OBJECT **ppsObj);
+extern BASE_OBJECT* orderStateObj(DROID *psDroid, DROID_ORDER order);
 
 /* Give a droid an order with a location and a stat */
 extern void orderDroidStatsLoc(DROID *psDroid, DROID_ORDER order,
@@ -227,6 +227,8 @@ extern void orderMoralCheck(UDWORD player);
 
 // do a moral check for a group
 extern void orderGroupMoralCheck(struct _droid_group *psGroup);
+
+extern const char* getDroidOrderName(DROID_ORDER order);
 
 extern DROID *FindATransporter(void);
 

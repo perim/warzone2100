@@ -17,7 +17,10 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/* WarCAM - Handles tracking/following of in game objects */
+/**
+ * @file warcam.c
+ * Handles tracking/following of in game objects.
+ */
 /* Alex McLean, Pumpkin Studios, EIDOS Interactive, 1998 */
 /*	23rd September, 1998 - This code is now so hideously complex
 	and unreadable that's it's inadvisable to attempt changing
@@ -25,19 +28,21 @@
 	get it working the way it used to, should anything get broken.
 	I really hope that no further changes are needed here...:-(
 	Alex M. */
-#include <stdio.h>
 #include "lib/framework/frame.h"
 #include "lib/framework/trig.h"
 
 #include "lib/ivis_opengl/piematrix.h"
 #include "lib/ivis_common/piedef.h" //ivis matrix code
-#include "objects.h"
+
+#include "lib/gamelib/gtime.h"
+
 #include "warcam.h"
+
+#include "objects.h"
 #include "display.h"
 #include "display3d.h"
 #include "hci.h"
 #include "console.h"
-#include "lib/gamelib/gtime.h"
 #include "effects.h"
 #include "map.h"
 #include "geometry.h"
@@ -53,6 +58,7 @@
 #include "raycast.h"
 #include "display3d.h"
 #include "selection.h"
+
 
 #define MIN_TRACK_HEIGHT 16
 
@@ -704,160 +710,114 @@ in the case of location and degrees of arc in the case of rotation.
 
 //-----------------------------------------------------------------------------------
 
+
 static void updateCameraAcceleration(UBYTE update)
 {
-float	separation;
-SDWORD	realPos;
-SDWORD	xConcern,yConcern,zConcern;
-SDWORD	xBehind,yBehind;
-BOOL	bFlying;
-DROID	*psDroid;
-UDWORD	multiAngle;
-PROPULSION_STATS	*psPropStats;
-//SDWORD	pitch;
-SDWORD	angle;
+	Vector3i concern = {
+		trackingCamera.target->pos.x,
+		trackingCamera.target->pos.z,
+		trackingCamera.target->pos.y
+	};
+	Vector2i behind = {0, 0}; /* Irrelevant for normal radar tracking */
+	BOOL bFlying = FALSE;
 
-	angle = abs(((player.r.x/182)%90));
-	angle = 90-angle;
-
-	bFlying = FALSE;
-	if(trackingCamera.target->type == OBJ_DROID)
-	{
-		psDroid = (DROID*)trackingCamera.target;
-		psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
-		if(psPropStats->propulsionType == LIFT)
-		{
-			bFlying = TRUE;
-		}
-	}
-	/*	This is where we check what it is we're tracking.
+	/*
+		This is where we check what it is we're tracking.
 		Were we to track a building or location - this is
-		where it'd be set up */
-
-	/*	If we're tracking a droid, then we nned to track slightly in front
+		where it'd be set up
+	*/
+	/*
+		If we're tracking a droid, then we need to track slightly in front
 		of it in order that the droid appears down the screen a bit. This means
 		that we need to find an offset point from it relative to it's present
 		direction
 	*/
-	if(trackingCamera.target->type == OBJ_DROID)
+	if (trackingCamera.target->type == OBJ_DROID)
 	{
-		/* Present direction is important */
-		if(getNumDroidsSelected()>2)
+		const int angle = 90 - abs((player.r.x/182) % 90);
+
+		const DROID *psDroid = (DROID*)trackingCamera.target;
+		const PROPULSION_STATS *psPropStats = &asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat];
+
+		if (psPropStats->propulsionType == LIFT)
 		{
-			if(trackingCamera.target->selected)
+			bFlying = TRUE;
+		}
+
+		/* Present direction is important */
+		if (getNumDroidsSelected() > 2)
+		{
+			unsigned int multiAngle;
+
+			if (trackingCamera.target->selected)
 			{
 				multiAngle = getAverageTrackAngle(TRUE);
+				getTrackingConcerns(&concern.x, &concern.y, &concern.z);
 			}
 			else
 			{
 				multiAngle = getGroupAverageTrackAngle( trackingCamera.target->group, TRUE );
+				getGroupTrackingConcerns(&concern.x, &concern.y, &concern.z, trackingCamera.target->group, TRUE);
 			}
-			xBehind = ( ( CAM_DEFAULT_Y_OFFSET * SIN( DEG(multiAngle) ) ) >> FP12_SHIFT );
-			yBehind = ( ( CAM_DEFAULT_X_OFFSET * COS( DEG(multiAngle) ) ) >> FP12_SHIFT );
+
+			behind.x = ( CAM_DEFAULT_Y_OFFSET * SIN( DEG(multiAngle) ) ) >> FP12_SHIFT;
+			behind.y = ( CAM_DEFAULT_X_OFFSET * COS( DEG(multiAngle) ) ) >> FP12_SHIFT;
 		}
 		else
 		{
-		 	xBehind = ( ( CAM_DEFAULT_Y_OFFSET * SIN( DEG( (int)trackingCamera.target->direction ) ) ) >> FP12_SHIFT );
-			yBehind = ( ( CAM_DEFAULT_X_OFFSET * COS( DEG( (int)trackingCamera.target->direction ) ) ) >> FP12_SHIFT );
+		 	behind.x = ( CAM_DEFAULT_Y_OFFSET * SIN( DEG( trackingCamera.target->direction ) ) ) >> FP12_SHIFT;
+			behind.x = ( CAM_DEFAULT_X_OFFSET * COS( DEG( trackingCamera.target->direction ) ) ) >> FP12_SHIFT;
 		}
-	}
-	else
-	{
-		/* Irrelevant for normal radar tracking */
-		xBehind = 0;
-		yBehind = 0;
+
+		concern.y += angle*5;
 	}
 
-	/*	Get these new coordinates */
-	if(getNumDroidsSelected()>2 && trackingCamera.target->type == OBJ_DROID)
-	{
-	 	xConcern = trackingCamera.target->pos.x;		  // nb - still NEED to be set
-		yConcern = trackingCamera.target->pos.z;
-		zConcern = trackingCamera.target->pos.y;
-		if(trackingCamera.target->selected)
-		{
-			getTrackingConcerns(&xConcern,&yConcern,&zConcern);
-		}
-		else
-		{
-			getGroupTrackingConcerns(&xConcern,&yConcern,&zConcern,trackingCamera.target->group,TRUE);
-		}
-//		getBestPitchToEdgeOfGrid(xConcern,zConcern,360-((getAverageTrackAngle(TRUE)+180)%360),&pitch);
-		yConcern+=angle*5;
-
-	}
-	else
-	{
-		xConcern = trackingCamera.target->pos.x;
-		yConcern = trackingCamera.target->pos.z;
-		zConcern = trackingCamera.target->pos.y;
-	}
-
-	if(trackingCamera.target->type == OBJ_DROID && getNumDroidsSelected()<=2)
-	{
-//		getBestPitchToEdgeOfGrid(trackingCamera.target->pos.x,trackingCamera.target->pos.z,
-//			360-((trackingCamera.target->direction+180)%360),&pitch);
-		yConcern+=angle*5;
-
-	}
-
-
-	if(update & X_UPDATE)
+	if (update & X_UPDATE)
 	{
 		/* Need to update acceleration along x axis */
-		realPos = xConcern - (CAM_X_SHIFT) - xBehind;
-		separation = (float)(realPos - trackingCamera.position.x);
-		if(!bFlying)
+		int realPos = concern.x - CAM_X_SHIFT - behind.x;
+		float separation = realPos - trackingCamera.position.x;
+
+		if (!bFlying)
 		{
-		 	trackingCamera.acceleration.x =
-				(ACCEL_CONSTANT*separation - VELOCITY_CONSTANT*(float)trackingCamera.velocity.x);
+		 	trackingCamera.acceleration.x = ACCEL_CONSTANT*separation - VELOCITY_CONSTANT*trackingCamera.velocity.x;
 		}
 		else
 		{
-			trackingCamera.acceleration.x =
-				((ACCEL_CONSTANT*separation*4) - (VELOCITY_CONSTANT*2*(float)trackingCamera.velocity.x));
-
+			trackingCamera.acceleration.x = ACCEL_CONSTANT*separation*4 - VELOCITY_CONSTANT*2*trackingCamera.velocity.x;
 		}
 	}
 
-	if(update & Y_UPDATE)
+	if (update & Y_UPDATE)
 	{
-//		flushConsoleMessages();
-//		CONPRINTF(ConsoleString,(ConsoleString,"Attempted height : %d",yConcern));
-
 		/* Need to update acceleration along y axis */
-		realPos = (yConcern);
-		separation = (float)(realPos - trackingCamera.position.y);
-		if(bFlying) separation = separation/2;
-//		CONPRINTF(ConsoleString,(ConsoleString,"Separation : %f",separation));
-//		CONPRINTF(ConsoleString,(ConsoleString,"Distance : %d",distance));
-		if(!bFlying)
+		int realPos = concern.y;
+		float separation = realPos - trackingCamera.position.y;
+
+		if (!bFlying)
 		{
-		 	trackingCamera.acceleration.y =
-				((ACCEL_CONSTANT)*separation - (VELOCITY_CONSTANT)*trackingCamera.velocity.y);
+		 	trackingCamera.acceleration.y = ACCEL_CONSTANT*separation - VELOCITY_CONSTANT*trackingCamera.velocity.y;
 		}
 		else
 		{
-			trackingCamera.acceleration.y =
-				(((ACCEL_CONSTANT)*separation*4) - ((VELOCITY_CONSTANT)*2*trackingCamera.velocity.y));
+			separation /= 2.0f;
+			trackingCamera.acceleration.y = ACCEL_CONSTANT*separation*4 - VELOCITY_CONSTANT*2*trackingCamera.velocity.y;
 		}
 	}
 
-	if(update & Z_UPDATE)
+	if (update & Z_UPDATE)
 	{
 		/* Need to update acceleration along z axis */
-		realPos = zConcern - (CAM_Z_SHIFT) - yBehind;
-		separation = (float)(realPos - trackingCamera.position.z);
-		if(!bFlying)
+		int realPos = concern.z - CAM_Z_SHIFT - behind.y;
+		float separation = realPos - trackingCamera.position.z;
+
+		if (!bFlying)
 		{
-			trackingCamera.acceleration.z =
-				(ACCEL_CONSTANT*separation - VELOCITY_CONSTANT*trackingCamera.velocity.z);
+			trackingCamera.acceleration.z = ACCEL_CONSTANT*separation - VELOCITY_CONSTANT*trackingCamera.velocity.z;
 		}
 		else
 		{
-			trackingCamera.acceleration.z =
-				((ACCEL_CONSTANT*separation*4) - (VELOCITY_CONSTANT*2*trackingCamera.velocity.z));
-
+			trackingCamera.acceleration.z = ACCEL_CONSTANT*separation*4 - VELOCITY_CONSTANT*2*trackingCamera.velocity.z;
 		}
 	}
 }
@@ -1350,10 +1310,10 @@ void	camToggleStatus( void )
 	{
 		/* Otherwise, switch it off */
 		setWarCamActive(FALSE);
-//		if(getDrivingStatus())
-//		{
-//			StopDriverMode();
-//		}
+		if(getDrivingStatus())
+		{
+			StopDriverMode();
+		}
 	}
 }
 

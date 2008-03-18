@@ -17,10 +17,11 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * HCI.c		(Human Computer Interface - thanks to Alex for the file name).
+/**
+ * @file hci.c
  *
  * Functions for the in game interface.
+ * (Human Computer Interface - thanks to Alex for the file name).
  *
  */
 
@@ -1137,7 +1138,7 @@ static void intGetMapSize(void)
 void intResetScreen(BOOL NoAnim)
 {
 //	// Ensure driver mode is turned off.
-//	StopDriverMode();
+	StopDriverMode();
 
 	if(getWidgetsStatus() == FALSE)
 	{
@@ -2275,13 +2276,9 @@ static void intRunStats(void)
 			{
 				//get the template build points
 				Power = calcTemplatePower((DROID_TEMPLATE *)apsTemplateList[statID - IDSTAT_START]);
-				/*if(Power * Quantity > asPower[selectedPlayer]->availablePower)
+				if (Power * Quantity > getPower(selectedPlayer))
 				{
-					Quantity = asPower[selectedPlayer]->availablePower / Power;
-				}*/
-				if(Power * Quantity > asPower[selectedPlayer]->currentPower)
-				{
-					Quantity = (UBYTE)(asPower[selectedPlayer]->currentPower / Power);
+					Quantity = (UBYTE)(getPower(selectedPlayer) / Power);
 				}
 			}
 		}
@@ -4116,7 +4113,7 @@ BOOL intAddOptions(void)
 	sButInit.id = IDOPT_DROID;
 	sButInit.x += OPT_GAP + OPT_BUTWIDTH;
 	sButInit.pText = _("Unit");
-	sButInit.pTip = "Place Unit on map";
+	sButInit.pTip = _("Place Unit on map");
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -4125,7 +4122,7 @@ BOOL intAddOptions(void)
 	sButInit.id = IDOPT_STRUCT;
 	sButInit.x += OPT_GAP + OPT_BUTWIDTH;
 	sButInit.pText = _("Struct");
-	sButInit.pTip = "Place Structures on map";
+	sButInit.pTip = _("Place Structures on map");
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -4134,7 +4131,7 @@ BOOL intAddOptions(void)
 	sButInit.id = IDOPT_FEATURE;
 	sButInit.x += OPT_GAP + OPT_BUTWIDTH;
 	sButInit.pText = _("Feat");
-	sButInit.pTip = "Place Features on map";
+	sButInit.pTip = _("Place Features on map");
 	if (!widgAddButton(psWScreen, &sButInit))
 	{
 		return FALSE;
@@ -6067,34 +6064,39 @@ static BOOL selectConstruction(BASE_OBJECT *psObj)
 /* Return the stats for a construction droid */
 static BASE_STATS *getConstructionStats(BASE_OBJECT *psObj)
 {
-	DROID	*psDroid;
+	DROID *psDroid = (DROID *)psObj;
 	BASE_STATS *Stats;
-	STRUCTURE *Structure;
-	UDWORD x,y;
+	BASE_OBJECT *Structure;
+	UDWORD x, y;
 
 	ASSERT( psObj != NULL && psObj->type == OBJ_DROID,
 		"getConstructionStats: invalid droid pointer" );
-	psDroid = (DROID *)psObj;
 
-	//if(droidType(psDroid) != DROID_CONSTRUCT) return NULL;
-    if (!(droidType(psDroid) == DROID_CONSTRUCT || droidType(psDroid) ==
-        DROID_CYBORG_CONSTRUCT))
-    {
-        return NULL;
-    }
+	if (!(droidType(psDroid) == DROID_CONSTRUCT ||
+		droidType(psDroid) == DROID_CYBORG_CONSTRUCT))
+	{
+		return NULL;
+	}
 
-	if(orderStateStatsLoc(psDroid, DORDER_BUILD,&Stats,&x,&y)) {	// Moving to build location?
+	if(orderStateStatsLoc(psDroid, DORDER_BUILD, &Stats, &x, &y)) // Moving to build location?
+	{
 		return Stats;
-	} else if( orderStateObj(psDroid, DORDER_BUILD,(BASE_OBJECT**)&Structure) &&
-				 psDroid->order == DORDER_BUILD ) { // Is building
+	}
+	else if ((Structure = orderStateObj(psDroid, DORDER_BUILD))
+	      && psDroid->order == DORDER_BUILD) // Is building
+	{
 		return psDroid->psTarStats;
-	} else if( orderStateObj(psDroid, DORDER_HELPBUILD,(BASE_OBJECT**)&Structure) &&
-		 (psDroid->order == DORDER_HELPBUILD || psDroid->order == DORDER_LINEBUILD)) { //Is helping
-		return (BASE_STATS*)Structure->pStructureType;
-    } else if (orderState(psDroid, DORDER_DEMOLISH)) {
-        return 	(BASE_STATS *)structGetDemolishStat();
-    }
-
+	}
+	else if ((Structure = orderStateObj(psDroid, DORDER_HELPBUILD))
+	 && (psDroid->order == DORDER_HELPBUILD
+	  || psDroid->order == DORDER_LINEBUILD)) // Is helping
+	{
+		return (BASE_STATS*)((STRUCTURE*)Structure)->pStructureType;
+	}
+	else if (orderState(psDroid, DORDER_DEMOLISH))
+	{
+		return (BASE_STATS *)structGetDemolishStat();
+	}
 
 	return NULL;
 }

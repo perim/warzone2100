@@ -17,8 +17,8 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * Stats.c
+/**
+ * @file stats.c
  *
  * Store common stats for weapons, components, brains, etc.
  *
@@ -36,21 +36,21 @@
 #include "lib/sound/audio_id.h"
 #include "projectile.h"
 #include "text.h"
+
 #define WEAPON_TIME		100
 
-
 /* The stores for the different stats */
-BODY_STATS			*asBodyStats;
-BRAIN_STATS			*asBrainStats;
+BODY_STATS		*asBodyStats;
+BRAIN_STATS		*asBrainStats;
 PROPULSION_STATS	*asPropulsionStats;
 SENSOR_STATS		*asSensorStats;
-ECM_STATS			*asECMStats;
+ECM_STATS		*asECMStats;
 REPAIR_STATS		*asRepairStats;
 WEAPON_STATS		*asWeaponStats;
 CONSTRUCT_STATS		*asConstructStats;
 PROPULSION_TYPES	*asPropulsionTypes;
-TERRAIN_TABLE		*asTerrainTable;
-SPECIAL_ABILITY		*asSpecialAbility;
+static TERRAIN_TABLE	*asTerrainTable;
+static SPECIAL_ABILITY	*asSpecialAbility;
 
 //used to hold the modifiers cross refd by weapon effect and propulsion type
 WEAPON_MODIFIER		asWeaponModifier[WE_NUMEFFECTS][NUM_PROP_TYPES];
@@ -58,7 +58,7 @@ WEAPON_MODIFIER		asWeaponModifier[WE_NUMEFFECTS][NUM_PROP_TYPES];
 //used to hold the current upgrade level per player per weapon subclass
 WEAPON_UPGRADE		asWeaponUpgrade[MAX_PLAYERS][NUM_WEAPON_SUBCLASS];
 SENSOR_UPGRADE		asSensorUpgrade[MAX_PLAYERS];
-ECM_UPGRADE			asECMUpgrade[MAX_PLAYERS];
+ECM_UPGRADE		asECMUpgrade[MAX_PLAYERS];
 REPAIR_UPGRADE		asRepairUpgrade[MAX_PLAYERS];
 CONSTRUCTOR_UPGRADE	asConstUpgrade[MAX_PLAYERS];
 BODY_UPGRADE		asBodyUpgrade[MAX_PLAYERS][BODY_TYPE];
@@ -72,22 +72,23 @@ UDWORD		numECMStats;
 UDWORD		numRepairStats;
 UDWORD		numWeaponStats;
 UDWORD		numConstructStats;
-UDWORD		numSpecialAbility;
+static UDWORD	numSpecialAbility;
 
 //the max values of the stats used in the design screen
-UDWORD      maxComponentWeight;
-UDWORD      maxBodyArmour;
-UDWORD      maxBodyPower;
-UDWORD      maxBodyPoints;
-UDWORD      maxSensorRange;
-UDWORD      maxSensorPower;
-UDWORD      maxECMPower;
-UDWORD      maxConstPoints;
-UDWORD      maxRepairPoints;
-UDWORD      maxWeaponRange;
-UDWORD      maxWeaponDamage;
-UDWORD      maxWeaponROF;
-UDWORD      maxPropulsionSpeed;
+static UDWORD	maxComponentWeight;
+static UDWORD	maxBodyArmour;
+static UDWORD	maxBodyPower;
+static UDWORD	maxBodyPoints;
+static UDWORD	maxSensorRange;
+static UDWORD	maxSensorPower;
+static UDWORD	maxECMPower;
+static UDWORD	maxECMRange;
+static UDWORD	maxConstPoints;
+static UDWORD	maxRepairPoints;
+static UDWORD	maxWeaponRange;
+static UDWORD	maxWeaponDamage;
+static UDWORD	maxWeaponROF;
+static UDWORD	maxPropulsionSpeed;
 
 //stores for each players component states - can be either UNAVAILABLE, FOUND or AVAILABLE
 UBYTE		*apCompLists[MAX_PLAYERS][COMP_NUMCOMPONENTS];
@@ -95,8 +96,8 @@ UBYTE		*apCompLists[MAX_PLAYERS][COMP_NUMCOMPONENTS];
 //store for each players Structure states
 UBYTE		*apStructTypeLists[MAX_PLAYERS];
 
-static BOOL compareYes(char *strToCompare, char *strOwner);
-static MOVEMENT_MODEL	getMovementModel(char *pMovement);
+static BOOL compareYes(const char *strToCompare, const char *strOwner);
+static MOVEMENT_MODEL	getMovementModel(const char *pMovement);
 
 //Access functions for the max values to be used in the Design Screen
 static void setMaxComponentWeight(UDWORD weight);
@@ -105,6 +106,7 @@ static void setMaxBodyPower(UDWORD power);
 static void setMaxBodyPoints(UDWORD points);
 static void setMaxSensorRange(UDWORD range);
 static void setMaxSensorPower(UDWORD power);
+static void setMaxECMRange(UDWORD power);
 static void setMaxECMPower(UDWORD power);
 static void setMaxConstPoints(UDWORD points);
 static void setMaxRepairPoints(UDWORD repair);
@@ -193,7 +195,7 @@ void statsInitVars(void)
 
 	// init the max values
 	maxComponentWeight = maxBodyArmour = maxBodyPower =
-        maxBodyPoints = maxSensorRange = maxSensorPower = maxECMPower =
+        maxBodyPoints = maxSensorRange = maxSensorPower = maxECMPower = maxECMRange =
         maxConstPoints = maxRepairPoints = maxWeaponRange = maxWeaponDamage =
         maxPropulsionSpeed = 0;
 }
@@ -202,20 +204,6 @@ void statsInitVars(void)
 /*Deallocate all the stats assigned from input data*/
 void statsDealloc(COMP_BASE_STATS* pStats, UDWORD listSize, UDWORD structureSize)
 {
-#if !defined (RESOURCE_NAMES) && !defined(STORE_RESOURCE_ID)
-
-	UDWORD				inc;
-	COMP_BASE_STATS		*pStatList = pStats;
-	UDWORD				address = (UDWORD)pStats;
-
-	for (inc=0; inc < listSize; inc++)
-	{
-		free(pStatList->pName);
-		address += structureSize;
-		pStatList = (COMP_BASE_STATS *) address;
-	}
-#endif
-
 	free(pStats);
 }
 
@@ -224,7 +212,6 @@ static BOOL allocateStatName(BASE_STATS* pStat, const char *Name)
 {
 	return (allocateName(&pStat->pName, Name));
 }
-
 
 
 /* body stats need the extra list removing */
@@ -236,11 +223,6 @@ static void deallocBodyStats(void)
 	for (inc = 0; inc < numBodyStats; inc++)
 	{
 		psStat = &asBodyStats[inc];
-
-#if !defined (RESOURCE_NAMES) && !defined (STORE_RESOURCE_ID)
-
-		free(psStat->pName);
-#endif
 		free(psStat->ppIMDList);
 	}
 	free(asBodyStats);
@@ -352,11 +334,16 @@ const char *getStatName(void * Stat)
 /*******************************************************************************
 *		Load stats functions
 *******************************************************************************/
+
+// Include the definitions of the database loading functions here (they need the
+// static functions from this file as well).
+#include "stats-db.c"
+
 /*Load the weapon stats from the file exported from Access*/
 BOOL loadWeaponStats(const char *pWeaponData, UDWORD bufferSize)
 {
 	const unsigned int NumWeapons = numCR(pWeaponData, bufferSize);
-	WEAPON_STATS	sStats, *psStats = &sStats, *psStartStats = &sStats;
+	WEAPON_STATS	sStats, * const psStats = &sStats;
 	UDWORD			i, rotate, maxElevation, surfaceToAir;
 	SDWORD			minElevation;
 	char			WeaponName[MAX_NAME_SIZE], GfxFile[MAX_NAME_SIZE];
@@ -693,18 +680,18 @@ BOOL loadWeaponStats(const char *pWeaponData, UDWORD bufferSize)
 				getStatName(psStats) );
 			return FALSE;
 		}
-        if (surfaceToAir == 0)
-        {
-            psStats->surfaceToAir = (UBYTE)SHOOT_ON_GROUND;
-        }
-        else if (surfaceToAir <= 50)
-        {
-            psStats->surfaceToAir = (UBYTE)SHOOT_IN_AIR;
-        }
-        else
-        {
-            psStats->surfaceToAir = (UBYTE)(SHOOT_ON_GROUND | SHOOT_IN_AIR);
-        }
+		if (surfaceToAir == 0)
+		{
+			psStats->surfaceToAir = (UBYTE)SHOOT_ON_GROUND;
+		}
+		else if (surfaceToAir <= 50)
+		{
+			psStats->surfaceToAir = (UBYTE)SHOOT_IN_AIR;
+		}
+		else
+		{
+			psStats->surfaceToAir = (UBYTE)(SHOOT_ON_GROUND | SHOOT_IN_AIR);
+		}
 
 		//set the attackRuns for VTOLs
 		if (numAttackRuns > UBYTE_MAX)
@@ -760,16 +747,15 @@ BOOL loadWeaponStats(const char *pWeaponData, UDWORD bufferSize)
 		//save the stats
 		statsSetWeapon(psStats, i);
 
-        //set the max stat values for the design screen
-        if (psStats->design)
-        {
-            setMaxWeaponRange(psStats->longRange);
-            setMaxWeaponDamage(psStats->damage);
-            setMaxWeaponROF(weaponROF(psStats, -1));
-            setMaxComponentWeight(psStats->weight);
-        }
+		// Set the max stat values for the design screen
+		if (psStats->design)
+		{
+			setMaxWeaponRange(psStats->longRange);
+			setMaxWeaponDamage(psStats->damage);
+			setMaxWeaponROF(weaponROF(psStats, -1));
+			setMaxComponentWeight(psStats->weight);
+		}
 
-		psStats = psStartStats;
 		//increment the pointer to the start of the next record
 		pWeaponData = strchr(pWeaponData,'\n') + 1;
 	}
@@ -780,7 +766,7 @@ BOOL loadWeaponStats(const char *pWeaponData, UDWORD bufferSize)
 /*Load the Body stats from the file exported from Access*/
 BOOL loadBodyStats(const char *pBodyData, UDWORD bufferSize)
 {
-	BODY_STATS sStats, *psStats = &sStats, *psStartStats = &sStats;
+	BODY_STATS sStats, * const psStats = &sStats;
 	const unsigned int NumBody = numCR(pBodyData, bufferSize);
 	unsigned int i, designable;
 	char BodyName[MAX_NAME_SIZE], size[MAX_NAME_SIZE],
@@ -889,7 +875,6 @@ BOOL loadBodyStats(const char *pBodyData, UDWORD bufferSize)
 			setMaxComponentWeight(psStats->weight);
 		}
 
-		psStats = psStartStats;
 		//increment the pointer to the start of the next record
 		pBodyData = strchr(pBodyData,'\n') + 1;
 	}
@@ -900,7 +885,7 @@ BOOL loadBodyStats(const char *pBodyData, UDWORD bufferSize)
 /*Load the Brain stats from the file exported from Access*/
 BOOL loadBrainStats(const char *pBrainData, UDWORD bufferSize)
 {
-	BRAIN_STATS sStats, *psStats = &sStats, *psStartStats = &sStats;
+	BRAIN_STATS sStats, * const psStats = &sStats;
 	const unsigned int NumBrain = numCR(pBrainData, bufferSize);
 	unsigned int i = 0, weapon = 0;
 	char		BrainName[MAX_NAME_SIZE], techLevel[MAX_NAME_SIZE],
@@ -978,7 +963,6 @@ BOOL loadBrainStats(const char *pBrainData, UDWORD bufferSize)
 		//save the stats
 		statsSetBrain(psStats, i);
 
-		psStats = psStartStats;
 		//increment the pointer to the start of the next record
 		pBrainData = strchr(pBrainData, '\n') + 1;
 	}
@@ -1033,7 +1017,7 @@ PROPULSION_TYPE getPropulsionType(const char *pType)
 BOOL loadPropulsionStats(const char *pPropulsionData, UDWORD bufferSize)
 {
 	const unsigned int NumPropulsion = numCR(pPropulsionData, bufferSize);
-	PROPULSION_STATS	sStats, *psStats = &sStats, *psStartStats = &sStats;
+	PROPULSION_STATS	sStats, * const psStats = &sStats;
 	unsigned int i = 0, designable;
 	char				PropulsionName[MAX_NAME_SIZE], imdName[MAX_NAME_SIZE],
 						techLevel[MAX_NAME_SIZE], type[MAX_NAME_SIZE];
@@ -1109,7 +1093,6 @@ BOOL loadPropulsionStats(const char *pPropulsionData, UDWORD bufferSize)
 			//setMaxComponentWeight(psStats->weight);
 		}
 
-		psStats = psStartStats;
 		//increment the pointer to the start of the next record
 		pPropulsionData = strchr(pPropulsionData,'\n') + 1;
 	}
@@ -1146,7 +1129,7 @@ BOOL loadPropulsionStats(const char *pPropulsionData, UDWORD bufferSize)
 BOOL loadSensorStats(const char *pSensorData, UDWORD bufferSize)
 {
 	const unsigned int NumSensor = numCR(pSensorData, bufferSize);
-	SENSOR_STATS sStats, *psStats = &sStats, *psStartStats = &sStats;
+	SENSOR_STATS sStats, * const psStats = &sStats;
 	unsigned int i = 0, designable;
 	char			SensorName[MAX_NAME_SIZE], location[MAX_NAME_SIZE],
 					GfxFile[MAX_NAME_SIZE],type[MAX_NAME_SIZE];
@@ -1274,7 +1257,6 @@ BOOL loadSensorStats(const char *pSensorData, UDWORD bufferSize)
             setMaxComponentWeight(psStats->weight);
         }
 
-		psStats = psStartStats;
 		//increment the pointer to the start of the next record
 		pSensorData = strchr(pSensorData,'\n') + 1;
 	}
@@ -1285,7 +1267,7 @@ BOOL loadSensorStats(const char *pSensorData, UDWORD bufferSize)
 BOOL loadECMStats(const char *pECMData, UDWORD bufferSize)
 {
 	const unsigned int NumECM = numCR(pECMData, bufferSize);
-	ECM_STATS	sStats, *psStats = &sStats, *psStartStats = &sStats;
+	ECM_STATS	sStats, * const psStats = &sStats;
 	unsigned int i = 0, designable;
 	char		ECMName[MAX_NAME_SIZE], location[MAX_NAME_SIZE],
 				GfxFile[MAX_NAME_SIZE];
@@ -1307,11 +1289,11 @@ BOOL loadECMStats(const char *pECMData, UDWORD bufferSize)
 		location[0] = '\0';
 		//read the data into the storage - the data is delimeted using comma's
 		sscanf(pECMData,"%[^','],%[^','],%d,%d,%d,%d,%d,%d,%[^','],%[^','],\
-			%[^','],%d,%d",
+			%[^','],%d,%d,%d",
 			(char*)&ECMName, (char*)&techLevel, &psStats->buildPower,&psStats->buildPoints,
 			&psStats->weight, &psStats->hitPoints, &psStats->systemPoints,
 			&psStats->body,	(char*)&GfxFile, (char*)&mountGfx, (char*)&location, &psStats->power,
-			&designable);
+			&psStats->range, &designable);
 
 		// set a default ECM range for now
 		psStats->range = TILE_UNITS * 8;
@@ -1380,14 +1362,14 @@ BOOL loadECMStats(const char *pECMData, UDWORD bufferSize)
 		//save the stats
 		statsSetECM(psStats, i);
 
-        //set the max stat values for the design screen
-        if (psStats->design)
-        {
-            setMaxECMPower(psStats->power);
-            setMaxComponentWeight(psStats->weight);
-        }
+		// Set the max stat values for the design screen
+		if (psStats->design)
+		{
+			setMaxECMPower(psStats->power);
+			setMaxECMRange(psStats->range);
+			setMaxComponentWeight(psStats->weight);
+		}
 
-		psStats = psStartStats;
 		//increment the pointer to the start of the next record
 		pECMData = strchr(pECMData,'\n') + 1;
 	}
@@ -1399,7 +1381,7 @@ BOOL loadECMStats(const char *pECMData, UDWORD bufferSize)
 BOOL loadRepairStats(const char *pRepairData, UDWORD bufferSize)
 {
 	const unsigned int NumRepair = numCR(pRepairData, bufferSize);
-	REPAIR_STATS sStats, *psStats = &sStats, *psStartStats = &sStats;
+	REPAIR_STATS sStats, * const psStats = &sStats;
 	unsigned int i = 0, designable;
 	char			RepairName[MAX_NAME_SIZE], techLevel[MAX_NAME_SIZE],
 					GfxFile[MAX_NAME_SIZE],	mountGfx[MAX_NAME_SIZE],
@@ -1512,7 +1494,6 @@ BOOL loadRepairStats(const char *pRepairData, UDWORD bufferSize)
             setMaxComponentWeight(psStats->weight);
         }
 
-		psStats = psStartStats;
 		//increment the pointer to the start of the next record
 		pRepairData = strchr(pRepairData,'\n') + 1;
 	}
@@ -1525,7 +1506,7 @@ BOOL loadRepairStats(const char *pRepairData, UDWORD bufferSize)
 BOOL loadConstructStats(const char *pConstructData, UDWORD bufferSize)
 {
 	const unsigned int NumConstruct = numCR(pConstructData, bufferSize);
-	CONSTRUCT_STATS sStats, *psStats = &sStats, *psStartStats = &sStats;
+	CONSTRUCT_STATS sStats, * const psStats = &sStats;
 	unsigned int i = 0, designable;
 	char			ConstructName[MAX_NAME_SIZE], GfxFile[MAX_NAME_SIZE];
 	char			mountGfx[MAX_NAME_SIZE], techLevel[MAX_NAME_SIZE];
@@ -1609,14 +1590,13 @@ BOOL loadConstructStats(const char *pConstructData, UDWORD bufferSize)
 		//save the stats
 		statsSetConstruct(psStats, i);
 
-        //set the max stat values for the design screen
-        if (psStats->design)
-        {
-            setMaxConstPoints(psStats->constructPoints);
-            setMaxComponentWeight(psStats->weight);
-        }
+		// Set the max stat values for the design screen
+		if (psStats->design)
+		{
+			setMaxConstPoints(psStats->constructPoints);
+			setMaxComponentWeight(psStats->weight);
+		}
 
-		psStats = psStartStats;
 		//increment the pointer to the start of the next record
 		pConstructData = strchr(pConstructData,'\n') + 1;
 	}
@@ -2564,7 +2544,7 @@ unsigned int componentType(const char* pType)
 }
 
 //function to compare a value with yes/no - if neither warns player!
-BOOL compareYes(char *strToCompare, char *strOwner)
+BOOL compareYes(const char* strToCompare, const char* strOwner)
 {
 	if (!strcmp(strToCompare, "YES"))
 	{
@@ -2589,13 +2569,6 @@ BOOL compareYes(char *strToCompare, char *strOwner)
 //used in Scripts
 SDWORD	getCompFromResName(UDWORD compType, const char *pName)
 {
-#ifdef RESOURCE_NAMES
-	if (!getResourceName(pName))
-	{
-		return -1;
-	}
-#endif
-
 	return getCompFromName(compType, pName);
 }
 
@@ -2679,27 +2652,12 @@ SDWORD getCompFromName(UDWORD compType, const char *pName)
 //converts the name read in from Access into the name which is used in the Stat lists
 BOOL getResourceName(const char *pName)
 {
-#ifdef RESOURCE_NAMES
-	UDWORD id;
-
-	//see if the name has a resource associated with it by trying to get the ID for the string
-	if (!strresGetIDNum(psStringRes, pName, &id))
-	{
-		debug( LOG_ERROR, "Unable to find string resource for %s", pName );
-		abort();
-		return FALSE;
-	}
-	//get the string from the id
-	strcpy(pName, strresGetString(psStringRes, id));
-#endif
-
 	return TRUE;
 }
 
 /*return the name to display for the interface - valid for OBJECTS and STATS*/
 const char* getName(const char *pNameID)
 {
-#ifdef STORE_RESOURCE_ID
 	UDWORD id;
 	char *pName;
 	static char Unknown[] = "Name Unknown";
@@ -2722,15 +2680,11 @@ const char* getName(const char *pNameID)
 	{
 		return Unknown;
 	}
-
-#else
-	return pNameID;
-#endif
 }
 
 
 /*sets the tech level for the stat passed in - returns TRUE if set OK*/
-BOOL setTechLevel(BASE_STATS *psStats, char *pLevel)
+BOOL setTechLevel(BASE_STATS *psStats, const char *pLevel)
 {
 	TECH_LEVEL		techLevel = MAX_TECH_LEVELS;
 
@@ -2770,19 +2724,20 @@ BOOL setTechLevel(BASE_STATS *psStats, char *pLevel)
 	}
 
 	//store tech level in the appropriate stat
-	if ((psStats->ref >= REF_BODY_START && psStats->ref <= (REF_WEAPON_START +
-		REF_RANGE)) || (psStats->ref>= REF_CONSTRUCT_START && psStats->ref <=
-		(REF_CONSTRUCT_START + REF_RANGE)))
+	if ((psStats->ref >= REF_BODY_START
+	  && psStats->ref <= (REF_WEAPON_START + REF_RANGE))
+	 || (psStats->ref >= REF_CONSTRUCT_START
+	  && psStats->ref <= (REF_CONSTRUCT_START + REF_RANGE)))
 	{
 		((COMP_BASE_STATS *)psStats)->techLevel = techLevel;
 	}
-	else if (psStats->ref >= REF_STRUCTURE_START && psStats->ref <= (
-		REF_STRUCTURE_START + REF_RANGE))
+	else if (psStats->ref >= REF_STRUCTURE_START
+	      && psStats->ref <= (REF_STRUCTURE_START + REF_RANGE))
 	{
 		((STRUCTURE_STATS *)psStats)->techLevel = techLevel;
 	}
-	else if (psStats->ref >= REF_RESEARCH_START && psStats->ref <= (
-		REF_RESEARCH_START + REF_RANGE))
+	else if (psStats->ref >= REF_RESEARCH_START
+	      && psStats->ref <= (REF_RESEARCH_START + REF_RANGE))
 	{
 		((RESEARCH *)psStats)->techLevel = techLevel;
 	}
@@ -2901,7 +2856,7 @@ WEAPON_SUBCLASS getWeaponSubClass(const char *pSubClass)
 }
 
 /*returns the movement model based on the string name passed in */
-MOVEMENT_MODEL	getMovementModel(char *pMovement)
+MOVEMENT_MODEL	getMovementModel(const char *pMovement)
 {
 	if (!strcmp(pMovement,"DIRECT"))
 	{
@@ -2972,23 +2927,6 @@ and stores the name. Eventually ALL names will be 'resourced' for translation
 */
 BOOL allocateName(char **ppStore, const char *pName)
 {
-#ifdef RESOURCE_NAMES
-
-	UDWORD id;
-
-	//see if the name has a resource associated with it by trying to get the ID for the string
-	if (!strresGetIDNum(psStringRes, pName, &id))
-	{
-		debug( LOG_ERROR, "Unable to find string resource for %s", pName );
-		abort();
-		return FALSE;
-	}
-
-	//get the string from the id
-	*ppStore = strresGetString(psStringRes, id);
-	return TRUE;
-
-#elif defined STORE_RESOURCE_ID
 	//checks the name has been loaded as a resource and gets the storage pointer
 	if (!strresGetIDString(psStringRes, pName, ppStore))
 	{
@@ -2997,19 +2935,6 @@ BOOL allocateName(char **ppStore, const char *pName)
 		return FALSE;
 	}
 	return TRUE;
-#else
-	//need to allocate space for the name
-	*ppStore = (char*)malloc((strlen(pName))+1);
-	if (ppStore == NULL)
-	{
-		debug( LOG_ERROR, "Name - Out of memory" );
-		abort();
-		return FALSE;
-	}
-	strcpy(*ppStore,pName);
-
-	return TRUE;
-#endif
 }
 
 
@@ -3087,6 +3012,12 @@ UDWORD	sensorRange(SENSOR_STATS *psStats, UBYTE player)
 UDWORD	ecmPower(ECM_STATS *psStats, UBYTE player)
 {
 	return (UWORD)(psStats->power + (psStats->power * asECMUpgrade[player].power)/100);
+}
+
+/*Access functions for the upgradeable stats of a ECM*/
+UDWORD	ecmRange(ECM_STATS *psStats, UBYTE player)
+{
+	return (UWORD)(psStats->range + (psStats->range * asECMUpgrade[player].range)/100);
 }
 
 /*Access functions for the upgradeable stats of a repair*/
@@ -3245,6 +3176,18 @@ void setMaxECMPower(UDWORD power)
 UDWORD getMaxECMPower(void)
 {
     return maxECMPower;
+}
+
+void setMaxECMRange(UDWORD power)
+{
+    if (power > maxECMRange)
+    {
+        maxECMPower = power;
+    }
+}
+UDWORD getMaxECMRange(void)
+{
+    return maxECMRange;
 }
 
 void setMaxConstPoints(UDWORD points)

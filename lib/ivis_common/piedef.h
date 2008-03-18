@@ -42,8 +42,6 @@
 /***************************************************************************/
 #define DEG_360	65536
 #define DEG_1	(DEG_360/360)
-#define DEG_2	(DEG_360/180)
-#define DEG_60	(DEG_360/6)
 #define DEG(X)	(DEG_1 * (X))
 
 //! PSX-style float emulation: 12 digit semi-floats stored in an int
@@ -52,11 +50,10 @@
 #define FP12_MULTIPLIER (1 << FP12_SHIFT)
 
 #define STRETCHED_Z_SHIFT		10 // stretchs z range for (1000 to 4000) to (8000 to 32000)
-#define MAX_Z				(32000.0f) // raised to 32000 from 6000 when stretched
+#define MAX_Z				(32000) // raised to 32000 from 6000 when stretched
 #define MIN_STRETCHED_Z			256
 #define LONG_WAY			(1<<15)
-#define LONG_TEST			(1<<14)
-#define INTERFACE_DEPTH		(MAX_Z - 1.0f)
+#define INTERFACE_DEPTH		(MAX_Z - 1)
 #define BUTTON_DEPTH		2000 // will be stretched to 16000
 
 #define OLD_TEXTURE_SIZE_FIX 256.0f
@@ -96,21 +93,9 @@ typedef struct
 	PIELIGHT light;
 	Vector3i screen; //! Screenspace tile coordinates
 } TERRAIN_VERTEX;
-typedef struct {float x, y, z, u, v; PIELIGHT light, specular;} TERRAIN_VERTEXF;
 
 typedef struct {SWORD x, y, w, h;} PIERECT;				/**< Screen rectangle. */
 typedef struct {SDWORD texPage; SWORD tu, tv, tw, th;} PIEIMAGE;	/**< An area of texture. */
-
-/** Render style for pie draw functions. */
-typedef struct {UDWORD pieFlag; PIELIGHT colour, specular; UBYTE light, trans, scale, height;} PIESTYLE;
-
-typedef struct {
-	unsigned int flags;
-	unsigned int nVrts;
-	TERRAIN_VERTEXF *pVrts;
-	iTexAnim *pTexAnim;
-} PIEPOLY;
-
 
 /***************************************************************************/
 /*
@@ -118,9 +103,10 @@ typedef struct {
  */
 /***************************************************************************/
 extern void pie_Draw3DShape(iIMDShape *shape, int frame, int team, PIELIGHT colour, PIELIGHT specular, int pieFlag, int pieData);
-extern void pie_DrawImage(PIEIMAGE *image, PIERECT *dest, PIESTYLE *style);
+extern void pie_DrawImage(PIEIMAGE *image, PIERECT *dest);
 
-void pie_DrawTerrainDone(int mapx, int mapy);
+void pie_TerrainInit(int sizex, int sizey);
+void pie_DrawTerrain(int mapx, int mapy);
 void pie_DrawTerrainTriangle(int index, const TERRAIN_VERTEX *aVrts);
 void pie_DrawWaterTriangle(const TERRAIN_VERTEX *aVrts);
 

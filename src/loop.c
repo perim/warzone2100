@@ -23,42 +23,43 @@
  * The main game loop
  *
  */
-
-#include <stdio.h>
-#include <string.h>
-
-/* loop position printf's */
 #include "lib/framework/frame.h"
 #include "lib/framework/input.h"
 #include "lib/framework/strres.h"
 
-#include "loop.h"
 #include "lib/ivis_common/rendmode.h"
 #include "lib/ivis_common/piestate.h" //ivis render code
 #include "lib/ivis_common/piemode.h"
 // FIXME Direct iVis implementation include!
 #include "lib/ivis_common/rendmode.h" //ivis render code
+#include "lib/ivis_opengl/screen.h"
+
+#include "lib/gamelib/gtime.h"
+#include "lib/gamelib/animobj.h"
+#include "lib/script/script.h"
+#include "lib/sound/audio.h"
+#include "lib/sound/cdaudio.h"
+#include "lib/sound/mixer.h"
+
+#include "loop.h"
+
 #include "objects.h"
 #include "display.h"
 #include "map.h"
 #include "hci.h"
-#include "lib/sound/audio.h"
 #include "ingameop.h"
-#include "lib/gamelib/gtime.h"
 #include "miscimd.h"
 #include "effects.h"
 #include "radar.h"
 #include "projectile.h"
 #include "console.h"
 #include "power.h"
-#include "lib/gamelib/animobj.h"
 #include "message.h"
 #include "bucket3d.h"
 #include "display3d.h"
 #include "warzoneconfig.h"
 
 #include "multiplay.h" //ajl
-#include "lib/script/script.h"
 #include "scripttabs.h"
 #include "levels.h"
 #include "visibility.h"
@@ -66,14 +67,11 @@
 #include "intelmap.h"
 #include "loadsave.h"
 #include "game.h"
-// FIXME Direct iVis implementation inlcude!
-#include "lib/ivis_opengl/screen.h"
 #include "multijoin.h"
 
 #include "intimage.h"
 #include "resource.h"
 #include "seqdisp.h"
-#include "lib/sound/cdaudio.h"
 #include "mission.h"
 #include "warcam.h"
 #include "lighting.h"
@@ -84,7 +82,6 @@
 #include "fpath.h"
 #include "scriptextern.h"
 #include "cluster.h"
-#include "lib/sound/mixer.h"
 #include "cmddroid.h"
 #include "keybind.h"
 #include "wrappers.h"
@@ -150,9 +147,8 @@ GAMECODE gameLoop(void)
 	UDWORD		i,widgval;
 	BOOL		quitting=FALSE;
 	INT_RETVAL	intRetVal;
-	int	        clearMode;
+	int	        clearMode = 0;
 
-	clearMode = CLEAR_FOG;
 	if (!war_GetFog())
 	{
 		PIELIGHT black;
@@ -182,7 +178,6 @@ GAMECODE gameLoop(void)
 	{
 		if (!scriptPaused())
 		{
-#ifdef SCRIPTS
 			/* Update the event system */
 			if (!bInTutorial)
 			{
@@ -192,7 +187,6 @@ GAMECODE gameLoop(void)
 			{
 				eventProcessTriggers(gameTime2/SCR_TICKRATE);
 			}
-#endif
 		}
 
 		/* Run the in game interface and see if it grabbed any mouse clicks */
@@ -563,7 +557,6 @@ GAMECODE gameLoop(void)
 
 	if (fogStatus & FOG_BACKGROUND)
 	{
-		clearMode = CLEAR_FOG;//screen clear to fog colour D3D
 		if (loopMissionState == LMS_SAVECONTINUE)
 		{
 			pie_SetFogStatus(FALSE);
@@ -624,7 +617,6 @@ GAMECODE gameLoop(void)
 	{
 		pie_SetFogStatus(FALSE);
 		pie_ScreenFlip(CLEAR_BLACK);//gameloopflip
-		pie_ScreenFlip(CLEAR_BLACK);//gameloopflip
 		/* Check for toggling display mode */
 		if ((keyDown(KEY_LALT) || keyDown(KEY_RALT)) && keyPressed(KEY_RETURN))
 		{
@@ -661,7 +653,7 @@ void videoLoop(void)
 		bQuitVideo = !seq_UpdateFullScreenVideo(NULL);
 	}
 
-	if ( (keyPressed(KEY_ESC) || bQuitVideo) && !seq_AnySeqLeft() )
+	if ( (keyPressed(KEY_ESC) || mouseReleased(MOUSE_LMB) || bQuitVideo) && !seq_AnySeqLeft() )
 	{
 		/* zero volume before video quit - restore later */
 		originalVolume = sound_GetUIVolume();
@@ -671,7 +663,7 @@ void videoLoop(void)
 
 	//toggling display mode disabled in video mode
 	// Check for quit
-	if (keyPressed(KEY_ESC))
+	if (keyPressed(KEY_ESC) || mouseReleased(MOUSE_LMB))
 	{
 		seq_StopFullScreenVideo();
 		bQuitVideo = FALSE;

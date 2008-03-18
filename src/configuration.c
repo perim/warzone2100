@@ -17,8 +17,9 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- *Config.c  saves your favourite options to the Registry.
+/**
+ * @file config.c
+ * Saves your favourite options to the Registry.
  *
  */
 #include <string.h>
@@ -132,6 +133,11 @@ BOOL loadConfig(void)
 	if (getWarzoneKeyNumeric("showFPS", &val))
 	{
 		showFPS = val;
+	}
+	else
+	{
+		showFPS = FALSE;
+		setWarzoneKeyNumeric("showFPS", FALSE);
 	}
 
 	// //////////////////////////
@@ -409,28 +415,6 @@ BOOL loadConfig(void)
 		setWarzoneKeyNumeric("base", game.base);
 	}
 
-	//limit
-	if(getWarzoneKeyNumeric("limit", &val))
-	{
-		game.limit=(UBYTE)val;
-	}
-	else
-	{
-		game.limit = NOLIMIT;
-		setWarzoneKeyNumeric("limit", game.limit);
-	}
-
-	//maxplay
-	if(getWarzoneKeyNumeric("maxPlay", &val))
-	{
-		game.maxPlayers =(UBYTE)val;
-	}
-	else
-	{
-		game.maxPlayers = 4;
-		setWarzoneKeyNumeric("maxPlay", game.maxPlayers);
-	}
-
 	//alliance
 	if(getWarzoneKeyNumeric("alliance", &val))
 	{
@@ -545,7 +529,7 @@ BOOL loadRenderMode(void)
 	{
 		bad_resolution = true;
 	}
-	
+
 	if (getWarzoneKeyNumeric("height", &val)
 	 && val > 0)
 	{
@@ -564,7 +548,7 @@ BOOL loadRenderMode(void)
 		war_SetWidth(640);
 		war_SetHeight(480);
 	}
-	
+
 	if (getWarzoneKeyNumeric("bpp", &val))
 	{
 		pie_SetVideoBufferDepth(val);
@@ -636,8 +620,6 @@ BOOL saveConfig(void)
 		setWarzoneKeyNumeric("type", game.type);				// game type
 		setWarzoneKeyNumeric("base", game.base);				// size of base
 		setWarzoneKeyNumeric("fog", game.fog);				// fog 'o war
-		setWarzoneKeyNumeric("limit", game.limit);			// limits
-		setWarzoneKeyNumeric("maxPlay", game.maxPlayers);		// max no of players
 		setWarzoneKeyNumeric("alliance", game.alliance);			// allow alliances
 		setWarzoneKeyString("forceName", sForceName);			// force
 		setWarzoneKeyString("playerName",(char*)sPlayer);		// player name

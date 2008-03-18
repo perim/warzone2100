@@ -22,22 +22,18 @@
  *
  * Load feature stats
  */
-
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-
 #include "lib/framework/frame.h"
 #include "lib/framework/frameresource.h"
 #include "lib/framework/strres.h"
 
+#include "lib/gamelib/gtime.h"
+#include "lib/sound/audio.h"
+#include "lib/sound/audio_id.h"
+
 #include "feature.h"
 #include "map.h"
 #include "hci.h"
-#include "lib/gamelib/gtime.h"
 #include "power.h"
-#include "lib/sound/audio.h"
-#include "lib/sound/audio_id.h"
 #include "objects.h"
 #include "display.h"
 #include "console.h"
@@ -50,7 +46,7 @@
 #include "effects.h"
 #include "geometry.h"
 #include "scores.h"
-
+#include "combat.h"
 #include "multiplay.h"
 #include "advvis.h"
 
@@ -228,16 +224,6 @@ BOOL loadFeatureStats(const char *pFeatureData, UDWORD bufferSize)
 /* Release the feature stats memory */
 void featureStatsShutDown(void)
 {
-#if !defined(RESOURCE_NAMES) && !defined(STORE_RESOURCE_ID)
-	FEATURE_STATS	*psFeature = asFeatureStats;
-	UDWORD			inc;
-
-	for(inc=0; inc < numFeatureStats; inc++, psFeature++)
-	{
-		free(psFeature->pName);
-	}
-#endif
-
 	if(numFeatureStats)
 	{
 		free(asFeatureStats);
@@ -254,44 +240,25 @@ void featureStatsShutDown(void)
  */
 float featureDamage(FEATURE *psFeature, UDWORD damage, UDWORD weaponClass, UDWORD weaponSubClass, HIT_SIDE impactSide)
 {
-	// Do at least one point of damage
-	unsigned int actualDamage = 1;
-	float		body = (float) psFeature->body;
-	float		originalBody = (float) psFeature->psStats->body;
+	float		relativeDamage;
 
-	ASSERT( psFeature != NULL,
-		"featureDamage: Invalid feature pointer" );
+	ASSERT(psFeature != NULL, "featureDamage: Invalid feature pointer");
 
-	debug( LOG_ATTACK, "featureDamage(%d): body %d armour %d damage: %d\n",
-		psFeature->id, psFeature->body, psFeature->armour[impactSide][weaponClass], damage);
+	debug(LOG_ATTACK, "featureDamage(%d): body %d armour %d damage: %d",
+	      psFeature->id, psFeature->body, psFeature->armour[impactSide][weaponClass], damage);
 
-	// EMP cannons do not work on Features
-	if (weaponSubClass == WSC_EMP)
-	{
-		return 0;
-	}
-
-	if (damage > psFeature->armour[impactSide][weaponClass])
-	{
-		// Damage has penetrated - reduce body points
-		actualDamage = damage - psFeature->armour[impactSide][weaponClass];
-		debug( LOG_ATTACK, "        penetrated: %d\n", actualDamage);
-	}
+	relativeDamage = objDamage((BASE_OBJECT *)psFeature, damage, psFeature->psStats->body, weaponClass, weaponSubClass, impactSide);
 
 	// If the shell did sufficient damage to destroy the feature
-	if (actualDamage >= psFeature->body)
+	if (relativeDamage < 0.0f)
 	{
 		destroyFeature(psFeature);
-		return body / originalBody * -1.0f;
+		return relativeDamage * -1.0f;
 	}
-
-	// Substract the dealt damage from the feature's remaining body points
-	psFeature->body -= actualDamage;
-
-	// Set last hit-time to <now>
-	psFeature->timeLastHit = gameTime;
-
-	return (float) actualDamage / originalBody;
+	else
+	{
+		return relativeDamage;
+	}
 }
 
 
@@ -373,7 +340,9 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,BOOL FromSave)
 	//psFeature->subType = psStats->subType;
 	psFeature->body = psStats->body;
 	psFeature->player = MAX_PLAYERS+1;	//set the player out of range to avoid targeting confusions
-
+	psFeature->sensorRange = 0;
+	psFeature->sensorPower = 0;
+	psFeature->ECMMod = 0;
 	psFeature->bTargetted = FALSE;
 	psFeature->timeLastHit = 0;
 

@@ -26,7 +26,6 @@
 #ifndef _map_h
 #define _map_h
 
-#include <stdio.h>
 #include "lib/framework/frame.h"
 #include "objects.h"
 
@@ -53,7 +52,7 @@ typedef enum _terrain_type
 #define	TERRAIN_TYPES	TER_MAX
 
 #define TALLOBJECT_YMAX		(200)
-#define TALLOBJECT_ADJUST	(200)
+#define TALLOBJECT_ADJUST	(300)
 
 /* Flags for whether texture tiles are flipped in X and Y or rotated */
 #define TILE_XFLIP		0x8000
@@ -130,7 +129,7 @@ typedef struct _maptile
 	UWORD			texture;		// Which graphics texture is on this tile
 	bool			bMaxed;
 	bool			activeSensor;	// selected player can see through fog of war here
-	UBYTE			level;
+	float			level;
 	BASE_OBJECT		*psObject;		// Any object sitting on the location (e.g. building)
 	PIELIGHT		colour;
 

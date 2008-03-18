@@ -21,17 +21,15 @@
 /* Alex McLean, Pumpkin Studios, EIDOS Interactive */
 
 #include "lib/framework/frame.h"
-#include <stdio.h>
-#include <stdlib.h>
 
-#include "lib/ivis_common/ivisdef.h" //ivis matrix code
+#include "lib/ivis_common/ivisdef.h"
 #include "lib/ivis_opengl/piematrix.h"
+#include "lib/gamelib/gtime.h"
 
+#include "geometry.h"
 #include "objectdef.h"
 #include "map.h"
 #include "display3d.h"
-#include "geometry.h"
-#include "lib/gamelib/gtime.h"
 #include "hci.h"
 #include "display.h"
 
@@ -44,12 +42,13 @@ static UBYTE sineHeightTable[SIZE_SINE_TABLE];
 
 void initBulletTable( void )
 {
-UDWORD	 i;
-UBYTE	height;
-	for (i=0; i<SIZE_SINE_TABLE; i++)
+	UDWORD i;
+	UBYTE height;
+
+	for (i = 0; i < SIZE_SINE_TABLE; i++)
 	{
-	height = (UBYTE) (AMPLITUDE_HEIGHT*sin(i*deg));
-	sineHeightTable[i] = height;
+		height = AMPLITUDE_HEIGHT * sin(i*deg);
+		sineHeightTable[i] = height;
 	}
 }
 

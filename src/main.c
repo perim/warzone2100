@@ -17,27 +17,52 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * main.c
+/**
+ * @file main.c
  *
+ * The main file that launches the game and starts up everything.
+ */
+
+/** @mainpage Warzone2100 Code Documentation
+ *
+ * @section intro_sec Introduction
+ *
+ * Welcome to the Warzone2100 Resurrection Project's code library! We are still only starting
+ * to document this code base, but it should already be useful for quickly browsing around the
+ * code and getting an idea of what exists and how things work.
+ *
+ * @section install_sec Where to begin
+ *
+ * @subsection step1 Step 1: Read the wiki documentation
+ *
+ * We have a great deal of documentation on our wiki page at http://wiki.wz2100.net/ which
+ * may help get you started. Please also take notice of our style guide!
+ *
+ * @subsection step2 Step 2: Skim main.c
+ *
+ * You may want to begin reading code with main.c, since this is where execution begins,
+ * and trace code paths from here.
+ *
+ * Have fun!
  */
 
 // Get platform defines before checking for them!
 #include "lib/framework/frame.h"
 
 #include <SDL.h>
-#include <physfs.h>
 
-/* For SHGetFolderPath */
-#ifdef WZ_OS_WIN
+#if defined(WZ_OS_WIN)
 // FIXME HACK Workaround DATADIR definition in objbase.h
 // This works since DATADIR is never used on Windows.
-# undef DATADIR
-# include <shlobj.h>
+#  undef DATADIR
+#  include <shlobj.h> /* For SHGetFolderPath */
+#elif defined(WZ_OS_UNIX)
+#  include <errno.h>
 #endif // WZ_OS_WIN
 
 #include "lib/framework/configfile.h"
 #include "lib/framework/input.h"
+#include "lib/framework/physfs_ext.h"
 #include "lib/framework/tagfile.h"
 
 #include "lib/gamelib/gtime.h"
@@ -49,6 +74,7 @@
 #include "lib/script/script.h"
 #include "lib/sound/audio.h"
 #include "lib/sound/cdaudio.h"
+#include "lib/sqlite3/physfs_vfs.h"
 #include "lib/widget/widget.h"
 
 #include "clparse.h"
@@ -70,16 +96,16 @@
 #include "wrappers.h"
 #include "version.h"
 
-#if defined(WZ_OS_UNIX)
-# include <unistd.h>
-# include <errno.h>
-#elif defined(WZ_OS_WIN)
-# include <windows.h>
+
+/* Always use fallbacks on Windows */
+#if defined(WZ_OS_WIN)
+#  undef DATADIR
 #endif
 
-#ifndef DATADIR
-# define DATADIR "/usr/share/warzone2100/"
+#if !defined(DATADIR)
+#  define DATADIR "data"
 #endif
+
 
 #if defined(WZ_OS_WIN)
 # define WZ_WRITEDIR "Warzone 2100 2.1"
@@ -90,6 +116,7 @@
 #else
 # define WZ_WRITEDIR ".warzone2100-2.1"
 #endif
+
 
 char datadir[PATH_MAX] = "\0"; // Global that src/clparse.c:ParseCommandLine can write to, so it can override the default datadir on runtime. Needs to be \0 on startup for ParseCommandLine to work!
 char configdir[PATH_MAX] = "\0"; // specifies custom USER directory.  Same rules apply as datadir above.
@@ -103,7 +130,6 @@ char * multiplay_mods[MAX_MODS] = { NULL };
 
 //flag to indicate when initialisation is complete
 BOOL	gameInitialised = FALSE;
-BOOL	bDisableLobby = FALSE;
 char	SaveGamePath[PATH_MAX];
 char	ScreenDumpPath[PATH_MAX];
 char	MultiForcesPath[PATH_MAX];
@@ -215,7 +241,7 @@ static bool getCurrentDir(char * const dest, size_t const size)
 		{
 			debug(LOG_ERROR, "getPlatformUserDir: getcwd failed: %s", strerror(errno));
 		}
-		
+
 		return false;
 	}
 #elif defined(WZ_OS_WIN)
@@ -235,13 +261,13 @@ static bool getCurrentDir(char * const dest, size_t const size)
 
 		// Free our chunk of memory FormatMessageA gave us
 		LocalFree(err_string);
-			
+
 		return false;
 	}
 	else if (len > size)
 	{
 		debug(LOG_ERROR, "getPlatformUserDir: The buffer to contain our current directory is too small (%u bytes and %d needed)", (unsigned int)size, len);
-		
+
 		return false;
 	}
 #else
@@ -831,27 +857,14 @@ int main(int argc, char *argv[])
 	initialize_PhysicsFS(argv[0]);
 
 	/*** Initialize translations ***/
-	setlocale(LC_MESSAGES, "");
-	setlocale(LC_NUMERIC, "C");		// set radix character to the period (".")
-#if defined(WZ_OS_WIN)
-	{
-		// Retrieve an absolute path to the locale directory
-		char localeDir[PATH_MAX];
-		strlcpy(localeDir, PHYSFS_getBaseDir(), sizeof(localeDir));
-		strlcat(localeDir, "\\" LOCALEDIR, sizeof(localeDir));
-
-		// Set locale directory and translation domain name
-		(void)bindtextdomain(PACKAGE, localeDir);
-	}
-#else
-	(void)bindtextdomain(PACKAGE, LOCALEDIR);
-#endif
-	(void)textdomain(PACKAGE);
+	initI18n();
 
 	// find early boot info
 	if ( !ParseCommandLineEarly(argc, (const char**)argv) ) {
 		return -1;
 	}
+
+	debug(LOG_WZ, "Using language: %s", getLanguage());
 
 	/* Initialize the write/config directory for PhysicsFS.
 	 * This needs to be done __after__ the early commandline parsing,
@@ -897,17 +910,17 @@ int main(int argc, char *argv[])
 	// Find out where to find the data
 	scanDataDirs();
 
+	// Register the PhysicsFS implementation of the SQLite VFS class with
+	// SQLite's VFS system as the default (non-zero=default, zero=default).
+	sqlite3_register_physfs_vfs(1);
+
 #ifdef DEBUG
 	/* Runtime unit testing */
 	NETtest();
 	tagTest();
 #endif
 
-	// find out if the lobby stuff has been disabled
-	if (!bDisableLobby && !lobbyInitialise()) // ajl. Init net stuff. Lobby can modify startup conditions like commandline.
-	{
-		return -1;
-	}
+	NETinit(TRUE);
 
 	if (!frameInitialise( "Warzone 2100", pie_GetVideoBufferWidth(), pie_GetVideoBufferHeight(), pie_GetVideoBufferDepth(), war_getFullscreen() ))
 	{

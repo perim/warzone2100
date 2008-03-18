@@ -17,26 +17,34 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
+#include "lib/framework/frame.h"
 
 /* Standard library headers */
 #include <physfs.h>
 #include <string.h>
 
 /* Warzone src and library headers */
-#include "lib/framework/frame.h"
 #include "lib/framework/strres.h"
 #include "lib/framework/frameint.h"
 #include "lib/framework/tagfile.h"
+#include "lib/framework/file.h"
+#include "lib/framework/physfs_ext.h"
+
+#include "lib/gamelib/gtime.h"
 #include "lib/ivis_common/ivisdef.h"
 #include "lib/ivis_common/rendmode.h"
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/piepalette.h"
+#include "lib/netplay/netplay.h"
 #include "lib/script/script.h"
-#include "lib/gamelib/gtime.h"
+#include "lib/sound/audio.h"
+#include "lib/sound/audio_id.h"
+
+#include "game.h"
+
 #include "map.h"
 #include "droid.h"
 #include "action.h"
-#include "game.h"
 #include "research.h"
 #include "power.h"
 #include "projectile.h"
@@ -51,7 +59,6 @@
 #include "init.h"
 #include "mission.h"
 #include "scores.h"
-#include "lib/sound/audio_id.h"
 #include "anim_id.h"
 #include "design.h"
 #include "lighting.h"
@@ -62,23 +69,22 @@
 #include "formationdef.h"
 #include "warzoneconfig.h"
 #include "multiplay.h"
-#include "lib/netplay/netplay.h"
 #include "frontend.h"
 #include "levels.h"
 #include "mission.h"
 #include "geometry.h"
-#include "lib/sound/audio.h"
 #include "gateway.h"
 #include "scripttabs.h"
 #include "scriptextern.h"
 #include "multistat.h"
 #include "wrappers.h"
 
+
 #define MAX_SAVE_NAME_SIZE_V19	40
 #define MAX_SAVE_NAME_SIZE	60
 
 #if (MAX_NAME_SIZE > MAX_SAVE_NAME_SIZE)
-#error warning the current MAX_NAME_SIZE is to big for the save game
+#  error warning the current MAX_NAME_SIZE is to big for the save game
 #endif
 
 #define NULL_ID UDWORD_MAX
@@ -439,7 +445,7 @@ static bool serializeMultiplayerGame(PHYSFS_file* fileHandle, const MULTIPLAYERG
 	 || !PHYSFS_writeUBE32(fileHandle, serializeMulti->power)
 	 || !PHYSFS_writeUBE8(fileHandle, serializeMulti->base)
 	 || !PHYSFS_writeUBE8(fileHandle, serializeMulti->alliance)
-	 || !PHYSFS_writeUBE8(fileHandle, serializeMulti->limit)
+	 || !PHYSFS_writeUBE8(fileHandle, 0)
 	 || !PHYSFS_writeUBE16(fileHandle, 0)	// dummy, was bytesPerSec
 	 || !PHYSFS_writeUBE8(fileHandle, 0)	// dummy, was packetsPerSec
 	 || !PHYSFS_writeUBE8(fileHandle, 0))	// dummy, was encryptKey
@@ -470,7 +476,7 @@ static bool deserializeMultiplayerGame(PHYSFS_file* fileHandle, MULTIPLAYERGAME*
 	 || !PHYSFS_readUBE32(fileHandle, &serializeMulti->power)
 	 || !PHYSFS_readUBE8(fileHandle, &serializeMulti->base)
 	 || !PHYSFS_readUBE8(fileHandle, &serializeMulti->alliance)
-	 || !PHYSFS_readUBE8(fileHandle, &serializeMulti->limit)
+	 || !PHYSFS_readUBE8(fileHandle, &dummy8)
 	 || !PHYSFS_readUBE16(fileHandle, &dummy16)	// dummy, was bytesPerSec
 	 || !PHYSFS_readUBE8(fileHandle, &dummy8)	// dummy, was packetsPerSec
 	 || !PHYSFS_readUBE8(fileHandle, &dummy8))	// dummy, was encryptKey
@@ -530,15 +536,17 @@ static bool serializePlayer(PHYSFS_file* fileHandle, const PLAYER* serializePlay
 	return (PHYSFS_writeUBE32(fileHandle, serializePlayer->dpid)
 	     && PHYSFS_write(fileHandle, serializePlayer->name, StringSize, 1) == 1
 	     && PHYSFS_writeUBE32(fileHandle, serializePlayer->bHost)
-	     && PHYSFS_writeUBE32(fileHandle, serializePlayer->bSpectator));
+	     && PHYSFS_writeUBE32(fileHandle, 0));
 }
 
 static bool deserializePlayer(PHYSFS_file* fileHandle, PLAYER* serializePlayer)
 {
+	uint32_t dummy;
+
 	return (PHYSFS_readUBE32(fileHandle, &serializePlayer->dpid)
 	     && PHYSFS_read(fileHandle, serializePlayer->name, StringSize, 1) == 1
 	     && PHYSFS_readUBE32(fileHandle, &serializePlayer->bHost)
-	     && PHYSFS_readUBE32(fileHandle, &serializePlayer->bSpectator));
+	     && PHYSFS_readUBE32(fileHandle, &dummy));
 }
 
 static bool serializeNetPlay(PHYSFS_file* fileHandle, const NETPLAY* serializeNetPlay)
@@ -551,7 +559,7 @@ static bool serializeNetPlay(PHYSFS_file* fileHandle, const NETPLAY* serializeNe
 			return false;
 	}
 
-	for (i = 0; i < MaxNumberOfPlayers; ++i)
+	for (i = 0; i < MAX_PLAYERS; ++i)
 	{
 		if (!serializePlayer(fileHandle, &serializeNetPlay->players[i]))
 			return false;
@@ -559,16 +567,17 @@ static bool serializeNetPlay(PHYSFS_file* fileHandle, const NETPLAY* serializeNe
 
 	return (PHYSFS_writeUBE32(fileHandle, serializeNetPlay->bComms)
 	     && PHYSFS_writeUBE32(fileHandle, serializeNetPlay->bHost)
-	     && PHYSFS_writeUBE32(fileHandle, serializeNetPlay->bLobbyLaunched)
-	     && PHYSFS_writeUBE32(fileHandle, serializeNetPlay->bSpectator)
-	     && PHYSFS_writeUBE32(fileHandle, serializeNetPlay->bCaptureInUse)
-	     && PHYSFS_writeUBE32(fileHandle, serializeNetPlay->bAllowCaptureRecord)
-	     && PHYSFS_writeUBE32(fileHandle, serializeNetPlay->bAllowCapturePlay));
+	     && PHYSFS_writeUBE32(fileHandle, 0)
+	     && PHYSFS_writeUBE32(fileHandle, 0)
+	     && PHYSFS_writeUBE32(fileHandle, 0)
+	     && PHYSFS_writeUBE32(fileHandle, 0)
+	     && PHYSFS_writeUBE32(fileHandle, 0));
 }
 
 static bool deserializeNetPlay(PHYSFS_file* fileHandle, NETPLAY* serializeNetPlay)
 {
 	unsigned int i;
+	uint32_t dummy;
 
 	for (i = 0; i < MaxGames; ++i)
 	{
@@ -576,7 +585,7 @@ static bool deserializeNetPlay(PHYSFS_file* fileHandle, NETPLAY* serializeNetPla
 			return false;
 	}
 
-	for (i = 0; i < MaxNumberOfPlayers; ++i)
+	for (i = 0; i < MAX_PLAYERS; ++i)
 	{
 		if (!deserializePlayer(fileHandle, &serializeNetPlay->players[i]))
 			return false;
@@ -584,11 +593,11 @@ static bool deserializeNetPlay(PHYSFS_file* fileHandle, NETPLAY* serializeNetPla
 
 	return (PHYSFS_readUBE32(fileHandle, &serializeNetPlay->bComms)
 	     && PHYSFS_readUBE32(fileHandle, &serializeNetPlay->bHost)
-	     && PHYSFS_readUBE32(fileHandle, &serializeNetPlay->bLobbyLaunched)
-	     && PHYSFS_readUBE32(fileHandle, &serializeNetPlay->bSpectator)
-	     && PHYSFS_readUBE32(fileHandle, &serializeNetPlay->bCaptureInUse)
-	     && PHYSFS_readUBE32(fileHandle, &serializeNetPlay->bAllowCaptureRecord)
-	     && PHYSFS_readUBE32(fileHandle, &serializeNetPlay->bAllowCapturePlay));
+	     && PHYSFS_readUBE32(fileHandle, &dummy)
+	     && PHYSFS_readUBE32(fileHandle, &dummy)
+	     && PHYSFS_readUBE32(fileHandle, &dummy)
+	     && PHYSFS_readUBE32(fileHandle, &dummy)
+	     && PHYSFS_readUBE32(fileHandle, &dummy));
 }
 
 #define GAME_SAVE_V7	\
@@ -2367,8 +2376,8 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		memset(asBodyUpgrade, 0, MAX_PLAYERS * sizeof(BODY_UPGRADE) * BODY_TYPE);
 		//JPS 25 feb
 	}
-	
-	
+
+
 	if (saveGameVersion >= VERSION_11)
 	{
 		//camera position
@@ -2736,11 +2745,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		}
 
 	// reload the objects that were in the mission list
-//except droids these are always loaded directly to the mission.apsDroidList
-/*
-	*apsFlagPosLists[MAX_PLAYERS];
-	asPower[MAX_PLAYERS];
-*/
 		LOADBARCALLBACK();	//		loadingScreenCallback();
 		//load in the features -do before the structures
 		aFileName[fileExten] = '\0';
@@ -2806,7 +2810,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			//load the data into mission.apsDroidLists
-			//ppsCurrentDroidLists = mission.apsDroidLists;
 			if (!loadSaveDroid(pFileData, fileSize, apsDroidLists))
 			{
 				debug( LOG_NEVER, "loadgame: Fail12\n" );
@@ -2890,25 +2893,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 			debug( LOG_NEVER, "loadgame: Fail7\n" );
 			return(FALSE);
 		}
-
-#ifdef JOHN
-		// load in the gateway map
-/*		aFileName[fileExten] = '\0';
-		strcat(aFileName, "gates.txt");
-		// Load in the chosen file data
-		pFileData = fileLoadBuffer;
-		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
-		{
-			DBPRINTF(("loadgame: Failed to load gates.txt\n"));
-			goto error;
-		}
-
-		if (!gwLoadGateways(pFileData, fileSize))
-		{
-			DBPRINTF(("loadgame: failed to parse gates.txt"));
-			return FALSE;
-		}*/
-#endif
 	}
 
 	//save game stuff added after map load
@@ -3001,7 +2985,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		}
 
 		//load the data into apsDroidLists
-		//ppsCurrentDroidLists = apsDroidLists;
 		if (!loadSaveDroid(pFileData, fileSize, apsDroidLists))
 		{
 			debug( LOG_NEVER, "loadgame: Fail12\n" );
@@ -3046,7 +3029,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 				pFileData = fileLoadBuffer;
 				if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize)) {
 					//load the data into mission.apsDroidLists
-					//ppsCurrentDroidLists = mission.apsDroidLists;
 					if (!loadSaveDroid(pFileData, fileSize, mission.apsDroidLists))
 					{
 						debug( LOG_NEVER, "loadgame: Fail12\n" );
@@ -3059,8 +3041,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 	}
 
 	LOADBARCALLBACK();	//	loadingScreenCallback();
-//21feb	if (saveGameOnMission && UserSaveGame)
-//21feb	{
 	if (saveGameVersion >= VERSION_23)
 	{
 		//load in the limbo droids
@@ -3071,7 +3051,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		if (loadFileToBufferNoError(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			//load the data into apsDroidLists
-			//ppsCurrentDroidLists = apsLimboDroids;
 			if (!loadSaveDroid(pFileData, fileSize, apsLimboDroids))
 			{
 				debug( LOG_NEVER, "loadgame: Fail12\n" );
@@ -3316,7 +3295,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 			//load in the command list file
 			aFileName[fileExten] = '\0';
 			strcat(aFileName, "firesupport.tag");
-			
+
 			if (!readFiresupportDesignators(aFileName))
 			{
 				debug( LOG_NEVER, "loadMissionExtras: readFiresupportDesignators(%s) failed\n", aFileName );
@@ -3443,19 +3422,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 			loadStructSetPointers();
 		}
 	}
-	//don't need to do this anymore - AB 22/04/98
-	//set up the power levels for each player if not
-	/*if (!keepObjects)
-	{
-		clearPlayerPower();
-		initPlayerPower();
-	}*/
-
-	//set all players to have some power at start - will be scripted!
-	//newGameInitPower();
-
-	//set these values to suitable for first map - will be scripted!
-	//setLandingZone(10,51,12,53);
 
 	//if user save game then reset the time - THIS SETS BOTH TIMERS - BEWARE IF YOU USE IT
 	if ((gameType == GTYPE_SAVE_START) ||
@@ -3607,7 +3573,6 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	aFileName[fileExtension] = '\0';
 	strcat(aFileName, "unit.bjo");
 	/*Write the current droid lists to the file*/
-	//ppsCurrentDroidLists = apsDroidLists;
 	if (!writeDroidFile(aFileName,apsDroidLists))
 	{
 		debug(LOG_ERROR, "saveGame: writeDroidFile(\"%s\") failed", aFileName);
@@ -3792,7 +3757,6 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	aFileName[fileExtension-1] = '\0';
 	strcat(aFileName, "/munit.bjo");
 	/*Write the swapped droid lists to the file*/
-	//ppsCurrentDroidLists = mission.apsDroidLists;
 	if (!writeDroidFile(aFileName, mission.apsDroidLists))
 	{
 		debug(LOG_ERROR, "saveGame: writeDroidFile(\"%s\") failed", aFileName);
@@ -3820,7 +3784,6 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	aFileName[fileExtension] = '\0';
 	strcat(aFileName, "limbo.bjo");
 	/*Write the swapped droid lists to the file*/
-	//ppsCurrentDroidLists = apsLimboDroids;
 	if (!writeDroidFile(aFileName, apsLimboDroids))
 	{
 		debug(LOG_ERROR, "saveGame: writeDroidFile(\"%s\") failed", aFileName);
@@ -4028,7 +3991,7 @@ static void endian_SaveGameV(SAVE_GAME* psSaveGame, UDWORD version)
 			endian_sdword(&psSaveGame->sNetPlay.games[i].desc.dwUser3);
 			endian_sdword(&psSaveGame->sNetPlay.games[i].desc.dwUser4);
 		}
-		for(i = 0; i < MaxNumberOfPlayers; i++)
+		for(i = 0; i < MAX_PLAYERS; i++)
 			endian_udword(&psSaveGame->sNetPlay.players[i].dpid);
 		endian_udword(&psSaveGame->sNetPlay.playercount);
 		endian_udword(&psSaveGame->sNetPlay.dpidPlayer);
@@ -5642,7 +5605,7 @@ static void SaveDroidMoveControl(SAVE_DROID * const psSaveDroid, DROID const * c
 	psSaveDroid->sMove.numPoints = psDroid->sMove.numPoints;
 	memcpy(&psSaveDroid->sMove.asPath, &psDroid->sMove.asPath, sizeof(psSaveDroid->sMove.asPath));
 
-	
+
 	// Little endian SDWORDs
 	psSaveDroid->sMove.DestinationX = PHYSFS_swapSLE32(psDroid->sMove.DestinationX);
 	psSaveDroid->sMove.DestinationY = PHYSFS_swapSLE32(psDroid->sMove.DestinationY);
@@ -5710,7 +5673,7 @@ static void LoadDroidMoveControl(DROID * const psDroid, SAVE_DROID const * const
 	psDroid->sMove.numPoints   = psSaveDroid->sMove.numPoints;
 	memcpy(&psDroid->sMove.asPath, &psSaveDroid->sMove.asPath, sizeof(psSaveDroid->sMove.asPath));
 
-	
+
 	// Little endian SDWORDs
 	psDroid->sMove.DestinationX = PHYSFS_swapSLE32(psSaveDroid->sMove.DestinationX);
 	psDroid->sMove.DestinationY = PHYSFS_swapSLE32(psSaveDroid->sMove.DestinationY);
@@ -5725,7 +5688,7 @@ static void LoadDroidMoveControl(DROID * const psDroid, SAVE_DROID const * const
 	psDroid->sMove.speed        = PHYSFS_swapSLE32(psSaveDroid->sMove.speed);
 	psDroid->sMove.moveDir      = PHYSFS_swapSLE32(psSaveDroid->sMove.moveDir);
 	psDroid->sMove.fz           = PHYSFS_swapSLE32(psSaveDroid->sMove.fz);
-	assert(worldOnMap(psDroid->sMove.fx, psDroid->sMove.fy));
+	ASSERT(droidOnMap(psDroid), "loaded droid standing or moving off the map");
 
 	// Little endian SWORDs
 	psDroid->sMove.boundX       = PHYSFS_swapSLE16(psSaveDroid->sMove.boundX);
@@ -6533,13 +6496,13 @@ BOOL loadSaveDroidV(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD v
 		{
 			for(i = 0;i < psSaveDroid->numWeaps;i++)
 			{
-				endian_uword(&psSaveDroid->sMove.iAttackRuns[i]);
+				endian_udword(&psSaveDroid->sMove.iAttackRuns[i]);
 			}
 			//endian_uword(&psSaveDroid->sMove.iGuardRadius);
 		}
 		else
 		{
-			endian_uword(&psSaveDroid->sMove.iAttackRuns[0]);
+			endian_udword(&psSaveDroid->sMove.iAttackRuns[0]);
 		}
 		for(i = 0; i < TEMP_DROID_MAXPROGS; i++) {
 			/* SAVE_WEAPON */
@@ -6675,24 +6638,24 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			psSaveDroid->orderX2		= psCurr->orderX2;
 			psSaveDroid->orderY2		= psCurr->orderY2;
 			psSaveDroid->timeLastHit	= psCurr->timeLastHit;
-			
+
 			psSaveDroid->targetID = NULL_ID;
 			if (psCurr->psTarget != NULL && psCurr->psTarget->died <= 1 && checkValidId(psCurr->psTarget->id))
 			{
 				psSaveDroid->targetID = psCurr->psTarget->id;
 			}
-			
+
 			psSaveDroid->secondaryOrder = psCurr->secondaryOrder;
 			psSaveDroid->action			= psCurr->action;
 			psSaveDroid->actionX		= psCurr->actionX;
 			psSaveDroid->actionY		= psCurr->actionY;
-			
+
 			psSaveDroid->actionTargetID = NULL_ID;
 			if (psCurr->psActionTarget[0] != NULL && psCurr->psActionTarget[0]->died <= 1 && checkValidId( psCurr->psActionTarget[0]->id))
 			{
 				psSaveDroid->actionTargetID = psCurr->psActionTarget[0]->id;
 			}
-			
+
 			psSaveDroid->actionStarted	= psCurr->actionStarted;
 			psSaveDroid->actionPoints	= psCurr->actionPoints;
 			psSaveDroid->actionHeight	= psCurr->powerAccrued;
@@ -6707,7 +6670,7 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			{
 				strcpy(psSaveDroid->tarStatName,"");
 			}
-			
+
 			psSaveDroid->baseStructID = NULL_ID;
 			if ((psCurr->psBaseStruct != NULL))
 			{
@@ -6718,7 +6681,7 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 					psSaveDroid->baseStructID = psCurr->psBaseStruct->id;
 				}
 			}
-			
+
 			psSaveDroid->group = psCurr->group;
 			psSaveDroid->selected = psCurr->selected;
 //20feb			psSaveDroid->cluster = psCurr->cluster;
@@ -9554,7 +9517,7 @@ BOOL loadTerrainTypeMap(const char *pFileData, UDWORD filesize)
 			return FALSE;
 
 		}
-		if (*pType > TER_MAX)
+		if (*pType > TERRAIN_TYPES)
 		{
 			debug( LOG_ERROR, "loadTerrainTypeMap: terrain type out of range" );
 			abort();
@@ -11472,14 +11435,14 @@ BOOL readFiresupportDesignators(char *pFileName)
 		return FALSE;
 	}
 	debug(LOG_MAP, "Reading tagged savegame %s with definition %s:", pFileName, FireSupport_tag_definition);
-	
+
 	tagReadString(0x01, 12, formatIdentifier);
 	if (strcmp(formatIdentifier, FireSupport_file_identifier) != 0)
 	{
 		debug(LOG_ERROR, "readFiresupportDesignators: Incompatble %s, 'FIRESUPPORT' expected", pFileName);
 		return FALSE;
 	}
-	
+
 	numPlayers = tagReadEnter(0x02);
 	for (player = 0; player < numPlayers; player++)
 	{
@@ -11491,7 +11454,7 @@ BOOL readFiresupportDesignators(char *pFileName)
 		tagReadNext();
 	}
 	tagReadLeave(0x02);
-	
+
 	tagClose();
 
 	return TRUE;
@@ -11511,7 +11474,7 @@ BOOL writeFiresupportDesignators(char *pFileName)
 		return FALSE;
 	}
 	debug(LOG_MAP, "Creating tagged savegame %s with definition %s:", pFileName, FireSupport_tag_definition);
-	
+
 	tagWriteString(0x01, FireSupport_file_identifier);
 	tagWriteEnter(0x02, MAX_PLAYERS);
 	for (player = 0; player < MAX_PLAYERS; player++)
@@ -11528,9 +11491,9 @@ BOOL writeFiresupportDesignators(char *pFileName)
 		tagWriteNext();
 	}
 	tagWriteLeave(0x02);
-	
+
 	tagClose();
-	
+
 	return TRUE;
 }
 
@@ -11623,26 +11586,6 @@ static void setMapScroll(void)
 // -----------------------------------------------------------------------------------------
 BOOL getSaveObjectName(char *pName)
 {
-#ifdef RESOURCE_NAMES
-
-	UDWORD		id;
-
-	//check not a user save game
-	if (IsScenario)
-	{
-		//see if the name has a resource associated with it by trying to get the ID for the string
-		if (!strresGetIDNum(psStringRes, pName, &id))
-		{
-			debug( LOG_ERROR, "Cannot find string resource %s", pName );
-			abort();
-			return FALSE;
-		}
-
-		//get the string from the id if one exists
-		strcpy(pName, strresGetString(psStringRes, id));
-	}
-#endif
-
 	return TRUE;
 }
 
@@ -11705,7 +11648,7 @@ static BOOL getNameFromComp(UDWORD compType, char *pDest, UDWORD compIndex)
 
 
 // draws the structures onto a completed map preview sprite.
-BOOL plotStructurePreview(iTexture *backDropSprite, UBYTE scale, UDWORD offX, UDWORD offY)
+BOOL plotStructurePreview(iV_Image *backDropSprite, UBYTE scale, UDWORD offX, UDWORD offY)
 {
 	SAVE_STRUCTURE				sSave;  // close eyes now.
 	SAVE_STRUCTURE				*psSaveStructure = &sSave; // assumes save_struct is larger than all previous ones...

@@ -16,8 +16,8 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * Nettypes.c
+/**
+ * @file nettypes.c
  *
  * Contains the 'new' Network API functions for sending and receiving both
  * low-level primitives and higher-level types.
@@ -33,6 +33,18 @@
 #include "netplay.h"
 #include "nettypes.h"
 
+static PACKETDIR NetDir;
+
+static void NETsetPacketDir(PACKETDIR dir)
+{
+	NetDir = dir;
+}
+
+PACKETDIR NETgetPacketDir()
+{
+	return NetDir;
+} 
+
 /*
  * Begin & End functions
  */
@@ -47,9 +59,10 @@ void NETbeginEncode(uint8_t type, uint8_t player)
 	memset(&NetMsg.body, '\0', MaxMsgSize);
 }
 
-void NETbeginDecode(void)
+void NETbeginDecode(uint8_t type)
 {
 	NETsetPacketDir(PACKET_DECODE);
+	assert(type == NetMsg.type);
 	NetMsg.size = 0;
 	NetMsg.status = TRUE;
 }
@@ -323,6 +336,13 @@ BOOL NETstring(char *str, uint16_t maxlen)
 	}
 	else if (NETgetPacketDir() == PACKET_DECODE)
 	{
+		// Truncate length if necessary
+		if (len > maxlen)
+		{
+			debug(LOG_ERROR, "NETstring: Decoding packet type %d from %d, buffer size %u truncated at %u", 
+			      NetMsg.type, NetMsg.source, len, maxlen);
+			len = maxlen;
+		}
 		memcpy(str, store, len);
 	}
 
@@ -331,6 +351,7 @@ BOOL NETstring(char *str, uint16_t maxlen)
 
 	return TRUE;
 }
+
 BOOL NETbin(char *str, uint16_t maxlen)
 {
 	/*
@@ -360,6 +381,13 @@ BOOL NETbin(char *str, uint16_t maxlen)
 	}
 	else if (NETgetPacketDir() == PACKET_DECODE)
 	{
+		// Truncate length if necessary
+		if (len > maxlen)
+		{
+			debug(LOG_ERROR, "NETbin: Decoding packet type %d from %d, buffer size %u truncated at %u", 
+			      NetMsg.type, NetMsg.source, len, maxlen);
+			len = maxlen;
+		}
 		memcpy(str, store, len);
 	}
 
@@ -368,6 +396,7 @@ BOOL NETbin(char *str, uint16_t maxlen)
 
 	return TRUE;
 }
+
 BOOL NETVector3uw(Vector3uw* vp)
 {
 	return (NETuint16_t(&vp->x)
@@ -392,7 +421,7 @@ static void NETcoder(PACKETDIR dir)
 	if (dir == PACKET_ENCODE)
 		NETbeginEncode(0, 0);
 	else
-		NETbeginDecode();
+		NETbeginDecode(0);
 	NETbool(&b);			assert(b == TRUE);
 	NETuint32_t(&u32);  assert(u32 == 32);
 	NETuint16_t(&u16);  assert(u16 == 16);

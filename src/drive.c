@@ -17,29 +17,30 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-//
-// Drive.c
-//
-// Routines for player driving units about the map.
-//
+/**
+ * @file drive.c
+ * Routines for player driving units about the map.
+ */
 
 #define DEFINE_DRIVE_INLINE
 
-#include <stdio.h>
 #include "lib/framework/frame.h"
 #include "lib/framework/strres.h"
 
 #include "lib/ivis_common/rendmode.h"
+
+#include "lib/gamelib/gtime.h"
+#include "lib/gamelib/animobj.h"
+#include "lib/sound/audio.h"
+
+#include "drive.h"
 #include "objects.h"
 #include "move.h"
 #include "visibility.h"
 #include "map.h"
 #include "fpath.h"
 #include "loop.h"
-#include "lib/gamelib/gtime.h"
-#include "lib/sound/audio.h"
 #include "geometry.h"
-#include "lib/gamelib/animobj.h"
 #include "anim_id.h"
 #include "formationdef.h"
 #include "formation.h"
@@ -59,7 +60,6 @@
 #include "intdisplay.h"
 #include "multiplay.h"
 #include "target.h"
-#include "drive.h"
 
 // all the bollox needed for script callbacks
 #include "lib/script/interp.h"				// needed to define types in scripttabs.h
@@ -128,7 +128,9 @@ void driveInitVars(BOOL Restart)
 		ControlMode = CONTROLMODE_DRIVE;
 		TargetFeatures = FALSE;
 
-	} else {
+	}
+	else
+	{
 		debug( LOG_NEVER, "driveInitVars: Driving\n" );
 		DrivingAudioTrack=-1;
 		psDrivenDroid = NULL;
@@ -214,11 +216,16 @@ BOOL StartDriverMode(DROID *psOldDroid)
 
 		setDrivingStatus(TRUE);
 
-		if(DriveInterfaceEnabled) {
+		if(DriveInterfaceEnabled)
+		{
 			debug( LOG_NEVER, "Interface enabled1 ! Disabling drive control\n" );
 			DriveControlEnabled = FALSE;
-		} else {
+			DirectControl = FALSE;
+		}
+		else
+		{
 			DriveControlEnabled = TRUE;
+			DirectControl = TRUE; // we are taking over the unit.
 		}
 
 		if(psLastDriven != psDrivenDroid) {
@@ -267,9 +274,10 @@ void StopDriverMode(void)
 {
 	DROID *psDroid;
 
-	if(psDrivenDroid != NULL) {
+	if(psDrivenDroid != NULL)
+	{
 		debug( LOG_NEVER, "Drive mode canceled\n" );
-
+		addConsoleMessage("Driver mode canceled.", LEFT_JUSTIFY);
 //		audio_StopObjTrack(psDrivenDroid,ID_SOUND_SMALL_DROID_RUN);
 
 		psDrivenDroid = NULL;
@@ -284,7 +292,9 @@ void StopDriverMode(void)
 	}
 
 	setDrivingStatus(FALSE);
+	driveInitVars(FALSE);	// reset everything again
 	DriveControlEnabled = FALSE;
+	DirectControl = FALSE;
 }
 
 
@@ -302,7 +312,7 @@ BOOL driveDroidKilled(DROID *psDroid)
 			psDrivenDroid = NULL;
 			DeSelectDroid(psDroid);
 
-			if(!StartDriverMode(psDroid)) 
+			if(!StartDriverMode(psDroid))
 			{
 				return FALSE;
 			}
@@ -598,6 +608,8 @@ void driveSetDroidMove(DROID *psDroid)
 void driveDisableControl(void)
 {
 	DriveControlEnabled = FALSE;
+	DirectControl = FALSE;
+	DriveInterfaceEnabled = TRUE;
 }
 
 
@@ -606,6 +618,8 @@ void driveDisableControl(void)
 void driveEnableControl(void)
 {
 	DriveControlEnabled = TRUE;
+	DirectControl = TRUE;
+	DriveInterfaceEnabled = FALSE;
 }
 
 
@@ -653,9 +667,12 @@ BOOL driveInterfaceEnabled(void)
 //
 void driveProcessAquireButton(void)
 {
-	if(mouseReleased(MOUSE_RMB) || keyPressed(KEY_S)) {
+	if(mouseReleased(MOUSE_RMB) || keyPressed(KEY_S))
+	{
 		BASE_OBJECT	*psObj;
 		psObj = targetAquireNearestObjView((BASE_OBJECT*)psDrivenDroid);
+//		driveMarkTarget();
+//		frameSetCursorFromRes(111); //IDC_ATTACK = 111 defined in display.c
 	}
 }
 
@@ -686,10 +703,10 @@ BOOL driveAllowControl(void)
 
 
 // Disable Tactical order mode.
-// 
+//
 void driveDisableTactical(void)
 {
-	if(driveModeActive() && TacticalActive) 
+	if(driveModeActive() && TacticalActive)
 	{
 		CancelTacticalScroll();
 		TacticalActive = FALSE;
@@ -725,3 +742,20 @@ void driveProcessRadarInput(int x,int y)
 	CalcRadarPosition(x,y,(UDWORD *)&PosX,(UDWORD *)&PosY);
 	orderSelectedLoc(selectedPlayer, PosX*TILE_UNITS,PosY*TILE_UNITS);
 }
+/*
+void driveMarkTarget(void)
+{
+
+		BASE_OBJECT *psObj = targetGetCurrent();
+		if(psObj != NULL)
+		{
+			if(driveAllowControl())
+			{
+//				MouseMovement(FALSE);
+				targetMarkCurrent();
+				SetMousePos(0,psObj->sDisplay.screenX,psObj->sDisplay.screenY);
+//				pie_DrawMouse(psObj->sDisplay.screenX,psObj->sDisplay.screenY);
+			}
+		}
+}
+*/

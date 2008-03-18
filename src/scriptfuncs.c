@@ -248,7 +248,7 @@ BOOL scrPlayerPower(void)
 		return FALSE;
 	}
 
-	scrFunctionResult.v.ival = asPower[player]->currentPower;
+	scrFunctionResult.v.ival = getPower(player);
 	if (!stackPushResult(VAL_INT, &scrFunctionResult))
 	{
 		return FALSE;
@@ -969,27 +969,23 @@ BOOL scrAddDroidToTransporter(void)
 		return FALSE;
 	}
 
-    if (psTransporter == NULL || psDroid == NULL)
-    {
-        //ignore!
-        ASSERT( FALSE, "scrAddUnitToTransporter: null unit passed" );
-        return TRUE;
-    }
+	if (psTransporter == NULL || psDroid == NULL)
+	{
+		ASSERT(FALSE, "scrAddUnitToTransporter: null unit passed");
+		return TRUE; // allow to continue
+	}
 
-	ASSERT( psTransporter != NULL,
-			"scrAddUnitToTransporter: invalid transporter pointer" );
-	ASSERT( psDroid != NULL,
-			"scrAddUnitToTransporter: invalid unit pointer" );
-	ASSERT( psTransporter->droidType == DROID_TRANSPORTER,
-			"scrAddUnitToTransporter: invalid transporter type" );
+	ASSERT(psTransporter != NULL, "scrAddUnitToTransporter: invalid transporter pointer");
+	ASSERT(psDroid != NULL, "scrAddUnitToTransporter: invalid unit pointer");
+	ASSERT(psTransporter->droidType == DROID_TRANSPORTER, "scrAddUnitToTransporter: invalid transporter type");
 
 	/* check for space */
 	if (checkTransporterSpace(psTransporter, psDroid))
 	{
 		if (droidRemove(psDroid, mission.apsDroidLists))
-        {
-		    grpJoin(psTransporter->psGroup, psDroid);
-        }
+		{
+			grpJoin(psTransporter->psGroup, psDroid);
+		}
 	}
 
 	return TRUE;
@@ -2626,8 +2622,7 @@ BOOL scrGetDroid(void)
 // Sets all the scroll params for the map
 BOOL scrSetScrollParams(void)
 {
-	SDWORD				minX, minY, maxX, maxY;
-    SDWORD              prevMinX, prevMinY, prevMaxX, prevMaxY;
+	SDWORD		minX, minY, maxX, maxY, prevMinX, prevMinY, prevMaxX, prevMaxY;
 
 	if (!stackPopParams(4, VAL_INT, &minX, VAL_INT, &minY, VAL_INT, &maxX, VAL_INT, &maxY))
 	{
@@ -2639,24 +2634,22 @@ BOOL scrSetScrollParams(void)
 	ASSERT(minY >= 0, "Minimum scroll y value %d is less than zero - ", minY);
 	ASSERT(maxX <= mapWidth, "Maximum scroll x value %d is greater than mapWidth %d", maxX, (int)mapWidth);
 	ASSERT(maxY <= mapHeight, "Maximum scroll y value %d is greater than mapHeight %d", maxY, (int)mapHeight);
-	ASSERT(maxX <= visibleTiles.x, "Maximum scroll x %d has to be bigger than visible width %d - ", maxX, visibleTiles.x);
-	ASSERT(maxY <= visibleTiles.y, "Maximum scroll y %d has to be bigger than visible width %d - ", maxY, visibleTiles.y);
 
-    prevMinX = scrollMinX;
-    prevMinY = scrollMinY;
-    prevMaxX = scrollMaxX;
-    prevMaxY = scrollMaxY;
+	prevMinX = scrollMinX;
+	prevMinY = scrollMinY;
+	prevMaxX = scrollMaxX;
+	prevMaxY = scrollMaxY;
 
 	scrollMinX = minX;
 	scrollMaxX = maxX;
 	scrollMinY = minY;
 	scrollMaxY = maxY;
 
-    //when the scroll limits change midgame - need to redo the lighting
-    initLighting(prevMinX < scrollMinX ? prevMinX : scrollMinX,
-        prevMinY < scrollMinY ? prevMinY : scrollMinY,
-        prevMaxX < scrollMaxX ? prevMaxX : scrollMaxX,
-        prevMaxY < scrollMaxY ? prevMaxY : scrollMaxY);
+	// When the scroll limits change midgame - need to redo the lighting
+	initLighting(prevMinX < scrollMinX ? prevMinX : scrollMinX,
+	             prevMinY < scrollMinY ? prevMinY : scrollMinY,
+	             prevMaxX < scrollMaxX ? prevMaxX : scrollMaxX,
+	             prevMaxY < scrollMaxY ? prevMaxY : scrollMaxY);
 
 	return TRUE;
 }
@@ -3923,12 +3916,15 @@ BOOL scrSetFogColour(void)
 		return FALSE;
 	}
 
-	scrFogColour.byte.r = red;
-	scrFogColour.byte.g = green;
-	scrFogColour.byte.b = blue;
-	scrFogColour.byte.a = 255;
+	if (war_GetFog())
+	{
+		scrFogColour.byte.r = red;
+		scrFogColour.byte.g = green;
+		scrFogColour.byte.b = blue;
+		scrFogColour.byte.a = 255;
 
-	pie_SetFogColour(scrFogColour);
+		pie_SetFogColour(scrFogColour);
+	}
 
 	return TRUE;
 }
@@ -10070,16 +10066,15 @@ BOOL scrSavePlayerAIExperience(void)
 BOOL scrLoadPlayerAIExperience(void)
 {
 	SDWORD				player;
-	BOOL				bNotify;
 
-	if (!stackPopParams(2, VAL_INT, &player, VAL_BOOL, &bNotify))
+	if (!stackPopParams(1, VAL_INT, &player))
 	{
 		debug(LOG_ERROR, "scrLoadPlayerAIExperience(): stack failed");
 		return FALSE;
 	}
 
-	scrFunctionResult.v.bval = LoadPlayerAIExperience(player, bNotify);
-	if (!stackPushResult(VAL_BOOL, &scrFunctionResult))
+	scrFunctionResult.v.ival = LoadPlayerAIExperience(player);
+	if (!stackPushResult(VAL_INT, &scrFunctionResult))
 	{
 		return FALSE;
 	}
@@ -10095,7 +10090,7 @@ BOOL addHelpBlip(SDWORD locX, SDWORD locY, SDWORD forPlayer, SDWORD sender, char
 	MESSAGE			*psMessage;
 	VIEWDATA		*pTempData;
 
-	//debug(LOG_WZ, "addHelpBlip: forPlayer=%d, sender=%d", forPlayer,sender);
+	//debug(LOG_WZ, "addHelpBlip: forPlayer=%d, sender=%d", forPlayer, sender);
 
 	if (forPlayer >= MAX_PLAYERS)
 	{
@@ -10125,6 +10120,7 @@ BOOL addHelpBlip(SDWORD locX, SDWORD locY, SDWORD forPlayer, SDWORD sender, char
 
 		//set the data
 		pTempData = HelpViewData(sender, textMsg, locX, locY);
+		ASSERT(pTempData != NULL, "Empty help data for radar beacon");
 
 		psMessage->pViewData = (MSG_VIEWDATA *)pTempData;
 
@@ -10136,7 +10132,6 @@ BOOL addHelpBlip(SDWORD locX, SDWORD locY, SDWORD forPlayer, SDWORD sender, char
 		//{
 			((VIEW_PROXIMITY *)pTempData->pData)->z = height;
 		//}
-
 	}
 	else
 	{
@@ -10177,35 +10172,25 @@ BOOL sendBeaconToPlayer(SDWORD locX, SDWORD locY, SDWORD forPlayer, SDWORD sende
 VIEWDATA *HelpViewData(SDWORD sender, char *textMsg, UDWORD LocX, UDWORD LocY)
 {
 	VIEWDATA			*psViewData;
-	char				name[MAX_STR_LENGTH];
 	SDWORD				audioID;
-	UDWORD				numText;
-
 
 	//allocate message space
 	psViewData = (VIEWDATA *)malloc(sizeof(VIEWDATA));
 	if (psViewData == NULL)
 	{
-		debug(LOG_ERROR,"prepairHelpViewData() - Unable to allocate memory for viewdata");
+		ASSERT(FALSE, "prepairHelpViewData() - Unable to allocate memory for viewdata");
 		return NULL;
 	}
 
 	memset(psViewData, 0, sizeof(VIEWDATA));
 
-	numText = 1;
-
-	psViewData->numText=(UBYTE)numText;
+	psViewData->numText = 1;
 
 	//allocate storage for the name
-	name[0] = 'h';
-	name[1] = 'e';
-	name[2] = 'l';
-	name[3] = 'p';
-	name[4] = '\0';
- 	psViewData->pName = strdup(name);
+ 	psViewData->pName = strdup("help");
 	if (psViewData->pName == NULL)
 	{
-		debug(LOG_ERROR,"prepairHelpViewData() - ViewData Name - Out of memory");
+		ASSERT(FALSE, "prepairHelpViewData() - ViewData Name - Out of memory");
 		return NULL;
 	}
 
@@ -10220,13 +10205,11 @@ VIEWDATA *HelpViewData(SDWORD sender, char *textMsg, UDWORD LocX, UDWORD LocY)
 
 	//allocate memory for blip location etc
 	psViewData->pData = (VIEW_PROXIMITY *) malloc(sizeof(VIEW_PROXIMITY));
-
 	if (psViewData->pData == NULL)
 	{
-		debug(LOG_ERROR,"prepairHelpViewData() - Unable to allocate memory");
+		ASSERT(FALSE, "prepairHelpViewData() - Unable to allocate memory");
 		return NULL;
 	}
-
 
 	//store audio
 	audioID = NO_SOUND;
@@ -10235,13 +10218,13 @@ VIEWDATA *HelpViewData(SDWORD sender, char *textMsg, UDWORD LocX, UDWORD LocY)
 	//store blip location
 	if (LocX < 0)
 	{
-		debug(LOG_ERROR,"prepairHelpViewData() - Negative X coord for prox message");
+		ASSERT(FALSE, "prepairHelpViewData() - Negative X coord for prox message");
 		return NULL;
 	}
 
 	if (LocY < 0)
 	{
-		debug(LOG_ERROR,"prepairHelpViewData() - Negative X coord for prox message");
+		ASSERT(FALSE, "prepairHelpViewData() - Negative X coord for prox message");
 		return NULL;
 	}
 
@@ -10270,12 +10253,9 @@ MESSAGE * findHelpMsg(UDWORD player, SDWORD sender)
 		//look for VIEW_HELP, should only be 1 per player
 		if (psCurr->type == MSG_PROXIMITY)
 		{
-			//((VIEW_PROXIMITY *)((VIEWDATA *)psCurr->pViewData)->pData)->proxType
 			if(((VIEWDATA *)psCurr->pViewData)->type == VIEW_HELP)
 			{
 				debug(LOG_WZ, "findHelpMsg: %d ALREADY HAS A MESSAGE STORED", player);
-				//debug(LOG_ERROR,"stored sender = %d, looking for %d", ((VIEW_PROXIMITY *)((VIEWDATA *)psCurr->pViewData)->pData)->sender, sender);
-				//if((VIEW_PROXIMITY *)psCurr->pViewData)
 				if(((VIEW_PROXIMITY *)((VIEWDATA *)psCurr->pViewData)->pData)->sender == sender)
 				{
 					debug(LOG_WZ, "findHelpMsg: %d ALREADY HAS A MESSAGE STORED from %d", player, sender);
@@ -10973,7 +10953,7 @@ BOOL scrSqrt(void)
 		return FALSE;
 	}
 
-	scrFunctionResult.v.fval = sqrt(fArg);
+	scrFunctionResult.v.fval = sqrtf(fArg);
 	if (!stackPushResult(VAL_FLOAT, &scrFunctionResult))
 	{
 		return FALSE;

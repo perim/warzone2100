@@ -79,7 +79,6 @@ void sendOptions(uint32_t dest, uint32_t play)
 	NETuint32_t(&game.power);
 	NETuint8_t(&game.base);
 	NETuint8_t(&game.alliance);
-	NETuint8_t(&game.limit);
 	
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
@@ -165,7 +164,7 @@ void recvOptions()
 	UDWORD	play;
 	UDWORD	newPl;
 
-	NETbeginDecode();
+	NETbeginDecode(NET_OPTIONS);
 
 	// Get general information about the game
 	NETuint8_t(&game.type);
@@ -177,21 +176,16 @@ void recvOptions()
 	NETuint32_t(&game.power);
 	NETuint8_t(&game.base);
 	NETuint8_t(&game.alliance);
-	NETuint8_t(&game.limit);
 	
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
 		NETuint8_t(&game.skDiff[i]);
 	}
- 
+
 	// Check the version
 	if (strncmp(game.version, buildTime, 8) != 0)
 	{
-
-#ifndef DEBUG
 		debug(LOG_ERROR, "Host is running a different version of Warzone2100.");
-		abort();
-#endif
 	}
 
 	// Now the dpid array
@@ -310,17 +304,15 @@ BOOL hostCampaign(char *sGame, char *sPlayer)
 	debug(LOG_WZ, "Hosting campaign: '%s', player: '%s'", sGame, sPlayer);
 
 	freeMessages();
-	if (!NetPlay.bLobbyLaunched)
+
+	// If we had a single player (i.e. campaign) game before this value will
+	// have been set to 0. So revert back to the default value.
+	if (game.maxPlayers == 0)
 	{
-		NEThostGame(sGame,sPlayer,game.type,0,0,0,game.maxPlayers); // temporary stuff
+		game.maxPlayers = 4;
 	}
-	else
-	{
-		NETsetGameFlags(1,game.type);
-		// 2 is average ping
-		NETsetGameFlags(3,0);
-		NETsetGameFlags(4,0);
-	}
+
+	NEThostGame(sGame, sPlayer, game.type, 0, 0, 0, game.maxPlayers); // temporary stuff
 
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
@@ -378,11 +370,7 @@ BOOL joinCampaign(UDWORD gameNumber, char *sPlayer)
 
 	if(!ingame.localJoiningInProgress)
 	{
-//		game.type = CAMPAIGN;
-		if(!NetPlay.bLobbyLaunched)
-		{
-			NETjoinGame(gameNumber, sPlayer);	// join
-		}
+		NETjoinGame(gameNumber, sPlayer);	// join
 		ingame.localJoiningInProgress	= TRUE;
 
 		loadMultiStats(sPlayer,&playerStats);
@@ -400,7 +388,7 @@ BOOL joinCampaign(UDWORD gameNumber, char *sPlayer)
 BOOL LobbyLaunched(void)
 {
 	UDWORD i;
-	PLAYERSTATS pl={0};
+	PLAYERSTATS pl = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 	// set the player info as soon as possible to avoid screwy scores appearing elsewhere.
 	NETplayerInfo();
@@ -420,32 +408,6 @@ BOOL LobbyLaunched(void)
 	strcpy((char*) sPlayer, NetPlay.players[i].name);
 	strcpy((char*) game.name, NetPlay.games[0].name);
 
-	return TRUE;
-}
-
-// ////////////////////////////////////////////////////////////////////////////
-// Init and shutdown routines
-BOOL lobbyInitialise(void)
-{
-
-	if(!NETinit(TRUE))								// initialise, may change guid.
-	{
-		return FALSE;
-	}
-
-	if(NetPlay.bLobbyLaunched) // now check for lobby launching..
-	{
-		if(!LobbyLaunched())
-		{
-			return FALSE;
-		}
-	}
-	return TRUE;
-}
-
-BOOL multiInitialise(void)
-{
-	// Perform multiplayer initialization here, on success return TRUE
 	return TRUE;
 }
 
@@ -474,10 +436,6 @@ BOOL sendLeavingMsg(void)
 // called in Init.c to shutdown the whole netgame gubbins.
 BOOL multiShutdown(void)
 {
-	debug(LOG_MAIN, "shutting down audio capture");
-
-	debug(LOG_MAIN, "shutting down audio playback");
-
 	// shut down netplay lib.
 	debug(LOG_MAIN, "shutting down networking");
   	NETshutdown();
@@ -495,8 +453,6 @@ BOOL multiShutdown(void)
 
 // ////////////////////////////////////////////////////////////////////////////
 // copy tempates from one player to another.
-
-
 BOOL addTemplate(UDWORD player, DROID_TEMPLATE *psNew)
 {
 	DROID_TEMPLATE  *psTempl = malloc(sizeof(DROID_TEMPLATE));
@@ -655,7 +611,6 @@ static BOOL cleanMap(UDWORD player)
 
 	// reverse so we always remove the last object. re-reverse afterwards.
 //	reverseObjectList((BASE_OBJECT**)&apsStructLists[player]);
-
 
 	switch(game.base)
 	{
@@ -935,7 +890,6 @@ BOOL multiGameShutdown(void)
 	ingame.localJoiningInProgress = FALSE; // Clean up
 	ingame.localOptionsReceived = FALSE;
 	ingame.bHostSetup = FALSE;	// Dont attempt a host
-	NetPlay.bLobbyLaunched			= FALSE;	// Revert back to main menu, not multioptions.
 	NetPlay.bHost					= FALSE;
 	bMultiPlayer					= FALSE;	// Back to single player mode
 	selectedPlayer					= 0;		// Back to use player 0 (single player friendly)

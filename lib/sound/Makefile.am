@@ -1,5 +1,8 @@
 SUBDIRS = general openal
 
+AM_CPPFLAGS = $(SDL_CFLAGS) $(OGGVORBIS_CFLAGS) $(OPENAL_CFLAGS) $(WZ_CPPFLAGS)
+AM_CFLAGS = $(WZ_CFLAGS)
+
 noinst_LIBRARIES = libsound.a
 noinst_HEADERS = aud.h audio.h audio_id.h cdaudio.h constants.hpp decoding.hpp mixer.h openal_error.h playlist.hpp stream.hpp track.h tracklib.h
 

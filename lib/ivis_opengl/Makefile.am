@@ -1,3 +1,6 @@
+AM_CPPFLAGS = $(SDL_CFLAGS) $(PNG_CFLAGS) $(OPENGLC_CFLAGS) $(OPENGL_CFLAGS) $(WZ_CPPFLAGS)
+AM_CFLAGS = $(WZ_CFLAGS)
+
 noinst_LIBRARIES = libivis_opengl.a
 noinst_HEADERS = piematrix.h screen.h
 

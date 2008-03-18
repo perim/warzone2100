@@ -26,7 +26,7 @@
 #include <lib3ds/file.h>
 
 
-extern "C" void dump_pie_file(Lib3dsFile *f, FILE *o, const char *page, bool swapYZ, bool inverseUV, bool reverseWinding, int baseTexFlags);
+extern "C" void dump_pie_file(Lib3dsFile *f, FILE *o, const char *page, bool swapYZ, bool inverseUV, bool reverseWinding, int baseTexFlags, float scaleFactor);
 
 
 Gui3ds2pie::Gui3ds2pie( QWidget *parent )
@@ -38,11 +38,25 @@ Gui3ds2pie::Gui3ds2pie( QWidget *parent )
 
 	connect(inputFile_browse, SIGNAL(clicked()), this, SLOT(browseInputFile()));
 	connect(outputFile_browse, SIGNAL(clicked()), this, SLOT(browseOutputFile()));
+	connect(scale_slider, SIGNAL(valueChanged(int)), this, SLOT(sliderChanged(int)));
+	connect(scale_spinbox, SIGNAL(valueChanged(double)), this, SLOT(spinboxChanged(double)));
 }
 
 
 Gui3ds2pie::~Gui3ds2pie()
 {
+}
+
+
+void Gui3ds2pie::sliderChanged(int value)
+{
+	scale_spinbox->setValue(value/100.0);
+}
+
+
+void Gui3ds2pie::spinboxChanged(double value)
+{
+	scale_slider->setValue(value*100.0);
 }
 
 
@@ -121,7 +135,7 @@ void Gui3ds2pie::accept()
 		return;
 	}
 
-	dump_pie_file(f, o, texturePage.toAscii().data(), swapYZ->isChecked(), invertUV->isChecked(), reverseWinding->isChecked(), baseTexFlags);
+	dump_pie_file(f, o, texturePage.toAscii().data(), swapYZ->isChecked(), invertUV->isChecked(), reverseWinding->isChecked(), baseTexFlags, scale_spinbox->value());
 
 	fclose(o);
 	lib3ds_file_free(f);

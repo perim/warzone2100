@@ -24,17 +24,15 @@
 #define TILE_HEIGHT 128
 #define TILE_SIZE (TILE_WIDTH*TILE_HEIGHT)
 
+// Amount of visible terrain tiles in x/y direction
+#define VISIBLE_XTILES 64
+#define VISIBLE_YTILES 64
+
 #define	RADTLX		(OBJ_BACKX + OBJ_BACKWIDTH + BASE_GAP + 1 +D_W)	// Paul's settings (492+12)
 #define	RADTLY		(RET_Y + 1)									// Paul's settings (332-17)
 #define	RADWIDTH	128
 #define RADHEIGHT	128
 #define	RADBRX		(RADTLX + RADWIDTH) -1
 #define	RADBRY		(RADTLY + RADHEIGHT) -1
-//assigned to variable visibleXtiles, visibleYTiles 25/02/98 AB
-#define VISIBLE_XTILES 64
-#define VISIBLE_YTILES 64
-
-#define LAND_XGRD	(VISIBLE_XTILES + 1)
-#define LAND_YGRD	(VISIBLE_YTILES + 1)
 
 #endif

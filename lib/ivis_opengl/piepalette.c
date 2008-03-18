@@ -17,8 +17,6 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-#include <stdio.h>
-
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/piepalette.h"
 #include "lib/ivis_common/rendmode.h"
@@ -82,6 +80,7 @@ void pal_Init(void)
 	WZCOL_UNIT_SELECT_BOX.byte.a = 16;
 
 	WZCOL_RADAR_BACKGROUND = WZCOL_MENU_BACKGROUND;
+	WZCOL_RADAR_BACKGROUND.byte.a = 0; // fully transparent
 
 	WZCOL_MAP_OUTLINE_OK = WZCOL_WHITE;
 	WZCOL_MAP_OUTLINE_BAD = WZCOL_RED;

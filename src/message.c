@@ -41,30 +41,16 @@
 
 #include "multiplay.h"
 
-/* Allocation sizes for the message heaps */
-#define MESSAGE_INIT		20
-#define MESSAGE_EXT			5
-#define VIEWDATA_INIT		5		// was 2 ... but that wasn't enough
-#define VIEWDATA_EXT		1
-
-/* Allocation sizes for the proximity display heaps - this should coincide with
-the number of Proximity Messages for a mission*/
-#define PROXDISP_INIT		10
-#define PROXDISP_EXT		5
-
 //max number of text strings or sequences for viewdata
 #define MAX_DATA		4
 
-//VIEWDATA			*asViewData;
-//UDWORD			numViewData;
-
 //array of pointers for the view data
-VIEWDATA_LIST			*apsViewData;
+static VIEWDATA_LIST		*apsViewData;
 
 /* The id number for the next message allocated
  * Each message will have a unique id number irrespective of type
  */
-UDWORD	msgID = 0;
+static UDWORD	msgID = 0;
 
 static int currentNumProxDisplays;
 /* The list of messages allocated */
@@ -73,17 +59,12 @@ MESSAGE		*apsMessages[MAX_PLAYERS];
 /* The list of proximity displays allocated */
 PROXIMITY_DISPLAY *apsProxDisp[MAX_PLAYERS];
 
-/* The current tutorial message - there is only ever one at a time. They are displayed
-when called by the script. They are not to be re-displayed*/
-//MESSAGE		tutorialMessage;
-
 /* The IMD to use for the proximity messages */
 iIMDShape	*pProximityMsgIMD;
 
 //function declarations
 static void addProximityDisplay(MESSAGE *psMessage, BOOL proxPos, UDWORD player);
 static void removeProxDisp(MESSAGE *psMessage, UDWORD player);
-//static void checkMessages(VIEWDATA *psViewData);
 static void checkMessages(MSG_VIEWDATA *psViewData);
 
 
@@ -91,23 +72,26 @@ static void checkMessages(MSG_VIEWDATA *psViewData);
  * new is a pointer to a pointer to the new message
  * type is the type of the message
  */
-// ajl modified for netgames
-extern UDWORD selectedPlayer;
-
-static inline MESSAGE* createMessage(MESSAGE_TYPE msgType)
+static inline MESSAGE* createMessage(MESSAGE_TYPE msgType, UDWORD player)
 {
 	MESSAGE *newMsg;
+
+	ASSERT(player < MAX_PLAYERS, "createMessage: Bad player");
+	ASSERT(msgType < MSG_TYPES, "createMessage: Bad message");
 
 	// Allocate memory for the message, and on failure return a NULL pointer
 	newMsg = (MESSAGE*)malloc(sizeof(MESSAGE));
 	if (newMsg == NULL)
 	{
-		debug(LOG_ERROR, "createMessage: out of memory\n");
+		ASSERT(FALSE, "createMessage: out of memory");
 		return NULL;
 	}
 
 	newMsg->type = msgType;
 	newMsg->id = (msgID << 3) | selectedPlayer;
+	newMsg->pViewData = NULL;
+	newMsg->read = FALSE;
+	newMsg->player = player;
 	msgID++;
 
 	return newMsg;
@@ -121,8 +105,8 @@ static inline void addMessageToList(MESSAGE *list[MAX_PLAYERS], MESSAGE *msg, UD
 {
 	MESSAGE *psCurr = NULL, *psPrev = NULL;
 
-	ASSERT( msg != NULL,
-		"addMessageToList: Invalid message pointer" );
+	ASSERT(msg != NULL, "addMessageToList: Invalid message pointer");
+	ASSERT(player < MAX_PLAYERS, "addMessageToList: Bad player");
 
 	// If there is no message list, create one
 	if (list[player] == NULL)
@@ -214,8 +198,8 @@ static inline void removeMessageFromList(MESSAGE *list[], MESSAGE *del, UDWORD p
 {
 	MESSAGE *psPrev = NULL, *psCurr;
 
-	ASSERT( del != NULL,
-		"removeMessageFromList: Invalid message pointer" );
+	ASSERT(del != NULL, "removeMessageFromList: Invalid message pointer");
+	ASSERT(player < MAX_PLAYERS, "removeMessageFromList: Bad player");
 
 	// If the message to remove is the first one in the list then mark the next one as the first
 	if (list[player] == del)
@@ -231,8 +215,7 @@ static inline void removeMessageFromList(MESSAGE *list[], MESSAGE *del, UDWORD p
 		psPrev = psCurr;
 	}
 
-	ASSERT( psCurr != NULL,
-		"removeMessage: message not found in list" );
+	ASSERT(psCurr != NULL, "removeMessage: message not found in list");
 
 	if (psCurr != NULL)
 	{
@@ -284,64 +267,46 @@ BOOL initViewData(void)
 	return TRUE;
 }
 
-//destroys the viewdata heap
-void viewDataHeapShutDown(void)
-{
-}
-
 /*Add a message to the list */
 MESSAGE * addMessage(MESSAGE_TYPE msgType, BOOL proxPos, UDWORD player)
 {
 	//first create a message of the required type
-	MESSAGE* psMsgToAdd = createMessage(msgType);
+	MESSAGE* psMsgToAdd = createMessage(msgType, player);
 
 	debug(LOG_WZ, "addMessage: adding message for player %d, type is %d, proximity is %d", player, msgType, proxPos);
 
 	if (!psMsgToAdd)
 	{
-		debug(LOG_ERROR, "addMessage: createMessage failed");
+		ASSERT(FALSE, "addMessage: createMessage failed");
 		return NULL;
 	}
 	//then add to the players' list
 	addMessageToList(apsMessages, psMsgToAdd, player);
-
-	//initialise the message data
-	psMsgToAdd->player = player;
-	psMsgToAdd->pViewData = NULL;
-	//psMsgToAdd->frameNumber = 0;
-	psMsgToAdd->read = FALSE;
 
 	//add a proximity display
 	if (msgType == MSG_PROXIMITY)
 	{
 		addProximityDisplay(psMsgToAdd, proxPos, player);
 	}
-//	else
-//	{
-//		//make the reticule button flash as long as not prox msg or multiplayer game.
-//		if (player == selectedPlayer && !bMultiPlayer)
-//		{
-//			flashReticuleButton(IDRET_INTEL_MAP);
-//		}
-//	}
 
 	return psMsgToAdd;
 }
 
 /* adds a proximity display - holds varaibles that enable the message to be
  displayed in the Intelligence Screen*/
-void addProximityDisplay(MESSAGE *psMessage, BOOL proxPos, UDWORD player)
+static void addProximityDisplay(MESSAGE *psMessage, BOOL proxPos, UDWORD player)
 {
 	PROXIMITY_DISPLAY *psToAdd;
+
+	ASSERT(player < MAX_PLAYERS, "addProximityDisplay: Bad player");
 
 	//create the proximity display
 	psToAdd = (PROXIMITY_DISPLAY*)malloc(sizeof(PROXIMITY_DISPLAY));
 	if (psToAdd == NULL)
 	{
-		debug(LOG_ERROR, "addProximityDisplay: out of memory\n");
+		ASSERT(FALSE, "addProximityDisplay: out of memory");
 		return;
 	}
-
 
 	if (proxPos)
 	{
@@ -375,6 +340,8 @@ void addProximityDisplay(MESSAGE *psMessage, BOOL proxPos, UDWORD player)
  /*remove a message */
 void removeMessage(MESSAGE *psDel, UDWORD player)
 {
+	ASSERT(player < MAX_PLAYERS, "removeMessage: Bad player");
+	ASSERT(psDel != NULL, "removeMessage: Bad message");
 	debug(LOG_WZ, "removeMessage: removing message for player %d", player);
 
 	if (psDel->type == MSG_PROXIMITY)
@@ -388,6 +355,9 @@ void removeMessage(MESSAGE *psDel, UDWORD player)
 void removeProxDisp(MESSAGE *psMessage, UDWORD player)
 {
 	PROXIMITY_DISPLAY		*psCurr, *psPrev;
+
+	ASSERT(player < MAX_PLAYERS, "removeProxDisp: Bad player");
+	ASSERT(psMessage != NULL, "removeProxDisp: Bad message");
 
 	//find the proximity display for this message
 	if (apsProxDisp[player]->psMessage == psMessage)
@@ -437,7 +407,6 @@ void releaseAllProxDisp(void)
 	 		psNext = psCurr->psNext;
 			//remove message associated with this display
 			removeMessage(psCurr->psMessage, player);
-			//HEAP_FREE(psProxDispHeap, psCurr);
 		}
 		apsProxDisp[player] = NULL;
 	}
@@ -448,53 +417,24 @@ void releaseAllProxDisp(void)
 /* Initialise the message heaps */
 BOOL initMessage(void)
 {
-#ifdef VIDEO_TEST
-	MESSAGE *psMessage;
-#endif
-
 	//set up the imd used for proximity messages
 	pProximityMsgIMD = (iIMDShape *)resGetData("IMD", "arrow.pie");
 	if (pProximityMsgIMD == NULL)
 	{
-		debug( LOG_ERROR, "Unable to load Proximity Message PIE" );
-		abort();
+		ASSERT(FALSE, "Unable to load Proximity Message PIE");
 		return FALSE;
 	}
-
-	//initialise the tutorial message - only used by scripts
-	/*tutorialMessage.id = msgID;
-	tutorialMessage.type = MSG_TUTORIAL;
-	tutorialMessage.pViewData = NULL;
-	tutorialMessage.read = FALSE;
-	tutorialMessage.player = MAX_PLAYERS + 1;
-	tutorialMessage.psNext = NULL;*/
-
-	//JPS add message to get on screen video
-#ifdef VIDEO_TEST
-    //mission
-	psMessage = addMessage(MSG_MISSION, FALSE, 0);
-	if (psMessage)
-	{
-		psMessage->pViewData = (MSG_VIEWDATA *)getViewData("MB1A_MSG");
-	}
-    //campaign
-	psMessage = addMessage(MSG_CAMPAIGN, FALSE, 0);
-	if (psMessage)
-	{
-		psMessage->pViewData = (MSG_VIEWDATA *)getViewData("CMB1_MSG");
-	}
-#endif
 
 	return TRUE;
 }
 
 static BOOL addToViewDataList(VIEWDATA *psViewData, UBYTE numData)
 {
-	VIEWDATA_LIST		*psAdd;
-	psAdd = (VIEWDATA_LIST*)malloc(sizeof(VIEWDATA_LIST));
+	VIEWDATA_LIST		*psAdd = (VIEWDATA_LIST*)malloc(sizeof(VIEWDATA_LIST));
+
 	if (psAdd == NULL)
 	{
-		debug(LOG_ERROR, "addToViewDataList: out of memory\n");
+		ASSERT(FALSE, "addToViewDataList: out of memory");
 		return FALSE;
 	}
 
@@ -521,14 +461,11 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 	SDWORD				LocX,LocY,LocZ, audioID;
 	PROX_TYPE	proxType;
         int cnt;
-	//keep the start so we release it at the end
-	//pData = pViewMsgData;
 
 	numData = numCR(pViewMsgData, bufferSize);
 	if (numData > UBYTE_MAX)
 	{
-		debug( LOG_ERROR, "loadViewData: Didn't expect 256 viewData messages!" );
-		abort();
+		ASSERT(FALSE, "loadViewData: Didn't expect 256 viewData messages!");
 		return NULL;
 	}
 
@@ -536,15 +473,13 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 	psViewData = (VIEWDATA *)malloc(numData * sizeof(VIEWDATA));
 	if (psViewData == NULL)
 	{
-		debug( LOG_ERROR, "Unable to allocate memory for viewdata" );
-		abort();
+		ASSERT(FALSE, "Unable to allocate memory for viewdata");
 		return NULL;
 	}
 
 	//add to array list
 	addToViewDataList(psViewData, (UBYTE)numData);
 
-	//psViewData = asViewData;
 	//save so can pass the value back
 	pData = psViewData;
 
@@ -564,8 +499,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 		//check not loading up too many text strings
 		if (numText > MAX_DATA)
 		{
-			debug( LOG_ERROR, "loadViewData: too many text strings for %s", psViewData->pName );
-			abort();
+			ASSERT(FALSE, "loadViewData: too many text strings for %s", psViewData->pName);
 			return NULL;
 		}
 		psViewData->numText=(UBYTE)numText;
@@ -574,8 +508,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
  		psViewData->pName = (char *)malloc((strlen(name))+1);
 		if (psViewData->pName == NULL)
 		{
-			debug( LOG_ERROR, "ViewData Name - Out of memory" );
-			abort();
+			ASSERT(FALSE, "ViewData Name - Out of memory");
 			return NULL;
 		}
 		strcpy(psViewData->pName,name);
@@ -591,21 +524,17 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 		for (dataInc = 0; dataInc < psViewData->numText; dataInc++)
 		{
 			name[0] = '\0';
-			//sscanf(pViewMsgData,"%[^',']", &name);
 			sscanf(pViewMsgData,",%[^',']%n",name,&cnt);
                         pViewMsgData += cnt;
-
 
 			//get the ID for the string
 			if (!strresGetIDNum(psStringRes, name, &id))
 			{
-				debug( LOG_ERROR, "Cannot find the view data string id %s ", name );
-				abort();
+				ASSERT(FALSE, "Cannot find the view data string id %s ", name);
 				return NULL;
 			}
 			//get the string from the id
 			psViewData->ppTextMsg[dataInc] = strresGetString(psStringRes, id);
-
 		}
 
 		sscanf(pViewMsgData, ",%d%n", &readint, &cnt);
@@ -619,16 +548,13 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 			psViewData->pData = (VIEW_RESEARCH *) malloc(sizeof(VIEW_RESEARCH));
 			if (psViewData->pData == NULL)
 			{
-				debug( LOG_ERROR, "Unable to allocate memory" );
-				abort();
+				ASSERT(FALSE, "Unable to allocate memory");
 				return NULL;
 			}
 			imdName[0] = '\0';
 			imdName2[0] = '\0';
 			string[0] = '\0';
 			audioName[0] = '\0';
-			//sscanf(pViewMsgData, "%[^','],%[^','],%[^','],%[^','],%d",
-			//	&imdName, &imdName2, &string, &audioName, &numFrames);
 			sscanf(pViewMsgData,",%[^','],%[^','],%[^','],%[^','],%d%n",
 				imdName, imdName2, string, audioName, &numFrames,&cnt);
                         pViewMsgData += cnt;
@@ -636,8 +562,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 			psViewRes->pIMD = (iIMDShape *) resGetData("IMD", imdName);
 			if (psViewRes->pIMD == NULL)
 			{
-				debug( LOG_ERROR, "Cannot find the PIE for message %s", name );
-				abort();
+				ASSERT(LOG_ERROR, "Cannot find the PIE for message %s", name);
 				return NULL;
 			}
 			if (strcmp(imdName2, "0"))
@@ -645,8 +570,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 				psViewRes->pIMD2 = (iIMDShape *) resGetData("IMD", imdName2);
 				if (psViewRes->pIMD2 == NULL)
 				{
-					debug( LOG_ERROR, "Cannot find the 2nd PIE for message %s", name );
-					abort();
+					ASSERT(FALSE, "Cannot find the 2nd PIE for message %s", name);
 					return NULL;
 				}
 			}
@@ -662,8 +586,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 				psViewRes->pAudio = (char *) malloc(strlen(audioName) + 1);
 				if (psViewRes->pAudio == NULL)
 				{
-					debug( LOG_ERROR, "loadViewData - Out of memory" );
-					abort();
+					ASSERT(FALSE, "loadViewData - Out of memory");
 					return NULL;
 				}
 				strcpy(psViewRes->pAudio, audioName);
@@ -682,8 +605,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 			psViewData->pData = (VIEW_REPLAY *) malloc(sizeof(VIEW_REPLAY));
 			if (psViewData->pData == NULL)
 			{
-				debug( LOG_ERROR, "Unable to allocate memory" );
-				abort();
+				ASSERT(FALSE, "Unable to allocate memory");
 				return NULL;
 			}
 			psViewReplay = (VIEW_REPLAY *)psViewData->pData;
@@ -695,8 +617,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 
 			if (count > MAX_DATA)
 			{
-				debug( LOG_ERROR, "loadViewData: too many sequence for %s", psViewData->pName );
-				abort();
+				ASSERT(FALSE, "loadViewData: too many sequence for %s", psViewData->pName);
 				return NULL;
 			}
 
@@ -717,8 +638,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
                                         pViewMsgData += cnt;
 					if (count > MAX_DATA)
 					{
-						debug( LOG_ERROR, "loadViewData: too many strings for %s", psViewData->pName );
-						abort();
+						ASSERT(FALSE, "loadViewData: too many strings for %s", psViewData->pName);
 						return NULL;
 					}
 					psViewReplay->pSeqList[dataInc].numText = (UBYTE)count;
@@ -731,16 +651,14 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
                                         pViewMsgData += cnt;
 					if (count > MAX_DATA)
 					{
-						debug( LOG_ERROR, "loadViewData: invalid video playback flag %s", psViewData->pName );
-						abort();
+						ASSERT(FALSE, "loadViewData: invalid video playback flag %s", psViewData->pName);
 						return NULL;
 					}
 					psViewReplay->pSeqList[dataInc].flag = (UBYTE)count;
 					//check not loading up too many text strings
 					if (count2 > MAX_DATA)
 					{
-						debug( LOG_ERROR, "loadViewData: too many text strings for seq for %s", psViewData->pName );
-						abort();
+						ASSERT(FALSE, "loadViewData: too many text strings for seq for %s", psViewData->pName);
 						return NULL;
 					}
 					psViewReplay->pSeqList[dataInc].numText = (UBYTE)count2;
@@ -764,17 +682,12 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 					//get the ID for the string
 					if (!strresGetIDNum(psStringRes, name, &id))
 					{
-						debug( LOG_ERROR, "Cannot find the view data string id %s ", name );
-						abort();
+						ASSERT(FALSE, "Cannot find the view data string id %s ", name);
 						return NULL;
 					}
 
 					//get the string from the id
 					psViewReplay->pSeqList[dataInc].ppTextMsg[seqInc] = strresGetString(psStringRes, id);
-
-
-
-
 				}
 				//get the audio text string
 				sscanf(pViewMsgData,",%[^','],%d%n", audioName, &count,&cnt);
@@ -791,8 +704,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 						strlen(audioName) + 1);
 					if (psViewReplay->pSeqList[dataInc].pAudio == NULL)
 					{
-						debug( LOG_ERROR, "loadViewData - Out of memory" );
-						abort();
+						ASSERT(LOG_ERROR, "loadViewData - Out of memory");
 						return NULL;
 					}
 					strcpy(psViewReplay->pSeqList[dataInc].pAudio, audioName);
@@ -809,8 +721,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 			psViewData->pData = (VIEW_PROXIMITY *) malloc(sizeof(VIEW_PROXIMITY));
 			if (psViewData->pData == NULL)
 			{
-				debug( LOG_ERROR, "Unable to allocate memory" );
-				assert( FALSE );
+				ASSERT(FALSE, "Unable to allocate memory");
 				return NULL;
 			} else {
 				int tmp;
@@ -831,8 +742,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 			{
 				if ( (audioID = audio_GetIDFromStr( audioName )) == NO_SOUND )
 				{
-					debug( LOG_ERROR, "loadViewData: couldn't get ID %d for weapon sound %s", audioID, audioName );
-					abort();
+					ASSERT(FALSE, "loadViewData: couldn't get ID %d for weapon sound %s", audioID, audioName);
 					return FALSE;
 				}
 
@@ -840,8 +750,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 				  || audioID > ID_MAX_SOUND)
 				 && audioID != NO_SOUND)
 				{
-					debug( LOG_ERROR, "Invalid Weapon Sound ID - %d for weapon %s", audioID, audioName );
-					abort();
+					ASSERT(FALSE, "Invalid Weapon Sound ID - %d for weapon %s", audioID, audioName);
 					return FALSE;
 				}
 			}
@@ -851,37 +760,32 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 
 			if (LocX < 0)
 			{
-				ASSERT( FALSE,
-					"loadViewData: Negative X coord for prox message - %s",name );
+				ASSERT(FALSE, "loadViewData: Negative X coord for prox message - %s",name);
 				return NULL;
 			}
 			((VIEW_PROXIMITY *)psViewData->pData)->x = (UDWORD)LocX;
 			if (LocY < 0)
 			{
-				ASSERT( FALSE,
-					"loadViewData: Negative Y coord for prox message - %s",name );
+				ASSERT(FALSE, "loadViewData: Negative Y coord for prox message - %s",name);
 				return NULL;
 			}
 			((VIEW_PROXIMITY *)psViewData->pData)->y = (UDWORD)LocY;
 			if (LocZ < 0)
 			{
-				ASSERT( FALSE,
-					"loadViewData: Negative Z coord for prox message - %s",name );
+				ASSERT(FALSE, "loadViewData: Negative Z coord for prox message - %s",name);
 				return NULL;
 			}
 			((VIEW_PROXIMITY *)psViewData->pData)->z = (UDWORD)LocZ;
 
 			if (proxType > PROX_TYPES)
 			{
-//printf("proxType %d > %d\n",proxType,PROX_TYPES);
-				ASSERT( FALSE, "Invalid proximity message sub type - %s", name );
+				ASSERT(FALSE, "Invalid proximity message sub type - %s", name);
 				return NULL;
 			}
 			((VIEW_PROXIMITY *)psViewData->pData)->proxType = proxType;
 			break;
 		default:
-			debug( LOG_ERROR, "Unknown ViewData type" );
-			abort();
+			ASSERT(FALSE, "Unknown ViewData type");
 			return NULL;
 		}
 		//increment the pointer to the start of the next record
@@ -889,9 +793,7 @@ VIEWDATA *loadViewData(const char *pViewMsgData, UDWORD bufferSize)
 		//increment the list to the start of the next storage block
 		psViewData++;
 	}
-//	free(pData);
 
-	//return TRUE;
 	return pData;
 }
 
@@ -910,14 +812,12 @@ VIEWDATA * getViewData(const char *pName)
 			//compare the strings
 			if (!strcmp(psList->psViewData[i].pName, pName))
 			{
-				//return psViewData;
 				return &psList->psViewData[i];
 			}
 		}
 	}
 
-	debug( LOG_ERROR, "Unable to find viewdata for message %s", pName );
-	abort();
+	ASSERT(FALSE, "Unable to find viewdata for message %s", pName);
 	return NULL;
 }
 
@@ -933,8 +833,6 @@ BOOL messageShutdown(void)
 void viewDataShutDown(VIEWDATA *psViewData)
 {
 	VIEWDATA_LIST	*psList, *psPrev;
-	//VIEWDATA		*psData;// = asViewData;
-	//UDWORD		inc, numData;
 	UDWORD			seqInc;
 	VIEW_REPLAY		*psViewReplay;
 	VIEW_RESEARCH	*psViewRes;
@@ -1025,6 +923,9 @@ MESSAGE * findMessage(MSG_VIEWDATA *pViewData, MESSAGE_TYPE type, UDWORD player)
 {
 	MESSAGE					*psCurr;
 
+	ASSERT(player < MAX_PLAYERS, "findMessage: Bad player");
+	ASSERT(type < MSG_TYPES, "removeMessage: Bad message type");
+
 	for (psCurr = apsMessages[player]; psCurr != NULL; psCurr = psCurr->psNext)
 	{
 		if (psCurr->type == type && psCurr->pViewData == pViewData)
@@ -1040,48 +941,33 @@ MESSAGE * findMessage(MSG_VIEWDATA *pViewData, MESSAGE_TYPE type, UDWORD player)
 /* 'displays' a proximity display*/
 void displayProximityMessage(PROXIMITY_DISPLAY *psProxDisp)
 {
-	FEATURE			*psFeature;
-	VIEWDATA		*psViewData;
-	VIEW_PROXIMITY	*psViewProx;
-	//char			msgStr[255];
-
 	if (psProxDisp->type == POS_PROXDATA)
 	{
-		psViewData = (VIEWDATA *) psProxDisp->psMessage->pViewData;
+		VIEWDATA	*psViewData = (VIEWDATA *)psProxDisp->psMessage->pViewData;
+		VIEW_PROXIMITY	*psViewProx = (VIEW_PROXIMITY *)psViewData->pData;
 
 		//display text - if any
 		if (psViewData->ppTextMsg)
 		{
-			//Beacon stuff: Add player number to the text
-			//if(psViewData->type == VIEW_HELP)
-			//{
-			//	//NOTE: this seems to cause GFX artefacts for some players
-			//	sprintf(msgStr, "%s", psViewData->ppTextMsg[0]);	//temporary solution
-			//	addConsoleMessage( msgStr, DEFAULT_JUSTIFY );
-			//}
-			//else
-			//{
-				if(psViewData->type != VIEW_HELP)
-				{
-					addConsoleMessage( psViewData->ppTextMsg[0], DEFAULT_JUSTIFY );
-				}
-			//}
+			if (psViewData->type != VIEW_HELP)
+			{
+				addConsoleMessage(psViewData->ppTextMsg[0], DEFAULT_JUSTIFY);
+			}
 		}
 
 		//play message - if any
-		psViewProx = (VIEW_PROXIMITY *) psViewData->pData;
 		if ( psViewProx->audioID != NO_AUDIO_MSG )
 		{
-			audio_QueueTrackPos( psViewProx->audioID, psViewProx->x,
-									psViewProx->y, psViewProx->z );
+			audio_QueueTrackPos(psViewProx->audioID, psViewProx->x, psViewProx->y, psViewProx->z);
 		}
 	}
 	else if (psProxDisp->type == POS_PROXOBJ)
 	{
+		FEATURE	*psFeature = (FEATURE *)psProxDisp->psMessage->pViewData;
+
 		ASSERT( ((BASE_OBJECT *)psProxDisp->psMessage->pViewData)->type ==
 			OBJ_FEATURE, "displayProximityMessage: invalid feature" );
 
-		psFeature = (FEATURE *)psProxDisp->psMessage->pViewData;
 		if (psFeature->psStats->subType == FEAT_OIL_RESOURCE)
 		{
 			//play default audio message for oil resource
@@ -1098,24 +984,7 @@ void displayProximityMessage(PROXIMITY_DISPLAY *psProxDisp)
 
 	//set the read flag
 	psProxDisp->psMessage->read = TRUE;
-
 }
-
-/*void storeProximityScreenCoords(MESSAGE *psMessage, SDWORD x, SDWORD y)
-{
-	PROXIMITY_DISPLAY		*psProxDisp = NULL;
-
-	psProxDisp = getProximityDisplay(psMessage);
-	if (psProxDisp)
-	{
-		psProxDisp->screenX = x;
-		psProxDisp->screenY = y;
-	}
-	else
-	{
-		ASSERT( FALSE, "Unable to find proximity display" );
-	}
-}*/
 
 PROXIMITY_DISPLAY * getProximityDisplay(MESSAGE *psMessage)
 {
@@ -1139,7 +1008,6 @@ PROXIMITY_DISPLAY * getProximityDisplay(MESSAGE *psMessage)
 }
 
 //check for any messages using this viewdata and remove them
-//void checkMessages(VIEWDATA *psViewData)
 void checkMessages(MSG_VIEWDATA *psViewData)
 {
 	MESSAGE			*psCurr, *psNext;
@@ -1187,12 +1055,3 @@ void addOilResourceProximities(void)
         }
     }
 }
-
-
-
-
-
-
-
-
-

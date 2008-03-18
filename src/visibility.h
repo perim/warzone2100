@@ -20,11 +20,7 @@
 #ifndef _visibility_h
 #define _visibility_h
 
-/* Terrain types that could obscure LOS */
-#define LOS_MASK	0 /*TER_STONE*/
-
-/* The distance under which visibility is automatic */
-#define BASE_VISIBILITY  (5*TILE_UNITS/2)
+#include "objectdef.h"
 
 // initialise the visibility stuff
 extern BOOL visInitialise(void);
@@ -102,5 +98,29 @@ static inline BOOL visObjInRange(BASE_OBJECT *psObj1, BASE_OBJECT *psObj2, SDWOR
 	return TRUE;
 }
 
+static inline int objSensorRange(BASE_OBJECT *psObj)
+{
+	return psObj->sensorRange;
+}
+
+static inline int objSensorPower(BASE_OBJECT *psObj)
+{
+	return psObj->sensorPower;
+}
+
+static inline int objJammerPower(BASE_OBJECT *psObj)
+{
+	return 0;
+}
+
+static inline int objJammerRange(BASE_OBJECT *psObj)
+{
+	return 0;
+}
+
+static inline int objConcealment(BASE_OBJECT *psObj)
+{
+	return psObj->ECMMod;
+}
 
 #endif

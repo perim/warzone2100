@@ -141,6 +141,7 @@ Cyb-NXPulseLas-JUMP			"*Cyb-NXPulseLas-JUMP*"
 
 /* PLAYER 4 - FORCE EDITOR VEHICLES */
 ViperLtCannonWheels			_("Viper Light Cannon Wheels")
+ViperLtCannonHTracks		_("Viper Light Cannon Half-track")
 ViperFlameWheels			_("Viper Flamer Wheels")
 ViperSensorWheels			_("Viper Sensor Wheels")
 ViperLtCannonTracks			_("Viper Light Cannon Tracks")
@@ -215,11 +216,6 @@ CyborgFlamer01Grd			_("Flamer")
 CyborgRkt01Ground			_("Lancer")
 CyborgCannon01Grd			_("Heavy Gunner")
 
-CyborgChain01CGround			_("Machinegunner")
-CyborgFlamer01CGrd			_("Flamer")
-CyborgRkt01CGround			_("Lancer")
-CyborgCannon01CGrd			_("Heavy Gunner")
-
 // Cyborgs - shared 
 Cyb-Chain-GROUND			_("Machinegunner")
 Cyb-Flamer-GROUND			_("Cyborg Flamer")
@@ -279,8 +275,6 @@ NX-CybLasGrnd				"*NX-CybLasGrnd*"
 CyborgCannonGrd				"*Cyborg Cannon*"
 //				"*Cyborg Machine Gun*"
 CyborgFlamerGrd				"*Cyborg Flamer*"
-CyborgCan1CGround			"*Cyborg Cannon*"
-CyborgChn1CCGround			"*Cyborg Machine Gun*"
 //CyborgChn01Ground			"*Cyborg Machine Gun*"
 CybFlamer01CGrd				"*Cyborg Flamer*"
 //CybRocketGrd				"*Cyborg Rocket*"	
@@ -1913,3 +1907,15 @@ ViperTrkLancer				_("Viper Tracks Lancer")
 CobraPODHTracks				_("Cobra Half-Tracks Mini-Pod")
 CobraPODTracks				_("Cobra Tracks Mini-Pod")
 CobraMRLTracks				_("Cobra Tracks Mini-Rocket Artillery")
+
+CobraInfernoHTracks			_("Cobra Inferno Half-track")
+PythonHoverHVC				_("Python HVC Hover")
+
+PythonScourgeTracks			_("Python Scourge Tracks")
+PythonGaussTracks			_("Python Gauss Cannon Tracks")
+PythonPulseTracks			_("Python Pulse Laser Tracks")
+TigerPulseTracks			_("Tiger Pulse Laser Tracks")
+TigerHvLaserTracks			_("Tiger Heavy Laser Tracks")
+WyvernGaussTracks			_("Wyvern Gauss Cannon Tracks")
+WyvernPulseTracks			_("Wyvern Pulse Laser Tracks")
+WyvernHvLaserTracks			_("Wyvern Heavy Laser Tracks")

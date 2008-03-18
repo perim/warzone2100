@@ -23,17 +23,10 @@
  * Callback and display functions for interface.
  *
  */
-
-#include <stdio.h>
-
 #include "lib/framework/frame.h"
 #include "lib/framework/strres.h"
 #include "lib/framework/math-help.h"
 
-#include "objects.h"
-#include "loop.h"
-#include "map.h"
-#include "radar.h"
 /* Includes direct access to render library */
 #include "lib/ivis_common/ivisdef.h"
 #include "lib/ivis_common/piestate.h"
@@ -47,22 +40,28 @@
 #include "lib/ivis_common/rendmode.h"
 #include "lib/ivis_opengl/piematrix.h"
 
+#include "lib/gamelib/gtime.h"
+#include "lib/sound/audio.h"
+
+#include "intdisplay.h"
+
+#include "objects.h"
+#include "loop.h"
+#include "map.h"
+#include "radar.h"
+
 #include "display3d.h"
 #include "edit3d.h"
 #include "structure.h"
 #include "research.h"
 #include "function.h"
-#include "lib/gamelib/gtime.h"
 #include "hci.h"
 #include "stats.h"
 #include "game.h"
 #include "power.h"
-#include "lib/sound/audio.h"
-#include "lib/framework/math-help.h"
 #include "order.h"
 #include "frontend.h"
 #include "intimage.h"
-#include "intdisplay.h"
 #include "component.h"
 #include "console.h"
 #include "cmddroid.h"
@@ -580,8 +579,6 @@ void intUpdateCommandFact(WIDGET *psWidget, W_CONTEXT *psContext)
 }
 
 
-#define DRAW_POWER_BAR_TEXT TRUE
-
 #define BARXOFFSET	46
 
 // Widget callback to update and display the power bar.
@@ -594,43 +591,18 @@ void intDisplayPowerBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIG
 	SDWORD		Empty;
 	SDWORD		BarWidth, textWidth = 0;
 	SDWORD		iX,iY;
-#if	DRAW_POWER_BAR_TEXT
 	static char		szVal[8];
-#endif
-		//SDWORD Used,Avail,ManPow;
-
-//	asPower[selectedPlayer]->availablePower+=32;	// temp to test.
-
 
 	ManPow = ManuPower / POWERBAR_SCALE;
 	Avail = asPower[selectedPlayer]->currentPower / POWERBAR_SCALE;
 	realPower = asPower[selectedPlayer]->currentPower - ManuPower;
 
 	BarWidth = BarGraph->width;
-#if	DRAW_POWER_BAR_TEXT
-    iV_SetFont(font_regular);
+	iV_SetFont(font_regular);
 	sprintf( szVal, "%d", realPower );
 	textWidth = iV_GetTextWidth( szVal );
 	BarWidth -= textWidth;
-#endif
 
-
-
-	/*Avail = asPower[selectedPlayer]->availablePower / POWERBAR_SCALE;
-	Used = asPower[selectedPlayer]->usedPower / POWERBAR_SCALE;*/
-
-	/*if (Used < 0)
-	{
-		Used = 0;
-	}
-
-	Total = Avail + Used;*/
-
-	/*if(ManPow > Avail) {
-		ManPow = Avail;
-	}*/
-
-	//Empty = BarGraph->width - Total;
 	if (ManPow > Avail)
 	{
 		Empty = BarWidth - ManPow;
@@ -640,11 +612,8 @@ void intDisplayPowerBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIG
 		Empty = BarWidth - Avail;
 	}
 
-	//if(Total > BarGraph->width) {				// If total size greater than bar size then scale values.
-	if(Avail > BarWidth) {
-		//Used = PERNUM(BarGraph->width,Used,Total);
-		//ManPow = PERNUM(BarGraph->width,ManPow,Total);
-		//Avail = BarGraph->width - Used;
+	if (Avail > BarWidth)
+	{
 		ManPow = PERNUM(BarWidth,ManPow,Avail);
 		Avail = BarWidth;
 		Empty = 0;
@@ -660,36 +629,16 @@ void intDisplayPowerBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIG
 	x0 = xOffset + BarGraph->x;
 	y0 = yOffset + BarGraph->y;
 
-
-
-
-//	pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_OFF);
 	pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_ON);
 	pie_SetFogStatus(FALSE);
 
 
 	iV_DrawImage(IntImages,IMAGE_PBAR_TOP,x0,y0);
 
-#if	DRAW_POWER_BAR_TEXT
 	iX = x0 + 3;
 	iY = y0 + 9;
-#else
-
- 	iX = x0;
- 	iY = y0;
-
-#endif
 
 	x0 += iV_GetImageWidth(IntImages,IMAGE_PBAR_TOP);
-
-
-	/* indent to allow text value */
-	//draw used section
-	/*iV_DrawImageRect(IntImages,IMAGE_PBAR_USED,
-						x0,y0,
-						0,0,
-						Used, iV_GetImageHeight(IntImages,IMAGE_PBAR_USED));
-	x0 += Used;*/
 
 	//fill in the empty section behind text
 	if(textWidth > 0)
@@ -699,9 +648,6 @@ void intDisplayPowerBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIG
 							textWidth, iV_GetImageHeight(IntImages,IMAGE_PBAR_EMPTY));
 		x0 += textWidth;
 	}
-
-
-
 
 	//draw required section
 	if (ManPow > Avail)
@@ -740,15 +686,10 @@ void intDisplayPowerBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIG
 	}
 
 	iV_DrawImage(IntImages,IMAGE_PBAR_BOTTOM,x0,y0);
+
 	/* draw text value */
-
-
-
-
-#if	DRAW_POWER_BAR_TEXT
 	iV_SetTextColour(WZCOL_TEXT_BRIGHT);
 	iV_DrawText( szVal, iX, iY );
-#endif
 }
 
 
@@ -858,6 +799,7 @@ void intDisplayStatusButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PI
 						case REF_RESEARCH:
 							if (StructureIsResearching(Structure))
 							{
+								iIMDShape * shape = Object;
 								Stats = (BASE_STATS*)Buffer->Data2;
 								if (!Stats)
 								{
@@ -867,7 +809,8 @@ void intDisplayStatusButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PI
 		    						{
 			    						bOnHold = TRUE;
 				    				}
-								StatGetResearchImage(Stats,&Image,(iIMDShape**)&Object, &psResGraphic, FALSE);
+								StatGetResearchImage(Stats,&Image,&shape, &psResGraphic, FALSE);
+								Object = shape;
 								if (psResGraphic)
 								{
 									// we have a Stat associated with this research topic
@@ -1014,7 +957,6 @@ void intDisplayObjectButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PI
 
 				case OBJ_STRUCTURE:					// If it's a structure...
 					IMDType = IMDTYPE_STRUCTURE;
-//					Object = (void*)StructureGetIMD((STRUCTURE*)psObj);
 					Object = (void*)psObj;
 					break;
 
@@ -1057,7 +999,6 @@ void intDisplayStatsButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIE
 	BOOL            Hilight = FALSE;
 	RENDERED_BUTTON *Buffer = (RENDERED_BUTTON*)Form->pUserData;
 	UDWORD          IMDType = 0;
-//	UDWORD          IMDIndex = 0;
 	UDWORD          Player = selectedPlayer;		// ajl, changed for multiplayer (from 0)
 	void            *Object;
 
@@ -1088,8 +1029,6 @@ void intDisplayStatsButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIE
 		{
 			if(StatIsStructure(Stat))
 			{
-//				IMDType = IMDTYPE_STRUCTURE;
-//				Object = (void*)StatGetStructureIMD(Stat,selectedPlayer);
 				Object = (void*)Stat;
 				Player = selectedPlayer;
 				IMDType = IMDTYPE_STRUCTURESTAT;
@@ -1114,6 +1053,7 @@ void intDisplayStatsButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIE
 				}
 				else if(StatIsResearch(Stat))
 				{
+					iIMDShape * shape = Object;
 					/*IMDType = IMDTYPE_RESEARCH;
 					StatGetResearchImage(Stat,&Image,(iIMDShape**)&Object,TRUE);
 					//if Object != NULL the there must be a IMD so set the object to
@@ -1122,7 +1062,8 @@ void intDisplayStatsButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIE
 					{
 						Object = (void*)Stat;
 					}*/
-                    StatGetResearchImage(Stat,&Image,(iIMDShape**)&Object, &psResGraphic, TRUE);
+                    StatGetResearchImage(Stat,&Image,&shape, &psResGraphic, TRUE);
+					Object = shape;
                     if (psResGraphic)
                     {
                         //we have a Stat associated with this research topic
@@ -1197,9 +1138,6 @@ void intDisplayStatsButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIE
 		} else {
 			RenderBlankToButton(Buffer,Down,TOPBUTTON);
 		}
-
-
-
 
 		RENDERBUTTON_INITIALISED(Buffer);
 	}
@@ -1651,7 +1589,6 @@ void intDisplayReticuleButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, 
 
 
 	Down = ((W_BUTTON*)psWidget)->state & (WBUTS_DOWN | WBUTS_CLICKLOCK);
-//	Hilight = ((W_BUTTON*)psWidget)->state & WBUTS_HILITE;
 	Hilight = buttonIsHilite(psWidget);
 
 	if(Down)
@@ -1673,7 +1610,6 @@ void intDisplayReticuleButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, 
 		//flashing button?
 		if (flashing)
 		{
-//			if (flashTime < 2)
 			if (((gameTime/250) % 2) == 0)
 			{
 				ImageID = (UWORD)(Index);//IMAGE_RETICULE_BUTDOWN;//a step in the right direction JPS 27-4-98
@@ -2500,18 +2436,10 @@ void CreateIMDButton(IMAGEFILE *ImageFile, UWORD ImageID, void *Object, UDWORD P
 		Position.y = 0;
 		Position.z = BUTTON_DEPTH; //was 		Position.z = Radius*30;
 
-		if(ImageFile) {
+		if (ImageFile)
+		{
 			iV_DrawImage(ImageFile,ImageID,ButXPos+ox,ButYPos+oy);
-            //there may be an extra icon for research buttons now - AB 9/1/99
-            /*if (IMDType == IMDTYPE_RESEARCH)
-            {
-                if (((RESEARCH *)Object)->subGroup != NO_RESEARCH_ICON)
-                {
-                    iV_DrawImage(ImageFile,((RESEARCH *)Object)->subGroup,ButXPos+ox + 40,ButYPos+oy);
-                }
-            }*/
 		}
-
 
 		pie_SetDepthBufferStatus(DEPTH_CMP_LEQ_WRT_ON);
 
@@ -2575,22 +2503,21 @@ void CreateBlankButton(RENDERED_BUTTON *Buffer,BOOL Down, UDWORD buttonType)
 BOOL DroidIsDemolishing(DROID *Droid)
 {
 	BASE_STATS	*Stats;
-	STRUCTURE *Structure;
 	UDWORD x,y;
 
 	//if(droidType(Droid) != DROID_CONSTRUCT) return FALSE;
-    if (!(droidType(Droid) == DROID_CONSTRUCT || droidType(Droid) ==
-        DROID_CYBORG_CONSTRUCT))
-    {
-        return FALSE;
-    }
+	if (!(droidType(Droid) == DROID_CONSTRUCT ||
+		droidType(Droid) == DROID_CYBORG_CONSTRUCT))
+	{
+		return FALSE;
+	}
 
-	if(orderStateStatsLoc(Droid, DORDER_DEMOLISH,&Stats,&x,&y)) {	// Moving to demolish location?
-
+	if(orderStateStatsLoc(Droid, DORDER_DEMOLISH,&Stats,&x,&y)) // Moving to demolish location?
+	{
 		return TRUE;
-
-	} else if( orderStateObj(Droid, DORDER_DEMOLISH,(BASE_OBJECT**)&Structure) ) {	// Is demolishing?
-
+	}
+	else if (orderStateObj(Droid, DORDER_DEMOLISH)) // Is demolishing?
+	{
 		return TRUE;
 	}
 
@@ -2600,17 +2527,15 @@ BOOL DroidIsDemolishing(DROID *Droid)
 // Returns TRUE if the droid is currently repairing another droid.
 BOOL DroidIsRepairing(DROID *Droid)
 {
-	BASE_OBJECT *psObject;
+	//if(droidType(Droid) != DROID_REPAIR)
+	if (!(droidType(Droid) == DROID_REPAIR
+	   || droidType(Droid) == DROID_CYBORG_REPAIR))
+	{
+		return FALSE;
+	}
 
-    //if(droidType(Droid) != DROID_REPAIR)
-    if (!(droidType(Droid) == DROID_REPAIR || droidType(Droid) ==
-        DROID_CYBORG_REPAIR))
-    {
-        return FALSE;
-    }
-
-    if (orderStateObj(Droid, DORDER_DROIDREPAIR, &psObject))
-    {
+	if (orderStateObj(Droid, DORDER_DROIDREPAIR))
+	{
 		return TRUE;
 	}
 
@@ -2622,7 +2547,6 @@ BOOL DroidIsRepairing(DROID *Droid)
 BOOL DroidIsBuilding(DROID *Droid)
 {
 	BASE_STATS	*Stats;
-	STRUCTURE *Structure;
 	UDWORD x,y;
 
 	//if(droidType(Droid) != DROID_CONSTRUCT) return FALSE;
@@ -2632,16 +2556,14 @@ BOOL DroidIsBuilding(DROID *Droid)
         return FALSE;
     }
 
-	if(orderStateStatsLoc(Droid, DORDER_BUILD,&Stats,&x,&y)) {	// Moving to build location?
-
+	if (orderStateStatsLoc(Droid, DORDER_BUILD, &Stats, &x, &y))
+	{
+		// Moving to build location?
 		return FALSE;
-
-	} else if( orderStateObj(Droid, DORDER_BUILD,(BASE_OBJECT**)&Structure) ||	// Is building or helping?
-			orderStateObj(Droid, DORDER_HELPBUILD,(BASE_OBJECT**)&Structure) ) {
-
-//		DBPRINTF(("%p : %d %d\n",Droid,orderStateObj(Droid, DORDER_BUILD,(BASE_OBJECT**)&Structure),
-//						orderStateObj(Droid, DORDER_HELPBUILD,(BASE_OBJECT**)&Structure)));
-
+	}
+	else if (orderStateObj(Droid, DORDER_BUILD)
+	      || orderStateObj(Droid, DORDER_HELPBUILD)) // Is building or helping?
+	{
 		return TRUE;
 	}
 
@@ -2675,13 +2597,14 @@ BOOL DroidGoingToBuild(DROID *Droid)
 //
 STRUCTURE *DroidGetBuildStructure(DROID *Droid)
 {
-	STRUCTURE *Structure;
+	BASE_OBJECT *Structure = NULL;
 
-	if(!orderStateObj(Droid, DORDER_BUILD,(BASE_OBJECT**)&Structure)) {
-		orderStateObj(Droid, DORDER_HELPBUILD,(BASE_OBJECT**)&Structure);
+	if (orderStateObj(Droid, DORDER_BUILD))
+	{
+		Structure = orderStateObj(Droid, DORDER_HELPBUILD);
 	}
 
-	return Structure;
+	return (STRUCTURE*)Structure;
 }
 
 // Get the first factory assigned to a command droid
@@ -2972,8 +2895,6 @@ void StatGetResearchImage(BASE_STATS *psStat, SDWORD *Image, iIMDShape **Shape,
     }
 }
 
-#define	DRAW_BAR_TEXT	1
-
 /* Draws a stats bar for the design screen */
 void intDisplayStatsBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours)
 {
@@ -2992,25 +2913,18 @@ void intDisplayStatsBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIG
 	y0 += 3;
 
 	/* indent to allow text value */
-#if	DRAW_BAR_TEXT
 	iX = x0 + iV_GetTextWidth( szCheckWidth );
 	iY = y0 + (iV_GetImageHeight(IntImages,IMAGE_DES_STATSCURR) - iV_GetTextLineSize())/2 -
 					iV_GetTextAboveBase();
-#else
-	iX = x0;
-	iY = y0;
-#endif
 
 	//draw current value section
 	iV_DrawImageRect( IntImages, IMAGE_DES_STATSCURR, iX, y0,
 			BarGraph->majorSize, iV_GetImageHeight(IntImages,IMAGE_DES_STATSCURR));
 
 	/* draw text value */
-#if	DRAW_BAR_TEXT
 	sprintf( szVal, "%d", BarGraph->iValue );
 	iV_SetTextColour(WZCOL_TEXT_BRIGHT);
 	iV_DrawText( szVal, x0, iY );
-#endif
 
 	//draw the comparison value - only if not zero
 	if (BarGraph->minorSize != 0)
@@ -3047,14 +2961,9 @@ void intDisplayDesignPowerBar(WIDGET *psWidget, UDWORD xOffset,
 	y0 += arbitaryOffset;
 
 	/* indent to allow text value */
-#if	DRAW_BAR_TEXT
 	iX = x0 + iV_GetTextWidth( szCheckWidth );
 	iY = y0 + (iV_GetImageHeight(IntImages,IMAGE_DES_STATSCURR) - iV_GetTextLineSize())/2 -
 					iV_GetTextAboveBase();
-#else
-	iX = x0;
-	iY = y0;
-#endif
 
     //adjust the width based on the text drawn
     barWidth = BarGraph->width - (iX - x0 + arbitaryOffset);
@@ -3070,12 +2979,9 @@ void intDisplayDesignPowerBar(WIDGET *psWidget, UDWORD xOffset,
                         width, iV_GetImageHeight(IntImages,IMAGE_DES_STATSCURR));
 
 	/* draw text value */
-#if	DRAW_BAR_TEXT
 	sprintf( szVal, "%d", BarGraph->iValue );
 	iV_SetTextColour(WZCOL_TEXT_BRIGHT);
 	iV_DrawText( szVal, x0, iY );
-#endif
-
 
 	//draw the comparison value - only if not zero
 	if (BarGraph->minorSize != 0)
@@ -3101,7 +3007,6 @@ void WidgetAudioCallback(int AudioID)
 {
 	static	SDWORD LastTimeAudio;
 	if(AudioID >= 0) {
-//		DBPRINTF(("%d\n",AudioID));
 
 		SDWORD TimeSinceLastWidgetBeep;
 
@@ -3112,7 +3017,6 @@ void WidgetAudioCallback(int AudioID)
 		{
 			LastTimeAudio=gameTime2;
 			audio_PlayTrack(AudioID);
-//			DBPRINTF(("AudioID %d\n",AudioID));
 		}
 	}
 }
@@ -3192,48 +3096,36 @@ void intDisplayTransportButton(WIDGET *psWidget, UDWORD xOffset,
 }
 
 
-
 /*draws blips on radar to represent Proximity Display and damaged structures*/
 void drawRadarBlips(void)
 {
 	PROXIMITY_DISPLAY	*psProxDisp;
-//	STRUCTURE			*psBuilding;
-	FEATURE				*psFeature;
-	//VIEW_PROXIMITY		*pViewProximity;
-	//SDWORD				x, y;
-	UWORD				imageID;
-	UDWORD				VisWidth, VisHeight, delay = 150;
-	PROX_TYPE			proxType;
-
-	MESSAGE					*psCurr;
-	UDWORD i;
-
-/*
-	SDWORD				radarX,radarY;		// for multiplayer blips
-	//FEATURE				*psFeature;			// ditto. Needed always now!
-*/
-
-	VisWidth = RADWIDTH;
-	VisHeight = RADHEIGHT;
+	FEATURE			*psFeature;
+	UWORD			imageID;
+	UDWORD			delay = 150;
+	UDWORD			i;
+	UDWORD			VisWidth = RADWIDTH;
+	UDWORD			VisHeight = RADHEIGHT;
 
 	//check if it's time to remove beacons
 	for(i=0; i<MAX_PLAYERS; i++)
 	{
 		/* Go through all the proximity Displays*/
-		for (psProxDisp = apsProxDisp[i]; psProxDisp != NULL;
-			psProxDisp = psProxDisp->psNext)
+		for (psProxDisp = apsProxDisp[i]; psProxDisp != NULL; psProxDisp = psProxDisp->psNext)
 		{
 			if(psProxDisp->psMessage->type == MSG_PROXIMITY)
 			{
-				psCurr = psProxDisp->psMessage;
+				MESSAGE		*psCurr = psProxDisp->psMessage;
+				VIEWDATA	*pViewData = (VIEWDATA *)psCurr->pViewData;
 
-				if(((VIEWDATA *)psCurr->pViewData)->type == VIEW_HELP)
+				ASSERT(pViewData != NULL, "Message without data!");
+
+				if (pViewData->type == VIEW_HELP)
 				{
-					assert(((VIEWDATA *)psCurr->pViewData)->pData != NULL); // FIXME This should never happen since type==VIEW_HELP should imply pData!=NULL. This is apparently not the case for everyone and always. The real problem is somewhere else and should be fixed there.
-					if( ((VIEWDATA *)psCurr->pViewData)->pData != NULL &&
-					   (((VIEW_PROXIMITY *)((VIEWDATA *)psCurr->pViewData)->pData)->timeAdded + 60000) <= gameTime)
+					ASSERT(pViewData->pData != NULL, "Help message without data!");
+					if (pViewData->pData != NULL && (((VIEW_PROXIMITY *)pViewData->pData)->timeAdded + 60000) <= gameTime)
 					{
-						debug(LOG_WZ, "blip timeout for %d, from %d", i, (((VIEW_PROXIMITY *)((VIEWDATA *)psCurr->pViewData)->pData)->sender));
+						debug(LOG_WZ, "blip timeout for %d, from %d", i, (((VIEW_PROXIMITY *)pViewData->pData)->sender));
 						removeMessage(psCurr, i);	//remove beacon
 						break;	//there can only be 1 beacon per player
 					}
@@ -3250,12 +3142,11 @@ void drawRadarBlips(void)
 		if (psProxDisp->radarX > 0 && psProxDisp->radarX < VisWidth &&
 			psProxDisp->radarY > 0 && psProxDisp->radarY < VisHeight)
 		{
-			//pViewProximity = (VIEW_PROXIMITY*)psProxDisp->psMessage->
-			//	pViewData->pData;
+			PROX_TYPE		proxType;
+
 			if (psProxDisp->type == POS_PROXDATA)
 			{
-				proxType = ((VIEW_PROXIMITY*)((VIEWDATA *)psProxDisp->psMessage->
-					pViewData)->pData)->proxType;
+				proxType = ((VIEW_PROXIMITY*)((VIEWDATA *)psProxDisp->psMessage->pViewData)->pData)->proxType;
 			}
 			else
 			{
@@ -3274,11 +3165,7 @@ void drawRadarBlips(void)
 			//if the message is read - don't animate
 			if (psProxDisp->psMessage->read)
 			{
-
-				//imageID = (UWORD)(IMAGE_RAD_ENM3 + (pViewProximity->
-				//	proxType * (NUM_PULSES + 1)));
 				imageID = (UWORD)(IMAGE_RAD_ENM3 + (proxType * (NUM_PULSES + 1)));
-
 			}
 			else
 			{
@@ -3292,93 +3179,17 @@ void drawRadarBlips(void)
 					}
 					psProxDisp->timeLastDrawn = gameTime2;
 				}
-
-				//imageID = (UWORD)(IMAGE_RAD_ENM1 + psProxDisp->strobe + (
-				//	pViewProximity->proxType * (NUM_PULSES + 1)));
 				imageID = (UWORD)(IMAGE_RAD_ENM1 + psProxDisp->strobe + (
 					proxType * (NUM_PULSES + 1)));
 
 			}
 			//draw the 'blip'
-
 			iV_DrawImage(IntImages,imageID, psProxDisp->radarX + RADTLX,
 							psProxDisp->radarY + RADTLY);
 		}
 	}
-
-	/*
-	for (psBuilding = apsStructLists[selectedPlayer]; psBuilding != NULL;
-		psBuilding = psBuilding->psNext)
-	{
-		//check it is within the radar coords
-		if (psBuilding->radarX > 0 && psBuilding->radarX < VisWidth &&
-			psBuilding->radarY > 0 && psBuilding->radarY < VisHeight)
-		{
-			//check if recently damaged
-			if (psBuilding->timeLastHit)
-			{
-				if (((gameTime/250) % 2) == 0)
-				{
-					imageID = IMAGE_RAD_ENMREAD;
-				}
-				else
-				{
-					imageID = 0;//IMAGE_RAD_ENM1;
-				}
-				//turn blips off if been on for long enough
-				if (psBuilding->timeLastHit + ATTACK_CB_PAUSE < gameTime)
-				{
-					psBuilding->timeLastHit = 0;
-				}
-				//draw the 'blip'
-				if (imageID)
-				{
-					iV_DrawImage(IntImages,imageID, psBuilding->radarX + RADTLX,
-						psBuilding->radarY + RADTLY);
-				}
-			}
-		}
-	}
-	*/
 }
 
-/*draws blips on world to represent Proximity Messages - no longer the Green Arrow!*/
-/*void drawProximityBlips()
-{
-	PROXIMITY_DISPLAY	*psProxDisp;
-	VIEW_PROXIMITY		*pViewProximity;
-	UWORD				imageID;
-	UDWORD				VisWidth, VisHeight, delay = 150;
-
-	// Go through all the proximity Displays
-	for (psProxDisp = apsProxDisp[selectedPlayer]; psProxDisp != NULL;
-		psProxDisp = psProxDisp->psNext)
-	{
-		pViewProximity = (VIEW_PROXIMITY*)psProxDisp->psMessage->pViewData->pData;
-		// Is the Message worth rendering?
-		if(clipXY(pViewProximity->x,pViewProximity->y))
-		{
-			//if the message is read - don't draw
-			if (!psProxDisp->psMessage->read)
-			{
-				//draw animated - use same timings as radar blips
-				if ((gameTime2 - psProxDisp->timeLastDrawn) > delay)
-				{
-					psProxDisp->strobe++;
-					if (psProxDisp->strobe > (NUM_PULSES-1))
-					{
-						psProxDisp->strobe = 0;
-					}
-					psProxDisp->timeLastDrawn = gameTime2;
-				}
-				imageID = (UWORD)(IMAGE_GAM_ENM1 + psProxDisp->strobe +
-					(pViewProximity->proxType * (NUM_PULSES + 1)));
-			}
-			//draw the 'blip'
-			iV_DrawImage(IntImages,imageID, psProxDisp->screenX, psProxDisp->screenY);
-		}
-	}
-}*/
 
 /*Displays the proximity messages blips over the world*/
 void intDisplayProximityBlips(WIDGET *psWidget, UDWORD xOffset,
@@ -3387,10 +3198,6 @@ void intDisplayProximityBlips(WIDGET *psWidget, UDWORD xOffset,
 	W_CLICKFORM			*psButton = (W_CLICKFORM*)psWidget;
 	PROXIMITY_DISPLAY	*psProxDisp = (PROXIMITY_DISPLAY *)psButton->pUserData;
 	MESSAGE				*psMsg = psProxDisp->psMessage;
-	//BOOL				Hilight = FALSE;
-//	UWORD				imageID;
-//	UDWORD				delay = 100;
-	//VIEW_PROXIMITY		*pViewProximity;
 	SDWORD				x = 0, y = 0;
 
 	ASSERT( psMsg->type == MSG_PROXIMITY, "Invalid message type" );
@@ -3400,7 +3207,6 @@ void intDisplayProximityBlips(WIDGET *psWidget, UDWORD xOffset,
 	{
 		return;
 	}
-	//pViewProximity = (VIEW_PROXIMITY*)psProxDisp->psMessage->pViewData->pData;
 	if (psProxDisp->type == POS_PROXDATA)
 	{
 		x = ((VIEW_PROXIMITY*)((VIEWDATA *)psProxDisp->psMessage->pViewData)->pData)->x;
@@ -3413,56 +3219,19 @@ void intDisplayProximityBlips(WIDGET *psWidget, UDWORD xOffset,
 	}
 
 	//if not within view ignore message
-	//if (!clipXY(pViewProximity->x, pViewProximity->y))
 	if (!clipXY(x, y))
 	{
 		return;
 	}
 
-	/*Hilight = psButton->state & WBUTS_HILITE;
-
-	//if hilighted
-	if (Hilight)
-	{
-		imageID = IMAGE_DES_ROAD;
-		//set the button's x/y so that can be clicked on
-		psButton->x = (SWORD)psProxDisp->screenX;
-		psButton->y = (SWORD)psProxDisp->screenY;
-
-		//draw the 'button'
-		iV_DrawImage(IntImages,imageID, psButton->x, psButton->y);
-		return;
-	}*/
-
 	//if the message is read - don't draw
 	if (!psMsg->read)
 	{
-		//draw animated
-		/*
-		if ((gameTime2 - psProxDisp->timeLastDrawn) > delay)
-		{
-			psProxDisp->strobe++;
-			if (psProxDisp->strobe > (NUM_PULSES-1))
-			{
-				psProxDisp->strobe = 0;
-			}
-			psProxDisp->timeLastDrawn = gameTime2;
-		}
-		imageID = (UWORD)(IMAGE_GAM_ENM1 + psProxDisp->strobe +
-			(pViewProximity->proxType * (NUM_PULSES + 1)));
-		*/
 		//set the button's x/y so that can be clicked on
 		psButton->x = (SWORD)(psProxDisp->screenX - psButton->width/2);
 		psButton->y = (SWORD)(psProxDisp->screenY - psButton->height/2);
-/*
-		//draw the 'button'
-		iV_DrawImage(IntImages,imageID, psProxDisp->screenX,
-			psProxDisp->screenY);
-			*/
 	}
 }
-
-
 
 
 static UDWORD sliderMousePos(	W_SLIDER *Slider )
@@ -3542,14 +3311,8 @@ void intDisplayResSubGroup(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIE
 void intDisplayAllyIcon(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours)
 {
 	W_LABEL		*Label =  (W_LABEL*)psWidget;
-//	UDWORD		i = Label->pUserData;
 	UDWORD		x = Label->x + xOffset;
 	UDWORD		y = Label->y + yOffset;
-//	char		str[2];
 
-    iV_DrawImage(IntImages,IMAGE_DES_BODYPOINTS,x,y);
-
-//	iV_SetTextColour(WZCOL_TEXT_BRIGHT);
-//	sprintf(&str,"%d",i);
-//	iV_DrawText(&str, x+6, y-1 );
+	iV_DrawImage(IntImages, IMAGE_DES_BODYPOINTS, x, y);
 }

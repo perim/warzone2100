@@ -137,6 +137,13 @@ void	kf_ToggleMissionTimer( void )
 {
 	setMissionCheatTime(!mission.cheatTime);
 }
+
+void	kf_ToggleShowGateways(void)
+{
+	addConsoleMessage("Gateways toggled.", DEFAULT_JUSTIFY);
+	showGateways = !showGateways;
+}
+
 // --------------------------------------------------------------------------
 void	kf_ToggleRadarJump( void )
 {
@@ -369,7 +376,14 @@ void kf_ToggleFPS(void) //This shows *just FPS* and is always visable (when acti
 	// Toggle the boolean value of showFPS
 	showFPS = !showFPS;
 
-	CONPRINTF(ConsoleString, (ConsoleString, "FPS display is %s", showFPS ? "Enabled" : "Disabled"));
+	if (showFPS)
+	{
+		CONPRINTF(ConsoleString, (ConsoleString, _("FPS display is enabled.")));
+	}
+	else
+	{
+		CONPRINTF(ConsoleString, (ConsoleString, _("FPS display is disabled.")));
+	}
 }
 void kf_ToggleSamples(void) //Displays number of sound sample in the sound queues & lists.
 {
@@ -381,7 +395,8 @@ void kf_ToggleSamples(void) //Displays number of sound sample in the sound queue
 /* Writes out the frame rate */
 void	kf_FrameRate( void )
 {
-	CONPRINTF(ConsoleString,(ConsoleString,"FPS %d; FPS-Limit: %d; PIEs %d; polys %d; Terr. polys %d; States %d", frameGetAverageRate(), getFramerateLimit(), loopPieCount, loopPolyCount, loopTileCount, loopStateChanges));
+	CONPRINTF(ConsoleString,(ConsoleString, _("FPS %d; FPS-Limit: %d; PIEs %d; polys %d; Terr. polys %d; States %d"), 
+	          frameGetAverageRate(), getFramerateLimit(), loopPieCount, loopPolyCount, loopTileCount, loopStateChanges));
 	if (runningMultiplayer()) {
 			CONPRINTF(ConsoleString,(ConsoleString,
 						"NETWORK:  Bytes: s-%d r-%d  Packets: s-%d r-%d",
@@ -394,7 +409,6 @@ void	kf_FrameRate( void )
 	gameStats = !gameStats;
 
 	CONPRINTF(ConsoleString, (ConsoleString,"Built at %s on %s",__TIME__,__DATE__));
-//		addConsoleMessage("Game statistics display toggled",DEFAULT_JUSTIFY);
 }
 
 // --------------------------------------------------------------------------
@@ -1473,13 +1487,17 @@ void	kf_ToggleDrivingMode( void )
 			addConsoleMessage("DriverMode off", LEFT_JUSTIFY);
 		}
 		else
-		{
-			if(	(driveModeActive() == FALSE) &&	(demoGetStatus() == FALSE) && !bMultiPlayer)
+		{	// removed the MP check for this, so you can now play with in in MP games.
+			if(	(driveModeActive() == FALSE) &&	(demoGetStatus() == FALSE) ) // && !bMultiPlayer)
 			{
 				StartDriverMode( NULL );
 				addConsoleMessage("DriverMode on", LEFT_JUSTIFY);
 			}
 		}
+	}
+	else
+	{
+		addConsoleMessage("DriverMode disabled. Must be in tracking mode. Hit space bar with a unit selected.", LEFT_JUSTIFY);
 	}
 }
 
@@ -2354,6 +2372,16 @@ void kf_ToggleReopenBuildMenu( void )
 void kf_ToggleRadarAllyEnemy(void)
 {
 	bEnemyAllyRadarColor = !bEnemyAllyRadarColor;
+
+	if(bEnemyAllyRadarColor)
+	{
+		CONPRINTF(ConsoleString, (ConsoleString, _("Radar showing friend-foe colors")));
+	}
+	else
+	{
+		CONPRINTF(ConsoleString, (ConsoleString, _("Radar showing player colors")));
+	}
+
 	resetRadarRedraw();
 }
 
@@ -2368,16 +2396,16 @@ void kf_ToggleRadarTerrain(void)
 	switch (radarDrawMode)
 	{
 		case RADAR_MODE_NO_TERRAIN:
-		 	CONPRINTF(ConsoleString, (ConsoleString, "Radar showing only objects"));
+		 	CONPRINTF(ConsoleString, (ConsoleString, _("Radar showing only objects")));
 			break;
 		case RADAR_MODE_COMBINED:
-		 	CONPRINTF(ConsoleString, (ConsoleString, "Radar blending terrain and height"));
+		 	CONPRINTF(ConsoleString, (ConsoleString, _("Radar blending terrain and height")));
 			break;
 		case RADAR_MODE_TERRAIN:
-		 	CONPRINTF(ConsoleString, (ConsoleString, "Radar showing terrain"));
+		 	CONPRINTF(ConsoleString, (ConsoleString, _("Radar showing terrain")));
 			break;
 		case RADAR_MODE_HEIGHT_MAP:
-		 	CONPRINTF(ConsoleString, (ConsoleString, "Radar showing height"));
+		 	CONPRINTF(ConsoleString, (ConsoleString, _("Radar showing height")));
 			break;
 		case NUM_RADAR_MODES:
 			assert(false);
@@ -2435,8 +2463,6 @@ BOOL	processConsoleCommands( char *pName )
 	{
 		char tmpStr[255];
 
-
-
 		/* saveai x */
 		for(i=0;i<MAX_PLAYERS;i++)
 		{
@@ -2454,7 +2480,7 @@ BOOL	processConsoleCommands( char *pName )
 			sprintf(tmpStr,"/loadai %d", i);		//"loadai 0"
 			if(strcmp(pName,tmpStr) == FALSE)
 			{
-				LoadPlayerAIExperience(i, TRUE);
+				(void)LoadPlayerAIExperience(i);
 				return TRUE;
 			}
 		}
@@ -2490,9 +2516,10 @@ void	kf_AddHelpBlip( void )
 			mOverR = TRUE;
 			CalcRadarPosition(x,y,&worldX,&worldY);
 
+			CLIP(worldX, 0, mapWidth - 1);	// temporary hack until CalcRadarPosition is fixed
+			CLIP(worldY, 0, mapHeight- 1);
 			worldX = worldX*TILE_UNITS+TILE_UNITS/2;
 			worldY = worldY*TILE_UNITS+TILE_UNITS/2;
-			//printf_console("Radar, x: %d, y: %d", worldX, worldY);
 		}
 	}
 
@@ -2512,7 +2539,6 @@ void	kf_AddHelpBlip( void )
 	//{
 	//	strlcpy(tempStr, sCurrentConsoleText, sizeof(tempStr));
 	//}
-
 
 	/* add beacon for the sender */
 	strlcpy(beaconMsg[selectedPlayer], tempStr, sizeof(beaconMsg[selectedPlayer]));

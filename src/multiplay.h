@@ -27,73 +27,6 @@
 #define _multiplay_h
 #include "group.h"
 
-// Different Message Structures allowed to be sent between players.
-// Each message must have type = to one of these.
-typedef enum _msgtype
-{
-	NET_DROID,				//0 a new droid
-	NET_DROIDINFO,			//1 update a droid order.
-	NET_DROIDDEST,			//2 issue a droid destruction
-	NET_DROIDMOVE,			//3 move a droid, don't change anything else though..
-	NET_GROUPORDER,			//4 order a group of droids.
-	NET_TEMPLATE,			//5 a new template
-	NET_TEMPLATEDEST,		//6 remove template
-	NET_FEATUREDEST,		//7 destroy a game feature.
-	NET_PING,				//8 ping players.
-	NET_CHECK_DROID,		//9 check & update bot position and damage.
-	NET_CHECK_STRUCT,		//10 check & update struct damage.
-	NET_CHECK_POWER,		//11 power levels for a player.
-	NET_PLAYER_STATS,			//12 player stats
-	NET_BUILD,				//13 build a new structure
-	NET_STRUCTDEST,			//14 specify a strucutre to destroy
-	NET_BUILDFINISHED,		//15 a building is complete.
-	NET_RESEARCH,			//16 Research has been completed.
-	NET_TEXTMSG,			//17 A simple text message between machines.
-	NET_LEAVING,			//18 A player is leaving, (nicely)
-	NET_REQUESTDROID,		//19 a message has been recvd for an unknown droid, request the droid to resolve issues.
-
-	// JOINING TYPES. these msgs are used when a player joins a game in progress.
-	NET_PLAYERCOMPLETE,		//20 All Setup information about player x has been sent
-	__DEPRECATED__NET_REQUESTPLAYER__,		//21 NOTUSED please send me info about a player; is unused now; but some code depends on this enum having these numbers (BAD!!!)
-	NET_STRUCT,				//22 a complete structure
-	NET_WHOLEDROID,			//23 a complete droid
-	NET_FEATURES,			//24 information regarding features.
-	NET_PLAYERRESPONDING,	//25 computer that sent this is now playing warzone!
-
-	// RECENT TYPES
-	NET_OPTIONS,			//26 welcome a player to a game.
-	NET_KICK,				//27 kick a player .
-	NET_SECONDARY,			//28 set a droids secondary order
-
-	NET_FIREUP,				//29 campaign game has started, we can go too.. Shortcut message, not to be used in dmatch.
-	NET_ALLIANCE,			//30 alliance data.
-	NET_GIFT,				//31 a luvly gift between players.
-	NET_DEMOLISH,			//32 a demolish is complete.
-	NET_COLOURREQUEST,		//33 player requests a colour change.
-	NET_ARTIFACTS,			//34 artifacts randomly placed.
-	NET_DMATCHWIN,			//35 winner of a deathmatch. NOTUSED
-	NET_SCORESUBMIT,		//36 submission of scores to host.
-	NET_DESTROYXTRA,		//37 destroy droid with destroyer intact.
-	NET_VTOL,				//38 vtol rearmed
-	NET_UNUSED_39,			//39 unused
-
-	NET_WHITEBOARD,			//40 whiteboard.
-    NET_SECONDARY_ALL,      //41 complete secondary order.
-    NET_DROIDEMBARK,        //42 droid embarked on a Transporter
-    NET_DROIDDISEMBARK,     //43 droid disembarked from a Transporter
-
-	NET_RESEARCHSTATUS,		//44 105, research state.
-	NET_LASSAT,				//45 107, lassat firing.
-
-	NET_REQUESTMAP,			//46 107 dont have map, please send it.
-	NET_AITEXTMSG,			//chat between AIs
-	NET_TEAMS_ON,
-	NET_BEACONMSG,
-	NET_SET_TEAMS,
-	NET_TEAMREQUEST
-} MESSAGE_TYPES;
-
-
 // /////////////////////////////////////////////////////////////////////////////////////////////////
 // Game Options Structure. Enough info to completely describe the static stuff in amultiplay game.
 typedef struct {
@@ -106,9 +39,8 @@ typedef struct {
 	uint32_t    power;						// power level for arena game
 	uint8_t		base;						// clean/base/base&defence
 	uint8_t		alliance;					// no/yes/AIs vs Humans
-	uint8_t		limit;						// limit no/time/frag
 	uint8_t		skDiff[MAX_PLAYERS];			// skirmish game difficulty settings.
-} MULTIPLAYERGAME, *LPMULTIPLAYERGAME;
+} MULTIPLAYERGAME;
 
 typedef struct
 {
@@ -124,14 +56,11 @@ typedef struct {
 	BOOL				JoiningInProgress[MAX_PLAYERS];
 	BOOL				bHostSetup;
 	UDWORD				startTime;
-	UDWORD				modem;								// modem to use.
 	UDWORD				numStructureLimits;					// number of limits
 	MULTISTRUCTLIMITS	*pStructureLimits;					// limits chunk.
-
 	UDWORD		skScores[MAX_PLAYERS][2];			// score+kills for local skirmish players.
-
 	char		phrases[5][255];					// 5 favourite text messages.
-} MULTIPLAYERINGAME, *LPMULTIPLAYERINGAME;
+} MULTIPLAYERINGAME;
 
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -155,32 +84,20 @@ extern UBYTE				bDisplayMultiJoiningStatus;	// draw load progress?
 #define ANYPLAYER				99
 #define ONEPLAYER				98
 
-//#define DMATCH					11			// to easily distinguish game types when joining.
 #define CAMPAIGN				12
-//#define TEAMPLAY				13
-
 #define	SKIRMISH				14
 #define MULTI_SKIRMISH2			18
 #define MULTI_SKIRMISH3			19
-//#define MULTI_SKIRMISHA			20
 
 #define MULTI_CAMPAIGN2			15
 #define MULTI_CAMPAIGN3			16
-//#define MULTI_CAMPAIGNA			17
-
-
-#define NOLIMIT					0			// limit options for dmatch.
-#define FRAGLIMIT				1
-#define TIMELIMIT				2
 
 #define CAMP_CLEAN				0			// campaign subtypes
 #define CAMP_BASE				1
 #define CAMP_WALLS				2
 
-#define	FORCEEDITPLAYER			0
 #define DEATHMATCHTEMPLATES		4			// game templates are stored in player x.
 #define CAMPAIGNTEMPLATES		5
-
 
 #define PING_LO					0			// this ping is kickin'.
 #define PING_MED				600			// this ping is crusin'.
@@ -259,15 +176,11 @@ extern BOOL sendHappyVtol		(const DROID* psDroid);
 
 // Startup. mulitopt
 extern BOOL multiTemplateSetup	(void);
-extern BOOL multiInitialise		(void);							// for Init.c
-extern BOOL lobbyInitialise		(void);							// for Init.c
 extern BOOL multiShutdown		(void);
 extern BOOL sendLeavingMsg		(void);
 
 extern BOOL hostCampaign		(char *sGame, char *sPlayer);
 extern BOOL joinCampaign		(UDWORD gameNumber, char *playername);
-//extern BOOL hostArena			(char *sGame, char *sPlayer);
-//extern BOOL joinArena			(UDWORD gameNumber, char *playername);
 extern void	playerResponding	(void);
 extern BOOL multiGameInit		(void);
 extern BOOL multiGameShutdown	(void);

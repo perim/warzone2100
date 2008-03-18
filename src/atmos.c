@@ -17,11 +17,10 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/* Atmos.c - Handles atmospherics such as snow and rain */
-/* Alex McLean, Pumpkin Studios, EIDOS Interactive */
-/*
-	At present, the water effects are part of the atmos
-	system and aren't properly implemented in the software mode
+/**
+ * @file atmos.c
+ *
+ * Handles atmospherics such as snow and rain.
 */
 #include "lib/framework/frame.h"
 #include "lib/ivis_common/piedef.h"
@@ -101,19 +100,21 @@ void	atmosUpdateSystem( void )
 	UDWORD	numberToAdd;
 	Vector3i pos;
 
-	for(i=0; i<MAX_ATMOS_PARTICLES; i++)
-	{
-		/* See if it's active */
-		if(asAtmosParts[i].status == APS_ACTIVE)
-		{
-			processParticle(&asAtmosParts[i]);
-		}
-	}
-
-	/* This bit below needs to go into a "precipitation function" */
+	// we don't want to do any of this while paused.
 	if(!gamePaused() && weather!=WT_NONE)
 	{
+		for(i = 0; i < MAX_ATMOS_PARTICLES; i++)
+		{
+			/* See if it's active */
+			if(asAtmosParts[i].status == APS_ACTIVE)
+			{
+				processParticle(&asAtmosParts[i]);
+			}
+		}
+
+		/* This bit below needs to go into a "precipitation function" */
 		numberToAdd = ((weather==WT_SNOWING) ? 2 : 4);
+
 		/* Temporary stuff - just adds a few particles! */
 		for(i=0; i<numberToAdd; i++)
 		{

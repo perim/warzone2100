@@ -902,6 +902,7 @@ BOOL scrValDefSave(INTERP_VAL *psVal, char *pBuffer, UDWORD *pSize)
 	char		*pPos;
 	DROID		*psCDroid;
 	SDWORD		members;
+	BOOL		bObjectDefined;
 	DROID_GROUP	*psGroup;
 #ifdef _DEBUG
 	BASE_OBJECT	*psObj;
@@ -1047,48 +1048,67 @@ BOOL scrValDefSave(INTERP_VAL *psVal, char *pBuffer, UDWORD *pSize)
 		}
 		break;
 	case ST_GROUP:
-		if (psVal->v.oval != NULL)
+		bObjectDefined = (psVal->v.oval != NULL);
+
+		if (bObjectDefined)
 		{
 			members = grpNumMembers((DROID_GROUP *)psVal->v.oval);
 		}
 		else
 		{
-			members = 0;
+			members = UNALLOCATED_OBJECT;
 		}
-		if (pBuffer != NULL)
+
+		if (pBuffer)
 		{
 			pPos = pBuffer;
-			psGroup = (DROID_GROUP *)psVal->v.oval;
 
-			// store the run data
-			*((SDWORD *)pPos) = psGroup->sRunData.sPos.x;
-			endian_sdword((SDWORD*)pPos);
-			pPos += sizeof(SDWORD);
-			*((SDWORD *)pPos) = psGroup->sRunData.sPos.y;
-			endian_sdword((SDWORD*)pPos);
-			pPos += sizeof(SDWORD);
-			*((SDWORD *)pPos) = psGroup->sRunData.forceLevel;
-			endian_sdword((SDWORD*)pPos);
-			pPos += sizeof(SDWORD);
-			*((SDWORD *)pPos) = psGroup->sRunData.leadership;
-			endian_sdword((SDWORD*)pPos);
-			pPos += sizeof(SDWORD);
-			*((SDWORD *)pPos) = psGroup->sRunData.healthLevel;
+			*((SDWORD *)pPos) = members;
 			endian_sdword((SDWORD*)pPos);
 			pPos += sizeof(SDWORD);
 
-			// now store the droids
-			for(psCDroid=((DROID_GROUP *)psVal->v.oval)->psList; psCDroid; psCDroid=psCDroid->psGrpNext)
+			if(bObjectDefined)
 			{
-				checkValidId(psCDroid->id);
+				psGroup = (DROID_GROUP *)psVal->v.oval;
 
-				*((UDWORD *)pPos) = psCDroid->id;
-				endian_udword((UDWORD*)pPos);
+				// store the run data
+				*((SDWORD *)pPos) = psGroup->sRunData.sPos.x;
+				endian_sdword((SDWORD*)pPos);
+				pPos += sizeof(SDWORD);
+				*((SDWORD *)pPos) = psGroup->sRunData.sPos.y;
+				endian_sdword((SDWORD*)pPos);
+				pPos += sizeof(SDWORD);
+				*((SDWORD *)pPos) = psGroup->sRunData.forceLevel;
+				endian_sdword((SDWORD*)pPos);
+				pPos += sizeof(SDWORD);
+				*((SDWORD *)pPos) = psGroup->sRunData.leadership;
+				endian_sdword((SDWORD*)pPos);
+				pPos += sizeof(SDWORD);
+				*((SDWORD *)pPos) = psGroup->sRunData.healthLevel;
+				endian_sdword((SDWORD*)pPos);
+				pPos += sizeof(SDWORD);
 
-				pPos += sizeof(UDWORD);
+				// now store the droids
+				for(psCDroid=((DROID_GROUP *)psVal->v.oval)->psList; psCDroid; psCDroid=psCDroid->psGrpNext)
+				{
+					checkValidId(psCDroid->id);
+
+					*((UDWORD *)pPos) = psCDroid->id;
+					endian_udword((UDWORD*)pPos);
+
+					pPos += sizeof(UDWORD);
+				}
 			}
 		}
-		*pSize = sizeof(UDWORD) * members + sizeof(SDWORD) * 5;
+
+		if(!bObjectDefined)
+		{
+			*pSize = sizeof(SDWORD);
+		}
+		else
+		{
+			*pSize = sizeof(SDWORD) + sizeof(UDWORD) * members + sizeof(SDWORD) * 5;	// members + runData
+		}
 		break;
 	case ST_SOUND:
 		if(psVal->v.ival)
@@ -1134,11 +1154,12 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 {
 	char			*pPos;
 	DROID			*psCDroid;
-	SDWORD			index, members;
+	SDWORD			index, members, savedMembers;
 	UDWORD			id;
 	LEVEL_DATASET	*psLevel;
 	DROID_GROUP		*psGroup = NULL;
 	const char              *pName;
+	BOOL			bObjectDefined;
 
 	switch (psVal->type)
 	{
@@ -1344,6 +1365,8 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 		}
 		break;
 	case ST_GROUP:
+		bObjectDefined = TRUE;
+
 		if (psVal->v.oval == NULL)
 		{
 			if (!grpCreate((DROID_GROUP**)&(psVal->v.oval)))
@@ -1355,6 +1378,8 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 			grpJoin((DROID_GROUP*)(psVal->v.oval), NULL);
 		}
 
+		pPos = pBuffer;
+
 		switch (version)
 		{
 			case 1:
@@ -1364,55 +1389,75 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 				members = (size - sizeof(SDWORD)*4) / sizeof(UDWORD);
 				break;
 			case 3:
-				members = (size - sizeof(SDWORD)*5) / sizeof(UDWORD);
+				members = (size - sizeof(SDWORD)*6) / sizeof(UDWORD);
+
+				// get saved group member count/nullpointer flag
+				endian_sdword((SDWORD*)pPos);
+				bObjectDefined = ( *((SDWORD *)pPos) != UNALLOCATED_OBJECT );
+
+				if(bObjectDefined)
+				{
+					savedMembers = *((SDWORD *)pPos);	// get number of saved group members
+
+					ASSERT(savedMembers == members, "scrValDefLoad: calculated and saved group member count did not match." );
+				}
+				pPos += sizeof(SDWORD);
 				break;
 			default:
 				members = 0;
 				debug( LOG_ERROR, "scrValDefLoad: unsupported version %i", version);
 		}
-		pPos = pBuffer;
-		if (version >= 2)
-		{
-			// load the retreat data
-			psGroup = (DROID_GROUP*)(psVal->v.oval);
-			endian_sdword((SDWORD*)pPos);
-			psGroup->sRunData.sPos.x = *((SDWORD *)pPos);
-			pPos += sizeof(SDWORD);
-			endian_sdword((SDWORD*)pPos);
-			psGroup->sRunData.sPos.y = *((SDWORD *)pPos);
-			pPos += sizeof(SDWORD);
-			endian_sdword((SDWORD*)pPos);
-			psGroup->sRunData.forceLevel = (UBYTE)(*((SDWORD *)pPos));
-			pPos += sizeof(SDWORD);
-			endian_sdword((SDWORD*)pPos);
-			psGroup->sRunData.leadership = (UBYTE)(*((SDWORD *)pPos));
-			pPos += sizeof(SDWORD);
-		}
-		if (version >= 3)
-		{
-			endian_sdword((SDWORD*)pPos);
-			psGroup->sRunData.healthLevel = (UBYTE)(*((SDWORD *)pPos));
-			pPos += sizeof(SDWORD);
-		}
 
-		// load the droids
-		while (members > 0)
+		// make sure group was allocated when it was saved (relevant starting from version 3)
+		if( version < 3 || bObjectDefined )
 		{
-			endian_udword((UDWORD*)pPos);
-			id = *((UDWORD *) pPos);
-			psCDroid = (DROID *)getBaseObjFromId(id);
-			if (!psCDroid)
+			if (version >= 2)
 			{
-				debug( LOG_ERROR, "scrValDefLoad: couldn't find object id %d", id );
-				abort();
+				// load the retreat data
+				psGroup = (DROID_GROUP*)(psVal->v.oval);
+				endian_sdword((SDWORD*)pPos);
+				psGroup->sRunData.sPos.x = *((SDWORD *)pPos);
+				pPos += sizeof(SDWORD);
+				endian_sdword((SDWORD*)pPos);
+				psGroup->sRunData.sPos.y = *((SDWORD *)pPos);
+				pPos += sizeof(SDWORD);
+				endian_sdword((SDWORD*)pPos);
+				psGroup->sRunData.forceLevel = (UBYTE)(*((SDWORD *)pPos));
+				pPos += sizeof(SDWORD);
+				endian_sdword((SDWORD*)pPos);
+				psGroup->sRunData.leadership = (UBYTE)(*((SDWORD *)pPos));
+				pPos += sizeof(SDWORD);
 			}
-			else
+			if (version >= 3)
 			{
-				grpJoin((DROID_GROUP*)(psVal->v.oval), psCDroid);
+				endian_sdword((SDWORD*)pPos);
+				psGroup->sRunData.healthLevel = (UBYTE)(*((SDWORD *)pPos));
+				pPos += sizeof(SDWORD);
 			}
 
-			pPos += sizeof(UDWORD);
-			members -= 1;
+			// load the droids
+			while (members > 0)
+			{
+				endian_udword((UDWORD*)pPos);
+				id = *((UDWORD *) pPos);
+				psCDroid = (DROID *)getBaseObjFromId(id);
+				if (!psCDroid)
+				{
+					debug( LOG_ERROR, "scrValDefLoad: couldn't find object id %d", id );
+					abort();
+				}
+				else
+				{
+					grpJoin((DROID_GROUP*)(psVal->v.oval), psCDroid);
+				}
+
+				pPos += sizeof(UDWORD);
+				members -= 1;
+			}
+		}
+		else		// a group var was unallocated during saving
+		{
+			pPos += sizeof(UWORD);
 		}
 		break;
 	case ST_SOUND:

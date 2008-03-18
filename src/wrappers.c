@@ -17,14 +17,11 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * Wrappers.c
- * frontend loop & also loading screen & game over screen.
+/**
+ * @file wrappers.c
+ * Frontend loop & also loading screen & game over screen.
  * AlexL. Pumpkin Studios, EIDOS Interactive, 1997
  */
-
-#include <stdio.h>
-
 #include "lib/framework/frame.h"
 #include "lib/framework/frameresource.h"
 #include "lib/framework/strres.h"
@@ -125,19 +122,6 @@ TITLECODE titleLoop(void)
 		changeTitleMode(TITLE);
 
 		frameSetCursorFromRes(IDC_DEFAULT); // reset cursor (sw)
-
-		if(NetPlay.bLobbyLaunched) // lobbies skip title screens & go into the game
-		{
-			if (NetPlay.bHost)
-			{
-				ingame.bHostSetup = TRUE;
-			}
-			else
-			{
-				ingame.bHostSetup = FALSE;
-			}
-			changeTitleMode(QUIT);
-		}
 	}
 
 	switch(titleMode) // run relevant title screen code.
@@ -204,7 +188,7 @@ TITLECODE titleLoop(void)
 		case GAME3:
 			runGameOptions3Menu();
 			break;
-		
+
 		case GAME4:
 			runGameOptions4Menu();
 			break;
@@ -228,9 +212,7 @@ TITLECODE titleLoop(void)
 
 		case SHOWINTRO:
 			pie_SetFogStatus(FALSE);
-			pie_ScreenFlip(CLEAR_BLACK);//flip to clear screen but not here//reshow intro video.
-	  		pie_ScreenFlip(CLEAR_BLACK);//flip to clear screen but not here
-
+	  		pie_ScreenFlip(CLEAR_BLACK);
 			changeTitleMode(TITLE);
 			RetCode = TITLECODE_SHOWINTRO;
 			break;
@@ -323,15 +305,13 @@ void initLoadingScreen( BOOL drawbdrop )
 		//just init the load bar with the current screen
 		// setup the callback....
 		pie_SetFogStatus(FALSE);
-		pie_ScreenFlip(CLEAR_BLACK);//init loading
-		pie_ScreenFlip(CLEAR_BLACK);//init loading
+		pie_ScreenFlip(CLEAR_BLACK);
 		resSetLoadCallback(loadingScreenCallback);
 		loadScreenCallNo = 0;
 		return;
 	}
 
 	pie_SetFogStatus(FALSE);
-	pie_ScreenFlip(CLEAR_BLACK);//init loading
 	pie_ScreenFlip(CLEAR_BLACK);//init loading
 
 	// setup the callback....
@@ -353,7 +333,6 @@ void startCreditsScreen(void)
 	pie_LoadBackDrop(screen);
 
 	pie_SetFogStatus(FALSE);
-	pie_ScreenFlip(CLEAR_BLACK);//flip to set back buffer
 	pie_ScreenFlip(CLEAR_BLACK);//init loading
 }
 

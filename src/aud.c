@@ -17,13 +17,11 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/***************************************************************************/
-/*
- * Aud.c
+/**
+ * @file aud.c
  *
- * Warzone audio wrapper functions
+ * Warzone audio wrapper functions.
  *
- * Gareth Jones 16/12/97
  */
 /***************************************************************************/
 
@@ -54,7 +52,6 @@ BOOL
 audio_ObjectDead( void * psObj )
 {
 	SIMPLE_OBJECT	*psSimpleObj = (SIMPLE_OBJECT *) psObj;
-	BASE_OBJECT		*psBaseObj;
 	PROJECTILE		*psProj;
 
 	/* check is valid simple object pointer */
@@ -88,7 +85,7 @@ audio_ObjectDead( void * psObj )
 	else
 	{
 		/* check base object */
-		psBaseObj = (BASE_OBJECT *) psObj;
+		BASE_OBJECT *psBaseObj  = (BASE_OBJECT *) psObj;
 
 		/* check is valid pointer */
 		if ( psBaseObj == NULL )

@@ -18,9 +18,10 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
-/*
-	Scores.c Deals with all the mission results gubbins.
-	Alex W. McLean
+/**
+ * @file scores.c
+ * Deals with all the mission results gubbins.
+ * Alex W. McLean
 */
 
 #include <string.h>
@@ -105,7 +106,7 @@ const char *getDescription(int id)
 		case STR_MR_STR_NOW      : return _("Total Structures: %u");
 
 		case STR_MR_LEVEL_ROOKIE : return _("Rookie: %u");
-		case STR_MR_LEVEL_GREEN  : return _("Green: %u");
+		case STR_MR_LEVEL_GREEN  : return P_("rank", "Green: %u");
 		case STR_MR_LEVEL_TRAINED: return _("Trained: %u");
 		case STR_MR_LEVEL_REGULAR: return _("Regular: %u");
 		case STR_MR_LEVEL_VETERAN: return _("Professional: %u");

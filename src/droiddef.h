@@ -151,11 +151,7 @@ typedef struct _droid
 	 */
 	UDWORD          weight;
 	UDWORD          baseSpeed;                      ///< the base speed dependant on propulsion type
-	UDWORD          sensorRange;
-	UDWORD          sensorPower;
-	UDWORD          ECMMod;
 	UDWORD          originalBody;                   ///< the original body points
-	UDWORD          body;                           ///< the current body points
 	float           experience;
 	UWORD           turretRotation[DROID_MAXWEAPS]; ///< Watermelon:turretRotation info for multiple turrents :)
 	UWORD           turretPitch[DROID_MAXWEAPS];    ///< Watermelon:turrentPitch info for multiple turrents :)
@@ -179,8 +175,6 @@ typedef struct _droid
 	UWORD           orderX, orderY;
 	UWORD           orderX2, orderY2;
 
-	UDWORD          lastHitWeapon;
-	UDWORD          timeLastHit;
 	BOOL            bTargetted;
 
 	BASE_OBJECT*    psTarget;                       ///< Order target
@@ -215,11 +209,10 @@ typedef struct _droid
 
 	/* Movement control data */
 	MOVE_CONTROL    sMove;
-//	void            *lastTile;
 
 	/* anim data */
 	ANIM_OBJECT     *psCurAnim;
 	SDWORD          iAudioID;
-} DROID;
+} WZ_DECL_MAY_ALIAS DROID;
 
 #endif // __INCLUDED_DROIDDEF_H__

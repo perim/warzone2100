@@ -8,6 +8,12 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([lib/framework/frame.c])
 
 
+# HACK
+# Workaround stupid autoconf CFLAGS default
+# (Bash considers set but empty variables different from null for the ${VAR:+alt} operator)
+CFLAGS=${CFLAGS}
+
+
 # Checks for programs.
 AC_PROG_CC_STDC
 AC_PROG_RANLIB
@@ -50,7 +56,7 @@ case ${host_os} in
 	*mingw32*)
 		host_os_mingw32=yes
 		AC_CHECK_TOOL([WINDRES], [windres], AC_MSG_ERROR([windres not found]))
-		WIN32_LIBS='-lintl -ldbghelp -lshfolder -lwinmm -lwsock32'
+		WIN32_LIBS='-ldbghelp -lshfolder -lwinmm -lwsock32'
 		AC_SUBST([WIN32_LIBS], [${WIN32_LIBS}])
 		;;
 	*)
@@ -164,7 +170,7 @@ if test "x$enable_debug" = "xyes" ; then
 		WZ_CFLAGS="${WZ_CFLAGS} -O0 -g -Wcheck -Werror"
 		WZ_CPPFLAGS="${WZ_CPPFLAGS} -DDEBUG"
 	else
-		WZ_CFLAGS="${WZ_CFLAGS} -O0 -g -Wall -Werror -Wno-unused-label -Wno-pointer-to-int-cast"
+		WZ_CFLAGS="${WZ_CFLAGS} -O0 -g -Wall -Werror -Wno-unused-label -Wno-pointer-to-int-cast -Wmissing-field-initializers"
 		WZ_CPPFLAGS="${WZ_CPPFLAGS} -DDEBUG"
 	fi
 elif test "x$enable_debug" = "xrelaxed" ; then
@@ -232,18 +238,11 @@ AC_SUBST([OPENGLC_LIBS], [${OPENGLC_LIBS}])
 
 WZ_CPPFLAGS="${WZ_CPPFLAGS} -DDATADIR=\"\\\"\${datadir}/\${PACKAGE}\\\"\""
 WZ_CPPFLAGS="${WZ_CPPFLAGS} -DLOCALEDIR=\"\\\"\${localedir}\\\"\""
+WZ_CPPFLAGS="${WZ_CPPFLAGS} -I\$(top_srcdir)"
 
 
-# add some required C flags here
-#  YY_NO_INPUT to prevent Flex from defining input(): We use our own YY_INPUT instead.
-WZ_CPPFLAGS="${WZ_CPPFLAGS} -DYY_NO_INPUT"
-
-
-# Purposefully including the SDL, PNG, OGGVORBIS, OPENAL and OPENGL CFLAGS into
-# the CPPFLAGS here as they're really preprocessor options, not C compilation
-# options.
-CPPFLAGS="${CPPFLAGS} ${WZ_CPPFLAGS} -I\$(top_srcdir) ${SDL_CFLAGS} ${PNG_CFLAGS} ${OGGVORBIS_CFLAGS} ${OPENAL_CFLAGS} ${OPENGL_CFLAGS}"
-CFLAGS="${CFLAGS} ${WZ_CFLAGS}"
+AC_SUBST([WZ_CPPFLAGS], [${WZ_CPPFLAGS}])
+AC_SUBST([WZ_CFLAGS], [${WZ_CFLAGS}])
 
 
 AC_CONFIG_HEADER([config.h])
@@ -256,7 +255,9 @@ AC_CONFIG_FILES([Makefile
 		data/Makefile
 		data/mods/Makefile
 		data/mods/global/Makefile
-		nsis/Makefile
+		data/mods/global/aivolution/multiplay/skirmish/Makefile
+		pkg/Makefile
+		pkg/nsis/Makefile
 		win32/Makefile
 		lib/Makefile
 		lib/framework/Makefile
@@ -269,6 +270,7 @@ AC_CONFIG_FILES([Makefile
 		lib/sound/Makefile
 		lib/sound/general/Makefile
 		lib/sound/openal/Makefile
+		lib/sqlite3/Makefile
 		lib/widget/Makefile
 		src/Makefile])
 AC_OUTPUT

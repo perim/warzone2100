@@ -17,8 +17,8 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * Display.c
+/**
+ * @file display.c
  *
  * Display routines.
  *
@@ -561,7 +561,9 @@ static void CheckFinishedDrag(void)
 			if(wallDrag.status == DRAG_DRAGGING)
 			{
 				//if invalid location keep looking for a valid one
-				if (buildState == BUILD3D_VALID || buildState == BUILD3D_FINISHED)
+				if ((buildState == BUILD3D_VALID || buildState == BUILD3D_FINISHED)
+				    && sBuildDetails.psStats->ref >= REF_STRUCTURE_START
+				    && sBuildDetails.psStats->ref < (REF_STRUCTURE_START + REF_RANGE))
 				{
 					if ((((STRUCTURE_STATS *)sBuildDetails.psStats)->type == REF_WALL
 					     || ((STRUCTURE_STATS *)sBuildDetails.psStats)->type == REF_DEFENSE)
@@ -603,7 +605,9 @@ static void CheckStartWallDrag(void)
 		/* Store away the details if we're building */
 		// You can start dragging walls from invalid locations so check for
 		// BUILD3D_POS or BUILD3D_VALID, used tojust check for BUILD3D_VALID.
-		if( (buildState == BUILD3D_POS) || (buildState == BUILD3D_VALID) )
+		if ((buildState == BUILD3D_POS || buildState == BUILD3D_VALID)
+		    && sBuildDetails.psStats->ref >= REF_STRUCTURE_START
+		    && sBuildDetails.psStats->ref < (REF_STRUCTURE_START + REF_RANGE))
 		{
 			if ((((STRUCTURE_STATS *)sBuildDetails.psStats)->type == REF_WALL
 			     || ((STRUCTURE_STATS *)sBuildDetails.psStats)->type == REF_DEFENSE)
@@ -635,6 +639,8 @@ static BOOL CheckFinishedFindPosition(void)
 		{
 			if ((((STRUCTURE_STATS *)sBuildDetails.psStats)->type == REF_WALL
 			     || ((STRUCTURE_STATS *)sBuildDetails.psStats)->type == REF_DEFENSE)
+			    && sBuildDetails.psStats->ref >= REF_STRUCTURE_START
+			    && sBuildDetails.psStats->ref < (REF_STRUCTURE_START + REF_RANGE)
 			    && !isLasSat((STRUCTURE_STATS *)sBuildDetails.psStats))
 			{
 				int dx, dy;
@@ -1553,16 +1559,15 @@ static BOOL droidHasLeader(DROID *psDroid)
 		return FALSE;
 	}
 
-	psLeader = NULL;
-	if ((psDroid->psGroup != NULL) &&
-		(psDroid->psGroup->type == GT_COMMAND))
+	if (psDroid->psGroup != NULL
+	 && psDroid->psGroup->type == GT_COMMAND)
 	{
 		psLeader = (BASE_OBJECT *)psDroid->psGroup->psCommander;
 	}
 	else
 	{
 		//psLeader can be either a droid or a structure
-		orderStateObj(psDroid, DORDER_FIRESUPPORT, &psLeader);
+		psLeader = orderStateObj(psDroid, DORDER_FIRESUPPORT);
 	}
 
 	if (psLeader != NULL)
@@ -1794,10 +1799,10 @@ static inline void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 		if (getDebugMappingStatus()) // cheating on, so output debug info
 		{
 			CONPRINTF(ConsoleString, (ConsoleString,
-			          "%s - Damage %d%% - ID %d - experience %f, %s - order %d - action %d - sensor range %hu power %hu - ECM %u",
+			          "%s - Damage %d%% - ID %d - experience %f, %s - order %s - action %s - sensor range %hu power %hu - ECM %u",
 			          droidGetName(psDroid), 100 - PERCENT(psDroid->body, psDroid->originalBody), psDroid->id,
-			          psDroid->experience, getDroidLevelName(psDroid), psDroid->order, psDroid->action, psDroid->sensorRange,
-			          psDroid->sensorPower, psDroid->ECMMod));
+			          psDroid->experience, getDroidLevelName(psDroid), getDroidOrderName(psDroid->order), getDroidActionName(psDroid->action),
+			          droidSensorRange(psDroid), droidSensorPower(psDroid), droidConcealment(psDroid)));
 			FeedbackClickedOn();
 		}
 		else

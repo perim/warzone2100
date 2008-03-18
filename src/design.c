@@ -17,8 +17,8 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * Design.c
+/**
+ * @file design.c
  *
  * Functions for design screen.
  *
@@ -2477,7 +2477,7 @@ static BOOL intAddExtraSystemButtons(UDWORD sensorIndex, UDWORD ecmIndex,
 			compIndex = repairIndex;
 			break;
 		case 4:
-			// Repair Buttons
+			// Brain Buttons
 			psCurrStats = (COMP_BASE_STATS *)asBrainStats;
 			size = sizeof(BRAIN_STATS);
 			aAvailable = apCompLists[selectedPlayer][COMP_BRAIN];
@@ -4338,9 +4338,7 @@ void intProcessDesign(UDWORD id)
 		/* save template if valid */
 		if (saveTemplate())
 		{
-#ifdef SCRIPTS
 			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DROIDDESIGNED);
-#endif
 		}
 
 		switch ( desCompMode )

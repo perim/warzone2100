@@ -66,11 +66,8 @@ Cyb-Rail1-GROUND,Cyb-Wpn-Rail1,NULL,NULL,0
 Cyb-Rocket-GROUND,CyborgRocket,NULL,NULL,0
 Cyb-RotMG-GROUND,CyborgRotMG,NULL,NULL,0
 Cyb-Thermite,Cyb-Wpn-Thermite,NULL,NULL,5
-CyborgCannon01CGrd,CyborgCannon,NULL,NULL,4
 CyborgCannon01Grd,CyborgCannon,NULL,NULL,5
-CyborgChain01CGround,CyborgChaingun,NULL,NULL,4
 CyborgChain01Ground,CyborgChaingun,NULL,NULL,5
-CyborgFlamer01CGrd,CyborgFlamer01,NULL,NULL,4
 CyborgFlamer01Grd,CyborgFlamer01,NULL,NULL,5
 CyborgRkt01Ground,CyborgRocket,NULL,NULL,5
 CyborgRotMgGround,CyborgRotMG,NULL,NULL,5
@@ -215,6 +212,7 @@ ViperHMGTracks,MG3Mk1,NULL,NULL,6
 ViperLtA-Twheels,Rocket-LtA-T,NULL,NULL,6
 ViperLtCannonTracks,Cannon1Mk1,NULL,NULL,4
 ViperLtCannonWheels,Cannon1Mk1,NULL,NULL,4
+ViperLtCannonHTracks,Cannon1Mk1,NULL,NULL,4
 ViperLtMGWheels,MG1Mk1,NULL,NULL,0
 ViperMedCnTrks,Cannon2A-TMk1,NULL,NULL,6
 ViperMG01Wheels,MG1Mk1,NULL,NULL,6
@@ -284,4 +282,14 @@ ViperTrkLancer,Rocket-LtA-T,NULL,NULL,6
 CobraPODHTracks,Rocket-Pod,NULL,NULL,6
 CobraPODTracks,Rocket-Pod,NULL,NULL,6
 CobraMRLTracks,Rocket-MRL,NULL,NULL,6
+CobraInfernoHTracks,Flame2,NULL,NULL,6
+PythonHoverHVC,Cannon4AUTOMk1,NULL,NULL,6
+PythonScourgeTracks,Missile-A-T,NULL,NULL,6
+PythonGaussTracks,RailGun3Mk1,NULL,NULL,6
+PythonPulseTracks,Laser2PULSEMk1,NULL,NULL,6
+TigerPulseTracks,Laser2PULSEMk1,NULL,NULL,6
+TigerHvLaserTracks,HeavyLaser,NULL,NULL,6
+WyvernGaussTracks,RailGun3Mk1,NULL,NULL,6
+WyvernPulseTracks,Laser2PULSEMk1,NULL,NULL,6
+WyvernHvLaserTracks,HeavyLaser,NULL,NULL,6
 ZNULLDESIGN,ZNULLWEAPON,ZNULLWEAPON,ZNULLWEAPON,0

@@ -21,59 +21,57 @@
  * MultiInt.c
  *
  * Alex Lee, 98. Pumpkin Studios, Bath.
- * Functions to display and handle the multiplayer interface screens
- * Arena and Campaign styles, along with connection and game options.
+ * Functions to display and handle the multiplayer interface screens,
+ * along with connection and game options.
  */
 
 #include "lib/framework/frame.h"
 
+#include <time.h>
 #include <SDL_opengl.h>
 
 #include "lib/framework/frameresource.h"
 #include "lib/framework/frameint.h"
-// FIXME Direct iVis implementation include!
-#include "lib/ivis_opengl/screen.h"
-#include "lib/widget/widget.h"
-
-#include "main.h"
-#include "objects.h"
-#include "display.h"// pal stuff
-#include "display3d.h"
+#include "lib/framework/file.h"
 
 /* Includes direct access to render library */
 #include "lib/ivis_common/piedef.h"
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/pieclip.h"
 #include "lib/ivis_common/piepalette.h"
-// FIXME Direct iVis implementation include!
 #include "lib/ivis_common/rendmode.h"
+#include "lib/ivis_opengl/piematrix.h"			// for setgeometricoffset
+#include "lib/ivis_opengl/screen.h"
+
+#include "lib/gamelib/gtime.h"
+#include "lib/netplay/netplay.h"
+#include "lib/script/script.h"
+#include "lib/widget/widget.h"
+
+#include "main.h"
+#include "objects.h"
+#include "display.h"// pal stuff
+#include "display3d.h"
 #include "objmem.h"
 #include "gateway.h"
-#include <time.h>
-#include "lib/gamelib/gtime.h"
+
 #include "configuration.h"
 #include "intdisplay.h"
 #include "design.h"
 #include "hci.h"
 #include "power.h"
 #include "loadsave.h"			// for blueboxes.
-// FIXME Direct iVis implementation include!
-#include "lib/ivis_opengl/piematrix.h"			// for setgeometricoffset
 #include "component.h"
 #include "map.h"
 #include "console.h"			// chat box stuff
 #include "frend.h"
 #include "advvis.h"
-//#include "editbox.h"
 #include "frontend.h"
-//#include "texture.h"
 #include "data.h"
-#include "lib/script/script.h"
 #include "keymap.h"
 #include "game.h"
 #include "warzoneconfig.h"
 
-#include "lib/netplay/netplay.h"
 #include "multiplay.h"
 #include "multiint.h"
 #include "multijoin.h"
@@ -94,8 +92,6 @@ extern char	MultiPlayersPath[PATH_MAX];
 extern BOOL				bSendingMap;
 
 extern void intDisplayTemplateButton(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT *pColours);
-
-extern BOOL NETsetupTCPIP(void ** addr, const char * machine);
 
 BOOL						bHosted			= FALSE;				//we have set up a game
 char						sPlayer[128];							// player name (to be used)
@@ -401,7 +397,6 @@ void runConnectionScreen(void )
 {
 	UDWORD id;
 	static char addr[128];
-	void * finalconnection;
 
 	if(SettingsUp == TRUE)
 	{
@@ -431,7 +426,7 @@ void runConnectionScreen(void )
 			addConnections(InitialProto);
 			break;
 		case CON_TYPESID_START+0: // Lobby button
-			NETsetupTCPIP(&finalconnection, ""); //inet
+			NETsetupTCPIP(""); //inet
 			changeTitleMode(GAMEFIND);
 			break;
 		case CON_TYPESID_START+1: // IP button
@@ -447,7 +442,7 @@ void runConnectionScreen(void )
 				SettingsUp = FALSE;
 			}
 
-			NETsetupTCPIP(&finalconnection, addr); //inet
+			NETsetupTCPIP(addr); //inet
 
 			changeTitleMode(GAMEFIND);
 			break;
@@ -559,11 +554,12 @@ void runGameFind(void )
 		if( ( NetPlay.games[gameNumber].desc.dwCurrentPlayers < NetPlay.games[gameNumber].desc.dwMaxPlayers)
 			&& !(NetPlay.games[gameNumber].desc.dwFlags & SESSION_JOINDISABLED) ) // if still joinable
 		{
-
+			// TODO: Check whether this code is used at all in skirmish games, if not, remove it.
 			// if skirmish, check it wont take the last slot
-			if( NETgetGameFlagsUnjoined(gameNumber,1) == SKIRMISH
-			  && (NetPlay.games[gameNumber].desc.dwCurrentPlayers >= NetPlay.games[gameNumber].desc.dwMaxPlayers -1)
-			  )
+			if (bMultiPlayer
+			 && !NetPlay.bComms
+			 && NETgetGameFlagsUnjoined(gameNumber,1) == SKIRMISH
+			 && (NetPlay.games[gameNumber].desc.dwCurrentPlayers >= NetPlay.games[gameNumber].desc.dwMaxPlayers - 1))
 			{
 				goto FAIL;
 			}
@@ -834,7 +830,6 @@ static void addGameOptions(BOOL bRedo)
 		iV_GetImageHeight(FrontImages,IMAGE_RETURN),
 		_("Return To Previous Screen"),IMAGE_RETURN,IMAGE_RETURN_HI,TRUE);
 
-
 	// host Games button
 	if(ingame.bHostSetup && !bHosted)
 	{
@@ -848,17 +843,6 @@ static void addGameOptions(BOOL bRedo)
 	{
 		addMultiBut(psWScreen,MULTIOP_OPTIONS,MULTIOP_STRUCTLIMITS,MULTIOP_STRUCTLIMITSX,MULTIOP_STRUCTLIMITSY,
 					35,28, _("Set Structure Limits"),IMAGE_SLIM,IMAGE_SLIM_HI,FALSE);
-	}
-
-	// disable buttons not available in lobby games
-	if(NetPlay.bLobbyLaunched)
-	{
-		widgSetButtonState(psWScreen, MULTIOP_GNAME,WEDBS_DISABLE);
-		widgSetButtonState(psWScreen, MULTIOP_GNAME_ICON,WBUT_DISABLE);
-
-		widgSetButtonState(psWScreen, MULTIOP_PNAME,WEDBS_DISABLE);
-		widgSetButtonState(psWScreen, MULTIOP_PNAME_ICON,WBUT_DISABLE);
-
 	}
 
 	return;
@@ -937,7 +921,7 @@ static void addColourChooser(UDWORD player)
 				MULTIOP_ROW_WIDTH,MULTIOP_PLAYERHEIGHT);
 
 	// add the flags
-	for(i=0;i<MAX_PLAYERS;i++)		//game.maxPlayers;i++)
+	for (i = 0; i < MAX_PLAYERS; i++)
 	{
 		addMultiBut(psWScreen,MULTIOP_COLCHOOSER_FORM, MULTIOP_COLCHOOSER+i,
 			(i*(iV_GetImageWidth(FrontImages,IMAGE_PLAYER0) +5)+7) ,//x
@@ -1016,14 +1000,14 @@ BOOL recvTeamRequest()
 		return TRUE;
 	}
 
-	NETbeginDecode();
+	NETbeginDecode(NET_TEAMREQUEST);
 	NETuint8_t(&player);
 	NETuint8_t(&team);
 	NETend();
 
 	if (player > MAX_PLAYERS || team > MAX_PLAYERS)
 	{
-		debug(LOG_ERROR, "Invalid NET_TEAMREQUEST from player %d: Tried to change player %d (team %d)", 
+		debug(LOG_ERROR, "Invalid NET_TEAMREQUEST from player %d: Tried to change player %d (team %d)",
 		      NETgetSource(), (int)player, (int)team);
 		return FALSE;
 	}
@@ -1102,7 +1086,7 @@ BOOL recvColourRequest()
 		return TRUE;
 	}
 
-	NETbeginDecode();
+	NETbeginDecode(NET_COLOURREQUEST);
 		NETuint8_t(&player);
 		NETuint8_t(&col);
 		NETuint8_t(&chosenPlayer);
@@ -1110,7 +1094,7 @@ BOOL recvColourRequest()
 
 	if (player > MAX_PLAYERS || (chosenPlayer > MAX_PLAYERS && chosenPlayer != UBYTE_MAX))
 	{
-		debug(LOG_ERROR, "Invalid NET_COLOURREQUEST from player %d: Tried to change player %d to %d", 
+		debug(LOG_ERROR, "Invalid NET_COLOURREQUEST from player %d: Tried to change player %d to %d",
 		      NETgetSource(), (int)player, (int)chosenPlayer);
 		return FALSE;
 	}
@@ -1142,7 +1126,7 @@ static void addTeamChooser(UDWORD player)
 				MULTIOP_ROW_WIDTH,MULTIOP_TEAMSHEIGHT);
 
 	// add the teams
-	for(i=0;i<MAX_PLAYERS;i++)		//game.maxPlayers;i++)
+	for (i = 0; i < MAX_PLAYERS; i++)
 	{
 		W_BUTINIT		sButInit;
 
@@ -1451,12 +1435,6 @@ static void stopJoining(void)
 	dwSelectedGame	 = 0;
 	saveConfig();
 
-	if(NetPlay.bLobbyLaunched)
-	{
-		changeTitleMode(QUIT);
-		return;
-	}
-	else
 	{
 		if(bHosted)											// cancel a hosted game.
 		{
@@ -1579,9 +1557,7 @@ static void processMultiopWidgets(UDWORD id)
 			game.type = CAMPAIGN;
 			widgSetString(psWScreen, MULTIOP_MAP, DEFAULTCAMPAIGNMAP);
 			strcpy(game.map,widgGetString(psWScreen, MULTIOP_MAP));
-			game.maxPlayers = 4;
 			game.alliance = NO_ALLIANCES;
-
 			addGameOptions(FALSE);
 			break;
 
@@ -1589,11 +1565,8 @@ static void processMultiopWidgets(UDWORD id)
 			widgSetButtonState(psWScreen, MULTIOP_CAMPAIGN,0 );
 			widgSetButtonState(psWScreen, MULTIOP_SKIRMISH,WBUT_LOCK);
 			game.type = SKIRMISH;
-
 			widgSetString(psWScreen, MULTIOP_MAP, DEFAULTSKIRMISHMAP);
 			strcpy(game.map,widgGetString(psWScreen, MULTIOP_MAP));
-			game.maxPlayers = 4;
-
 			addGameOptions(FALSE);
 			break;
 		}
@@ -1719,39 +1692,6 @@ static void processMultiopWidgets(UDWORD id)
 				sendOptions(0,0);
 			}
 			break;
-
-		case MULTIOP_NOLIMIT:								// set power level to low
-			widgSetButtonState(psWScreen, MULTIOP_NOLIMIT,WBUT_LOCK);
-			widgSetButtonState(psWScreen, MULTIOP_FRAGLIMIT,0);
-			widgSetButtonState(psWScreen, MULTIOP_TIMELIMIT ,0);
-			game.limit = NOLIMIT;
-			if(bHosted)
-			{
-				sendOptions(0,0);
-			}
-			break;
-
-		case MULTIOP_FRAGLIMIT:								// set power to med
-			widgSetButtonState(psWScreen, MULTIOP_NOLIMIT,0);
-			widgSetButtonState(psWScreen, MULTIOP_FRAGLIMIT,WBUT_LOCK);
-			widgSetButtonState(psWScreen, MULTIOP_TIMELIMIT ,0);
-			game.limit = FRAGLIMIT;
-			if(bHosted)
-			{
-				sendOptions(0,0);
-			}
-			break;
-
-		case MULTIOP_TIMELIMIT:									// set power to hi
-			widgSetButtonState(psWScreen, MULTIOP_NOLIMIT,0);
-			widgSetButtonState(psWScreen, MULTIOP_FRAGLIMIT,0);
-			widgSetButtonState(psWScreen, MULTIOP_TIMELIMIT,WBUT_LOCK);
-			game.limit = TIMELIMIT;
-			if(bHosted)
-			{
-				sendOptions(0,0);
-			}
-			break;
 		}
 	}
 
@@ -1802,18 +1742,6 @@ static void processMultiopWidgets(UDWORD id)
 
 		hostCampaign((char*)game.name,(char*)sPlayer);
 		bHosted = TRUE;
-
-		// wait for players, when happy, send options.
-		if(NetPlay.bLobbyLaunched)
-		{
-			for(i=0;i<MAX_PLAYERS;i++)	// send options to everyone.
-			{
-				if(isHumanPlayer(i))
-				{
-					sendOptions(player2dpid[i],i);
-				}
-			}
-		}
 
 		widgDelete(psWScreen,MULTIOP_REFRESH);
 		widgDelete(psWScreen,MULTIOP_HOST);
@@ -2034,14 +1962,12 @@ static void processMultiopWidgets(UDWORD id)
 
 void frontendMultiMessages(void)
 {
-	NETMSG			msg;			// a blank msg.
+	uint8_t type;
 
-	while(NETrecv(&msg))
+	while(NETrecv(&type))
 	{
 		// Copy the message to the global one used by the new NET API
-		NetMsg = msg;
-		
-		switch(msg.type)
+		switch(type)
 		{
 		case NET_REQUESTMAP:
 			recvMapFileRequested();
@@ -2049,7 +1975,6 @@ void frontendMultiMessages(void)
 		case FILEMSG:
 			recvMapFileData();
 			break;
-
 
 		case NET_OPTIONS:					// incoming options file.
 			recvOptions();
@@ -2084,7 +2009,7 @@ void frontendMultiMessages(void)
 			BOOL host;
 			uint32_t player_id;
 
-			NETbeginDecode();
+			NETbeginDecode(NET_LEAVING);
 			{
 				NETuint32_t(&player_id);
 				NETbool(&host);
@@ -2101,7 +2026,7 @@ void frontendMultiMessages(void)
 		{
 			uint32_t player_id;
 
-			NETbeginDecode();
+			NETbeginDecode(NET_PLAYERRESPONDING);
 				// the player that has just responded
 				NETuint32_t(&player_id);
 			NETend();
@@ -2128,7 +2053,7 @@ void frontendMultiMessages(void)
 		{
 			uint32_t player_id;
 
-			NETbeginDecode();
+			NETbeginDecode(NET_KICK);
 				NETuint32_t(&player_id);
 			NETend();
 
@@ -2173,12 +2098,7 @@ void runMultiOptions(void)
 	if ((gameTime - lastrefresh) >2000)
 	{
 		lastrefresh= gameTime;
-		if( !multiRequestUp
-			&& (bHosted
-				|| (ingame.localJoiningInProgress && !NetPlay.bLobbyLaunched)
-				|| (NetPlay.bLobbyLaunched && ingame.localOptionsReceived)
-				)
-			)
+		if (!multiRequestUp && (bHosted || ingame.localJoiningInProgress))
 		{
 
 			// store the slider settings if they are up,
@@ -2359,16 +2279,6 @@ BOOL startMultiOptions(BOOL bReenter)
 	addPlayerBox(FALSE);								// Players
 	addGameOptions(FALSE);
 
-	if(NetPlay.bLobbyLaunched)
-	{
-		if(!NetPlay.bHost)
-		{
-			ingame.localJoiningInProgress = TRUE;
-			widgDelete(psWScreen,MULTIOP_REFRESH);
-		}
-		ingame.localOptionsReceived = FALSE;
-	}
-
 	addChatBox();
 
 	// going back to multiop after setting limits up..
@@ -2391,7 +2301,7 @@ void displayChatEdit(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGHT 
 	UDWORD x = xOffset+psWidget->x;
 	UDWORD y = yOffset+psWidget->y -4;			// 4 is the magic number.
 
-	// draws the line at the bottom of the multiplayer join dialog separating the chat 
+	// draws the line at the bottom of the multiplayer join dialog separating the chat
 	// box from the input box
 	iV_Line(x, y, x + psWidget->width, y, WZCOL_MENU_SEPARATOR);
 
@@ -2461,15 +2371,15 @@ void displayRemoteGame(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PIELIGH
 	iV_DrawText(NetPlay.games[i].name, x + 100, y + 24);	// name
 
 	// get game info.
-	if(	   (NetPlay.games[i].desc.dwFlags & SESSION_JOINDISABLED)
-		|| (NetPlay.games[i].desc.dwCurrentPlayers >= NetPlay.games[i].desc.dwMaxPlayers) 	// if not joinable
-
-		||(   (NETgetGameFlagsUnjoined(gameNumber,1)== SKIRMISH)	// the LAST bug...
-			&&(NetPlay.games[gameNumber].desc.dwCurrentPlayers >= NetPlay.games[gameNumber].desc.dwMaxPlayers -1)
-		  )
-	   )
-
+	// TODO: Check whether this code is used at all in skirmish games, if not, remove it.
+	if ((NetPlay.games[i].desc.dwFlags & SESSION_JOINDISABLED)
+	 || NetPlay.games[i].desc.dwCurrentPlayers >= NetPlay.games[i].desc.dwMaxPlayers        // if not joinable
+	 || (bMultiPlayer
+	  && !NetPlay.bComms
+	  && NETgetGameFlagsUnjoined(gameNumber,1) == SKIRMISH                                  // the LAST bug...
+	  && NetPlay.games[gameNumber].desc.dwCurrentPlayers >= NetPlay.games[gameNumber].desc.dwMaxPlayers - 1))
 	{
+		// FIXME: We should really use another way to indicate that the game is full than our current big fat cross.
 		// need some sort of closed thing here!
 		iV_DrawImage(FrontImages,IMAGE_NOJOIN,x+18,y+11);
 	}

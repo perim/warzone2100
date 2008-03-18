@@ -23,6 +23,8 @@
 
 #include "frame.h"
 
+#include <stdarg.h>
+
 /** A variant on snprintf which appends its output string to the given string
  *  buffer, rather than to replace it.
  *  \param str the string to append to
@@ -56,7 +58,7 @@ extern int wz_snprintf(char* str, size_t size, const char* format, ...);
 # define snprintf  wz_snprintf
 #elif defined(__cplusplus) && defined(WZ_CC_GNU)
 // Do nothing here, and assume that G++ has a proper implementation of snprintf and vsnprintf
-#elif !defined(WZ_C99)
+#elif !defined(WZ_CC_GNU) && !defined(WZ_C99)
 # error "This code depends on a C99-compliant implementation of snprintf and vsnprintf; please compile as C99 or provide a compliant implementation!"
 #endif
 
