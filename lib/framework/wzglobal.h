@@ -28,11 +28,9 @@
 #define WZGLOBAL_H
 
 
-#ifdef HAVE_CONFIG_H
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
-#endif
-
-#ifdef __MACOSX__
+#elif defined(__MACOSX__)
 #  include "config-macosx.h"
 #endif
 
@@ -406,6 +404,10 @@
 #else
 #  define WZ_DECL_MAY_ALIAS
 #endif
+
+/* ---- Global constants ---- */
+
+#define	MAX_STR_LENGTH          256
 
 /* ---- Platform specific setup ---- */
 

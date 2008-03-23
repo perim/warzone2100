@@ -17,12 +17,9 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * Slider.c
- *
- * Slide bar widget definitions.
+/** @file
+ *  Slide bar widget definitions.
  */
-
 
 #include "widget.h"
 #include "widgint.h"
@@ -38,84 +35,92 @@ void sliderEnableDrag(BOOL Enable)
 }
 
 /* Create a slider widget data structure */
-BOOL sliderCreate(W_SLIDER **ppsWidget, W_SLDINIT *psInit)
+W_SLIDER* sliderCreate(const W_SLDINIT* psInit)
 {
+	W_SLIDER* psWidget;
+
 	if (psInit->style & ~(WBAR_PLAIN | WIDG_HIDDEN))
 	{
-		ASSERT( FALSE, "sliderCreate: Unknown style" );
-		return FALSE;
+		ASSERT(FALSE, "sliderCreate: Unknown style");
+		return NULL;
 	}
 
-	if (psInit->orientation < WSLD_LEFT || psInit->orientation > WSLD_BOTTOM)
+	if (psInit->orientation < WSLD_LEFT
+	 || psInit->orientation > WSLD_BOTTOM)
 	{
-		ASSERT( FALSE, "sliderCreate: Unknown orientation" );
-		return FALSE;
+		ASSERT(FALSE, "sliderCreate: Unknown orientation");
+		return NULL;
 	}
 
-	if (((psInit->orientation == WSLD_LEFT || psInit->orientation == WSLD_RIGHT) &&
-				psInit->numStops > (psInit->width - psInit->barSize)) ||
-		((psInit->orientation == WSLD_TOP || psInit->orientation == WSLD_BOTTOM) &&
-				psInit->numStops > (psInit->height - psInit->barSize)))
+	if (((psInit->orientation == WSLD_LEFT
+	   || psInit->orientation == WSLD_RIGHT)
+	  && psInit->numStops > (psInit->width - psInit->barSize))
+	 || ((psInit->orientation == WSLD_TOP
+	   || psInit->orientation == WSLD_BOTTOM)
+	  && psInit->numStops > (psInit->height - psInit->barSize)))
 	{
-		ASSERT( FALSE, "sliderCreate: Too many stops for slider length" );
-		return FALSE;
+		ASSERT(FALSE, "sliderCreate: Too many stops for slider length");
+		return NULL;
 	}
 
 	if (psInit->pos > psInit->numStops)
 	{
-		ASSERT( FALSE, "sliderCreate: slider position greater than stops (%d/%d)", psInit->pos,  psInit->numStops);
-		return FALSE;
+		ASSERT(FALSE, "sliderCreate: slider position greater than stops (%d/%d)", psInit->pos,  psInit->numStops);
+		return NULL;
 	}
 
-	if (((psInit->orientation == WSLD_LEFT || psInit->orientation == WSLD_RIGHT) &&
-				psInit->barSize > psInit->width) ||
-		((psInit->orientation == WSLD_TOP || psInit->orientation == WSLD_BOTTOM) &&
-				psInit->barSize > psInit->height))
+	if (((psInit->orientation == WSLD_LEFT
+	   || psInit->orientation == WSLD_RIGHT)
+	  && psInit->barSize > psInit->width)
+	 || ((psInit->orientation == WSLD_TOP
+	   || psInit->orientation == WSLD_BOTTOM)
+	  && psInit->barSize > psInit->height))
 	{
-		ASSERT( FALSE, "sliderCreate: slider bar is larger than slider width" );
-		return FALSE;
+		ASSERT(FALSE, "sliderCreate: slider bar is larger than slider width");
+		return NULL;
 	}
 
 	/* Allocate the required memory */
-	*ppsWidget = (W_SLIDER *)malloc(sizeof(W_SLIDER));
-	if (*ppsWidget == NULL)
+	psWidget = (W_SLIDER *)malloc(sizeof(W_SLIDER));
+	if (psWidget == NULL)
 	{
-		ASSERT( FALSE, "sliderCreate: Out of memory" );
-		return FALSE;
+		debug(LOG_ERROR, "sliderCreate: Out of memory");
+		abort();
+		return NULL;
 	}
 	/* Allocate the memory for the tip and copy it if necessary */
-	(*ppsWidget)->pTip = psInit->pTip;
+	psWidget->pTip = psInit->pTip;
 
 	/* Initialise the structure */
-	(*ppsWidget)->type = WIDG_SLIDER;
-	(*ppsWidget)->id = psInit->id;
-	(*ppsWidget)->formID = psInit->formID;
-	(*ppsWidget)->style = psInit->style;
-	(*ppsWidget)->x = psInit->x;
-	(*ppsWidget)->y = psInit->y;
-	(*ppsWidget)->width = psInit->width;
-	(*ppsWidget)->height = psInit->height;
+	psWidget->type = WIDG_SLIDER;
+	psWidget->id = psInit->id;
+	psWidget->formID = psInit->formID;
+	psWidget->style = psInit->style;
+	psWidget->x = psInit->x;
+	psWidget->y = psInit->y;
+	psWidget->width = psInit->width;
+	psWidget->height = psInit->height;
 
 	if (psInit->pDisplay)
 	{
-		(*ppsWidget)->display = psInit->pDisplay;
+		psWidget->display = psInit->pDisplay;
 	}
 	else
 	{
-		(*ppsWidget)->display = sliderDisplay;
+		psWidget->display = sliderDisplay;
 	}
-	(*ppsWidget)->callback = psInit->pCallback;
-	(*ppsWidget)->pUserData = psInit->pUserData;
-	(*ppsWidget)->UserData = psInit->UserData;
-	(*ppsWidget)->orientation = psInit->orientation;
-	(*ppsWidget)->numStops = psInit->numStops;
-	(*ppsWidget)->barSize = psInit->barSize;
+	psWidget->callback = psInit->pCallback;
+	psWidget->pUserData = psInit->pUserData;
+	psWidget->UserData = psInit->UserData;
+	psWidget->orientation = psInit->orientation;
+	psWidget->numStops = psInit->numStops;
+	psWidget->barSize = psInit->barSize;
 
-	sliderInitialise(*ppsWidget);
+	sliderInitialise(psWidget);
 
-	(*ppsWidget)->pos = psInit->pos;
+	psWidget->pos = psInit->pos;
 
-	return TRUE;
+	return psWidget;
 }
 
 
@@ -226,7 +231,7 @@ void sliderRun(W_SLIDER *psWidget, W_CONTEXT *psContext)
 	if ((psWidget->state & SLD_DRAG) && !mouseDown(MOUSE_LMB))
 	{
 		psWidget->state &= ~SLD_DRAG;
-		widgSetReturn((WIDGET *)psWidget);
+		widgSetReturn(psContext->psScreen, (WIDGET *)psWidget);
 	}
 	else if (psWidget->state & SLD_DRAG)
 	{

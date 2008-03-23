@@ -17,13 +17,12 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * Widget.h
- *
- * Definitions for the Widget library
+/** @file
+ *  Definitions for the Widget library
  */
-#ifndef _widget_h
-#define _widget_h
+
+#ifndef __INCLUDED_LIB_WIDGET_WIDGET_H__
+#define __INCLUDED_LIB_WIDGET_WIDGET_H__
 
 #include "lib/framework/frame.h"
 #include "lib/ivis_common/piepalette.h"
@@ -284,7 +283,7 @@ extern void widgReset(void);
 extern void widgShutDown(void);
 
 /* Create an empty widget screen */
-extern BOOL widgCreateScreen(W_SCREEN **ppsScreen);
+extern W_SCREEN* widgCreateScreen(void);
 
 /* Release a screen and all its associated data */
 extern void widgReleaseScreen(W_SCREEN *psScreen);
@@ -293,22 +292,22 @@ extern void widgReleaseScreen(W_SCREEN *psScreen);
 extern void widgSetTipFont(W_SCREEN *psScreen, int FontID);
 
 /* Add a form to the widget screen */
-extern BOOL widgAddForm(W_SCREEN *psScreen, W_FORMINIT *psInit);
+extern BOOL widgAddForm(W_SCREEN *psScreen, const W_FORMINIT* psInit);
 
 /* Add a label to the widget screen */
-extern BOOL widgAddLabel(W_SCREEN *psScreen, W_LABINIT *psInit);
+extern BOOL widgAddLabel(W_SCREEN *psScreen, const W_LABINIT* psInit);
 
 /* Add a button to a form */
-extern BOOL widgAddButton(W_SCREEN *psScreen, W_BUTINIT *psInit);
+extern BOOL widgAddButton(W_SCREEN *psScreen, const W_BUTINIT* psInit);
 
 /* Add an edit box to a form */
-extern BOOL widgAddEditBox(W_SCREEN *psScreen, W_EDBINIT *psInit);
+extern BOOL widgAddEditBox(W_SCREEN *psScreen, const W_EDBINIT* psInit);
 
 /* Add a bar graph to a form */
-extern BOOL widgAddBarGraph(W_SCREEN *psScreen, W_BARINIT *psInit);
+extern BOOL widgAddBarGraph(W_SCREEN *psScreen, const W_BARINIT* psInit);
 
 /* Add a slider to a form */
-extern BOOL widgAddSlider(W_SCREEN *psScreen, W_SLDINIT *psInit);
+extern BOOL widgAddSlider(W_SCREEN *psScreen, const W_SLDINIT* psInit);
 
 /* Delete a widget from the screen */
 extern void widgDelete(W_SCREEN *psScreen, UDWORD id);
@@ -461,5 +460,4 @@ extern void sliderEnableDrag(BOOL Enable);
 extern void setWidgetsStatus( BOOL var );
 extern BOOL getWidgetsStatus( void );
 
-#endif
-
+#endif // __INCLUDED_LIB_WIDGET_WIDGET_H__

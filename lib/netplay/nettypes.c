@@ -307,6 +307,20 @@ BOOL NETnull()
 	return NETuint32_t(&zero);
 }
 
+/** Sends or receives a string to or from the current network package.
+ *  \param str    When encoding a packet this is the (NUL-terminated string to
+ *                be sent in the current network package. When decoding this
+ *                is the buffer to decode the string from the network package
+ *                into. When decoding this string is guaranteed to be
+ *                NUL-terminated provided that this buffer is at least 1 byte
+ *                large.
+ *  \param maxlen The buffer size of \c str. For static buffers this means
+ *                sizeof(\c str), for dynamically allocated buffers this is
+ *                whatever number you passed to malloc().
+ *  \note If while decoding \c maxlen is smaller than the actual length of the
+ *        string being decoded, the resulting string (in \c str) will be
+ *        truncated.
+ */
 BOOL NETstring(char *str, uint16_t maxlen)
 {
 	/*
@@ -344,6 +358,8 @@ BOOL NETstring(char *str, uint16_t maxlen)
 			len = maxlen;
 		}
 		memcpy(str, store, len);
+		// Guarantee NUL-termination
+		str[len - 1] = '\0';
 	}
 
 	// Increment the size of the message
@@ -404,10 +420,16 @@ BOOL NETVector3uw(Vector3uw* vp)
 	     && NETuint16_t(&vp->z));
 }
 
+typedef enum
+{
+	test_a,
+	test_b,
+} test_enum;
+
 static void NETcoder(PACKETDIR dir)
 {
-	char str[100];
-	char *original = "THIS IS A TEST STRING";
+	static const char original[] = "THIS IS A TEST STRING";
+	char str[sizeof(original)];
 	BOOL b = TRUE;
 	uint32_t u32 = 32;
 	uint16_t u16 = 16;
@@ -415,6 +437,7 @@ static void NETcoder(PACKETDIR dir)
 	int32_t i32 = -32;
 	int16_t i16 = -16;
 	int8_t i8 = -8;
+	test_enum te = test_b;
 
 	strlcpy(str, original, sizeof(str));
 
@@ -429,7 +452,8 @@ static void NETcoder(PACKETDIR dir)
 	NETint32_t(&i32);   assert(i32 == -32);
 	NETint16_t(&i16);   assert(i16 == -16);
 	NETint8_t(&i8);     assert(i8 == -8);
-	NETstring(str, 99); assert(strncmp(str, original, 99) == 0);
+	NETstring(str, sizeof(str)); assert(strncmp(str, original, sizeof(str) - 1) == 0);
+	NETenum(&te);       assert(te == test_b);
 	NETend();
 }
 

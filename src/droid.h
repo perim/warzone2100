@@ -17,14 +17,12 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * droid.h
- *
- * Definitions for the droid object.
- *
+/** @file
+ *  Definitions for the droid object.
  */
-#ifndef _droid_h
-#define _droid_h
+
+#ifndef __INCLUDED_SRC_DROID_H__
+#define __INCLUDED_SRC_DROID_H__
 
 #include "objectdef.h"
 #include "lib/gamelib/gtime.h"
@@ -237,7 +235,9 @@ extern BOOL activateGroupAndMove(UDWORD playerNumber, UDWORD groupNumber);
 extern BOOL calcDroidMuzzleLocation(DROID *psDroid, Vector3i *muzzle, int weapon_slot);
 
 /* gets a template from its name - relies on the name being unique */
-extern DROID_TEMPLATE* getTemplateFromName(char *pName);
+extern DROID_TEMPLATE * getTemplateFromUniqueName(const char *pName, unsigned int player);
+/* gets a template from its name - relies on the name being unique */
+extern DROID_TEMPLATE* getTemplateFromTranslatedNameNoPlayer(char *pName);
 /*getTemplateFromSinglePlayerID gets template for unique ID  searching one players list */
 extern DROID_TEMPLATE* getTemplateFromSinglePlayerID(UDWORD multiPlayerID, UDWORD player);
 /*getTemplateFromMultiPlayerID gets template for unique ID  searching all lists */
@@ -296,11 +296,11 @@ extern BOOL buildModule(STRUCTURE *psStruct);
 extern void setUpBuildModule(DROID *psDroid);
 
 /*return the name to display for the interface given a DROID structure*/
-extern char* getDroidName(DROID *psDroid);
+extern const char* getDroidName(const DROID *psDroid) WZ_DECL_UNUSED;
 
 /*return the name to display for the interface - we don't know if this is
 a string ID or something the user types in*/
-extern char* getTemplateName(DROID_TEMPLATE *psTemplate);
+extern const char* getTemplateName(const DROID_TEMPLATE *psTemplate);
 
 /* Just returns true if the droid's present body points aren't as high as the original*/
 extern BOOL	droidIsDamaged(DROID *psDroid);
@@ -404,7 +404,7 @@ extern BOOL cyborgDroid(DROID *psDroid);
 BOOL droidCheckReferences(DROID *psVictimDroid);
 
 /** Check if droid is in a legal world position and is not on its way to drive off the map. */
-BOOL droidOnMap(DROID *psDroid);
+BOOL droidOnMap(const DROID *psDroid);
 
 #define droidSensorRange(_psDroid) objSensorRange((BASE_OBJECT *)_psDroid)
 #define droidSensorPower(_psDroid) objSensorPower((BASE_OBJECT *)_psDroid)
@@ -545,4 +545,4 @@ do { \
 // Minimum damage a weapon will deal to its target
 #define	MIN_WEAPON_DAMAGE	1
 
-#endif
+#endif // __INCLUDED_SRC_DROID_H__

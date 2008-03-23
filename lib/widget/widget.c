@@ -17,10 +17,8 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * Widget.c
- *
- * The main interface functions to the widget library
+/** @file
+ *  The main interface functions to the widget library
  */
 
 #include "lib/framework/frame.h"
@@ -36,9 +34,6 @@
 #include "bar.h"
 #include "slider.h"
 #include "tip.h"
-
-/* the widget to be returned by widgRunScreen */
-static WIDGET	*psRetWidget;
 
 static	BOOL	bWidgetsActive = TRUE;
 
@@ -86,16 +81,17 @@ void widgShutDown(void)
 }
 
 /* Create an empty widget screen */
-BOOL widgCreateScreen(W_SCREEN **ppsScreen)
+W_SCREEN* widgCreateScreen()
 {
 	W_FORM		*psForm;
 	W_FORMINIT	sInit;
 
-	*ppsScreen = (W_SCREEN *)malloc(sizeof(W_SCREEN));
-	if (*ppsScreen == NULL)
+	W_SCREEN* psScreen = (W_SCREEN *)malloc(sizeof(W_SCREEN));
+	if (psScreen == NULL)
 	{
-		ASSERT( FALSE, "Out of memory" );
-		return FALSE;
+		debug(LOG_ERROR, "widgCreateScreen: Out of memory");
+		abort();
+		return NULL;
 	}
 
 	memset(&sInit, 0, sizeof(W_FORMINIT));
@@ -105,16 +101,19 @@ BOOL widgCreateScreen(W_SCREEN **ppsScreen)
 	sInit.y = 0;
 	sInit.width = (UWORD)(screenWidth - 1);
 	sInit.height = (UWORD)(screenHeight - 1);
-	if (!formCreate(&psForm, &sInit))
+
+	psForm = formCreate(&sInit);
+	if (psForm == NULL)
 	{
-		return FALSE;
+		free(psScreen);
+		return NULL;
 	}
 
-	(*ppsScreen)->psForm = (WIDGET *)psForm;
-	(*ppsScreen)->psFocus = NULL;
-	(*ppsScreen)->TipFontID = 0;
+	psScreen->psForm = (WIDGET *)psForm;
+	psScreen->psFocus = NULL;
+	psScreen->TipFontID = 0;
 
-	return TRUE;
+	return psScreen;
 }
 
 
@@ -258,7 +257,7 @@ void widgSetTipFont(W_SCREEN *psScreen, int FontID)
 
 
 /* Add a form to the widget screen */
-BOOL widgAddForm(W_SCREEN *psScreen, W_FORMINIT *psInit)
+BOOL widgAddForm(W_SCREEN *psScreen, const W_FORMINIT* psInit)
 {
 	W_FORM	*psParent, *psForm;
 
@@ -289,13 +288,10 @@ BOOL widgAddForm(W_SCREEN *psScreen, W_FORMINIT *psInit)
 	}
 
 	/* Create the form structure */
-	if (!formCreate(&psForm, psInit))
-	{
-		return FALSE;
-	}
-
+	psForm = formCreate(psInit);
+	if (psForm == NULL
 	/* Add it to the screen */
-	if (!formAddWidget(psParent, (WIDGET *)psForm, (W_INIT *)psInit))
+	 || !formAddWidget(psParent, (WIDGET *)psForm, (W_INIT *)psInit))
 	{
 		return FALSE;
 	}
@@ -305,7 +301,7 @@ BOOL widgAddForm(W_SCREEN *psScreen, W_FORMINIT *psInit)
 
 
 /* Add a label to the widget screen */
-BOOL widgAddLabel(W_SCREEN *psScreen, W_LABINIT *psInit)
+BOOL widgAddLabel(W_SCREEN *psScreen, const W_LABINIT* psInit)
 {
 	W_LABEL		*psLabel;
 	W_FORM		*psForm;
@@ -336,13 +332,10 @@ BOOL widgAddLabel(W_SCREEN *psScreen, W_LABINIT *psInit)
 	}
 
 	/* Create the button structure */
-	if (!labelCreate(&psLabel, psInit))
-	{
-		return FALSE;
-	}
-
+	psLabel = labelCreate(psInit);
+	if (psInit == NULL
 	/* Add it to the form */
-	if (!formAddWidget(psForm, (WIDGET *)psLabel, (W_INIT *)psInit))
+	 || !formAddWidget(psForm, (WIDGET *)psLabel, (W_INIT *)psInit))
 	{
 		return FALSE;
 	}
@@ -352,7 +345,7 @@ BOOL widgAddLabel(W_SCREEN *psScreen, W_LABINIT *psInit)
 
 
 /* Add a button to the widget screen */
-BOOL widgAddButton(W_SCREEN *psScreen, W_BUTINIT *psInit)
+BOOL widgAddButton(W_SCREEN *psScreen, const W_BUTINIT* psInit)
 {
 	W_BUTTON	*psButton;
 	W_FORM		*psForm;
@@ -383,13 +376,10 @@ BOOL widgAddButton(W_SCREEN *psScreen, W_BUTINIT *psInit)
 	}
 
 	/* Create the button structure */
-	if (!buttonCreate(&psButton, psInit))
-	{
-		return FALSE;
-	}
-
+	psButton = buttonCreate(psInit);
+	if (psButton == NULL
 	/* Add it to the form */
-	if (!formAddWidget(psForm, (WIDGET *)psButton, (W_INIT *)psInit))
+	 || !formAddWidget(psForm, (WIDGET *)psButton, (W_INIT *)psInit))
 	{
 		return FALSE;
 	}
@@ -399,7 +389,7 @@ BOOL widgAddButton(W_SCREEN *psScreen, W_BUTINIT *psInit)
 
 
 /* Add an edit box to the widget screen */
-BOOL widgAddEditBox(W_SCREEN *psScreen, W_EDBINIT *psInit)
+BOOL widgAddEditBox(W_SCREEN *psScreen, const W_EDBINIT* psInit)
 {
 	W_EDITBOX	*psEdBox;
 	W_FORM		*psForm;
@@ -430,13 +420,10 @@ BOOL widgAddEditBox(W_SCREEN *psScreen, W_EDBINIT *psInit)
 	}
 
 	/* Create the edit box structure */
-	if (!editBoxCreate(&psEdBox, psInit))
-	{
-		return FALSE;
-	}
-
+	psEdBox = editBoxCreate(psInit);
+	if (psEdBox == NULL
 	/* Add it to the form */
-	if (!formAddWidget(psForm, (WIDGET *)psEdBox, (W_INIT *)psInit))
+	 || !formAddWidget(psForm, (WIDGET *)psEdBox, (W_INIT *)psInit))
 	{
 		return FALSE;
 	}
@@ -446,7 +433,7 @@ BOOL widgAddEditBox(W_SCREEN *psScreen, W_EDBINIT *psInit)
 
 
 /* Add a bar graph to the widget screen */
-BOOL widgAddBarGraph(W_SCREEN *psScreen, W_BARINIT *psInit)
+BOOL widgAddBarGraph(W_SCREEN *psScreen, const W_BARINIT* psInit)
 {
 	W_BARGRAPH	*psBarGraph;
 	W_FORM		*psForm;
@@ -477,13 +464,10 @@ BOOL widgAddBarGraph(W_SCREEN *psScreen, W_BARINIT *psInit)
 	}
 
 	/* Create the bar graph structure */
-	if (!barGraphCreate(&psBarGraph, psInit))
-	{
-		return FALSE;
-	}
-
+	psBarGraph = barGraphCreate(psInit);
+	if (psBarGraph == NULL
 	/* Add it to the form */
-	if (!formAddWidget(psForm, (WIDGET *)psBarGraph, (W_INIT *)psInit))
+	 || !formAddWidget(psForm, (WIDGET *)psBarGraph, (W_INIT *)psInit))
 	{
 		return FALSE;
 	}
@@ -493,7 +477,7 @@ BOOL widgAddBarGraph(W_SCREEN *psScreen, W_BARINIT *psInit)
 
 
 /* Add a slider to a form */
-BOOL widgAddSlider(W_SCREEN *psScreen, W_SLDINIT *psInit)
+BOOL widgAddSlider(W_SCREEN *psScreen, const W_SLDINIT* psInit)
 {
 	W_SLIDER	*psSlider;
 	W_FORM		*psForm;
@@ -503,7 +487,7 @@ BOOL widgAddSlider(W_SCREEN *psScreen, W_SLDINIT *psInit)
 
 	if (widgCheckIDForm((W_FORM *)psScreen->psForm, psInit->id))
 	{
-		ASSERT( FALSE, "widgSlider: ID number has already been used (%d)", psInit->id );
+		ASSERT(FALSE, "widgSlider: ID number has already been used (%d)", psInit->id);
 		return FALSE;
 	}
 
@@ -515,22 +499,19 @@ BOOL widgAddSlider(W_SCREEN *psScreen, W_SLDINIT *psInit)
 	else
 	{
 		psForm = (W_FORM *)widgGetFromID(psScreen, psInit->formID);
-		if (!psForm || psForm->type != WIDG_FORM)
+		if (!psForm
+		 || psForm->type != WIDG_FORM)
 		{
-			ASSERT( FALSE,
-				"widgAddSlider: Could not find parent form from formID" );
+			ASSERT(FALSE, "widgAddSlider: Could not find parent form from formID");
 			return FALSE;
 		}
 	}
 
 	/* Create the slider structure */
-	if (!sliderCreate(&psSlider, psInit))
-	{
-		return FALSE;
-	}
-
+	psSlider = sliderCreate(psInit);
+	if (psSlider == NULL
 	/* Add it to the form */
-	if (!formAddWidget(psForm, (WIDGET *)psSlider, (W_INIT *)psInit))
+	 || !formAddWidget(psForm, (WIDGET *)psSlider, (W_INIT *)psInit))
 	{
 		return FALSE;
 	}
@@ -924,14 +905,11 @@ void widgSetUserData2(W_SCREEN *psScreen, UDWORD id,UDWORD UserData)
 /* Return the user data for the returned widget */
 void *widgGetLastUserData(W_SCREEN *psScreen)
 {
-	/* Don't actually need the screen parameter at the moment - but it might be
-	   handy if psRetWidget needs to stop being a static and moves into
-	   the screen structure */
-	(void)psScreen;
+	assert(psScreen != NULL);	
 
-	if (psRetWidget)
+	if (psScreen->psRetWidget)
 	{
-		return psRetWidget->pUserData;
+		return psScreen->psRetWidget->pUserData;
 	}
 
 	return NULL;
@@ -1449,9 +1427,8 @@ static void widgProcessForm(W_CONTEXT *psContext)
 UDWORD widgRunScreen(W_SCREEN *psScreen)
 {
 	W_CONTEXT	sContext;
-	UDWORD		returnID;
 
-	psRetWidget = NULL;
+	psScreen->psRetWidget = NULL;
 
 	// Note which keys have been pressed
 	pressed = WKEY_NONE;
@@ -1492,22 +1469,14 @@ UDWORD widgRunScreen(W_SCREEN *psScreen)
 	widgProcessCallbacks(&sContext);
 
 	/* Return the ID of a pressed button or finished edit box if any */
-	if (psRetWidget)
-	{
-		returnID = psRetWidget->id;
-	}
-	else
-	{
-		returnID = 0;
-	}
-	return returnID;
+	return psScreen->psRetWidget ? psScreen->psRetWidget->id : 0;
 }
 
 
 /* Set the id number for widgRunScreen to return */
-void widgSetReturn(WIDGET *psWidget)
+void widgSetReturn(W_SCREEN* psScreen, WIDGET *psWidget)
 {
-	psRetWidget = psWidget;
+	psScreen->psRetWidget = psWidget;
 }
 
 
@@ -1575,30 +1544,8 @@ void widgDisplayScreen(W_SCREEN *psScreen)
 	tipDisplay();
 }
 
-
-/* Set the keyboard focus for the screen */
-void screenSetFocus(W_SCREEN *psScreen, WIDGET *psWidget)
-{
-	if (psScreen->psFocus != NULL)
-	{
-		widgFocusLost(psScreen->psFocus);
-	}
-	psScreen->psFocus = psWidget;
-}
-
-
-/* Clear the keyboard focus */
-void screenClearFocus(W_SCREEN *psScreen)
-{
-	if (psScreen->psFocus != NULL)
-	{
-		widgFocusLost(psScreen->psFocus);
-		psScreen->psFocus = NULL;
-	}
-}
-
 /* Call the correct function for loss of focus */
-void widgFocusLost(WIDGET *psWidget)
+static void widgFocusLost(W_SCREEN* psScreen, WIDGET *psWidget)
 {
 	switch (psWidget->type)
 	{
@@ -1609,7 +1556,7 @@ void widgFocusLost(WIDGET *psWidget)
 	case WIDG_BUTTON:
 		break;
 	case WIDG_EDITBOX:
-		editBoxFocusLost((W_EDITBOX *)psWidget);
+		editBoxFocusLost(psScreen, (W_EDITBOX *)psWidget);
 		break;
 	case WIDG_BARGRAPH:
 		break;
@@ -1618,6 +1565,27 @@ void widgFocusLost(WIDGET *psWidget)
 	default:
 		ASSERT( FALSE,"widgFocusLost: Unknown widget type" );
 		break;
+	}
+}
+
+/* Set the keyboard focus for the screen */
+void screenSetFocus(W_SCREEN *psScreen, WIDGET *psWidget)
+{
+	if (psScreen->psFocus != NULL)
+	{
+		widgFocusLost(psScreen, psScreen->psFocus);
+	}
+	psScreen->psFocus = psWidget;
+}
+
+
+/* Clear the keyboard focus */
+void screenClearFocus(W_SCREEN *psScreen)
+{
+	if (psScreen->psFocus != NULL)
+	{
+		widgFocusLost(psScreen, psScreen->psFocus);
+		psScreen->psFocus = NULL;
 	}
 }
 
@@ -1721,7 +1689,7 @@ static void widgReleased(WIDGET *psWidget, UDWORD key, W_CONTEXT *psContext)
 	case WIDG_LABEL:
 		break;
 	case WIDG_BUTTON:
-		buttonReleased((W_BUTTON *)psWidget, key);
+		buttonReleased(psContext->psScreen, (W_BUTTON *)psWidget, key);
 		break;
 	case WIDG_EDITBOX:
 		editBoxReleased((W_EDITBOX *)psWidget);

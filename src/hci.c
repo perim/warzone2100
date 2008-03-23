@@ -394,9 +394,6 @@ BASE_OBJECT		**apsListToOrder;
 #define			ORDERED_LIST_SIZE		(NUM_FACTORY_TYPES * MAX_FACTORY)
 
 
-/* default droid design template */
-extern DROID_TEMPLATE	sDefaultDesignTemplate;
-
 /* The current design being edited on the design screen */
 extern DROID_TEMPLATE	sCurrDesign;
 
@@ -648,9 +645,10 @@ BOOL intInitialise(void)
 
 	LOADBARCALLBACK();	//	loadingScreenCallback();
 
-	if (!widgCreateScreen(&psWScreen))
+	psWScreen = widgCreateScreen();
+	if (psWScreen == NULL)
 	{
-		debug( LOG_ERROR, "intInitialise: Couldn't create widget screen (Out of memory ?)" );
+		debug(LOG_ERROR, "intInitialise: Couldn't create widget screen");
 		abort();
 		return FALSE;
 	}

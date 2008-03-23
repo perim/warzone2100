@@ -44,7 +44,7 @@ void pie_DrawViewingWindow(Vector3i *v, UDWORD x1, UDWORD y1, UDWORD x2, UDWORD 
 	CLIP_VERTEX pieVrts[pie_MAX_VERTICES_PER_POLYGON];
 	SDWORD i;
 
-	pie_SetTexturePage(-1);
+	pie_SetTexturePage(TEXPAGE_NONE);
 	pie_SetRendMode(REND_ALPHA_FLAT);
 
 	pieVrts[0].pos.x = v[1].x;
@@ -97,7 +97,7 @@ void pie_TransColouredTriangle(CLIP_VERTEX *vrt, PIELIGHT c)
 {
 	UDWORD i;
 
-	pie_SetTexturePage(-1);
+	pie_SetTexturePage(TEXPAGE_NONE);
 	pie_SetRendMode(REND_ALPHA_ITERATED);
 
 	glColor4ub(c.byte.r, c.byte.g, c.byte.b, 128);
@@ -161,6 +161,8 @@ void pie_DrawSkybox(float scale, int u, int v, int w, int h)
 void pie_DrawFogBox(float left, float right, float front, float back, float height, float wider)
 {
 	PIELIGHT fog_colour = pie_GetFogColour();
+
+	pie_SetTexturePage(TEXPAGE_NONE);
 
 	glColor4ub(fog_colour.byte.r,fog_colour.byte.g,fog_colour.byte.b,0xFF);
 

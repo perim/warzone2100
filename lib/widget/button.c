@@ -17,10 +17,8 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
-/*
- * Button.c
- *
- * Functions for the button widget
+/** @file
+ *  Functions for the button widget
  */
 
 #include "lib/framework/frame.h"
@@ -41,71 +39,74 @@ BOOL buttonStartUp(void)
 
 
 /* Create a button widget data structure */
-BOOL buttonCreate(W_BUTTON **ppsWidget, W_BUTINIT *psInit)
+W_BUTTON* buttonCreate(const W_BUTINIT* psInit)
 {
-	if (psInit->style & ~(WBUT_PLAIN | WIDG_HIDDEN | WFORM_NOCLICKMOVE |
-						  WBUT_NOPRIMARY | WBUT_SECONDARY | WBUT_TXTCENTRE ))
+	W_BUTTON* psWidget;
+
+	if (psInit->style & ~(WBUT_PLAIN | WIDG_HIDDEN | WFORM_NOCLICKMOVE
+	                    | WBUT_NOPRIMARY | WBUT_SECONDARY | WBUT_TXTCENTRE))
 	{
 		ASSERT(!"unknown button style", "buttonCreate: unknown button style");
-		return FALSE;
+		return NULL;
 	}
 
 	/* Allocate the required memory */
-	*ppsWidget = (W_BUTTON *)malloc(sizeof(W_BUTTON));
-	if (*ppsWidget == NULL)
+	psWidget = (W_BUTTON *)malloc(sizeof(W_BUTTON));
+	if (psWidget == NULL)
 	{
 		debug(LOG_ERROR, "buttonCreate: Out of memory" );
-		return FALSE;
+		abort();
+		return NULL;
 	}
 	/* Allocate memory for the text and copy it if necessary */
 	if (psInit->pText)
 	{
-		(*ppsWidget)->pText = psInit->pText;
+		psWidget->pText = psInit->pText;
 	}
 	else
 	{
-		(*ppsWidget)->pText = NULL;
+		psWidget->pText = NULL;
 	}
 	/* Allocate the memory for the tip and copy it if necessary */
 	if (psInit->pTip)
 	{
-		(*ppsWidget)->pTip = psInit->pTip;
+		psWidget->pTip = psInit->pTip;
 	}
 	else
 	{
-		(*ppsWidget)->pTip = NULL;
+		psWidget->pTip = NULL;
 	}
 
 	/* Initialise the structure */
-	(*ppsWidget)->type = WIDG_BUTTON;
-	(*ppsWidget)->id = psInit->id;
-	(*ppsWidget)->formID = psInit->formID;
-	(*ppsWidget)->style = psInit->style;
-	(*ppsWidget)->x = psInit->x;
-	(*ppsWidget)->y = psInit->y;
-	(*ppsWidget)->width = psInit->width;
-	(*ppsWidget)->height = psInit->height;
-	(*ppsWidget)->callback = psInit->pCallback;
-	(*ppsWidget)->pUserData = psInit->pUserData;
-	(*ppsWidget)->UserData = psInit->UserData;
-	(*ppsWidget)->AudioCallback = WidgGetAudioCallback();
-	(*ppsWidget)->HilightAudioID = WidgGetHilightAudioID();
-	(*ppsWidget)->ClickedAudioID = WidgGetClickedAudioID();
+	psWidget->type = WIDG_BUTTON;
+	psWidget->id = psInit->id;
+	psWidget->formID = psInit->formID;
+	psWidget->style = psInit->style;
+	psWidget->x = psInit->x;
+	psWidget->y = psInit->y;
+	psWidget->width = psInit->width;
+	psWidget->height = psInit->height;
+	psWidget->callback = psInit->pCallback;
+	psWidget->pUserData = psInit->pUserData;
+	psWidget->UserData = psInit->UserData;
+	psWidget->AudioCallback = WidgGetAudioCallback();
+	psWidget->HilightAudioID = WidgGetHilightAudioID();
+	psWidget->ClickedAudioID = WidgGetClickedAudioID();
 
 
 	if (psInit->pDisplay)
 	{
-		(*ppsWidget)->display = psInit->pDisplay;
+		psWidget->display = psInit->pDisplay;
 	}
 	else
 	{
-		(*ppsWidget)->display = buttonDisplay;
+		psWidget->display = buttonDisplay;
 	}
-	(*ppsWidget)->FontID = psInit->FontID;
+	psWidget->FontID = psInit->FontID;
 
-	buttonInitialise(*ppsWidget);
+	buttonInitialise(psWidget);
 
-	return TRUE;
+	return psWidget;
 }
 
 
@@ -247,7 +248,7 @@ void buttonClicked(W_BUTTON *psWidget, UDWORD key)
 }
 
 /* Respond to a mouse button up */
-void buttonReleased(W_BUTTON *psWidget, UDWORD key)
+void buttonReleased(W_SCREEN* psScreen, W_BUTTON* psWidget, UDWORD key)
 {
 	if (psWidget->state & WBUTS_DOWN)
 	{
@@ -255,7 +256,7 @@ void buttonReleased(W_BUTTON *psWidget, UDWORD key)
 		if ((!(psWidget->style & WBUT_NOPRIMARY) && key == WKEY_PRIMARY) ||
 			((psWidget->style & WBUT_SECONDARY) && key == WKEY_SECONDARY))
 		{
-			widgSetReturn((WIDGET *)psWidget);
+			widgSetReturn(psScreen, (WIDGET *)psWidget);
 			psWidget->state &= ~WBUTS_DOWN;
 		}
 	}
