@@ -2313,6 +2313,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 	DROID           *psCurr;
 	UWORD           missionScrollMinX = 0, missionScrollMinY = 0,
 	                missionScrollMaxX = 0, missionScrollMaxY = 0;
+	char		fileNameMod[250];
 
 	/* Stop the game clock */
 	gameTimeStop();
@@ -2623,6 +2624,19 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 	aFileName[fileExten - 1] = '\0';
 	strcat(aFileName, "/");
 
+	/* Load in new savegame format */
+	sstrcpy(fileNameMod, aFileName);
+	sstrcat(fileNameMod, "game.wzs");
+	if (mapLoadTagged(fileNameMod))
+	{
+		debug(LOG_SAVE, "Loaded from tagfile format");
+		ASSERT(psMapTiles, "Failed to create map");
+	}
+	else
+	{
+		debug(LOG_ERROR, "Failed to load %s! (That is okay for now.)", fileNameMod);
+	}
+
 	//the terrain type WILL only change with Campaign changes (well at the moment!)
 	//if (freeMem) - this now works for Cam Start and Cam Change
 	if (gameType != GTYPE_SCENARIO_EXPAND
@@ -2883,7 +2897,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 	if (gameType != GTYPE_SCENARIO_EXPAND)
 	{
 		LOADBARCALLBACK();	//		loadingScreenCallback();
-		psMapTiles = NULL;
 		//load in the map file
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "game.map");
@@ -3503,31 +3516,9 @@ error:
 	freeAllStructs();
 	freeAllFeatures();
 	droidTemplateShutDown();
-	if (psMapTiles)
-	{
-//		free(psMapTiles);
-	}
-	psMapTiles = NULL;
-
-	/*if (!loadFile("blank.map", &pFileData, &fileSize))
-	{
-		return false;
-	}
-
-	if (!mapLoad(pFileData, fileSize))
-	{
-		return false;
-	}
-
-	free(pFileData);*/
 
 	/* Start the game clock */
 	gameTimeStart();
-//	if (multiPlayerInUse)
-//	{
-//		bMultiPlayer = true;				// reenable multi player messages.
-//		multiPlayerInUse = false;
-//	}
 
 	return false;
 }
@@ -3886,13 +3877,11 @@ static bool writeMapFile(const char* fileName)
 	dot = strrchr(fileNameMod, '.');
 	*dot = '\0';
 	strcat(fileNameMod, ".wzs");
-	debug(LOG_WZ, "SAVING %s INTO NEW FORMAT AS %s!", fileName, fileNameMod);
+	debug(LOG_MAP, "SAVING %s INTO NEW FORMAT AS %s!", fileName, fileNameMod);
 	if (!mapSaveTagged(fileNameMod))
 	{
 		debug(LOG_ERROR, "Saving %s into new format as %s FAILED!", fileName, fileNameMod);
 	}
-	debug(LOG_WZ, "Loading new savegame format for validation");
-	mapLoadTagged(fileNameMod);
 
 	if (pFileData != NULL)
 	{

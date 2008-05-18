@@ -53,6 +53,8 @@
 //scroll min and max values
 SDWORD		scrollMinX, scrollMaxX, scrollMinY, scrollMaxY;
 
+static bool readFromNewFormat;
+
 /* Structure definitions for loading and saving map data */
 typedef struct _map_save_header
 {
@@ -191,6 +193,11 @@ static BOOL mapLoadV3(char *pFileData, UDWORD fileSize)
 	GATEWAY_SAVEHEADER	*psGateHeader;
 	GATEWAY_SAVE		*psGate;
 
+	if (readFromNewFormat)
+	{
+		return true;
+	}
+
 	/* Load in the map data */
 	psTileData = (MAP_SAVETILEV2 *)(pFileData + SAVE_HEADER_SIZE);
 	for(i=0; i< mapWidth * mapHeight; i++)
@@ -236,6 +243,14 @@ BOOL mapLoad(char *pFileData, UDWORD fileSize)
 {
 	UDWORD				width,height;
 	MAP_SAVEHEADER		*psHeader;
+
+	if (readFromNewFormat)
+	{
+		return true;
+	}
+
+	free(psMapTiles);
+	psMapTiles = NULL;
 
 	/* Check the file type */
 	psHeader = (MAP_SAVEHEADER *)pFileData;
@@ -982,7 +997,7 @@ BOOL mapSaveTagged(char *pFileName)
 
 BOOL mapLoadTagged(char *pFileName)
 {
-	int count, i, mapx, mapy;
+	int count, i;
 	float cam[3];
 	const char *definition = "tagdefinitions/savegame/map.def";
 	MAPTILE	*psTile;
@@ -990,15 +1005,20 @@ BOOL mapLoadTagged(char *pFileName)
 	if (!tagOpenRead(definition, pFileName))
 	{
 		debug(LOG_ERROR, "mapLoadTagged: Failed to open savegame %s", pFileName);
+		readFromNewFormat = false;
 		return false;
 	}
+
+	LOADBARCALLBACK();	//	loadingScreenCallback();
+	free(psMapTiles);
+	psMapTiles = NULL;
+
 	debug(LOG_MAP, "Reading tagged savegame %s with definition %s:", pFileName, definition);
+	readFromNewFormat = true; // skip reading old savegame format
 
 	tagReadEnter(0x03); // map info group
-	mapx = tagRead(0x01);
-	mapy = tagRead(0x02);
-	debug(LOG_MAP, " * Map size: %d, %d", (int)mapx, (int)mapy);
-	ASSERT(mapx == mapWidth && mapy == mapHeight, "mapLoadTagged: Wrong map size");
+	mapWidth = tagRead(0x01);
+	mapHeight = tagRead(0x02);
 	ASSERT(mapWidth * mapHeight <= MAP_MAXAREA, "mapLoadTagged: Map too large");
 	tagReadLeave(0x03);
 
@@ -1007,6 +1027,7 @@ BOOL mapLoadTagged(char *pFileName)
 	tagReadfv(0x02, 3, cam); debug(LOG_MAP, " * Camera rotation: %f, %f, %f", cam[0], cam[1], cam[2]);
 	tagReadLeave(0x04);
 
+	LOADBARCALLBACK();	//	loadingScreenCallback();
 	count = tagReadEnter(0x05); // texture group
 	for (i = 0; i < count; i++)
 	{
@@ -1018,6 +1039,11 @@ BOOL mapLoadTagged(char *pFileName)
 	}
 	tagReadLeave(0x05);
 
+	/* Allocate the memory for the map */
+	psMapTiles = calloc(mapWidth * mapHeight, sizeof(MAPTILE));
+	ASSERT(psMapTiles != NULL, "mapLoadTagged: Out of memory" );
+
+	LOADBARCALLBACK();	//	loadingScreenCallback();
 	i = tagReadEnter(0x0a); // tile group
 	ASSERT(i == mapWidth * mapHeight, "Map size (%d, %d) is not equal to number of tiles (%d) in mapLoadTagged()!",
 	       (int)mapWidth, (int)mapHeight, i);
@@ -1025,22 +1051,63 @@ BOOL mapLoadTagged(char *pFileName)
 	for (i = 0; i < mapWidth * mapHeight; i++)
 	{
 		BOOL triflip, notblock, xflip, yflip;
-		int texture, height, terrain;
+		unsigned int rotation;
 
-		terrain = tagRead(0x01); ASSERT(terrainType(psTile) == terrain, "Wrong terrain");
-		texture = tagRead(0x02); ASSERT(TileNumber_tile(psTile->texture) == texture, "Wrong texture");
+		psTile->texture = tagRead(0x02);
 		triflip = tagRead(0x03);
 		xflip = tagRead(0x04);
 		yflip = tagRead(0x05);
 		notblock = tagRead(0x06);
-		height = tagRead(0x08); ASSERT(psTile->height == height, "Wrong height");
+		psTile->height = tagRead(0x08);
+		psTile->tileVisBits = tagRead(0x09);
+		psTile->tileInfoBits = tagRead(0x0a);
+		rotation = tagRead(0x0b) << TILE_ROTSHIFT;
+
+		psTile->texture |= rotation;
+		if (triflip)
+		{
+			TOGGLE_TRIFLIP(psTile);
+		}
+		if (xflip)
+		{
+			psTile->texture |= TILE_XFLIP;
+		}
+		if (yflip)
+		{
+			psTile->texture |= TILE_YFLIP;
+		}
+		if (notblock)
+		{
+			SET_TILE_NOTBLOCKING(psTile);
+		}
 
 		psTile++;
 		tagReadNext();
 	}
 	tagReadLeave(0x0a);
 
+	LOADBARCALLBACK();	//	loadingScreenCallback();
+	count = tagReadEnter(0x0b); // gateway group
+	for (i = 0; i < count; i++)
+	{
+		uint16_t p[4];
+
+		tagRead16v(0x01, 4, p);
+		if (!gwNewGateway(p[0], p[1], p[2], p[3]))
+		{
+			debug(LOG_ERROR, "mapLoadTagged: Unable to add gateway %d at (%hu, %hu, %hu, %hu)", 
+			      i, p[0], p[1], p[2], p[3]);
+		}
+		tagReadNext();
+	}
+	tagReadLeave(0x0b);
+
 	tagClose();
+
+	LOADBARCALLBACK();	//	loadingScreenCallback();
+
+	environReset();
+
 	return true;
 }
 
