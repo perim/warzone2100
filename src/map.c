@@ -1513,33 +1513,27 @@ static void astarTest(const char *name, int x1, int y1, int x2, int y2)
 	int		endy = world_coord(y2);
 	clock_t		stop;
 	clock_t		start = clock();
-	int		iterations;
 	bool		retval;
 
 	retval = levLoadData(name, NULL, 0);
 	ASSERT(retval, "Could not load %s", name);
-	fpathInitialise();
 	route.asPath = NULL;
 	for (i = 0; i < 100; i++)
 	{
-		iterations = 1;
 		route.numPoints = 0;
 		astarResetCounters();
-		ASSERT(astarInner == 0, "astarInner not reset");
-		asret = fpathAStarRoute(ASR_NEWROUTE, &route, x, y, endx, endy, WHEELED);
-		while (asret == ASR_PARTIAL)
-		{
-			astarResetCounters();
-			ASSERT(astarInner == 0, "astarInner not reset");
-			asret = fpathAStarRoute(ASR_CONTINUE, &route, x, y, endx, endy, WHEELED);
-			iterations++;
-		}
+		asret = fpathAStarRoute(&route, x, y, endx, endy, WHEELED);
 		free(route.asPath);
 		route.asPath = NULL;
 	}
 	stop = clock();
-	fprintf(stdout, "\t\tPath-finding timing %s: %.02f (%d nodes, %d iterations)\n", name,
-	        (double)(stop - start) / (double)CLOCKS_PER_SEC, route.numPoints, iterations);
+	fprintf(stdout, "\t\tA* timing %s: %.02f (%d nodes)\n", name,
+	        (double)(stop - start) / (double)CLOCKS_PER_SEC, route.numPoints);
+	start = clock();
+	fpathTest(x, y, endx, endy);
+	stop = clock();
+	fprintf(stdout, "\t\tfPath timing %s: %.02f (%d nodes)\n", name,
+	        (double)(stop - start) / (double)CLOCKS_PER_SEC, route.numPoints);
 	retval = levReleaseAll();
 	assert(retval);
 }
