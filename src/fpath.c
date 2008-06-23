@@ -142,13 +142,12 @@ static int fpathThreadFunc(WZ_DECL_UNUSED void *data)
 {
 	bool	finished = false;
 
+	SDL_SemWait(fpathSemaphore);
 	while (!finished)
 	{
 		PATHJOB		job;
 		PATHRESULT	*psResult, result;
 		bool		gotWork = false;
-
-		SDL_SemWait(fpathSemaphore);
 
 		// Pop the first job off the queue
 		if (firstJob)
@@ -165,7 +164,8 @@ static int fpathThreadFunc(WZ_DECL_UNUSED void *data)
 		if (!gotWork)
 		{
 			SDL_SemPost(fpathSemaphore);
-			SDL_Delay( 200 );
+			SDL_Delay(100);
+			SDL_SemWait(fpathSemaphore);
 			continue;
 		}
 
@@ -204,15 +204,10 @@ static int fpathThreadFunc(WZ_DECL_UNUSED void *data)
 			psResult->retval = result.retval;
 			psResult->done = true;
 		}
-
-		SDL_SemPost(fpathSemaphore);
-
-		// Yield processor
-		SDL_Delay( 20 );
 	}
+	SDL_SemPost(fpathSemaphore);
 	return 0;
 }
-
 
 
 // initialise the findpath module
@@ -515,7 +510,7 @@ FPATH_RETVAL fpathNullRoute(int x, int y, int x2, int y2, int *length)
 }
 
 
-// Find a route for an DROID to a location
+// Find a route for an DROID to a location in world coordinates
 FPATH_RETVAL fpathDroidRoute(DROID* psDroid, SDWORD tX, SDWORD tY)
 {
 	PROPULSION_STATS	*psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
@@ -528,7 +523,7 @@ FPATH_RETVAL fpathDroidRoute(DROID* psDroid, SDWORD tX, SDWORD tY)
 	}
 	// check whether the end point of the route
 	// is a blocking tile and find an alternative if it is
-	if (fpathBlockingTile(map_coord(tX), map_coord(tY), psPropStats->propulsionType))
+	if (psDroid->sMove.Status != MOVEWAITROUTE && fpathBlockingTile(map_coord(tX), map_coord(tY), psPropStats->propulsionType))
 	{
 		// find the nearest non blocking tile to the DROID
 		int minDist = SDWORD_MAX;
