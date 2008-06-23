@@ -297,15 +297,14 @@ void moveUpdateBaseSpeed(void)
 	astarResetCounters();
 }
 
-/** Set a target location for a droid to move to
+/** Set a target location in world coordinates for a droid to move to
  *  @return true if the routing was succesful, if false then the calling code
  *          should not try to route here again for a while
  *  @todo Document what "should not try to route here again for a while" means.
  */
-static BOOL moveDroidToBase(DROID	*psDroid, UDWORD x, UDWORD y, BOOL bFormation)
+static BOOL moveDroidToBase(DROID *psDroid, UDWORD x, UDWORD y, BOOL bFormation)
 {
 	FPATH_RETVAL		retVal = FPR_OK;
-	SDWORD				fmx1,fmy1, fmx2,fmy2;
 
 	CHECK_DROID(psDroid);
 
@@ -366,6 +365,8 @@ static BOOL moveDroidToBase(DROID	*psDroid, UDWORD x, UDWORD y, BOOL bFormation)
 		{
 			// join a formation if it exists at the destination
 			FORMATION* psFormation = formationFind(x, y);
+			SDWORD	fmx1, fmy1, fmx2, fmy2;
+
 			if (psFormation)
 			{
 				psDroid->sMove.psFormation = psFormation;
@@ -1036,7 +1037,7 @@ static BOOL moveBlocked(DROID *psDroid)
 						  map_coord(psDroid->sMove.DestinationX), map_coord(psDroid->sMove.DestinationY)))
 		{
 			objTrace(psDroid->id, "Trying to reroute to (%d,%d)", psDroid->sMove.DestinationX, psDroid->sMove.DestinationY);
-			moveDroidTo(psDroid, world_coord(psDroid->sMove.DestinationX), world_coord(psDroid->sMove.DestinationY));
+			moveDroidTo(psDroid, psDroid->sMove.DestinationX, psDroid->sMove.DestinationY);
 			return false;
 		}
 
