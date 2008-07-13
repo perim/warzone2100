@@ -17,9 +17,10 @@
 	along with Warzone 2100; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
+
+#include "lib/ivis_opengl/GLee.h"
 #include "lib/framework/frame.h"
 
-#include <SDL_opengl.h>
 #ifdef __APPLE__
 #include <opengl/glu.h>
 #else
@@ -86,7 +87,7 @@ int pie_AddTexPage(iV_Image *s, const char* filename, int slot)
 	assert(s != NULL);
 
 	/* Stick the name into the tex page structures */
-	strlcpy(_TEX_PAGE[i].name, filename, sizeof(_TEX_PAGE[i].name));
+	sstrcpy(_TEX_PAGE[i].name, filename);
 
 	glGenTextures(1, (GLuint *) &_TEX_PAGE[i].id);
 	// FIXME: This function is used instead of glBindTexture, but we're juggling with difficult to trace global state here. Look into pie_SetTexturePage's definition for details.
@@ -106,7 +107,7 @@ int pie_AddTexPage(iV_Image *s, const char* filename, int slot)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	// Use anisotropic filtering, if available, but only max 4.0 to reduce processor burden
-	if (check_extension("GL_EXT_texture_filter_anisotropic"))
+	if (GLEE_EXT_texture_filter_anisotropic)
 	{
 		GLfloat max;
 
@@ -162,12 +163,16 @@ static void pie_PrintLoadedTextures(void)
 	}
 }
 
-
-/**************************************************************************
-	Return the texture number for a given texture resource.  We keep
-	textures in a separate data structure _TEX_PAGE apart from the
-	normal resource system.
-**************************************************************************/
+/** Retrieve the texture number for a given texture resource.
+ *
+ *  @NOTE We keep textures in a separate data structure _TEX_PAGE apart from the
+ *        normal resource system.
+ *
+ *  @param filename The filename of the texture page to search for.
+ *
+ *  @return a non-negative index number for the texture, negative if no texture
+ *          with the given filename could be found
+ */
 int iV_GetTexture(const char *filename)
 {
 	unsigned int i = 0;

@@ -21,9 +21,8 @@
  *  Matrix manipulation functions.
  */
 
+#include "lib/ivis_opengl/GLee.h"
 #include "lib/framework/frame.h"
-
-#include <SDL_opengl.h>
 
 #include "lib/ivis_common/piedef.h"
 #include "lib/ivis_common/pieclip.h"
@@ -43,7 +42,7 @@ typedef struct { SDWORD a, b, c,  d, e, f,  g, h, i,  j, k, l; } SDMATRIX;
 static SDMATRIX	aMatrixStack[MATRIX_MAX];
 static SDMATRIX *psMatrix = &aMatrixStack[0];
 
-BOOL drawing_interface = TRUE;
+BOOL drawing_interface = true;
 
 //*************************************************************************
 
@@ -323,13 +322,13 @@ void pie_TranslateTextureEnd(void)
 void pie_Begin3DScene(void)
 {
 	glDepthRange(0.1, 1);
-	drawing_interface = FALSE;
+	drawing_interface = false;
 }
 
 void pie_BeginInterface(void)
 {
 	glDepthRange(0, 0.1);
-	drawing_interface = TRUE;
+	drawing_interface = true;
 }
 
 void pie_SetGeometricOffset(int x, int y)
@@ -374,6 +373,17 @@ void pie_MatInit(void)
 }
 
 void pie_RotateTranslate3iv(const Vector3i *v, Vector3i *s)
+{
+	s->x = ( v->x * psMatrix->a + v->z * psMatrix->d + v->y * psMatrix->g
+			+ psMatrix->j ) / FP12_MULTIPLIER;
+	s->z = ( v->x * psMatrix->b + v->z * psMatrix->e + v->y * psMatrix->h
+			+ psMatrix->k ) / FP12_MULTIPLIER;
+	s->y = ( v->x * psMatrix->c + v->z * psMatrix->f + v->y * psMatrix->i
+			+ psMatrix->l ) / FP12_MULTIPLIER;
+}
+
+
+void pie_RotateTranslate3f(const Vector3f *v, Vector3f *s)
 {
 	s->x = ( v->x * psMatrix->a + v->z * psMatrix->d + v->y * psMatrix->g
 			+ psMatrix->j ) / FP12_MULTIPLIER;

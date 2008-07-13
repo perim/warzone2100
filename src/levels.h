@@ -25,6 +25,7 @@
 #define __INCLUDED_SRC_LEVELS_H__
 
 #include "init.h"
+#include "game.h"
 
 // maximum number of WRF/WDG files
 
@@ -34,7 +35,7 @@
 // types of level datasets
 
 
-enum _level_type
+typedef enum
 {
 	LDS_COMPLETE,		// all data required for a stand alone level
 	LDS_CAMPAIGN,		// the data set for a campaign (no map data)
@@ -46,12 +47,10 @@ enum _level_type
 	LDS_MCLEAR,			// off map mission (extra map data)
 	LDS_EXPAND_LIMBO,   // expand campaign map using droids held in apsLimboDroids
 	LDS_MKEEP_LIMBO,    // off map saving any droids (selectedPlayer) at end into apsLimboDroids
-	LDS_NONE,			//flags when not got a mission to go back to or when 
+	LDS_NONE,			//flags when not got a mission to go back to or when
 						//already on one - ****LEAVE AS LAST ONE****
-};
-
-
-typedef UDWORD LEVEL_TYPE;
+	LDS_MULTI_TYPE_START,           ///< Start number for custom type numbers (as used by a `type` instruction)
+} LEVEL_TYPE;
 
 // the WRF/WDG files needed for a particular level
 // the WRF/WDG files needed for a particular level
@@ -76,7 +75,7 @@ typedef struct _level_dataset
 extern LEVEL_DATASET	*psLevels;
 
 // parse a level description data file
-extern BOOL levParse(char *pBuffer, SDWORD size, searchPathMode datadir);
+extern BOOL levParse(const char* buffer, size_t size, searchPathMode datadir);
 
 // shutdown the level system
 extern void levShutDown(void);
@@ -84,20 +83,22 @@ extern void levShutDown(void);
 extern BOOL levInitialise(void);
 
 // load up the data for a level
-extern BOOL levLoadData(char *pName, char *pSaveName, SDWORD saveType);
+extern BOOL levLoadData(const char* name, char *pSaveName, GAME_TYPE saveType);
 
 // find the level dataset
-extern BOOL levFindDataSet(char *pName, LEVEL_DATASET **ppsDataSet);
+extern LEVEL_DATASET* levFindDataSet(const char* name);
 
 // free the currently loaded dataset
 extern BOOL levReleaseAll(void);
 
 // free the data for the current mission
 extern BOOL levReleaseMissionData(void);
- 
+
 //get the type of level currently being loaded of GTYPE type
 extern SDWORD getLevelLoadType(void);
 
-char *getLevelName( void );
+extern char *getLevelName( void );
+
+extern void levTest(void);
 
 #endif // __INCLUDED_SRC_LEVELS_H__

@@ -40,13 +40,22 @@ typedef enum _object_type
 	OBJ_TARGET,     ///< for the camera tracking
 } OBJECT_TYPE;
 
+/*
+ Coordinate system used for objects in Warzone 2100:
+  x - "right"
+  y - "forward"
+  z - "up"
+
+  For explanation of yaw/pitch/roll look for "flight dynamics" in your encyclopedia.
+*/
+
 #define BASE_ELEMENTS1(pointerType) \
 	OBJECT_TYPE     type;                           /**< The type of object */ \
 	UDWORD          id;                             /**< ID number of the object */ \
 	Vector3uw       pos;                            /**< Position of the object */ \
-	float           direction;                      /**< Object's direction +ve rotation about y axis */ \
-	SWORD           pitch;                          /**< Object's pitch +ve nose up */ \
-	SWORD           roll                            /**< Object's roll +ve left up, right down */
+	float           direction;                      /**< Object's yaw +ve rotation around up-axis */ \
+	SWORD           pitch;                          /**< Object's pitch +ve rotation around right-axis (nose up/down) */ \
+	SWORD           roll                            /**< Object's roll +ve rotation around forward-axis (left wing up/down) */
 
 #define BASE_ELEMENTS2(pointerType) \
 	SCREEN_DISP_DATA    sDisplay;                   /**< screen coordinate details */ \
@@ -60,13 +69,13 @@ typedef enum _object_type
 	UDWORD              lastHitWeapon;		/**< The weapon that last hit it */ \
 	UDWORD              timeLastHit;		/**< The time the structure was last attacked */ \
 	UDWORD              body;			/**< Hit points with lame name */ \
-	BOOL                inFire;                     /**< TRUE if the object is in a fire */ \
+	BOOL                inFire;                     /**< true if the object is in a fire */ \
 	UDWORD              burnStart;                  /**< When the object entered the fire */ \
 	UDWORD              burnDamage;                 /**< How much damage has been done since the object entered the fire */ \
 	SDWORD              sensorPower;		/**< Active sensor power */ \
 	SDWORD              sensorRange;		/**< Range of sensor */ \
 	SDWORD              ECMMod;			/**< Ability to conceal oneself from sensors */ \
-	UDWORD              armour[NUM_HIT_SIDES][NUM_WEAPON_CLASS]
+	UDWORD              armour[NUM_HIT_SIDES][WC_NUM_WEAPON_CLASSES]
 
 #define NEXTOBJ(pointerType) \
 	pointerType     *psNext                         /**< Pointer to the next object in the list */

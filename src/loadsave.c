@@ -30,6 +30,9 @@
 
 #include "lib/framework/frame.h"
 #include "lib/framework/strres.h"
+#include "lib/framework/input.h"
+#include "lib/widget/button.h"
+#include "lib/widget/editbox.h"
 #include "lib/widget/widget.h"
 #include "lib/ivis_common/piepalette.h"		// for predefined colours.
 #include "lib/ivis_common/rendmode.h"		// for boxfill
@@ -102,10 +105,10 @@ static	W_SCREEN	*psRequestScreen;					// Widget screen for requester
 static	BOOL		mode;
 static	UDWORD		chosenSlotId;
 
-BOOL				bLoadSaveUp = FALSE;        // true when interface is up and should be run.
+BOOL				bLoadSaveUp = false;        // true when interface is up and should be run.
 char				saveGameName[256];          //the name of the save game to load from the front end
 char				sRequestResult[PATH_MAX];   // filename returned;
-BOOL				bRequestLoad = FALSE;
+BOOL				bRequestLoad = false;
 LOADSAVE_MODE		bLoadSaveMode;
 
 static char			sPath[255];
@@ -138,13 +141,13 @@ BOOL bLoad;
 	case LOAD_MISSIONEND:
 	case LOAD_INGAME:
 	case LOAD_FORCE:
-		bLoad = TRUE;
+		bLoad = true;
 		break;
 	case SAVE_MISSIONEND:
 	case SAVE_INGAME:
 	case SAVE_FORCE:
 	default:
-		bLoad = FALSE;
+		bLoad = false;
 		break;
 	}
 
@@ -165,7 +168,7 @@ static BOOL _addLoadSave(BOOL bLoad, const char *sSearchPath, const char *sExten
 	const char* checkExtension;
 
 	mode = bLoad;
-	debug(LOG_WZ, "_addLoadSave(%d, %s, %s, %s)", bLoad, sSearchPath, sExtension, title);
+	debug(LOG_SAVE, "called (%d, %s, %s, %s)", bLoad, sSearchPath, sExtension, title);
 
 	if ((bLoadSaveMode == LOAD_INGAME) || (bLoadSaveMode == SAVE_INGAME))
 	{
@@ -176,22 +179,22 @@ static BOOL _addLoadSave(BOOL bLoad, const char *sSearchPath, const char *sExten
 			{
 				BOOL radOnScreen = radarOnScreen;				// Only do this in main game.
 
-				bRender3DOnly = TRUE;
-				radarOnScreen = FALSE;
+				bRender3DOnly = true;
+				radarOnScreen = false;
 
 				displayWorld();									// Just display the 3d, no interface
 
 				pie_UploadDisplayBuffer();			// Upload the current display back buffer into system memory.
 
 				radarOnScreen = radOnScreen;
-				bRender3DOnly = FALSE;
+				bRender3DOnly = false;
 			}
 
-			setGamePauseStatus( TRUE );
-			setGameUpdatePause(TRUE);
-			setScriptPause(TRUE);
-			setScrollPause(TRUE);
-			setConsolePause(TRUE);
+			setGamePauseStatus( true );
+			setGameUpdatePause(true);
+			setScriptPause(true);
+			setScrollPause(true);
+			setConsolePause(true);
 
 		}
 
@@ -213,7 +216,7 @@ static BOOL _addLoadSave(BOOL bLoad, const char *sSearchPath, const char *sExten
 	sFormInit.y = (SWORD)(LOADSAVE_Y);
 	sFormInit.width = LOADSAVE_W;
 	sFormInit.height = (LOADSAVE_H*2)-46;		// hmm..the bottom of the box.... -Q
-	sFormInit.disableChildren = TRUE;
+	sFormInit.disableChildren = true;
 	sFormInit.pDisplay = intOpenPlainForm;
 	widgAddForm(psRequestScreen, &sFormInit);
 
@@ -224,7 +227,7 @@ static BOOL _addLoadSave(BOOL bLoad, const char *sSearchPath, const char *sExten
 	sFormInit.y = LOADSAVE_VGAP;
 	sFormInit.width = LOADSAVE_W-(2*LOADSAVE_HGAP);
 	sFormInit.height = LOADSAVE_BANNER_DEPTH;
-	sFormInit.disableChildren = FALSE;
+	sFormInit.disableChildren = false;
 	sFormInit.pDisplay = displayLoadBanner;
 	sFormInit.UserData = bLoad;
 	widgAddForm(psRequestScreen, &sFormInit);
@@ -291,10 +294,10 @@ static BOOL _addLoadSave(BOOL bLoad, const char *sSearchPath, const char *sExten
 	// fill slots.
 	slotCount = 0;
 
-	strlcpy(sPath, sSearchPath, sizeof(sPath));  // setup locals.
-	strlcpy(sExt, sExtension, sizeof(sExt));
+	sstrcpy(sPath, sSearchPath);  // setup locals.
+	sstrcpy(sExt, sExtension);
 
-	debug(LOG_WZ, "_addLoadSave: Searching \"%s\" for savegames", sSearchPath);
+	debug(LOG_SAVE, "Searching \"%s\" for savegames", sSearchPath);
 
 	// Check for an extension like ".ext", not "ext"
 	sasprintf((char**)&checkExtension, ".%s", sExtension);
@@ -314,10 +317,10 @@ static BOOL _addLoadSave(BOOL bLoad, const char *sSearchPath, const char *sExten
 
 		button = (W_BUTTON*)widgGetFromID(psRequestScreen, LOADENTRY_START + slotCount);
 
-		debug(LOG_WZ, "_addLoadSave: We found [%s]", *i);
+		debug(LOG_SAVE, "We found [%s]", *i);
 		/* Set the tip and add the button */
 		(*i)[strlen(*i) - 4] = '\0'; // remove .gam extension
-		strlcpy(sSlots[slotCount], *i, sizeof(sSlots[slotCount]));  //store it!
+		sstrcpy(sSlots[slotCount], *i);  //store it!
 		button->pTip = sSlots[slotCount];
 		button->pText = sSlots[slotCount];
 		slotCount++;		// goto next but...
@@ -328,15 +331,15 @@ static BOOL _addLoadSave(BOOL bLoad, const char *sSearchPath, const char *sExten
 	}
 	PHYSFS_freeList(files);
 
-	bLoadSaveUp = TRUE;
-	return TRUE;
+	bLoadSaveUp = true;
+	return true;
 }
 
 // ////////////////////////////////////////////////////////////////////////////
 BOOL closeLoadSave(void)
 {
 	widgDelete(psRequestScreen,LOADSAVE_FORM);
-	bLoadSaveUp = FALSE;
+	bLoadSaveUp = false;
 
 	if ((bLoadSaveMode == LOAD_INGAME) || (bLoadSaveMode == SAVE_INGAME))
 	{
@@ -344,11 +347,11 @@ BOOL closeLoadSave(void)
 		if (!bMultiPlayer || (NetPlay.bComms == 0))
 		{
 			gameTimeStart();
-			setGamePauseStatus( FALSE );
-			setGameUpdatePause(FALSE);
-			setScriptPause(FALSE);
-			setScrollPause(FALSE);
-			setConsolePause(FALSE);
+			setGamePauseStatus( false );
+			setGameUpdatePause(false);
+			setScriptPause(false);
+			setScrollPause(false);
+			setConsolePause(false);
 		}
 
 		intAddReticule();
@@ -357,7 +360,7 @@ BOOL closeLoadSave(void)
 	}
 	widgReleaseScreen(psRequestScreen);
 
-	return TRUE;
+	return true;
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -395,7 +398,7 @@ void deleteSaveGame(char* saveGameName)
 		// filename to the directory it is in.
 		snprintf(del_file, sizeof(del_file), "%s/%s", saveGameName, *i);
 
-		debug(LOG_WZ, "Deleting [%s].", del_file);
+		debug(LOG_SAVE, "Deleting [%s].", del_file);
 
 		// Delete the file
 		if (!PHYSFS_delete(del_file))
@@ -415,20 +418,20 @@ void deleteSaveGame(char* saveGameName)
 
 
 // ////////////////////////////////////////////////////////////////////////////
-// Returns TRUE if cancel pressed or a valid game slot was selected.
-// if when returning TRUE strlen(sRequestResult) != 0 then a valid game
+// Returns true if cancel pressed or a valid game slot was selected.
+// if when returning true strlen(sRequestResult) != 0 then a valid game
 // slot was selected otherwise cancel was selected..
 static BOOL _runLoadSave(BOOL bResetMissionWidgets)
 {
 	UDWORD		id=0;
 	W_EDBINIT	sEdInit;
 	static char     sDelete[PATH_MAX];
-	UDWORD		i;
+	UDWORD		i, campaign;
 	W_CONTEXT		context;
 
 	id = widgRunScreen(psRequestScreen);
 
-	strlcpy(sRequestResult, "", sizeof(sRequestResult));					// set returned filename to null;
+	sstrcpy(sRequestResult, "");					// set returned filename to null;
 
 	// cancel this operation...
 	if(id == LOADSAVE_CANCEL || CancelPressed() )
@@ -485,7 +488,7 @@ static BOOL _runLoadSave(BOOL bResetMissionWidgets)
 				}
 				else
 				{
-					strlcpy(sDelete, "", sizeof(sDelete));
+					sstrcpy(sDelete, "");
 				}
 
 				widgHide(psRequestScreen,id);		// hide the old button
@@ -516,13 +519,13 @@ static BOOL _runLoadSave(BOOL bResetMissionWidgets)
 		{
 			widgDelete(psRequestScreen,SAVEENTRY_EDIT);	//unselect this box, and go back ..
 			widgReveal(psRequestScreen,chosenSlotId);
-			return TRUE;
+			return true;
 		}
 
 
 		// scan to see if that game exists in another slot, if
 		// so then fail.
-		strlcpy(sTemp, ((W_EDITBOX *)widgGetFromID(psRequestScreen,id))->aText, sizeof(sTemp));
+		sstrcpy(sTemp, ((W_EDITBOX *)widgGetFromID(psRequestScreen,id))->aText);
 
 		for(i=LOADENTRY_START;i<LOADENTRY_END;i++)
 		{
@@ -537,7 +540,7 @@ static BOOL _runLoadSave(BOOL bResetMissionWidgets)
 				// move mouse to same box..
 				//	SetMousePos(widgGetFromID(psRequestScreen,i)->pos.x ,widgGetFromID(psRequestScreen,i)->pos.y);
 					audio_PlayTrack(ID_SOUND_BUILD_FAIL);
-					return TRUE;
+					return true;
 				}
 			}
 		}
@@ -546,7 +549,7 @@ static BOOL _runLoadSave(BOOL bResetMissionWidgets)
 		// return with this name, as we've edited it.
 		if (strlen(((W_EDITBOX *)widgGetFromID(psRequestScreen,id))->aText))
 		{
-			strlcpy(sTemp, ((W_EDITBOX *)widgGetFromID(psRequestScreen,id))->aText, sizeof(sTemp));
+			sstrcpy(sTemp, ((W_EDITBOX *)widgGetFromID(psRequestScreen,id))->aText);
 			removeWildcards(sTemp);
 			snprintf(sRequestResult, sizeof(sRequestResult), "%s%s.%s", sPath, sTemp, sExt);
 			if (strlen(sDelete) != 0)
@@ -561,33 +564,35 @@ static BOOL _runLoadSave(BOOL bResetMissionWidgets)
 
 		// we're done. saving.
 		closeLoadSave();
-		bRequestLoad = FALSE;
+		bRequestLoad = false;
         if (bResetMissionWidgets && widgGetFromID(psWScreen,IDMISSIONRES_FORM) == NULL)
         {
             resetMissionWidgets();			//reset the mission widgets here if necessary
         }
-		return TRUE;
+		return true;
 	}
 
-	return FALSE;
+	return false;
 
 // failed and/or cancelled..
 failure:
 	closeLoadSave();
-	bRequestLoad = FALSE;
+	bRequestLoad = false;
     if (bResetMissionWidgets && widgGetFromID(psWScreen,IDMISSIONRES_FORM) == NULL)
 	{
 		resetMissionWidgets();
 	}
-    return TRUE;
+    return true;
 
 // success on load.
 success:
-	setCampaignNumber( getCampaign(sRequestResult) );
+	campaign = getCampaign(sRequestResult);
+	setCampaignNumber(campaign);
+	debug(LOG_WZ, "Set campaign for %s to %u", sRequestResult, campaign);
 successforce:
 	closeLoadSave();
-	bRequestLoad = TRUE;
-	return TRUE;
+	bRequestLoad = true;
+	return true;
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -595,7 +600,7 @@ successforce:
 BOOL displayLoadSave(void)
 {
 	widgDisplayScreen(psRequestScreen);	// display widgets.
-	return TRUE;
+	return true;
 }
 
 
@@ -674,7 +679,7 @@ static void displayLoadSlot(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, PI
 
 	if(((W_BUTTON *)psWidget)->pTip )
 	{
-		strlcpy(butString, ((W_BUTTON *)psWidget)->pTip, sizeof(butString));
+		sstrcpy(butString, ((W_BUTTON *)psWidget)->pTip);
 
 		iV_SetFont(font_regular);									// font
 		iV_SetTextColour(WZCOL_TEXT_BRIGHT);

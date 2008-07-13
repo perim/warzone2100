@@ -22,13 +22,15 @@
  * @file texture.c
  * This is where we do texture atlas generation.
  */
+
+#include "lib/ivis_opengl/GLee.h"
 #include "lib/framework/frame.h"
 
 
 #include <string.h>
 
 #include <physfs.h>
-#include <SDL_opengl.h>
+
 #ifdef __APPLE__
 #include <opengl/glu.h>
 #else
@@ -94,7 +96,7 @@ static int newPage(const char *name, int level, int width, int height, int count
 	ASSERT(_TEX_INDEX > texPage, "newPage: Index too low (%d > %d)", _TEX_INDEX, texPage);
 	ASSERT(_TEX_INDEX < iV_TEX_MAX, "Too many texture pages used");
 
-	strlcpy(_TEX_PAGE[texPage].name, name, sizeof(_TEX_PAGE[texPage].name));
+	sstrcpy(_TEX_PAGE[texPage].name, name);
 
 	pie_SetTexturePage(texPage);
 
@@ -112,7 +114,7 @@ static int newPage(const char *name, int level, int width, int height, int count
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	// Use anisotropic filtering, if available, but only max 4.0 to reduce processor burden
-	if (check_extension("GL_EXT_texture_filter_anisotropic"))
+	if (GLEE_EXT_texture_filter_anisotropic)
 	{
 		GLfloat max;
 

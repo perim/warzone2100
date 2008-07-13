@@ -58,25 +58,24 @@ BOOL scrBaseObjGet(UDWORD index)
 	DROID			*psDroid;
 	STRUCTURE		*psStruct;
 	FEATURE			*psFeature;
-	SDWORD			temp;
 
 	if (!stackPopParams(1, ST_BASEOBJECT, &psObj))
 	{
 		debug(LOG_ERROR, "scrBaseObjGet: stackPopParams failed");
-		return FALSE;
+		return false;
 	}
 
 	// Check this is a valid pointer
 	if (psObj == NULL )
 	{
 		debug(LOG_ERROR, "scrBaseObjGet: was passed an invalid pointer");
-		return FALSE;
+		return false;
 	}
 	// Check this is a valid pointer
 	if (psObj->type != OBJ_DROID && psObj->type != OBJ_STRUCTURE && psObj->type != OBJ_FEATURE)
 	{
 		debug(LOG_ERROR, "scrBaseObjGet: invalid object");
-		return FALSE;
+		return false;
 	}
 
 	// set the type and return value
@@ -110,7 +109,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		if (psObj->type != OBJ_DROID)
 		{
 			debug(LOG_ERROR, "scrBaseObjGet: order only valid for a droid");
-			return FALSE;
+			return false;
 		}
 		type = VAL_INT;
 		scrFunctionResult.v.ival = (SDWORD)((DROID *)psObj)->order;
@@ -124,7 +123,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		if (psObj->type != OBJ_DROID)
 		{
 			debug(LOG_ERROR, "scrBaseObjGet: action only valid for a droid");
-			return FALSE;
+			return false;
 		}
 		type = VAL_INT;
 		scrFunctionResult.v.ival = (SDWORD)((DROID *)psObj)->action;
@@ -134,7 +133,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		if (psObj->type != OBJ_DROID)
 		{
 			debug(LOG_ERROR, "scrBaseObjGet: selected only valid for a droid");
-			return FALSE;
+			return false;
 		}
 		type = VAL_BOOL;
 		scrFunctionResult.v.bval = (SDWORD)((DROID *)psObj)->selected;
@@ -149,7 +148,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		else
 		{
 			debug(LOG_ERROR, ".stattype is only supported by Structures");
-			return FALSE;
+			return false;
 		}
 		break;
 
@@ -157,7 +156,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		if (psObj->type != OBJ_DROID)
 		{
 			debug(LOG_ERROR, "scrBaseObjGet: order only valid for a droid");
-			return FALSE;
+			return false;
 		}
 		type = VAL_INT;
 		scrFunctionResult.v.ival = (SDWORD)((DROID *)psObj)->orderX;
@@ -166,7 +165,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		if (psObj->type != OBJ_DROID)
 		{
 			debug(LOG_ERROR, "scrBaseObjGet: order only valid for a droid");
-			return FALSE;
+			return false;
 		}
 		type = VAL_INT;
 		scrFunctionResult.v.ival = (SDWORD)((DROID *)psObj)->orderY;
@@ -175,7 +174,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		if (psObj->type != OBJ_DROID)
 		{
 			debug(LOG_ERROR, "scrBaseObjGet: droidType only valid for a droid");
-			return FALSE;
+			return false;
 		}
 		type = VAL_INT;
 		scrFunctionResult.v.ival = (SDWORD)((DROID *)psObj)->droidType;
@@ -184,7 +183,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		if (psObj->type == OBJ_FEATURE)
 		{
 			debug(LOG_ERROR, "scrBaseObjGet: clusterID not valid for features");
-			return FALSE;
+			return false;
 		}
 		type = VAL_INT;
 		scrFunctionResult.v.ival = clustGetClusterID(psObj);
@@ -223,7 +222,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		if (psObj->type != OBJ_DROID)
 		{
 			debug(LOG_ERROR, "scrBaseObjGet: body only valid for a droid");
-			return FALSE;
+			return false;
 		}
 		type = (INTERP_TYPE)ST_BODY;
 		scrFunctionResult.v.ival = (SDWORD)((DROID *)psObj)->asBits[COMP_BODY].nStat;
@@ -232,7 +231,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		if (psObj->type != OBJ_DROID)
 		{
 			debug(LOG_ERROR, "scrBaseObjGet: propulsion only valid for a droid");
-			return FALSE;
+			return false;
 		}
 		type = (INTERP_TYPE)ST_PROPULSION;
 		scrFunctionResult.v.ival = (SDWORD)((DROID *)psObj)->asBits[COMP_PROPULSION].nStat;
@@ -259,7 +258,7 @@ BOOL scrBaseObjGet(UDWORD index)
 			break;
 		default:		//only droids and structures can have a weapon
 			debug(LOG_ERROR, "scrBaseObjGet: weapon only valid for droids and structures" );
-			return FALSE;
+			return false;
 			break;
 		}
 
@@ -280,7 +279,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		else		//Nothing else supported
 		{
 			debug(LOG_ERROR, "scrBaseObjGet(): .stat only valid for structures and droids");
-			return FALSE;
+			return false;
 		}
 
 		break;
@@ -300,7 +299,7 @@ BOOL scrBaseObjGet(UDWORD index)
 		else		//Nothing else supported
 		{
 			debug(LOG_ERROR, "scrBaseObjGet(): .target only valid for structures and droids");
-			return FALSE;
+			return false;
 		}
 
 		break;
@@ -308,235 +307,13 @@ BOOL scrBaseObjGet(UDWORD index)
 		if (psObj->type != OBJ_DROID)
 		{
 			debug(LOG_ERROR, "scrBaseObjGet: group only valid for a droid");
-			return FALSE;
+			return false;
 		}
 
 		type = (INTERP_TYPE)ST_GROUP;
 		scrFunctionResult.v.oval = ((DROID *)psObj)->psGroup;
 		break;
-	case OBJID_WEAP_SHORT_RANGE:
 
-		type = VAL_INT;
-		temp = -1;		// in case object has no weapon return -1
-
-		if (psObj->type == OBJ_STRUCTURE)
-		{
-			if(((STRUCTURE *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = asWeaponStats[((STRUCTURE *)psObj)->asWeaps[0].nStat].shortRange;
-			}
-		}
-		else if (psObj->type == OBJ_DROID)
-		{
-			if(((DROID *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = asWeaponStats[((DROID *)psObj)->asWeaps[0].nStat].shortRange;
-			}
-		}
-		else
-		{
-			debug(LOG_ERROR, "scrBaseObjGet(): shortRange: features don't have weapons");
-			return FALSE;
-		}
-
-		scrFunctionResult.v.ival = temp;
-
-		break;
-	case OBJID_WEAP_LONG_RANGE:
-
-		type = VAL_INT;
-		temp = -1;		// in case object has no weapon return -1
-
-		if (psObj->type == OBJ_STRUCTURE)
-		{
-			if(((STRUCTURE *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = asWeaponStats[((STRUCTURE *)psObj)->asWeaps[0].nStat].longRange;
-			}
-		}
-		else if (psObj->type == OBJ_DROID)
-		{
-			if(((DROID *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = asWeaponStats[((DROID *)psObj)->asWeaps[0].nStat].longRange;
-			}
-		}
-		else
-		{
-			debug(LOG_ERROR, "scrBaseObjGet(): shortRange: features don't have weapons");
-			return FALSE;
-		}
-
-		scrFunctionResult.v.ival = temp;
-
-		break;
-	case OBJID_WEAP_SHORT_HIT:
-		type = VAL_INT;
-		temp = -1;		// in case object has no weapon return -1
-
-		if (psObj->type == OBJ_STRUCTURE)
-		{
-			if(((STRUCTURE *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = weaponShortHit(&asWeaponStats[((STRUCTURE *)psObj)->asWeaps[0].nStat], psObj->player);
-			}
-		}
-		else if (psObj->type == OBJ_DROID)
-		{
-			if(((DROID *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = weaponShortHit(&asWeaponStats[((DROID *)psObj)->asWeaps[0].nStat], psObj->player);
-			}
-		}
-		else
-		{
-			debug(LOG_ERROR, "scrBaseObjGet(): shortHit: features don't have weapons");
-			return FALSE;
-		}
-
-		scrFunctionResult.v.ival = temp;
-
-		break;
-	case OBJID_WEAP_LONG_HIT:
-
-		type = VAL_INT;
-		temp = -1;		// in case object has no weapon return -1
-
-		if (psObj->type == OBJ_STRUCTURE)
-		{
-			if(((STRUCTURE *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = weaponLongHit(&asWeaponStats[((STRUCTURE *)psObj)->asWeaps[0].nStat], psObj->player);
-			}
-		}
-		else if (psObj->type == OBJ_DROID)
-		{
-			if(((DROID *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = weaponLongHit(&asWeaponStats[((DROID *)psObj)->asWeaps[0].nStat], psObj->player);
-			}
-		}
-		else
-		{
-			debug(LOG_ERROR, "scrBaseObjGet(): shortHit: features don't have weapons");
-			return FALSE;
-		}
-
-		scrFunctionResult.v.ival = temp;
-
-		break;
-	case OBJID_WEAP_DAMAGE:
-
-		type = VAL_INT;
-		temp = -1;		// in case object has no weapon return -1
-
-		if (psObj->type == OBJ_STRUCTURE)
-		{
-			if(((STRUCTURE *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = weaponDamage(&asWeaponStats[((STRUCTURE *)psObj)->asWeaps[0].nStat], psObj->player);
-			}
-		}
-		else if (psObj->type == OBJ_DROID)
-		{
-			if(((DROID *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = weaponDamage(&asWeaponStats[((DROID *)psObj)->asWeaps[0].nStat], psObj->player);
-			}
-		}
-		else
-		{
-			debug(LOG_ERROR, "scrBaseObjGet(): shortHit: features don't have weapons");
-			return FALSE;
-		}
-
-		scrFunctionResult.v.ival = temp;
-
-		break;
-	case OBJID_WEAP_FIRE_PAUSE:
-
-		type = VAL_INT;
-		temp = -1;		// in case object has no weapon return -1
-
-		if (psObj->type == OBJ_STRUCTURE)
-		{
-			if(((STRUCTURE *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = weaponFirePause(&asWeaponStats[((STRUCTURE *)psObj)->asWeaps[0].nStat], psObj->player);
-			}
-		}
-		else if (psObj->type == OBJ_DROID)
-		{
-			if(((DROID *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = weaponFirePause(&asWeaponStats[((DROID *)psObj)->asWeaps[0].nStat], psObj->player);
-			}
-		}
-		else
-		{
-			debug(LOG_ERROR, "scrBaseObjGet(): shortHit: features don't have weapons");
-			return FALSE;
-		}
-
-		scrFunctionResult.v.ival = temp;
-
-		break;
-	case OBJID_WEAP_RELOAD_TIME:
-
-		type = VAL_INT;
-		temp = -1;		// in case object has no weapon return -1
-
-		if (psObj->type == OBJ_STRUCTURE)
-		{
-			if(((STRUCTURE *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = asWeaponStats[((STRUCTURE *)psObj)->asWeaps[0].nStat].reloadTime;
-			}
-		}
-		else if (psObj->type == OBJ_DROID)
-		{
-			if(((DROID *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = asWeaponStats[((DROID *)psObj)->asWeaps[0].nStat].reloadTime;
-			}
-		}
-		else
-		{
-			debug(LOG_ERROR, "scrBaseObjGet(): shortHit: features don't have weapons");
-			return FALSE;
-		}
-
-		scrFunctionResult.v.ival = temp;
-
-		break;
-	case OBJID_WEAP_NUM_ROUNDS:
-
-		type = VAL_INT;
-		temp = -1;		// in case object has no weapon return -1
-
-		if (psObj->type == OBJ_STRUCTURE)
-		{
-			if(((STRUCTURE *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = asWeaponStats[((STRUCTURE *)psObj)->asWeaps[0].nStat].numRounds;
-			}
-		}
-		else if (psObj->type == OBJ_DROID)
-		{
-			if(((DROID *)psObj)->asWeaps[0].nStat > 0)
-			{
-				temp = asWeaponStats[((DROID *)psObj)->asWeaps[0].nStat].numRounds;
-			}
-		}
-		else
-		{
-			debug(LOG_ERROR, "scrBaseObjGet(): shortHit: features don't have weapons");
-			return FALSE;
-		}
-
-		scrFunctionResult.v.ival = temp;
-
-		break;
 	case OBJID_HITPOINTS:
 
 		type = VAL_INT;
@@ -557,7 +334,7 @@ BOOL scrBaseObjGet(UDWORD index)
 
 		default:
 			debug(LOG_ERROR, "scrBaseObjGet: unknown object type");
-			return FALSE;
+			return false;
 			break;
 		}
 
@@ -581,14 +358,14 @@ BOOL scrBaseObjGet(UDWORD index)
 
 		default:
 			debug(LOG_ERROR, "scrBaseObjGet: unknown object type");
-			return FALSE;
+			return false;
 			break;
 		}
 
 		break;
 	default:
 		debug(LOG_ERROR, "scrBaseObjGet: unknown variable index");
-		return FALSE;
+		return false;
 		break;
 	}
 
@@ -596,10 +373,10 @@ BOOL scrBaseObjGet(UDWORD index)
 	if (!stackPushResult(type, &scrFunctionResult))
 	{
 		debug(LOG_ERROR, "scrBaseObjGet: stackPushResult() failed");
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -610,7 +387,7 @@ BOOL scrObjToDroid(void)
 
 	if (!stackPopParams(1, ST_BASEOBJECT, &psObj))
 	{
-		return FALSE;
+		return false;
 	}
 
 	// return NULL if not a droid
@@ -623,10 +400,10 @@ BOOL scrObjToDroid(void)
 	scrFunctionResult.v.oval = psObj;
 	if (!stackPushResult((INTERP_TYPE)ST_DROID, &scrFunctionResult))
 	{
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -637,7 +414,7 @@ BOOL scrObjToStructure(void)
 
 	if (!stackPopParams(1, ST_BASEOBJECT, &psObj))
 	{
-		return FALSE;
+		return false;
 	}
 
 	// return NULL if not a droid
@@ -649,10 +426,10 @@ BOOL scrObjToStructure(void)
 	scrFunctionResult.v.oval = psObj;
 	if (!stackPushResult((INTERP_TYPE)ST_STRUCTURE, &scrFunctionResult))
 	{
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -663,7 +440,7 @@ BOOL scrObjToFeature(void)
 
 	if (!stackPopParams(1, ST_BASEOBJECT, &psObj))
 	{
-		return FALSE;
+		return false;
 	}
 
 	// return NULL if not a droid
@@ -675,16 +452,99 @@ BOOL scrObjToFeature(void)
 	scrFunctionResult.v.oval = psObj;
 	if (!stackPushResult((INTERP_TYPE)ST_FEATURE, &scrFunctionResult))
 	{
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 
 // cache all the possible values for the last group to try
 // to speed up access
 static SDWORD		lgX,lgY, lgMembers, lgHealth;
+
+// Get values from a weapon
+BOOL scrWeaponObjGet(UDWORD index)
+{
+	INTERP_TYPE		type;
+	SDWORD			weapIndex;
+
+	if (!stackPopParams(1, ST_WEAPON, &weapIndex))
+	{
+		return false;
+	}
+
+	switch (index)
+	{
+	case WEAPID_SHORT_RANGE:
+
+		type = VAL_INT;
+
+		scrFunctionResult.v.ival = asWeaponStats[weapIndex].shortRange;
+
+		break;
+	case WEAPID_LONG_RANGE:
+
+		type = VAL_INT;
+
+		scrFunctionResult.v.ival = asWeaponStats[weapIndex].longRange;
+
+		break;
+	case WEAPID_SHORT_HIT:
+		type = VAL_INT;
+
+		scrFunctionResult.v.ival = asWeaponStats[weapIndex].shortHit;
+
+		break;
+	case WEAPID_LONG_HIT:
+
+		type = VAL_INT;
+
+		scrFunctionResult.v.ival = asWeaponStats[weapIndex].longHit;
+
+		break;
+	case WEAPID_DAMAGE:
+
+		type = VAL_INT;
+
+		scrFunctionResult.v.ival = asWeaponStats[weapIndex].damage;
+
+		break;
+	case WEAPID_FIRE_PAUSE:
+
+		type = VAL_INT;
+
+		scrFunctionResult.v.ival = asWeaponStats[weapIndex].firePause;
+
+		break;
+	case WEAPID_RELOAD_TIME:
+
+		type = VAL_INT;
+
+		scrFunctionResult.v.ival = asWeaponStats[weapIndex].reloadTime;
+
+		break;
+	case WEAPID_NUM_ROUNDS:
+
+		type = VAL_INT;
+
+		scrFunctionResult.v.ival = asWeaponStats[weapIndex].numRounds;
+
+		break;
+	default:
+		ASSERT( false, "unknown variable index" );
+		return false;
+		break;
+	}
+
+	// Return the value
+	if (!stackPushResult(type, &scrFunctionResult))
+	{
+		return false;
+	}
+
+	return true;
+}
 
 // Get values from a group
 BOOL scrGroupObjGet(UDWORD index)
@@ -695,7 +555,7 @@ BOOL scrGroupObjGet(UDWORD index)
 
 	if (!stackPopParams(1, ST_GROUP, &psGroup))
 	{
-		return FALSE;
+		return false;
 	}
 
 	//fix: turn off caching, since it can screw up everything if returns outdated values
@@ -793,18 +653,18 @@ BOOL scrGroupObjGet(UDWORD index)
 		scrFunctionResult.v.oval = psGroup->psCommander;
 		break;
 	default:
-		ASSERT( FALSE, "scrGroupObjGet: unknown variable index" );
-		return FALSE;
+		ASSERT( false, "scrGroupObjGet: unknown variable index" );
+		return false;
 		break;
 	}
 
 	// Return the value
 	if (!stackPushResult(type, &scrFunctionResult))
 	{
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -977,7 +837,7 @@ BOOL scrValDefSave(INTERP_VAL *psVal, char *pBuffer, UDWORD *pSize)
 		}
 		else
 		{
-			return FALSE;
+			return false;
 		}
 		break;
 	case ST_TEMPLATE:
@@ -1143,10 +1003,10 @@ BOOL scrValDefSave(INTERP_VAL *psVal, char *pBuffer, UDWORD *pSize)
 		*pSize = sizeof(UDWORD);
 		break;
   default:
-    ASSERT( FALSE, "scrValDefSave: unknown script variable type for save" );
+    ASSERT( false, "scrValDefSave: unknown script variable type for save" );
     break;
 	}
-	return TRUE;
+	return true;
 }
 
 /// default value load routine
@@ -1174,7 +1034,7 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 			psVal->v.oval = (void*)getViewData(pBuffer);
 			if (psVal->v.oval == NULL)
 			{
-				return FALSE;
+				return false;
 			}
 		}
 		break;
@@ -1340,7 +1200,8 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 		}
 		else
 		{
-			if (!levFindDataSet(pBuffer, &psLevel))
+			psLevel = levFindDataSet(pBuffer);
+			if (psLevel == NULL)
 			{
 				debug( LOG_ERROR, "scrValDefLoad: couldn't find level dataset %s", pBuffer );
 				abort();
@@ -1356,7 +1217,7 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 		}
 		else
 		{
-			psVal->v.oval = (void*)getResearch(pBuffer, TRUE);
+			psVal->v.oval = (void*)getResearch(pBuffer, true);
 			if (psVal->v.oval == NULL)
 			{
 				debug( LOG_ERROR, "scrValDefLoad: couldn't find research %s", pBuffer );
@@ -1365,7 +1226,7 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 		}
 		break;
 	case ST_GROUP:
-		bObjectDefined = TRUE;
+		bObjectDefined = true;
 
 		if (psVal->v.oval == NULL)
 		{
@@ -1475,8 +1336,8 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 		if (index == SAMPLE_NOT_FOUND)
 		{
 			// find empty id and set track vals
-			index = audio_SetTrackVals(pName, FALSE, 100, 1800);
-			if (!index)			//this is a NON fatal error. 
+			index = audio_SetTrackVals(pName, false, 100, 1800);
+			if (!index)			//this is a NON fatal error.
 			{
 				// We can't find filename of the sound for some reason.
 				debug(LOG_ERROR, "Sound ID not available %s not found", pName);
@@ -1494,5 +1355,5 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 		break;
 	}
 
-	return TRUE;
+	return true;
 }

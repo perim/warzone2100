@@ -124,7 +124,6 @@ typedef struct _structure_stats
 {
 	STATS_BASE;						/* basic stats */
 	STRUCTURE_TYPE	type;				/* the type of structure */
-	TECH_LEVEL	techLevel;			/* technology level of the structure */
 	STRUCT_STRENGTH	strength;		/* strength against the weapon effects */
 	UDWORD		terrainType;		/*The type of terrain the structure has to be
 									  built next to - may be none*/
@@ -149,15 +148,15 @@ typedef struct _structure_stats
 	UDWORD		sizeModifier;		/*The larger the target, the easier to hit*/
 	iIMDShape	*pIMD;		/*The IMD to draw for this structure */
 	iIMDShape	*pBaseIMD;	/*The base IMD to draw for this structure */
-	struct _ecm_stats	*pECM;		/*Which ECM is standard for the structure -
+	struct ECM_STATS	*pECM;		/*Which ECM is standard for the structure -
 									  if any*/
-	struct _sensor_stats *pSensor;	/*Which Sensor is standard for the structure -
+	struct SENSOR_STATS *pSensor;	/*Which Sensor is standard for the structure -
 									  if any*/
 	UDWORD		weaponSlots;		/*Number of weapons that can be attached to the
 									  building*/
 	UDWORD		numWeaps;			/*Number of weapons for default */
 
-	struct _weapon_stats    *psWeapStat[STRUCT_MAXWEAPS];
+	struct WEAPON_STATS    *psWeapStat[STRUCT_MAXWEAPS];
 
 	UDWORD		numFuncs;			/*Number of functions for default*/
 	SDWORD		defaultFunc;		/*The default function*/
@@ -174,12 +173,12 @@ typedef enum _struct_states
 
 typedef struct _research_facility
 {
-	struct _base_stats	*psSubject;		/* the subject the structure is working on*/
+	struct BASE_STATS	*psSubject;		/* the subject the structure is working on*/
 	UDWORD		capacity;				/* Number of upgrade modules added*/
 	UDWORD		timeStarted;			/* The time the building started on the subject*/
 	UDWORD		researchPoints;			/* Research Points produced per research cycle*/
 	UDWORD		timeToResearch;			/* Time taken to research the topic*/
-	struct _base_stats	*psBestTopic;	/* The topic with the most research points
+	struct BASE_STATS	*psBestTopic;	/* The topic with the most research points
 										   that was last performed*/
 	UDWORD		powerAccrued;			/* used to keep track of power before
 										   researching a topic*/
@@ -251,6 +250,7 @@ typedef struct REPAIR_FACILITY
 	// The group the droids to be repaired by this facility belong to
 	struct _droid_group		*psGroup;
 	struct _droid			*psGrpNext;
+	int				droidQueue;		///< Last count of droid queue for this facility
 } REPAIR_FACILITY;
 
 typedef struct _rearm_pad

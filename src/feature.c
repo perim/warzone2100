@@ -52,7 +52,6 @@
 
 #include "mapgrid.h"
 #include "display3d.h"
-#include "gateway.h"
 
 
 /* The statistics for the features */
@@ -74,13 +73,13 @@ UDWORD			oilResFeature;
 
 struct featureTypeMap
 {
-	char *typeStr;
+	const char *typeStr;
 	FEATURE_TYPE type;
 };
 
-const static struct featureTypeMap map[] =
+static const struct featureTypeMap map[] =
 {
-	{ "HOVER WRECK", FEAT_HOVER },
+	{ "PROPULSION_TYPE_HOVER WRECK", FEAT_HOVER },
 	{ "TANK WRECK", FEAT_TANK },
 	{ "GENERIC ARTEFACT", FEAT_GEN_ARTE },
 	{ "OIL RESOURCE", FEAT_OIL_RESOURCE },
@@ -115,7 +114,7 @@ static void featureType(FEATURE_STATS* psFeature, const char *pType)
 		}
 	}
 
-	ASSERT(FALSE, "featureType: Unknown feature type");
+	ASSERT(false, "featureType: Unknown feature type");
 }
 
 /* Load the feature stats */
@@ -134,7 +133,7 @@ BOOL loadFeatureStats(const char *pFeatureData, UDWORD bufferSize)
 	{
 		debug( LOG_ERROR, "Feature Stats - Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	psFeature = asFeatureStats;
@@ -161,7 +160,7 @@ BOOL loadFeatureStats(const char *pFeatureData, UDWORD bufferSize)
 
 		if (!allocateName(&psFeature->pName, featureName))
 		{
-			return FALSE;
+			return false;
 		}
 
 		//determine the feature type
@@ -179,7 +178,7 @@ BOOL loadFeatureStats(const char *pFeatureData, UDWORD bufferSize)
 		{
 			debug( LOG_ERROR, "Cannot find the feature PIE for record %s",  getName( psFeature->pName ) );
 			abort();
-			return FALSE;
+			return false;
 		}
 
 		psFeature->ref = REF_FEATURE_START + i;
@@ -190,7 +189,7 @@ BOOL loadFeatureStats(const char *pFeatureData, UDWORD bufferSize)
 		psFeature++;
 	}
 
-	return TRUE;
+	return true;
 }
 
 /* Release the feature stats memory */
@@ -278,14 +277,7 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,BOOL FromSave)
 	//return the average of max/min height
 	height = (foundationMin + foundationMax) / 2;
 
-	// check you can reach an oil resource
-	if ((psStats->subType == FEAT_OIL_RESOURCE) &&
-		!gwZoneReachable(gwGetZone(startX,startY)))
-	{
-		debug( LOG_NEVER, "Oil resource at (%d,%d) is unreachable", startX, startY );
-	}
-
-	if(FromSave == TRUE) {
+	if(FromSave == true) {
 		psFeature->pos.x = (UWORD)x;
 		psFeature->pos.y = (UWORD)y;
 	} else {
@@ -307,7 +299,7 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,BOOL FromSave)
 		psFeature->direction = 0;
 	}
 	//psFeature->damage = featureDamage;
-	psFeature->selected = FALSE;
+	psFeature->selected = false;
 	psFeature->psStats = psStats;
 	//psFeature->subType = psStats->subType;
 	psFeature->body = psStats->body;
@@ -315,7 +307,7 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,BOOL FromSave)
 	psFeature->sensorRange = 0;
 	psFeature->sensorPower = 0;
 	psFeature->ECMMod = 0;
-	psFeature->bTargetted = FALSE;
+	psFeature->bTargetted = false;
 	psFeature->timeLastHit = 0;
 
 	// it has never been drawn
@@ -342,7 +334,7 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,BOOL FromSave)
 	{
 		int j;
 
-		for (j = 0; j < NUM_WEAPON_CLASS; j++)
+		for (j = 0; j < WC_NUM_WEAPON_CLASSES; j++)
 		{
 			psFeature->armour[i][j] = psFeature->psStats->armourValue;
 		}
@@ -393,11 +385,17 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,BOOL FromSave)
 
 			if (width != psStats->baseWidth && breadth != psStats->baseBreadth)
 			{
-				ASSERT( !(TILE_HAS_FEATURE(psTile)),
+				ASSERT( !(TileHasFeature(psTile)),
 					"buildFeature - feature- %d already found at %d, %d",
 					psFeature->id, mapX+width,mapY+breadth );
 
 				psTile->psObject = (BASE_OBJECT*)psFeature;
+
+				// if it's a tall feature then flag it in the map.
+				if (psFeature->sDisplay.imd->max.y > TALLOBJECT_YMAX)
+				{
+					SET_TILE_TALLSTRUCTURE(psTile);
+				}
 
 				if (psStats->subType == FEAT_GEN_ARTE || psStats->subType == FEAT_OIL_DRUM || psStats->subType == FEAT_BUILD_WRECK)// they're there - just can see me
 				{
@@ -405,7 +403,7 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,BOOL FromSave)
 				}
 			}
 
-			if( (!psStats->tileDraw) && (FromSave == FALSE) )
+			if( (!psStats->tileDraw) && (FromSave == false) )
 			{
 				psTile->height = (UBYTE)(height / ELEVATION_SCALE);
 			}
@@ -478,7 +476,7 @@ void removeFeature(FEATURE *psDel)
 	if (psDel->died)
 	{
 		// feature has already been killed, quit
-		ASSERT( FALSE,
+		ASSERT( false,
 			"removeFeature: feature already dead" );
 		return;
 	}
@@ -501,6 +499,7 @@ void removeFeature(FEATURE *psDel)
 
 			psTile->psObject = NULL;
 
+			CLEAR_TILE_TALLSTRUCTURE(psTile);
 			CLEAR_TILE_NOTBLOCKING(psTile);
 		}
 	}
@@ -510,7 +509,7 @@ void removeFeature(FEATURE *psDel)
 		pos.x = psDel->pos.x;
 		pos.z = psDel->pos.y;
 		pos.y = map_Height(pos.x,pos.z);
-		addEffect(&pos,EFFECT_EXPLOSION,EXPLOSION_TYPE_DISCOVERY,FALSE,NULL,0);
+		addEffect(&pos,EFFECT_EXPLOSION,EXPLOSION_TYPE_DISCOVERY,false,NULL,0);
 		scoreUpdateVar(WD_ARTEFACTS_FOUND);
 		intRefreshScreen();
 	}
@@ -576,7 +575,7 @@ void destroyFeature(FEATURE *psDel)
 			pos.x = psDel->pos.x + widthScatter - rand()%(2*widthScatter);
 			pos.z = psDel->pos.y + breadthScatter - rand()%(2*breadthScatter);
 			pos.y = psDel->pos.z + 32 + rand()%heightScatter;
-			addEffect(&pos,EFFECT_EXPLOSION,explosionSize,FALSE,NULL,0);
+			addEffect(&pos,EFFECT_EXPLOSION,explosionSize,false,NULL,0);
 		}
 
 //	  	if(psDel->sDisplay.imd->pos.ymax>300)	// WARNING - STATS CHANGE NEEDED!!!!!!!!!!!
@@ -585,7 +584,7 @@ void destroyFeature(FEATURE *psDel)
 			pos.x = psDel->pos.x;
 			pos.z = psDel->pos.y;
 			pos.y = psDel->pos.z;
-			addEffect(&pos,EFFECT_DESTRUCTION,DESTRUCTION_TYPE_SKYSCRAPER,TRUE,psDel->sDisplay.imd,0);
+			addEffect(&pos,EFFECT_DESTRUCTION,DESTRUCTION_TYPE_SKYSCRAPER,true,psDel->sDisplay.imd,0);
 			initPerimeterSmoke(psDel->sDisplay.imd,pos.x,pos.y,pos.z);
 
 			// ----- Flip all the tiles under the skyscraper to a rubble tile
@@ -630,7 +629,7 @@ void destroyFeature(FEATURE *psDel)
 		pos.x = psDel->pos.x;
 		pos.z = psDel->pos.y;
 		pos.y = map_Height(pos.x,pos.z);
-		addEffect(&pos,EFFECT_DESTRUCTION,DESTRUCTION_TYPE_FEATURE,FALSE,NULL,0);
+		addEffect(&pos,EFFECT_DESTRUCTION,DESTRUCTION_TYPE_FEATURE,false,NULL,0);
 
 		//play sound
 		// ffs gj
@@ -654,13 +653,6 @@ SDWORD getFeatureStatFromName( const char *pName )
 {
 	unsigned int inc;
 	FEATURE_STATS *psStat;
-
-#ifdef RESOURCE_NAMES
-	if (!getResourceName(pName))
-	{
-		return -1;
-	}
-#endif
 
 	for (inc = 0; inc < numFeatureStats; inc++)
 	{
@@ -692,7 +684,7 @@ FEATURE	* checkForWreckage(DROID *psDroid)
 		y = startY - incY;
 		for(x = startX - incX; x < (SDWORD)(startX + incX); x++)
 		{
-			if(TILE_HAS_FEATURE(mapTile(x,y)))
+			if(TileHasFeature(mapTile(x,y)))
 			{
 				psFeature = getTileFeature(x, y);
 				if(psFeature && psFeature->psStats->subType == FEAT_BUILD_WRECK)
@@ -705,7 +697,7 @@ FEATURE	* checkForWreckage(DROID *psDroid)
 		x = startX + incX;
 		for(y = startY - incY; y < (SDWORD)(startY + incY); y++)
 		{
-			if(TILE_HAS_FEATURE(mapTile(x,y)))
+			if(TileHasFeature(mapTile(x,y)))
 			{
 				psFeature = getTileFeature(x, y);
 				if(psFeature && psFeature->psStats->subType == FEAT_BUILD_WRECK)
@@ -718,7 +710,7 @@ FEATURE	* checkForWreckage(DROID *psDroid)
 		y = startY + incY;
 		for(x = startX + incX; x > (SDWORD)(startX - incX); x--)
 		{
-			if(TILE_HAS_FEATURE(mapTile(x,y)))
+			if(TileHasFeature(mapTile(x,y)))
 			{
 				psFeature = getTileFeature(x, y);
 				if(psFeature && psFeature->psStats->subType == FEAT_BUILD_WRECK)
@@ -732,7 +724,7 @@ FEATURE	* checkForWreckage(DROID *psDroid)
 		x = startX - incX;
 		for(y = startY + incY; y > (SDWORD)(startY - incY); y--)
 		{
-			if(TILE_HAS_FEATURE(mapTile(x,y)))
+			if(TileHasFeature(mapTile(x,y)))
 			{
 				psFeature = getTileFeature(x, y);
 				if(psFeature && psFeature->psStats->subType == FEAT_BUILD_WRECK)

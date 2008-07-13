@@ -6,7 +6,6 @@
 	ProjectGUID="{33979915-684A-4885-BFEA-2A4CCC5A5FD6}"
 	RootNamespace="framework"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -52,7 +51,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;$(SolutionDir)\..&quot;;&quot;$(SolutionDir)\..\devpkg\include&quot;;&quot;$(SolutionDir)\..\devpkg\include\SDL&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;YY_STATIC;PACKAGE_VERSION=\&quot;TRUNK\&quot;;PACKAGE=\&quot;warzone2100\&quot;;LOCALEDIR=\&quot;\&quot;;_CRT_SECURE_NO_WARNINGS"
+				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;YY_STATIC;PACKAGE_VERSION=\&quot;TRUNK\&quot;;PACKAGE=\&quot;warzone2100\&quot;;LOCALEDIR=\&quot;\&quot;;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -122,7 +121,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories="&quot;$(SolutionDir)\..&quot;;&quot;$(SolutionDir)\..\devpkg\include&quot;;&quot;$(SolutionDir)\..\devpkg\include\SDL&quot;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;YY_STATIC;PACKAGE_VERSION=\&quot;TRUNK\&quot;;PACKAGE=\&quot;warzone2100\&quot;;LOCALEDIR=\&quot;\&quot;;_CRT_SECURE_NO_WARNINGS"
+				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;YY_STATIC;PACKAGE_VERSION=\&quot;TRUNK\&quot;;PACKAGE=\&quot;warzone2100\&quot;;LOCALEDIR=\&quot;\&quot;;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -171,11 +170,19 @@
 				>
 			</File>
 			<File
-				RelativePath=".\debug.c"
+				RelativePath=".\cursors.c"
 				>
 			</File>
 			<File
-				RelativePath=".\exceptionhandler.c"
+				RelativePath=".\cursors16.c"
+				>
+			</File>
+			<File
+				RelativePath=".\cursors32.c"
+				>
+			</File>
+			<File
+				RelativePath=".\debug.c"
 				>
 			</File>
 			<File
@@ -187,11 +194,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\i18n.c"
+				>
+			</File>
+			<File
 				RelativePath=".\input.c"
 				>
 			</File>
 			<File
-				RelativePath=".\i18n.c"
+				RelativePath=".\lexer_input.c"
 				>
 			</File>
 			<File
@@ -271,10 +282,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\cursors16.h"
-				>
-			</File>
-			<File
 				RelativePath=".\dbghelp.h"
 				>
 			</File>
@@ -299,11 +306,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\i18n.h"
+				>
+			</File>
+			<File
 				RelativePath=".\input.h"
 				>
 			</File>
 			<File
-				RelativePath=".\i18n.h"
+				RelativePath=".\lexer_input.h"
 				>
 			</File>
 			<File

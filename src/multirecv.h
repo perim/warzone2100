@@ -32,7 +32,6 @@ extern BOOL recvDroidInfo			(void);
 extern BOOL recvDestroyDroid		(void);
 extern BOOL recvGroupOrder			(void);
 extern BOOL recvDroidMove			(void);
-extern BOOL receiveWholeDroid		(NETMSG *pMsg);
 extern BOOL recvDestroyStructure	(void);
 extern BOOL recvBuildStarted		(void);
 extern BOOL recvBuildFinished		(void);
@@ -51,7 +50,6 @@ extern BOOL recvStructureCheck		(void);
 extern BOOL recvPowerCheck			(void);
 extern BOOL recvAlliance			(BOOL allowAudio);
 extern BOOL recvColourRequest		(void);
-extern BOOL sendWholeDroid			(DROID	*pD, UDWORD dest);
 //extern BOOL sendWholeStructure		(STRUCTURE *pS, DPID dest);
 extern void recvOptions				(void);
 extern void sendOptions				(uint32_t dest, uint32_t play);
@@ -65,5 +63,6 @@ extern BOOL	recvMapFileRequested		(void);
 
 extern BOOL recvTextMessageAI		(void);		//AI multiplayer message
 extern BOOL	recvTeamRequest		(void);
+extern BOOL	recvReadyRequest		(void);
 
 #endif // __INCLUDED_SRC_MULTIRECV_H__

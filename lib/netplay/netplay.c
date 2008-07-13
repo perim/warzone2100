@@ -97,9 +97,6 @@ typedef struct
 	unsigned int	bytes;
 } NETBUFSOCKET;
 
-/// This is the hardcoded dpid (player ID) value for the hosting player.
-#define HOST_DPID 1
-
 #define PLAYER_HOST		1
 
 // ////////////////////////////////////////////////////////////////////////
@@ -107,25 +104,26 @@ typedef struct
 
 NETPLAY	NetPlay;
 
-static BOOL		allow_joining = FALSE;
+static BOOL		allow_joining = false;
 static GAMESTRUCT	game;
 static TCPsocket	tcp_socket = NULL;
 static NETBUFSOCKET*	bsocket = NULL;
 static NETBUFSOCKET*	connected_bsocket[MAX_CONNECTED_PLAYERS] = { NULL };
 static SDLNet_SocketSet	socket_set = NULL;
-static BOOL		is_server = FALSE;
+static BOOL		is_server = false;
 static TCPsocket	tmp_socket[MAX_TMP_SOCKETS] = { NULL };
 static SDLNet_SocketSet	tmp_socket_set = NULL;
 static char*		hostname;
 static NETSTATS		nStats = { 0, 0, 0, 0 };
 static NET_PLAYER	players[MAX_CONNECTED_PLAYERS];
-static int32_t          NetGameFlags[4];
+static int32_t          NetGameFlags[4] = { 0, 0, 0, 0 };
+char iptoconnect[PATH_MAX] = "\0"; // holds IP/hostname from command line
 
 // *********** Socket with buffer that read NETMSGs ******************
 
 static NETBUFSOCKET* NET_createBufferedSocket(void)
 {
-	NETBUFSOCKET* bs = (NETBUFSOCKET*)malloc(sizeof(NETBUFSOCKET));
+	NETBUFSOCKET* bs = (NETBUFSOCKET*)malloc(sizeof(*bs));
 
 	bs->socket = NULL;
 	bs->buffer = NULL;
@@ -160,12 +158,12 @@ static BOOL NET_fillBuffer(NETBUFSOCKET* bs, SDLNet_SocketSet socket_set)
 
 	if (bs->buffer_start != 0)
 	{
-		return FALSE;
+		return false;
 	}
 
 	if (SDLNet_SocketReady(bs->socket) <= 0)
 	{
-		return FALSE;
+		return false;
 	}
 
 	size = SDLNet_TCP_Recv(bs->socket, bufstart, bufsize);
@@ -173,7 +171,7 @@ static BOOL NET_fillBuffer(NETBUFSOCKET* bs, SDLNet_SocketSet socket_set)
 	if (size > 0)
 	{
 		bs->bytes += size;
-		return TRUE;
+		return true;
 	} else {
 		if (socket_set != NULL)
 		{
@@ -183,10 +181,10 @@ static BOOL NET_fillBuffer(NETBUFSOCKET* bs, SDLNet_SocketSet socket_set)
 		bs->socket = NULL;
 	}
 
-	return FALSE;
+	return false;
 }
 
-// Check if we have a full message waiting for us. If not, return FALSE and wait for more data.
+// Check if we have a full message waiting for us. If not, return false and wait for more data.
 // If there is a data remnant somewhere in the buffer except at its beginning, move it to the
 // beginning.
 static BOOL NET_recvMessage(NETBUFSOCKET* bs)
@@ -204,7 +202,7 @@ static BOOL NET_recvMessage(NETBUFSOCKET* bs)
 		goto error;
 	}
 
-	size = message->size + headersize;
+	size = SDL_SwapBE16(message->size) + headersize;
 
 	if (size > bs->bytes)
 	{
@@ -212,10 +210,11 @@ static BOOL NET_recvMessage(NETBUFSOCKET* bs)
 	}
 
 	memcpy(pMsg, message, size);
+	pMsg->size = SDL_SwapBE16(message->size);
 	bs->buffer_start += size;
 	bs->bytes -= size;
 
-	return TRUE;
+	return true;
 
 error:
 	if (bs->buffer_start != 0)
@@ -242,7 +241,7 @@ error:
 		bs->buffer_start = 0;
 	}
 
-	return FALSE;
+	return false;
 }
 
 static void NET_InitPlayers(void)
@@ -251,12 +250,12 @@ static void NET_InitPlayers(void)
 
 	for (i = 0; i < MAX_CONNECTED_PLAYERS; ++i)
 	{
-		players[i].allocated = FALSE;
+		players[i].allocated = false;
 		players[i].id = i;
 	}
 }
 
-static void NETBroadcastPlayerInfo(int dpid)
+static void NETBroadcastPlayerInfo(uint32_t dpid)
 {
 	NETbeginEncode(NET_PLAYER_INFO, NET_ALL_PLAYERS);
 		NETuint32_t(&players[dpid].id);
@@ -272,10 +271,10 @@ static unsigned int NET_CreatePlayer(const char* name, unsigned int flags)
 
 	for (i = 1; i < MAX_CONNECTED_PLAYERS; ++i)
 	{
-		if (players[i].allocated == FALSE)
+		if (players[i].allocated == false)
 		{
-			players[i].allocated = TRUE;
-			strlcpy(players[i].name, name, sizeof(players[i].name));
+			players[i].allocated = true;
+			sstrcpy(players[i].name, name);
 			players[i].flags = flags;
 			NETBroadcastPlayerInfo(i);
 			return i;
@@ -287,7 +286,7 @@ static unsigned int NET_CreatePlayer(const char* name, unsigned int flags)
 
 static void NET_DestroyPlayer(unsigned int id)
 {
-	players[id].allocated = FALSE;
+	players[id].allocated = false;
 }
 
 // ////////////////////////////////////////////////////////////////////////
@@ -301,27 +300,27 @@ UDWORD NETplayerInfo(void)
 	if(!NetPlay.bComms)
 	{
 		NetPlay.playercount		= 1;
-		NetPlay.players[0].bHost	= TRUE;
+		NetPlay.players[0].bHost	= true;
 		NetPlay.players[0].dpid		= HOST_DPID;
 		return 1;
 	}
 
-	memset(NetPlay.players, 0, sizeof(PLAYER) * MAX_PLAYERS);	// reset player info
+	memset(NetPlay.players, 0, sizeof(NetPlay.players));	// reset player info
 
 	for (i = 0; i < MAX_CONNECTED_PLAYERS; ++i)
 	{
-		if (players[i].allocated == TRUE)
+		if (players[i].allocated == true)
 		{
 			NetPlay.players[NetPlay.playercount].dpid = i;
-			strlcpy(NetPlay.players[NetPlay.playercount].name, players[i].name, sizeof(NetPlay.players[NetPlay.playercount].name));
+			sstrcpy(NetPlay.players[NetPlay.playercount].name, players[i].name);
 
 			if (players[i].flags & PLAYER_HOST)
 			{
-				NetPlay.players[NetPlay.playercount].bHost = TRUE;
+				NetPlay.players[NetPlay.playercount].bHost = true;
 			}
 			else
 			{
-				NetPlay.players[NetPlay.playercount].bHost = FALSE;
+				NetPlay.players[NetPlay.playercount].bHost = false;
 			}
 
 			NetPlay.playercount++;
@@ -337,16 +336,16 @@ BOOL NETchangePlayerName(UDWORD dpid, char *newName)
 {
 	if(!NetPlay.bComms)
 	{
-		strlcpy(NetPlay.players[0].name, newName, sizeof(NetPlay.players[0].name));
-		return TRUE;
+		sstrcpy(NetPlay.players[0].name, newName);
+		return true;
 	}
 	debug(LOG_NET, "Requesting a change of player name for pid=%d to %s", dpid, newName);
 
-	strlcpy(players[dpid].name, newName, sizeof(players[dpid].name));
+	sstrcpy(players[dpid].name, newName);
 
 	NETBroadcastPlayerInfo(dpid);
 
-	return TRUE;
+	return true;
 }
 
 // ////////////////////////////////////////////////////////////////////////
@@ -368,7 +367,7 @@ static void NETsendGameFlags(void)
 	NETbeginEncode(NET_GAME_FLAGS, NET_ALL_PLAYERS);
 	{
 		// Send the amount of game flags we're about to send
-		uint8_t i, count = sizeof(NetGameFlags) / sizeof(*NetGameFlags);
+		uint8_t i, count = ARRAY_SIZE(NetGameFlags);
 		NETuint8_t(&count);
 
 		// Send over all game flags
@@ -386,17 +385,17 @@ BOOL NETsetGameFlags(UDWORD flag, SDWORD value)
 {
 	if(!NetPlay.bComms)
 	{
-		return TRUE;
+		return true;
 	}
 
-	if (flag < 1 || flag > 4)
+	if (flag > 0 && flag < 5)
 	{
-		return NetGameFlags[flag-1] = value;
+		return (NetGameFlags[flag-1] = value);
 	}
 
 	NETsendGameFlags();
 
-	return TRUE;
+	return true;
 }
 
 static void NETsendGAMESTRUCT(TCPsocket socket, const GAMESTRUCT* game)
@@ -404,7 +403,8 @@ static void NETsendGAMESTRUCT(TCPsocket socket, const GAMESTRUCT* game)
 	// A buffer that's guaranteed to have the correct size (i.e. it
 	// circumvents struct padding, which could pose a problem).
 	char buf[sizeof(game->name) + sizeof(game->desc.host) + sizeof(int32_t) * 8];
-	char* buffer = buf;;
+	char *buffer = buf;
+	int result;
 
 	// Now dump the data into the buffer
 	// Copy a string
@@ -436,7 +436,11 @@ static void NETsendGAMESTRUCT(TCPsocket socket, const GAMESTRUCT* game)
 	buffer += sizeof(int32_t);
 
 	// Send over the GAMESTRUCT
-	SDLNet_TCP_Send(socket, buf, sizeof(buf));
+	result = SDLNet_TCP_Send(socket, buf, sizeof(buf));
+	if (result != sizeof(buf))
+	{
+		debug(LOG_NET, "Failed to send: %s", SDLNet_GetError());
+	}
 }
 
 static bool NETrecvGAMESTRUCT(GAMESTRUCT* game)
@@ -445,20 +449,26 @@ static bool NETrecvGAMESTRUCT(GAMESTRUCT* game)
 	// circumvents struct padding, which could pose a problem).
 	char buf[sizeof(game->name) + sizeof(game->desc.host) + sizeof(int32_t) * 8];
 	char* buffer = buf;
+	int result = 0;
 
 	// Read a GAMESTRUCT from the connection
 	if (tcp_socket == NULL
 	 || socket_set == NULL
 	 || SDLNet_CheckSockets(socket_set, 1000) <= 0
 	 || !SDLNet_SocketReady(tcp_socket)
-	 || SDLNet_TCP_Recv(tcp_socket, buf, sizeof(buf)) != sizeof(buf))
+	 || (result = SDLNet_TCP_Recv(tcp_socket, buf, sizeof(buf))) != sizeof(buf))
 	{
+		if (result < 0)
+		{
+			debug(LOG_WARNING, "SDLNet_TCP_Recv error: %s tcp_socket %p is now invalid", SDLNet_GetError(), tcp_socket);
+			tcp_socket = NULL;  //SDLnet docs say to 'disconnect' here. Dunno how. :S
+		}
 		return false;
 	}
 
 	// Now dump the data into the game struct
 	// Copy a string
-	strlcpy(game->name, buffer, sizeof(game->name));
+	sstrcpy(game->name, buffer);
 	buffer += sizeof(game->name);
 
 	// Copy 32bit large big endian numbers
@@ -468,7 +478,7 @@ static bool NETrecvGAMESTRUCT(GAMESTRUCT* game)
 	buffer += sizeof(int32_t);
 
 	// Copy yet another string
-	strlcpy(game->desc.host, buffer, sizeof(game->desc.host));
+	sstrcpy(game->desc.host, buffer);
 	buffer += sizeof(game->desc.host);
 
 	// Copy 32bit large big endian numbers
@@ -490,41 +500,39 @@ static bool NETrecvGAMESTRUCT(GAMESTRUCT* game)
 
 // ////////////////////////////////////////////////////////////////////////
 // setup stuff
-BOOL NETinit(BOOL bFirstCall)
+int NETinit(BOOL bFirstCall)
 {
 	UDWORD i;
-	debug( LOG_NET, "NETinit" );
 
+	debug(LOG_NET, "NETinit");
 	if(bFirstCall)
 	{
 		debug(LOG_NET, "NETPLAY: Init called, MORNIN'");
 
 		NetPlay.dpidPlayer		= 0;
 		NetPlay.bHost			= 0;
-		NetPlay.bComms			= TRUE;
-
 		for(i = 0; i < MAX_PLAYERS; i++)
 		{
-			memset(&NetPlay.players[i], 0, sizeof(PLAYER));
-			memset(&NetPlay.games[i], 0, sizeof(GAMESTRUCT));
+			memset(&NetPlay.players[i], 0, sizeof(NetPlay.players[i]));
+			memset(&NetPlay.games[i], 0, sizeof(NetPlay.games[i]));
 		}
-		NetPlay.bComms = TRUE;
+		NetPlay.bComms = true;
 		NETstartLogging();
 	}
 
 	if (SDLNet_Init() == -1)
 	{
-		debug(LOG_ERROR, "SDLNet_Init: %s", SDLNet_GetError());
-		return FALSE;
+		debug(LOG_ERROR, "SDLNet_Init reported: %s", SDLNet_GetError());
+		return -1;
 	}
 
-	return TRUE;
+	return 0;
 }
 
 
 // ////////////////////////////////////////////////////////////////////////
 // SHUTDOWN THE CONNECTION.
-BOOL NETshutdown(void)
+int NETshutdown(void)
 {
 	debug( LOG_NET, "NETshutdown" );
 
@@ -535,14 +543,15 @@ BOOL NETshutdown(void)
 
 // ////////////////////////////////////////////////////////////////////////
 //close the open game..
-BOOL NETclose(void)
+int NETclose(void)
 {
 	unsigned int i;
+	int result;
 
 	debug(LOG_NET, "NETclose");
 
 	NEThaltJoining();
-	is_server=FALSE;
+	is_server=false;
 
 	if(bsocket)
 	{
@@ -550,15 +559,17 @@ BOOL NETclose(void)
 		bsocket=NULL;
 	}
 
-	for(i=0;i<MAX_CONNECTED_PLAYERS;i++) {
-		if(connected_bsocket[i]) {
+	for(i = 0; i < MAX_CONNECTED_PLAYERS; i++)
+	{
+		if (connected_bsocket[i])
+		{
 			NET_destroyBufferedSocket(connected_bsocket[i]);
 			connected_bsocket[i]=NULL;
 		}
 		NET_DestroyPlayer(i);
 	}
 
-	if(tmp_socket_set)
+	if (tmp_socket_set)
 	{
 		SDLNet_FreeSocketSet(tmp_socket_set);
 		tmp_socket_set=NULL;
@@ -575,16 +586,23 @@ BOOL NETclose(void)
 
 	if (socket_set)
 	{
+		// checking to make sure tcp_socket is still valid
+		result = SDLNet_TCP_DelSocket(socket_set, tcp_socket);
+		if (result == -1)
+		{
+			debug(LOG_NET,"SDLNet_DelSocket error: %s", SDLNet_GetError());
+			tcp_socket = NULL;
+		}
 		SDLNet_FreeSocketSet(socket_set);
 		socket_set=NULL;
 	}
-
 	if (tcp_socket)
 	{
 		SDLNet_TCP_Close(tcp_socket);
 		tcp_socket=NULL;
 	}
-	return FALSE;
+
+	return 0;
 }
 
 
@@ -673,55 +691,76 @@ UDWORD NETgetPacketsRecvd(void)
 
 // ////////////////////////////////////////////////////////////////////////
 // Send a message to a player, option to guarantee message
-BOOL NETsend(NETMSG *msg, UDWORD player, BOOL guarantee)
+BOOL NETsend(NETMSG *msg, UDWORD player)
 {
 	int size;
+	int result = 0;
 
 	if(!NetPlay.bComms)
 	{
-		return TRUE;
+		return true;
 	}
 
-	if (player >= MAX_CONNECTED_PLAYERS) return FALSE;
+	if (player >= MAX_CONNECTED_PLAYERS) return false;
 	msg->destination = player;
 	msg->source = selectedPlayer;
 
 	size = msg->size + sizeof(msg->size) + sizeof(msg->type) + sizeof(msg->destination) + sizeof(msg->source);
 
-	NETlogPacket(msg, FALSE);
+	NETlogPacket(msg, false);
+	msg->size = SDL_SwapBE16(msg->size);
 
 	if (is_server)
 	{
 		if (   player < MAX_CONNECTED_PLAYERS
 		    && connected_bsocket[player] != NULL
 		    && connected_bsocket[player]->socket != NULL
-		    && SDLNet_TCP_Send(connected_bsocket[player]->socket,
-				       msg, size) == size)
+		    && (result = SDLNet_TCP_Send(connected_bsocket[player]->socket,
+				       msg, size) == size))
 		{
 			nStats.bytesSent   += size;
 			nStats.packetsSent += 1;
-			return TRUE;
+			return true;
 		}
-	} else {
-		if (   tcp_socket
-		    && SDLNet_TCP_Send(tcp_socket, msg, size) == size)
+		else
 		{
-			return TRUE;
+			if (result < size)
+			{
+				debug(LOG_NET, "SDLNet_TCP_Send returned: %d error: %s line %d", result, SDLNet_GetError(),__LINE__);
+				connected_bsocket[player]->socket = NULL ; // It is invalid,  Unknown how to handle.
+			}
 		}
 	}
+	else
+	{
+			if (tcp_socket && (result = SDLNet_TCP_Send(tcp_socket, msg, size) == size))
+			{
+				return true;
+			}
+			else
+			{
+				if (result < size)
+				{
+					debug(LOG_NET, "SDLNet_TCP_Send returned: %d error: %s line %d", result, SDLNet_GetError(),__LINE__);
+					tcp_socket = NULL; // unknow how to handle when invalid.
+				}
+			}
 
-	return FALSE;
+	}
+
+	return false;
 }
 
 // ////////////////////////////////////////////////////////////////////////
 // broadcast a message to all players.
-BOOL NETbcast(NETMSG *msg, BOOL guarantee)
+BOOL NETbcast(NETMSG *msg)
 {
 	int size;
+	int result = 0;
 
 	if(!NetPlay.bComms)
 	{
-		return TRUE;
+		return true;
 	}
 
 	msg->destination = NET_ALL_PLAYERS;
@@ -729,7 +768,8 @@ BOOL NETbcast(NETMSG *msg, BOOL guarantee)
 
 	size = msg->size + sizeof(msg->size) + sizeof(msg->type) + sizeof(msg->destination) + sizeof(msg->source);
 
-	NETlogPacket(msg, FALSE);
+	NETlogPacket(msg, false);
+	msg->size = SDL_SwapBE16(msg->size);
 
 	if (is_server)
 	{
@@ -740,22 +780,38 @@ BOOL NETbcast(NETMSG *msg, BOOL guarantee)
 			if (   connected_bsocket[i] != NULL
 			    && connected_bsocket[i]->socket != NULL)
 			{
-				SDLNet_TCP_Send(connected_bsocket[i]->socket, msg, size);
+				result = SDLNet_TCP_Send(connected_bsocket[i]->socket, msg, size);
+				if (result < size)
+				{
+					debug(LOG_NET, "(server) SDLNet_TCP_Send returned %d < %d, socket %p invalid: %s",
+					      result, size, connected_bsocket[i]->socket, SDLNet_GetError());
+					connected_bsocket[i]->socket = NULL; // Unsure how to handle invalid sockets.
+				}
 			}
 		}
 
-	} else {
-		if (   tcp_socket == NULL
-		    || SDLNet_TCP_Send(tcp_socket, msg, size) < size)
+	}
+	else
+	{
+		if (tcp_socket == NULL)
 		{
-			return FALSE;
+			return false;
+		}
+
+		result = SDLNet_TCP_Send(tcp_socket, msg, size);
+		if (result < size)
+		{
+			debug(LOG_WARNING, "(client) SDLNet_TCP_Send returned %d < %d, tcp_socket %p is now invalid: %s", 
+			      result, size, tcp_socket, SDLNet_GetError());
+			tcp_socket = NULL; // unsure how to handle invalid sockets.
+			return false;
 		}
 	}
 
 	nStats.bytesSent   += size;
 	nStats.packetsSent += 1;
 
-	return TRUE;
+	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -778,12 +834,12 @@ static BOOL NETprocessSystemMessage(void)
 				// Retrieve the player's ID
 				NETuint32_t(&dpid);
 
-				debug(LOG_NET, "NETprocessSystemMessage: Receiving MSG_PLAYER_INFO for player %u", (unsigned int)dpid);
+				debug(LOG_NET, "Receiving MSG_PLAYER_INFO for player %u", (unsigned int)dpid);
 
 				// Bail out if the given ID number is out of range
 				if (dpid >= MAX_CONNECTED_PLAYERS)
 				{
-					debug(LOG_NET, "NETprocessSystemMessage: MSG_PLAYER_INFO: Player ID (%u) out of range (max %u)", (unsigned int)dpid, (unsigned int)MAX_CONNECTED_PLAYERS);
+					debug(LOG_WARNING, "MSG_PLAYER_INFO: Player ID (%u) out of range (max %u)", dpid, (unsigned int)MAX_CONNECTED_PLAYERS);
 					NETend();
 					break;
 				}
@@ -814,7 +870,7 @@ static BOOL NETprocessSystemMessage(void)
 				NETuint8_t(&dpid);
 			NETend();
 
-			debug(LOG_NET, "NETprocessSystemMessage: Receiving NET_PLAYER_JOINED for player %u", (unsigned int)dpid);
+			debug(LOG_NET, "Receiving NET_PLAYER_JOINED for player %u", (unsigned int)dpid);
 
 			MultiPlayerJoin(dpid);
 			break;
@@ -822,11 +878,12 @@ static BOOL NETprocessSystemMessage(void)
 		case NET_PLAYER_LEFT:
 		{
 			uint32_t dpid;
+
 			NETbeginDecode(NET_PLAYER_LEFT);
 				NETuint32_t(&dpid);
 			NETend();
 
-			debug(LOG_NET, "NETprocessSystemMessage: Receiving NET_PLAYER_LEFT for player %u", (unsigned int)dpid);
+			debug(LOG_NET, "Receiving NET_PLAYER_LEFT for player %u", (unsigned int)dpid);
 
 			NET_DestroyPlayer(dpid);
 			MultiPlayerLeave(dpid);
@@ -834,11 +891,11 @@ static BOOL NETprocessSystemMessage(void)
 		}
 		case NET_GAME_FLAGS:
 		{
-			debug(LOG_NET, "NETprocessSystemMessage: Receiving game flags");
+			debug(LOG_NET, "Receiving game flags");
 
 			NETbeginDecode(NET_GAME_FLAGS);
 			{
-				static unsigned int max_flags = sizeof(NetGameFlags) / sizeof(*NetGameFlags);
+				static unsigned int max_flags = ARRAY_SIZE(NetGameFlags);
 				// Retrieve the amount of game flags that we should receive
 				uint8_t i, count;
 				NETuint8_t(&count);
@@ -847,7 +904,7 @@ static BOOL NETprocessSystemMessage(void)
 				// have enough space to store the given amount of game flags.
 				if (count > max_flags)
 				{
-					debug(LOG_NET, "NETprocessSystemMessage: NET_GAME_FLAGS: More game flags sent (%u) than our buffer can hold (%u)", (unsigned int)count, max_flags);
+					debug(LOG_NET, "NET_GAME_FLAGS: More game flags sent (%u) than our buffer can hold (%u)", (unsigned int)count, max_flags);
 					count = max_flags;
 				}
 
@@ -866,15 +923,15 @@ static BOOL NETprocessSystemMessage(void)
 			break;
 		}
 		default:
-			return FALSE;
+			return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 // ////////////////////////////////////////////////////////////////////////
-// Receive a message over the current connection. We return TRUE if there
-// is a message for the higher level code to process, and FALSE otherwise.
+// Receive a message over the current connection. We return true if there
+// is a message for the higher level code to process, and false otherwise.
 // We should not block here.
 BOOL NETrecv(uint8_t *type)
 {
@@ -885,7 +942,7 @@ BOOL NETrecv(uint8_t *type)
 
 	if (!NetPlay.bComms)
 	{
-		return FALSE;
+		return false;
 	}
 
 	if (is_server)
@@ -895,25 +952,25 @@ BOOL NETrecv(uint8_t *type)
 
 	do {
 receive_message:
-		received = FALSE;
+		received = false;
 
 		if (is_server)
 		{
 			if (connected_bsocket[current] == NULL)
 			{
-				return FALSE;
+				return false;
 			}
 
 			received = NET_recvMessage(connected_bsocket[current]);
 
-			if (received == FALSE)
+			if (received == false)
 			{
 				uint32_t i = current + 1;
 
 				if (socket_set == NULL
 				    || SDLNet_CheckSockets(socket_set, NET_READ_TIMEOUT) <= 0)
 				{
-					return FALSE;
+					return false;
 				}
 				for (;;)
 				{
@@ -935,13 +992,13 @@ receive_message:
 						// Decrement player count
 						--game.desc.dwCurrentPlayers;
 
-						debug(LOG_NET, "NETrecv: dpid to send set to %u", (unsigned int)i);
+						debug(LOG_NET, "dpid to send set to %u", i);
 						NETbeginEncode(NET_PLAYER_LEFT, NET_ALL_PLAYERS);
 							NETuint32_t(&i);
 						NETend();
 
-						NET_DestroyPlayer(i);
 						MultiPlayerLeave(i);
+						NET_DestroyPlayer(i);
 					}
 
 					if (++i == MAX_CONNECTED_PLAYERS)
@@ -951,7 +1008,7 @@ receive_message:
 
 					if (i == current+1)
 					{
-						return FALSE;
+						return false;
 					}
 				}
 			}
@@ -959,11 +1016,11 @@ receive_message:
 			// we are a client
 			if (bsocket == NULL)
 			{
-				return FALSE;
+				return false;
 			} else {
 				received = NET_recvMessage(bsocket);
 
-				if (received == FALSE)
+				if (received == false)
 				{
 					if (   socket_set != NULL
 					    && SDLNet_CheckSockets(socket_set, NET_READ_TIMEOUT) > 0
@@ -975,21 +1032,23 @@ receive_message:
 			}
 		}
 
-		if (received == FALSE)
+		if (received == false)
 		{
-			return FALSE;
+			return false;
 		}
 		else
 		{
 			size =	  pMsg->size + sizeof(pMsg->size) + sizeof(pMsg->type)
 				+ sizeof(pMsg->destination) + sizeof(pMsg->source);
-			if (is_server == FALSE)
+			if (is_server == false)
 			{
 				// do nothing
 			}
 			else if (pMsg->destination == NET_ALL_PLAYERS)
 			{
 				unsigned int j;
+
+				pMsg->size = SDL_SwapBE16(pMsg->size);
 
 				// we are the host, and have received a broadcast packet; distribute it
 				for (j = 0; j < MAX_CONNECTED_PLAYERS; ++j)
@@ -998,8 +1057,7 @@ receive_message:
 					    && connected_bsocket[j] != NULL
 					    && connected_bsocket[j]->socket != NULL)
 					{
-						SDLNet_TCP_Send(connected_bsocket[j]->socket,
-								pMsg, size);
+						SDLNet_TCP_Send(connected_bsocket[j]->socket, pMsg, size);
 					}
 				}
 			}
@@ -1010,7 +1068,8 @@ receive_message:
 				    && connected_bsocket[pMsg->destination] != NULL
 				    && connected_bsocket[pMsg->destination]->socket != NULL)
 				{
-					debug(LOG_NET, "Reflecting message type %hhu to UDWORD %hhu", pMsg->type, pMsg->destination);
+					debug(LOG_NET, "Reflecting message type %hhu to %hhu", pMsg->type, pMsg->destination);
+					pMsg->size = SDL_SwapBE16(pMsg->size);
 					SDLNet_TCP_Send(connected_bsocket[pMsg->destination]->socket,
 							pMsg, size);
 				} else {
@@ -1024,12 +1083,12 @@ receive_message:
 			nStats.packetsRecvd += 1;
 		}
 
-	} while (NETprocessSystemMessage() == TRUE);
+	} while (NETprocessSystemMessage() == true);
 
-	NETlogPacket(pMsg, TRUE);
+	NETlogPacket(pMsg, true);
 
 	*type = pMsg->type;
-	return TRUE;
+	return true;
 }
 
 // ////////////////////////////////////////////////////////////////////////
@@ -1038,7 +1097,7 @@ receive_message:
 
 BOOL NETsetupTCPIP(const char *machine)
 {
-	debug(LOG_NET, "NETsetupTCPIP(,%s)", machine ? machine : "NULL");
+	debug(LOG_NET, "NETsetupTCPIP(%s)", machine ? machine : "NULL");
 
 	if (   hostname != NULL
 	    && hostname != masterserver_name)
@@ -1053,7 +1112,7 @@ BOOL NETsetupTCPIP(const char *machine)
 		hostname = masterserver_name;
 	}
 
-	return TRUE;
+	return true;
 }
 
 // ////////////////////////////////////////////////////////////////////////
@@ -1075,7 +1134,7 @@ UBYTE NETsendFile(BOOL newFile, char *fileName, UDWORD player)
 		pFileHandle = PHYSFS_openRead(fileName);			// check file exists
 		if (pFileHandle == NULL)
 		{
-			debug(LOG_ERROR, "NETsendFile: Failed");
+			debug(LOG_ERROR, "Failed");
 			return 0; // failed
 		}
 		// get the file's size.
@@ -1095,7 +1154,7 @@ UBYTE NETsendFile(BOOL newFile, char *fileName, UDWORD player)
 	if (player == 0)
 	{	// FIXME: why would you send (map) file to everyone ??
 		// even if they already have it? multiplay.c 1529 & 1550 are both
-		// NETsendFile(TRUE,mapStr,0); & NETsendFile(FALSE,game.map,0);
+		// NETsendFile(true,mapStr,0); & NETsendFile(false,game.map,0);
 		// so we ALWAYS send it, it seems?
 		NETbeginEncode(FILEMSG, NET_ALL_PLAYERS);	// send it.
 	}
@@ -1143,7 +1202,7 @@ UBYTE NETrecvFile(void)
 
 	// read filename
 	NETstring(fileName, 256);	// Ugh. 256 = max array size
-	debug(LOG_NET, "NETrecvFile: Creating new file %s", fileName);
+	debug(LOG_NET, "Creating new file %s", fileName);
 
 	if (currPos == 0)	// first packet!
 	{
@@ -1165,7 +1224,7 @@ UBYTE NETrecvFile(void)
 	return ((currPos + bytesRead) * 100) / fileSize;
 }
 
-void NETregisterServer(int state)
+static void NETregisterServer(int state)
 {
 	static TCPsocket rs_socket = NULL;
 	static int registered = 0;
@@ -1184,7 +1243,7 @@ void NETregisterServer(int state)
 			case 1: {
 				if(SDLNet_ResolveHost(&ip, masterserver_name, masterserver_port) == -1)
 				{
-					debug(LOG_ERROR, "NETregisterServer: Cannot resolve masterserver \"%s\": %s", masterserver_name, SDLNet_GetError());
+					debug(LOG_ERROR, "Cannot resolve masterserver \"%s\": %s", masterserver_name, SDLNet_GetError());
 					server_not_there = 1;
 					return;
 				}
@@ -1192,12 +1251,12 @@ void NETregisterServer(int state)
 				if(!rs_socket) rs_socket = SDLNet_TCP_Open(&ip);
 				if(rs_socket == NULL)
 				{
-					debug(LOG_ERROR, "NETregisterServer: Cannot connect to masterserver \"%s:%d\": %s", masterserver_name, masterserver_port, SDLNet_GetError());
+					debug(LOG_ERROR, "Cannot connect to masterserver \"%s:%d\": %s", masterserver_name, masterserver_port, SDLNet_GetError());
 					server_not_there = 1;
 					return;
 				}
 
-				SDLNet_TCP_Send(rs_socket, "addg", 5);
+				SDLNet_TCP_Send(rs_socket, "addg", sizeof("addg"));
 				NETsendGAMESTRUCT(rs_socket, &game);
 			}
 			break;
@@ -1221,7 +1280,7 @@ static void NETallowJoining(void)
 	UDWORD numgames = SDL_SwapBE32(1);	// always 1 on normal server
 	char buffer[5];
 
-	if (allow_joining == FALSE) return;
+	if (allow_joining == false) return;
 
 	NETregisterServer(1);
 
@@ -1232,10 +1291,12 @@ static void NETallowJoining(void)
 		tmp_socket_set = SDLNet_AllocSocketSet(MAX_TMP_SOCKETS+1);
 		if (tmp_socket_set == NULL)
 		{
-			debug(LOG_ERROR, "NETallowJoining: Cannot create socket set: %s", SDLNet_GetError());
+			debug(LOG_ERROR, "Cannot create socket set: %s", SDLNet_GetError());
 			return;
 		}
+
 		SDLNet_TCP_AddSocket(tmp_socket_set, tcp_socket);
+		debug(LOG_NET,"TCP_AddSocket using %p set, socket %p", tmp_socket_set, tcp_socket);
 	}
 
 	if (SDLNet_CheckSockets(tmp_socket_set, NET_READ_TIMEOUT) > 0)
@@ -1257,7 +1318,7 @@ static void NETallowJoining(void)
 			{
 				if(strcmp(buffer, "list")==0)
 				{
-					SDLNet_TCP_Send(tmp_socket[i], &numgames, sizeof(UDWORD));
+					SDLNet_TCP_Send(tmp_socket[i], &numgames, sizeof(numgames));
 					NETsendGAMESTRUCT(tmp_socket[i], &game);
 				}
 				else if (strcmp(buffer, "join") == 0)
@@ -1274,7 +1335,7 @@ static void NETallowJoining(void)
 			if (   tmp_socket[i] != NULL
 			    && SDLNet_SocketReady(tmp_socket[i]) > 0)
 			{
-				int size = SDLNet_TCP_Recv(tmp_socket[i], &NetMsg, sizeof(NETMSG));
+				int size = SDLNet_TCP_Recv(tmp_socket[i], &NetMsg, sizeof(NetMsg));
 
 				if (size <= 0)
 				{
@@ -1286,7 +1347,7 @@ static void NETallowJoining(void)
 				else if (NetMsg.type == NET_JOIN)
 				{
 					char name[64];
-					int j;
+					uint32_t j;
 					uint8_t dpid;
 
 					NETbeginDecode(NET_JOIN);
@@ -1295,7 +1356,7 @@ static void NETallowJoining(void)
 
 					dpid = NET_CreatePlayer(name, 0);
 
-					debug(LOG_NET, "NETallowJoining, NET_JOIN: dpid set to %u", (unsigned int)dpid);
+					debug(LOG_NET, "NET_JOIN: dpid set to %u", (unsigned int)dpid);
 					SDLNet_TCP_DelSocket(tmp_socket_set, tmp_socket[i]);
 					NET_initBufferedSocket(connected_bsocket[dpid], tmp_socket[i]);
 					SDLNet_TCP_AddSocket(socket_set, connected_bsocket[dpid]->socket);
@@ -1355,40 +1416,41 @@ BOOL NEThostGame(const char* SessionName, const char* PlayerName,
 	if(!NetPlay.bComms)
 	{
 		NetPlay.dpidPlayer		= HOST_DPID;
-		NetPlay.bHost			= TRUE;
+		NetPlay.bHost			= true;
 
-		return TRUE;
+		return true;
 	}
 
 	if(SDLNet_ResolveHost(&ip, NULL, gameserver_port) == -1)
 	{
-		debug(LOG_ERROR, "NEThostGame: Cannot resolve master self: %s", SDLNet_GetError());
-		return FALSE;
+		debug(LOG_ERROR, "Cannot resolve master self: %s", SDLNet_GetError());
+		return false;
 	}
 
 	if(!tcp_socket) tcp_socket = SDLNet_TCP_Open(&ip);
 	if(tcp_socket == NULL)
 	{
-		printf("NEThostGame: Cannot connect to master self: %s", SDLNet_GetError());
-		return FALSE;
+		debug(LOG_ERROR, "Cannot connect to master self: %s", SDLNet_GetError());
+		return false;
 	}
-
+	debug(LOG_NET, "New tcp_socket = %p", tcp_socket);
 	if(!socket_set) socket_set = SDLNet_AllocSocketSet(MAX_CONNECTED_PLAYERS);
 	if (socket_set == NULL)
 	{
-		debug(LOG_ERROR, "NEThostGame: Cannot create socket set: %s", SDLNet_GetError());
-		return FALSE;
+		debug(LOG_ERROR, "Cannot create socket set: %s", SDLNet_GetError());
+		return false;
 	}
+	SDLNet_TCP_AddSocket(socket_set, tcp_socket);
 	for (i = 0; i < MAX_CONNECTED_PLAYERS; ++i)
 	{
 		connected_bsocket[i] = NET_createBufferedSocket();
 	}
 
-	is_server = TRUE;
+	is_server = true;
 
-	strlcpy(game.name, SessionName, sizeof(game.name));
-	memset(&game.desc, 0, sizeof(SESSIONDESC));
-	game.desc.dwSize = sizeof(SESSIONDESC);
+	sstrcpy(game.name, SessionName);
+	memset(&game.desc, 0, sizeof(game.desc));
+	game.desc.dwSize = sizeof(game.desc);
 	//game.desc.guidApplication = GAME_GUID;
 	game.desc.host[0] = '\0';
 	game.desc.dwCurrentPlayers = 1;
@@ -1401,17 +1463,17 @@ BOOL NEThostGame(const char* SessionName, const char* PlayerName,
 
 	NET_InitPlayers();
 	NetPlay.dpidPlayer	= NET_CreatePlayer(PlayerName, PLAYER_HOST);
-	NetPlay.bHost		= TRUE;
+	NetPlay.bHost		= true;
 
 	MultiPlayerJoin(NetPlay.dpidPlayer);
 
-	allow_joining = TRUE;
+	allow_joining = true;
 
 	NETregisterServer(0);
 
 	debug(LOG_NET, "Hosting a server. We are player %d.", NetPlay.dpidPlayer);
 
-	return TRUE;
+	return true;
 }
 
 // ////////////////////////////////////////////////////////////////////////
@@ -1420,10 +1482,10 @@ BOOL NEThaltJoining(void)
 {
 	debug(LOG_NET, "NEThaltJoining");
 
-	allow_joining = FALSE;
+	allow_joining = false;
 	// disconnect from the master server
 	NETregisterServer(0);
-	return TRUE;
+	return true;
 }
 
 // ////////////////////////////////////////////////////////////////////////
@@ -1434,7 +1496,7 @@ BOOL NETfindGame(void)
 	uint32_t gamesavailable;
 	IPaddress ip;
 	unsigned int port = (hostname == masterserver_name) ? masterserver_port : gameserver_port;
-
+	int result = 0;
 	debug(LOG_NET, "NETfindGame");
 
 	NetPlay.games[0].desc.dwSize = 0;
@@ -1444,48 +1506,70 @@ BOOL NETfindGame(void)
 	if(!NetPlay.bComms)
 	{
 		NetPlay.dpidPlayer		= HOST_DPID;
-		NetPlay.bHost			= TRUE;
-		return TRUE;
+		NetPlay.bHost			= true;
+		return true;
 	}
-
-	if (SDLNet_ResolveHost(&ip, hostname, port) == -1)
+	// We first check to see if we were given a IP/hostname from the command line
+	if (strlen(iptoconnect) )
 	{
-		debug(LOG_ERROR, "NETfindGame: Cannot resolve hostname \"%s\": %s", hostname, SDLNet_GetError());
-		return FALSE;
+		if (SDLNet_ResolveHost(&ip, iptoconnect, port) == -1)
+		{
+			debug(LOG_ERROR, "Error connecting to client via hostname provided (%s)",iptoconnect);
+			debug(LOG_ERROR, "Cannot resolve hostname :%s",SDLNet_GetError());
+			return false;
+		}
+		else
+		{
+			// We got a valid ip now
+			hostname = strdup(iptoconnect);		//copy it
+			memset(iptoconnect,0x0,sizeof(iptoconnect));	//reset it (so we don't loop back to this routine)
+		}
+	}
+	else if (SDLNet_ResolveHost(&ip, hostname, port) == -1)
+	{
+		debug(LOG_ERROR, "Cannot resolve hostname \"%s\": %s", hostname, SDLNet_GetError());
+		return false;
 	}
 
 	if (tcp_socket != NULL)
 	{
 		SDLNet_TCP_Close(tcp_socket);
+		tcp_socket = NULL;
 	}
 
 	tcp_socket = SDLNet_TCP_Open(&ip);
 	if (tcp_socket == NULL)
 	{
-		debug(LOG_ERROR, "NETfindGame: Cannot connect to \"%s:%d\": %s", hostname, port, SDLNet_GetError());
-		return FALSE;
+		debug(LOG_ERROR, "Cannot connect to \"%s:%d\": %s", hostname, port, SDLNet_GetError());
+		return false;
 	}
-
+	debug(LOG_NET, "New tcp_socket = %p", tcp_socket);
 	socket_set = SDLNet_AllocSocketSet(1);
 	if (socket_set == NULL)
 	{
-		debug(LOG_ERROR, "NETfindGame: Cannot create socket set: %s", SDLNet_GetError());
-		return FALSE;
+		debug(LOG_ERROR, "Cannot create socket set: %s", SDLNet_GetError());
+		return false;
 	}
 	SDLNet_TCP_AddSocket(socket_set, tcp_socket);
 
-	SDLNet_TCP_Send(tcp_socket, "list", 5);
+	SDLNet_TCP_Send(tcp_socket, "list", sizeof("list"));
 
 	if (SDLNet_CheckSockets(socket_set, 1000) > 0
 	 && SDLNet_SocketReady(tcp_socket)
-	 && SDLNet_TCP_Recv(tcp_socket, &gamesavailable, sizeof(gamesavailable)))
+	 && (result = SDLNet_TCP_Recv(tcp_socket, &gamesavailable, sizeof(gamesavailable))))
 	{
 		gamesavailable = SDL_SwapBE32(gamesavailable);
 	}
 	else
 	{
+		if (result < 0)
+		{
+			debug(LOG_NET, "SDLNet_TCP_Recv returned %d, error: %s - tcp_socket %p is now invalid.",
+			      result, SDLNet_GetError(), tcp_socket);
+			tcp_socket = NULL; // unsure how to handle invalid sockets?
+		}
 		// when we fail to receive a game count, bail out
-		return FALSE;
+		return false;
 	}
 
 	debug(LOG_NET, "receiving info of %u game(s)", (unsigned int)gamesavailable);
@@ -1507,15 +1591,12 @@ BOOL NETfindGame(void)
 				(int)(address[1]),
 				(int)(address[2]),
 				(int)(address[3]));
-
-			// Guarantee to nul-terminate
-			NetPlay.games[gamecount].desc.host[sizeof(NetPlay.games[gamecount].desc.host) - 1] = '\0';
 		}
 
 		++gamecount;
 	} while (gamecount < gamesavailable);
 
-	return TRUE;
+	return true;
 }
 
 // ////////////////////////////////////////////////////////////////////////
@@ -1537,8 +1618,8 @@ BOOL NETjoinGame(UDWORD gameNumber, const char* playername)
 
 	if(SDLNet_ResolveHost(&ip, hostname, gameserver_port) == -1)
 	{
-		debug(LOG_ERROR, "NETjoinGame: Cannot resolve hostname \"%s\": %s", hostname, SDLNet_GetError());
-		return FALSE;
+		debug(LOG_ERROR, "Cannot resolve hostname \"%s\": %s", hostname, SDLNet_GetError());
+		return false;
 	}
 
 	if (tcp_socket != NULL)
@@ -1549,19 +1630,19 @@ BOOL NETjoinGame(UDWORD gameNumber, const char* playername)
 	tcp_socket = SDLNet_TCP_Open(&ip);
  	if (tcp_socket == NULL)
 	{
-		debug(LOG_ERROR, "NETjoinGame: Cannot connect to \"%s:%d\": %s", hostname, gameserver_port, SDLNet_GetError());
-		return FALSE;
+		debug(LOG_ERROR, "Cannot connect to \"%s:%d\": %s", hostname, gameserver_port, SDLNet_GetError());
+		return false;
 	}
 
 	socket_set = SDLNet_AllocSocketSet(1);
 	if (socket_set == NULL)
 	{
-		debug(LOG_ERROR, "NETjoinGame: Cannot create socket set: %s", SDLNet_GetError());
- 		return FALSE;
+		debug(LOG_ERROR, "Cannot create socket set: %s", SDLNet_GetError());
+ 		return false;
  	}
 	SDLNet_TCP_AddSocket(socket_set, tcp_socket);
 
-	SDLNet_TCP_Send(tcp_socket, "join", 5);
+	SDLNet_TCP_Send(tcp_socket, "join", sizeof("join"));
 
 	if (NETrecvGAMESTRUCT(&NetPlay.games[gameNumber])
 	 && NetPlay.games[gameNumber].desc.host[0] == '\0')
@@ -1589,7 +1670,7 @@ BOOL NETjoinGame(UDWORD gameNumber, const char* playername)
 	// Loop until we've been accepted into the game
 	for (;;)
 	{
-		uint8_t type;
+		uint8_t type = NUM_GAME_PACKETS;
 
 		NETrecv(&type);
 
@@ -1602,26 +1683,26 @@ BOOL NETjoinGame(UDWORD gameNumber, const char* playername)
 			NETend();
 
 			NetPlay.dpidPlayer = dpid;
-			debug(LOG_NET, "NETjoinGame: NET_ACCEPTED received. Accepted into the game - I'm player %u",
+			debug(LOG_NET, "NET_ACCEPTED received. Accepted into the game - I'm player %u",
 			      (unsigned int)NetPlay.dpidPlayer);
-			NetPlay.bHost = FALSE;
+			NetPlay.bHost = false;
 
 			if (NetPlay.dpidPlayer >= MAX_CONNECTED_PLAYERS)
 			{
 				debug(LOG_ERROR, "Bad player number (%u) received from host!", NetPlay.dpidPlayer);
-				return FALSE;
+				return false;
 			}
 
-			players[NetPlay.dpidPlayer].allocated = TRUE;
+			players[NetPlay.dpidPlayer].allocated = true;
 			players[NetPlay.dpidPlayer].id = NetPlay.dpidPlayer;
-			strlcpy(players[NetPlay.dpidPlayer].name, playername, sizeof(players[NetPlay.dpidPlayer].name));
+			sstrcpy(players[NetPlay.dpidPlayer].name, playername);
 			players[NetPlay.dpidPlayer].flags = 0;
 
-			return TRUE;
+			return true;
 		}
 	}
 
-	return FALSE;
+	return false;
 }
 
 /*!
@@ -1630,7 +1711,7 @@ BOOL NETjoinGame(UDWORD gameNumber, const char* playername)
  */
 void NETsetMasterserverName(const char* hostname)
 {
-	strlcpy(masterserver_name, hostname, sizeof(masterserver_name));
+	sstrcpy(masterserver_name, hostname);
 }
 
 

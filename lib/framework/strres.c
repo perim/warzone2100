@@ -39,7 +39,6 @@
 /* Static forward declarations */
 static void strresReleaseIDStrings(STR_RES *psRes);
 static BOOL strresAllocBlock(STR_BLOCK **ppsBlock, UDWORD size);
-static void stringCpy(char *pDest, const char *pSrc);
 
 /* The string resource currently being loaded */
 STR_RES	*psCurrRes;
@@ -55,7 +54,7 @@ static BOOL strresAllocBlock(STR_BLOCK **ppsBlock, UDWORD size)
 	{
 		debug( LOG_ERROR, "strresAllocBlock: Out of memory - 1" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	(*ppsBlock)->apStrings = (char**)malloc(sizeof(char *) * size);
@@ -64,7 +63,7 @@ static BOOL strresAllocBlock(STR_BLOCK **ppsBlock, UDWORD size)
 		debug( LOG_ERROR, "strresAllocBlock: Out of memory - 2" );
 		abort();
 		free(*ppsBlock);
-		return FALSE;
+		return false;
 	}
 	memset((*ppsBlock)->apStrings, 0, sizeof(char *) * size);
 
@@ -73,7 +72,7 @@ static BOOL strresAllocBlock(STR_BLOCK **ppsBlock, UDWORD size)
 	memset((*ppsBlock)->aUsage, 0, sizeof(UDWORD) * size);
 #endif
 
-	return TRUE;
+	return true;
 }
 
 
@@ -87,7 +86,7 @@ BOOL strresCreate(STR_RES **ppsRes, UDWORD init, UDWORD ext)
 	{
 		debug( LOG_ERROR, "strresCreate: Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 	psRes->init = init;
 	psRes->ext = ext;
@@ -98,14 +97,14 @@ BOOL strresCreate(STR_RES **ppsRes, UDWORD init, UDWORD ext)
 		debug( LOG_ERROR, "strresCreate: Out of memory" );
 		abort();
 		free(psRes);
-		return FALSE;
+		return false;
 	}
 
 	if (!strresAllocBlock(&psRes->psStrings, init))
 	{
 		TREAP_DESTROY(psRes->psIDTreap);
 		free(psRes);
-		return FALSE;
+		return false;
 	}
 	psRes->psStrings->psNext = NULL;
 	psRes->psStrings->idStart = 0;
@@ -113,7 +112,7 @@ BOOL strresCreate(STR_RES **ppsRes, UDWORD init, UDWORD ext)
 
 	*ppsRes = psRes;
 
-	return TRUE;
+	return true;
 }
 
 
@@ -197,11 +196,11 @@ BOOL strresGetIDNum(STR_RES *psRes, const char *pIDStr, UDWORD *pIDNum)
 	ASSERT( psRes != NULL,
 		"strresGetIDNum: Invalid string res pointer" );
 
-	psID = (STR_ID*)TREAP_FIND(psRes->psIDTreap, (void*)pIDStr);
+	psID = (STR_ID*)TREAP_FIND(psRes->psIDTreap, pIDStr);
 	if (!psID)
 	{
 		*pIDNum = 0;
-		return FALSE;
+		return false;
 	}
 
 	if (psID->id & ID_ALLOC)
@@ -212,7 +211,7 @@ BOOL strresGetIDNum(STR_RES *psRes, const char *pIDStr, UDWORD *pIDNum)
 	{
 		*pIDNum = psID->id;
 	}
-	return TRUE;
+	return true;
 }
 
 
@@ -223,15 +222,15 @@ BOOL strresGetIDString(STR_RES *psRes, const char *pIDStr, char **ppStoredID)
 
 	ASSERT( psRes != NULL, "strresGetIDString: Invalid string res pointer" );
 
-	psID = (STR_ID*)TREAP_FIND(psRes->psIDTreap, (void*)pIDStr);
+	psID = (STR_ID*)TREAP_FIND(psRes->psIDTreap, pIDStr);
 	if (!psID)
 	{
 		*ppStoredID = NULL;
-		return FALSE;
+		return false;
 	}
 
 	*ppStoredID = psID->pIDStr;
-	return TRUE;
+	return true;
 }
 
 
@@ -256,29 +255,28 @@ BOOL strresStoreString(STR_RES *psRes, char *pID, const char *pString)
 		{
 			debug( LOG_ERROR, "strresStoreString: Out of memory" );
 			abort();
-			return FALSE;
+			return false;
 		}
-		psID->pIDStr = (char*)malloc(sizeof(char) * (strlen(pID) + 1));
+		psID->pIDStr = strdup(pID);
 		if (!psID->pIDStr)
 		{
 			debug( LOG_ERROR, "strresStoreString: Out of memory" );
 			abort();
 			free(psID);
-			return FALSE;
+			return false;
 		}
-		stringCpy(psID->pIDStr, pID);
 		psID->id = psRes->nextID | ID_ALLOC;
 		psRes->nextID += 1;
 		TREAP_ADD(psRes->psIDTreap, (void*)psID->pIDStr, psID);
 	}
-  if (psID->id & ID_ALLOC)
-  {
-    id = psID->id & ~ID_ALLOC;
-  }
-  else
-  {
-    id = psID->id;
-  }
+	if (psID->id & ID_ALLOC)
+	{
+		id = psID->id & ~ID_ALLOC;
+	}
+	else
+	{
+		id = psID->id;
+	}
 
 	// Find the block to store the string in
 	for(psBlock = psRes->psStrings; psBlock->idEnd < id;
@@ -289,7 +287,7 @@ BOOL strresStoreString(STR_RES *psRes, char *pID, const char *pString)
 			// Need to allocate a new string block
 			if (!strresAllocBlock(&psBlock->psNext, psRes->ext))
 			{
-				return FALSE;
+				return false;
 			}
 			psBlock->psNext->idStart = psBlock->idEnd+1;
 			psBlock->psNext->idEnd = psBlock->idEnd + psRes->ext;
@@ -302,21 +300,20 @@ BOOL strresStoreString(STR_RES *psRes, char *pID, const char *pString)
 	{
 		debug( LOG_ERROR, "strresStoreString: Duplicate string for id: %s", psID->pIDStr );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Allocate a copy of the string
-	pNew = (char*)malloc(sizeof(char) * (strlen(pString) + 1));
+	pNew = strdup(pString);
 	if (!pNew)
 	{
 		debug( LOG_ERROR, "strresStoreString: Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
-	stringCpy(pNew, pString);
 	psBlock->apStrings[id - psBlock->idStart] = pNew;
 
-	return TRUE;
+	return true;
 }
 
 
@@ -335,7 +332,7 @@ char *strresGetString(STR_RES *psRes, UDWORD id)
 
 	if (!psBlock)
 	{
-		ASSERT( FALSE, "strresGetString: String not found" );
+		ASSERT( false, "strresGetString: String not found" );
 		// Return the default string
 		return psRes->psStrings->apStrings[0];
 	}
@@ -360,36 +357,28 @@ char *strresGetString(STR_RES *psRes, UDWORD id)
 /* Load a string resource file */
 BOOL strresLoad(STR_RES* psRes, const char* fileName)
 {
-	PHYSFS_file* fileHandle = PHYSFS_openRead(fileName);
-	if (!fileHandle)
+	bool retval;
+	lexerinput_t input;
+
+	input.type = LEXINPUT_PHYSFS;
+	input.input.physfsfile = PHYSFS_openRead(fileName);
+	if (!input.input.physfsfile)
 	{
 		debug(LOG_ERROR, "strresLoadFile: PHYSFS_openRead(\"%s\") failed with error: %s\n", fileName, PHYSFS_getLastError());
-		return FALSE;
+		return false;
 	}
 
 	// Set string resource to operate on
 	psCurrRes = psRes;
 
-	strresSetInputFile(fileHandle);
-	if (strres_parse() != 0)
-	{
-		PHYSFS_close(fileHandle);
-		return FALSE;
-	}
-	PHYSFS_close(fileHandle);
+	strres_set_extra(&input);
+	retval = (strres_parse() == 0);
 
-	return TRUE;
+	strres_lex_destroy();
+	PHYSFS_close(input.input.physfsfile);
+
+	return retval;
 }
-
-/* Copy a char */
-static void stringCpy(char *pDest, const char *pSrc)
-{
-	do
-	{
-		*pDest++ = *pSrc;
-	} while (*pSrc++);
-}
-
 
 /* Get the ID number for a string*/
 UDWORD strresGetIDfromString(STR_RES *psRes, const char *pString)

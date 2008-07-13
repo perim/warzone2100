@@ -72,35 +72,34 @@ static CHEAT_ENTRY cheatCodes[] =
 	{"tileinfo", kf_TileInfo}, // output debug info about a tile
 	{"showfps", kf_ToggleFPS},	//displays your average FPS
 	{"showsamples", kf_ToggleSamples}, //displays the # of Sound samples in Queue & List
-	{"end of list",NULL}
 };
 
 BOOL attemptCheatCode(const char* cheat_name)
 {
-	UDWORD	index;
+	const CHEAT_ENTRY * curCheat;
+	static const CHEAT_ENTRY * const EndCheat = &cheatCodes[ARRAY_SIZE(cheatCodes)];
 
-	index = 0;
-
-	while(cheatCodes[index].function!=NULL)
+	for (curCheat = cheatCodes; curCheat != EndCheat; ++curCheat)
 	{
-		if (strcmp(cheat_name, cheatCodes[index].pName) == 0)
+		if (strcmp(cheat_name, curCheat->pName) == 0)
 		{
 			/* We've got our man... */
-			cheatCodes[index].function();	// run it
+			curCheat->function();	// run it
 			/* And get out of here */
-			return(TRUE);
+			return true;
 		}
-		index++;
 	}
+
 	/* We didn't find it. Report only for single player games. */
 	if (!runningMultiplayer())
 	{
 		char	errorString[255];
 
-		strlcpy(errorString, cheat_name, sizeof(errorString));
-		strlcat(errorString, "?", sizeof(errorString));
+		sstrcpy(errorString, cheat_name);
+		sstrcat(errorString, "?");
 
-		addConsoleMessage(errorString, LEFT_JUSTIFY);
+		addConsoleMessage(errorString, LEFT_JUSTIFY,SYSTEM_MESSAGE);
 	}
-	return(FALSE);
+
+	return false;
 }

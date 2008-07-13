@@ -32,10 +32,12 @@
 #include "frameint.h"
 #include "strnlen1.h"
 
+#include "lib/gamelib/gtime.h"
+
 #define MAX_LEN_LOG_LINE 512
 
 char last_called_script_event[MAX_EVENT_NAME_LEN];
-UDWORD traceID;
+UDWORD traceID = -1;
 
 static debug_callback * callbackRegistry = NULL;
 BOOL enabled_debug[LOG_LAST]; // global
@@ -64,15 +66,16 @@ static const char *code_part_names[] = {
 	"sensor",
 	"gui",
 	"map",
-	"savegame",
-	"multisync",
+	"save",
+	"sync",
 	"death",
 	"gateway",
+	"message",
 	"last"
 };
 
 static char inputBuffer[2][MAX_LEN_LOG_LINE];
-static BOOL useInputBuffer1 = FALSE;
+static BOOL useInputBuffer1 = false;
 
 /**
  * Convert code_part names to enum. Case insensitive.
@@ -115,14 +118,14 @@ void debug_callback_stderr( WZ_DECL_UNUSED void ** data, const char * outputBuff
  * \param	outputBuffer	Buffer containing the preprocessed text to output.
  */
 #if defined WIN32 && defined DEBUG
-void debug_callback_win32debug( void ** data, const char * outputBuffer )
+void debug_callback_win32debug(WZ_DECL_UNUSED void ** data, const char * outputBuffer)
 {
 	char tmpStr[MAX_LEN_LOG_LINE];
 
-	strlcpy(tmpStr, outputBuffer, sizeof(tmpStr));
+	sstrcpy(tmpStr, outputBuffer);
 	if (!strchr(tmpStr, '\n'))
 	{
-		strlcat(tmpStr, "\n", sizeof(tmpStr));
+		sstrcat(tmpStr, "\n");
 	}
 
 	OutputDebugStringA( tmpStr );
@@ -205,12 +208,12 @@ void debug_init(void)
 
 	STATIC_ASSERT(ARRAY_SIZE(code_part_names) - 1 == LOG_LAST); // enums start at 0
 
-	memset( enabled_debug, FALSE, sizeof(enabled_debug) );
-	enabled_debug[LOG_ERROR] = TRUE;
+	memset( enabled_debug, false, sizeof(enabled_debug) );
+	enabled_debug[LOG_ERROR] = true;
 	inputBuffer[0][0] = '\0';
 	inputBuffer[1][0] = '\0';
 #ifdef DEBUG
-	enabled_debug[LOG_WARNING] = TRUE;
+	enabled_debug[LOG_WARNING] = true;
 #endif
 }
 
@@ -268,38 +271,82 @@ BOOL debug_enable_switch(const char *str)
 		enabled_debug[part] = !enabled_debug[part];
 	}
 	if (part == LOG_ALL) {
-		memset(enabled_debug, TRUE, sizeof(enabled_debug));
+		memset(enabled_debug, true, sizeof(enabled_debug));
 	}
 	return (part != LOG_LAST);
 }
 
 /* Dump last two debug log calls into file descriptor. For exception handler. */
-#define dumpstr(desc, str) write(desc, str, strnlen1(str, MAX_LEN_LOG_LINE) - 1)
-void dumpLog(int filedesc)
+#if defined(WZ_OS_WIN)
+static inline void dumpstr(HANDLE file, const char* str)
 {
-	dumpstr(filedesc, "Log message 1:");
-	dumpstr(filedesc, inputBuffer[0]);
-	dumpstr(filedesc, "\nLog message 2:");
-	dumpstr(filedesc, inputBuffer[1]);
-	dumpstr(filedesc, "\n\n");
+	DWORD lNumberOfBytesWritten;
+	WriteFile(file, str, strnlen1(str, MAX_LEN_LOG_LINE) - 1, &lNumberOfBytesWritten, NULL);
+}
+static inline void dumpEOL(HANDLE file)
+{
+	DWORD lNumberOfBytesWritten;
+	WriteFile(file, "\r\n", strlen("\r\n"), &lNumberOfBytesWritten, NULL);
+}
+#else
+static inline void dumpstr(int file, const char* str)
+{
+	write(file, str, strnlen1(str, MAX_LEN_LOG_LINE) - 1);
+}
+static inline void dumpEOL(int file)
+{
+	write(file, "\n", strlen("\n"));
+}
+#endif
+
+#if defined(WZ_OS_WIN)
+void dumpLog(HANDLE file)
+#else
+void dumpLog(int file)
+#endif
+{
+	dumpstr(file, "Log message 1: ");
+	dumpstr(file, inputBuffer[0]);
+	dumpEOL(file);
+	dumpstr(file, "Log message 2: ");
+	dumpstr(file, inputBuffer[1]);
+	dumpEOL(file);
+	dumpEOL(file);
 }
 
-void _debug( code_part part, const char *str, ... )
+void _realObjTrace(int id, const char *function, const char *str, ...)
+{
+	debug_callback * curCallback = callbackRegistry;
+	char vaBuffer[MAX_LEN_LOG_LINE];
+	char outputBuffer[MAX_LEN_LOG_LINE];
+	va_list ap;
+
+	va_start(ap, str);
+	vsnprintf(vaBuffer, MAX_LEN_LOG_LINE, str, ap);
+	va_end(ap);
+
+	snprintf(outputBuffer, MAX_LEN_LOG_LINE, "[%6d]: [%s] %s", id, function, vaBuffer);
+	while (curCallback)
+	{
+		curCallback->callback(&curCallback->data, outputBuffer);
+		curCallback = curCallback->next;
+	}
+}
+
+void _debug( code_part part, const char *function, const char *str, ... )
 {
 	va_list ap;
 	static char outputBuffer[MAX_LEN_LOG_LINE];
-
 	debug_callback * curCallback = callbackRegistry;
-
 	static unsigned int repeated = 0; /* times current message repeated */
 	static unsigned int next = 2;     /* next total to print update */
 	static unsigned int prev = 0;     /* total on last update */
 
 	va_start(ap, str);
-	vsnprintf(inputBuffer[useInputBuffer1 ? 1 : 0], MAX_LEN_LOG_LINE, str, ap);
+	vsnprintf(outputBuffer, MAX_LEN_LOG_LINE, str, ap);
 	va_end(ap);
-	// Guarantee to nul-terminate
-	inputBuffer[useInputBuffer1 ? 1 : 0][MAX_LEN_LOG_LINE - 1] = '\0';
+
+	snprintf(inputBuffer[useInputBuffer1 ? 1 : 0], MAX_LEN_LOG_LINE, "[%s] %s", function, outputBuffer);
 
 	if ( strncmp( inputBuffer[0], inputBuffer[1], MAX_LEN_LOG_LINE - 1 ) == 0 ) {
 		// Received again the same line
@@ -342,7 +389,7 @@ void _debug( code_part part, const char *str, ... )
 	if (!repeated)
 	{
 		// Assemble the outputBuffer:
-		snprintf( outputBuffer, MAX_LEN_LOG_LINE, "%-8s: %s", code_part_names[part], useInputBuffer1 ? inputBuffer[1] : inputBuffer[0] );
+		snprintf( outputBuffer, MAX_LEN_LOG_LINE, "%-8s|%012u: %s", code_part_names[part], gameTime, useInputBuffer1 ? inputBuffer[1] : inputBuffer[0] );
 
 		while (curCallback) {
 			curCallback->callback( &curCallback->data, outputBuffer );

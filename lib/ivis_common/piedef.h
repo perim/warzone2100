@@ -84,7 +84,7 @@ typedef struct { UBYTE r, g, b, a; } PIELIGHTBYTES;
 
 /** Our basic colour type. Use whenever you want to define a colour.
  *  Set bytes separetely, and do not assume a byte order between the components. */
-typedef union  { PIELIGHTBYTES byte; UDWORD argb; UBYTE vector[4]; } PIELIGHT;
+typedef union  { PIELIGHTBYTES byte; UDWORD rgba; UBYTE vector[4]; } PIELIGHT;
 
 typedef struct
 {
@@ -106,8 +106,9 @@ extern void pie_Draw3DShape(iIMDShape *shape, int frame, int team, PIELIGHT colo
 extern void pie_DrawImage(PIEIMAGE *image, PIERECT *dest);
 
 void pie_TerrainInit(int sizex, int sizey);
-void pie_DrawTerrain(int mapx, int mapy);
-void pie_DrawTerrainTriangle(int index, const TERRAIN_VERTEX *aVrts);
+void pie_TerrainCleanup(void);
+void pie_DrawTerrain(int x1, int y1, int x2, int y2);
+void pie_DrawTerrainTriangle(int x, int y, int triangle, const TERRAIN_VERTEX *aVrts);
 void pie_DrawWaterTriangle(const TERRAIN_VERTEX *aVrts);
 
 extern void pie_GetResetCounts(unsigned int* pPieCount, unsigned int* pTileCount, unsigned int* pPolyCount, unsigned int* pStateCount);

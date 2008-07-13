@@ -22,44 +22,45 @@
 #define __INCLUDED_SRC_VISIBILITY__
 
 #include "objectdef.h"
+#include "raycast.h"
 
 // initialise the visibility stuff
 extern BOOL visInitialise(void);
 
 extern BOOL visTilesPending(BASE_OBJECT *psObj);
 
+/* The terrain revealing ray callback */
+extern bool rayTerrainCallback(Vector3i pos, int dist, void* data);
+
+/* Ray callback for scripts */
+extern bool scrRayTerrainCallback(Vector3i pos, int dist, void *data);
+
 /* Check which tiles can be seen by an object */
-extern void visTilesUpdate(BASE_OBJECT *psObj);
+extern void visTilesUpdate(BASE_OBJECT *psObj, RAY_CALLBACK callback);
 
 /* Check whether psViewer can see psTarget
  * psViewer should be an object that has some form of sensor,
  * currently droids and structures.
  * psTarget can be any type of BASE_OBJECT (e.g. a tree).
  */
-extern BOOL visibleObject(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget);
-
-/* Check whether psViewer can see psTarget.
- * struckBlock controls whether structures block LOS
- */
-extern BOOL visibleObjectBlock(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget,
-							   BOOL structBlock);
-
-// Do visibility check, but with walls completely blocking LOS.
-extern BOOL visibleObjWallBlock(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget);
+extern bool visibleObject(const BASE_OBJECT* psViewer, const BASE_OBJECT* psTarget, bool wallsBlock);
 
 // Find the wall that is blocking LOS to a target (if any)
-extern BOOL visGetBlockingWall(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget, STRUCTURE **ppsWall);
+extern STRUCTURE* visGetBlockingWall(const BASE_OBJECT* psViewer, const BASE_OBJECT* psTarget);
 
-extern void	processVisibility(BASE_OBJECT *psCurr);
+extern void processVisibility(BASE_OBJECT *psCurr);
 
 // update the visibility reduction
 extern void visUpdateLevel(void);
 
-extern	void	setUnderTilesVis(BASE_OBJECT *psObj, UDWORD player);
+extern void setUnderTilesVis(BASE_OBJECT *psObj, UDWORD player);
 
 // sensor range display
 extern BOOL	bDisplaySensorRange;
 extern void updateSensorDisplay(void);
+
+extern bool scrTileIsVisible(SDWORD player, SDWORD x, SDWORD y);
+extern void scrResetPlayerTileVisibility(SDWORD player);
 
 // fast test for whether obj2 is in range of obj1
 static inline BOOL visObjInRange(BASE_OBJECT *psObj1, BASE_OBJECT *psObj2, SDWORD range)
@@ -74,7 +75,7 @@ static inline BOOL visObjInRange(BASE_OBJECT *psObj1, BASE_OBJECT *psObj2, SDWOR
 	if (xdiff > range)
 	{
 		// too far away, reject
-		return FALSE;
+		return false;
 	}
 
 	ydiff = (SDWORD)psObj1->pos.y - (SDWORD)psObj2->pos.y;
@@ -85,7 +86,7 @@ static inline BOOL visObjInRange(BASE_OBJECT *psObj1, BASE_OBJECT *psObj2, SDWOR
 	if (ydiff > range)
 	{
 		// too far away, reject
-		return FALSE;
+		return false;
 	}
 
 	distSq = xdiff*xdiff + ydiff*ydiff;
@@ -93,33 +94,33 @@ static inline BOOL visObjInRange(BASE_OBJECT *psObj1, BASE_OBJECT *psObj2, SDWOR
 	if (distSq > rangeSq)
 	{
 		// too far away, reject
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
-static inline int objSensorRange(BASE_OBJECT *psObj)
+static inline int objSensorRange(const BASE_OBJECT* psObj)
 {
 	return psObj->sensorRange;
 }
 
-static inline int objSensorPower(BASE_OBJECT *psObj)
+static inline int objSensorPower(const BASE_OBJECT* psObj)
 {
 	return psObj->sensorPower;
 }
 
-static inline int objJammerPower(BASE_OBJECT *psObj)
+static inline int objJammerPower(WZ_DECL_UNUSED const BASE_OBJECT* psObj)
 {
 	return 0;
 }
 
-static inline int objJammerRange(BASE_OBJECT *psObj)
+static inline int objJammerRange(WZ_DECL_UNUSED const BASE_OBJECT* psObj)
 {
 	return 0;
 }
 
-static inline int objConcealment(BASE_OBJECT *psObj)
+static inline int objConcealment(const BASE_OBJECT* psObj)
 {
 	return psObj->ECMMod;
 }

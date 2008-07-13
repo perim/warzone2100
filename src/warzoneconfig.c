@@ -18,7 +18,7 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
 /**
- * @file warzoneConfig.c
+ * @file warzoneconfig.c
  *
  * Warzone Global configuration functions.
  */
@@ -47,12 +47,14 @@ typedef struct _warzoneGlobals
 	BOOL		bFog;
 	SWORD		effectsLevel;
 	BOOL		allowSubtitles;
-	BOOL		playAudioCDs;
 	BOOL		Fullscreen;
 	BOOL		soundEnabled;
 	BOOL		trapCursor;
 	UDWORD		width;
 	UDWORD		height;
+	bool            pauseOnFocusLoss;
+	bool            ColouredCursor;
+	bool            MusicEnabled;
 } WARZONE_GLOBALS;
 
 /***************************************************************************/
@@ -77,17 +79,11 @@ static WARZONE_GLOBALS	warGlobs;//STATIC use or write an access function if you 
 void war_SetDefaultStates(void)//Sets all states
 {
 	//set those here and reset in clParse or loadConfig
-	war_SetFog(FALSE);
-	war_SetPlayAudioCDs(TRUE);
-	war_setSoundEnabled( TRUE );
-}
-
-void war_SetPlayAudioCDs(BOOL b) {
-	warGlobs.playAudioCDs = b;
-}
-
-BOOL war_GetPlayAudioCDs(void) {
-	return warGlobs.playAudioCDs;
+	war_SetFog(false);
+	war_setSoundEnabled( true );
+	war_SetPauseOnFocusLoss(true);
+	war_SetColouredCursor(false);
+	war_SetMusicEnabled(true);
 }
 
 void war_SetAllowSubtitles(BOOL b) {
@@ -146,16 +142,16 @@ void war_SetFog(BOOL val)
 	{
 		warGlobs.bFog = val;
 	}
-	if (warGlobs.bFog == TRUE)
+	if (warGlobs.bFog == true)
 	{
-		setRevealStatus(FALSE);
+		setRevealStatus(false);
 	}
 	else
 	{
 		PIELIGHT black;
 
-		setRevealStatus(TRUE);
-		black.argb = 0;
+		setRevealStatus(true);
+		black.rgba = 0;
 		black.byte.a = 255;
 		pie_SetFogColour(black);
 	}
@@ -178,6 +174,25 @@ SEQ_MODE war_GetSeqMode(void)
 	return  warGlobs.seqMode;
 }
 
+void war_SetPauseOnFocusLoss(bool enabled)
+{
+	warGlobs.pauseOnFocusLoss = enabled;
+}
+
+bool war_GetPauseOnFocusLoss()
+{
+	return warGlobs.pauseOnFocusLoss;
+}
+
+void war_SetColouredCursor(bool enabled)
+{
+	warGlobs.ColouredCursor = enabled;
+}
+
+bool war_GetColouredCursor(void)
+{
+	return warGlobs.ColouredCursor;
+}
 
 void war_setSoundEnabled( BOOL soundEnabled )
 {
@@ -187,4 +202,14 @@ void war_setSoundEnabled( BOOL soundEnabled )
 BOOL war_getSoundEnabled( void )
 {
 	return warGlobs.soundEnabled;
+}
+
+bool war_GetMusicEnabled(void)
+{
+	return warGlobs.MusicEnabled;
+}
+
+void war_SetMusicEnabled(bool enabled)
+{
+	warGlobs.MusicEnabled = enabled;
 }

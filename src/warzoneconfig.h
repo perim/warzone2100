@@ -49,8 +49,6 @@ extern void war_SetFog(BOOL val);
 extern BOOL war_GetFog(void);
 extern void war_SetSeqMode(SEQ_MODE mode);
 extern SEQ_MODE war_GetSeqMode(void);
-extern void war_SetPlayAudioCDs(BOOL b);
-extern BOOL war_GetPlayAudioCDs(void);
 extern void war_SetAllowSubtitles(BOOL);
 extern BOOL war_GetAllowSubtitles(void);
 extern void war_setFullscreen(BOOL);
@@ -61,6 +59,12 @@ extern void war_SetWidth(UDWORD width);
 extern UDWORD war_GetWidth(void);
 extern void war_SetHeight(UDWORD height);
 extern UDWORD war_GetHeight(void);
+extern void war_SetPauseOnFocusLoss(bool enabled);
+extern bool war_GetPauseOnFocusLoss(void);
+extern bool war_GetColouredCursor(void);
+extern void war_SetColouredCursor(bool enabled);
+extern bool war_GetMusicEnabled(void);
+extern void war_SetMusicEnabled(bool enabled);
 
 /**
  * Enable or disable sound initialization

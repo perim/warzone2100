@@ -137,9 +137,13 @@ void	sound_SetTrackTimeLastFinished( SDWORD iTrack, UDWORD iTime );
 extern void sound_StopStream(AUDIO_STREAM* stream);
 extern void sound_PauseStream(AUDIO_STREAM* stream);
 extern void sound_ResumeStream(AUDIO_STREAM* stream);
+extern float sound_GetStreamVolume(const AUDIO_STREAM* stream);
+extern void sound_SetStreamVolume(AUDIO_STREAM* stream, float volume);
 
 #if defined(__cplusplus)
 }
 #endif
+
+void soundTest(void);
 
 #endif	// __INCLUDED_LIB_SOUND_TRACK_H__

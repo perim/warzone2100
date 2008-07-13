@@ -24,49 +24,61 @@
 #ifndef __INCLUDED_SRC_FPATH_H__
 #define __INCLUDED_SRC_FPATH_H__
 
-#define FPATH_LOOP_LIMIT	600
+#include "droiddef.h"
 
-/** Return values for routing */
+/** Return values for routing
+ *
+ *  @ingroup pathfinding
+ */
 typedef enum _fpath_retval
 {
-	FPR_OK,				// found a route
-	FPR_FAILED,			// failed to find a route
-	FPR_WAIT,			// route was too long to calculate this frame
-						// routing will continue on succeeding frames
-	FPR_RESCHEDULE,		// didn't try to route because too much time has been
-						// spent routing this frame
+	FPR_OK,         ///< found a route
+	FPR_FAILED,     ///< failed to find a route
+	FPR_WAIT,       ///< route was too long to calculate this frame, routing will continue on succeeding frames
+	FPR_RESCHEDULE, ///< didn't try to route because too much time has been spent on routing this frame
 } FPATH_RETVAL;
 
-/** Initialise the path-finding module. */
+/** Initialise the path-finding module.
+ *
+ *  @ingroup pathfinding
+ */
 extern BOOL fpathInitialise(void);
 
-/**
- *	Update the findpath system each frame. It checks whether a game object has a
- *	path-finding job that was not finished in the previous frame, and if this
- *	game object is dead, remove it from the job queue.
+/** Shutdown the path-finding module.
+ *
+ *  @ingroup
  */
+extern void fpathShutdown(void);
+
 extern void fpathUpdate(void);
 
-/** Find a route for an object to a location. */
-extern FPATH_RETVAL fpathRoute(BASE_OBJECT *psObj, MOVE_CONTROL *psMoveCntl, SDWORD targetX, SDWORD targetY);
-
-extern BOOL (*fpathBlockingTile)(SDWORD x, SDWORD y);
-
-/** Check if the map tile at a location blocks a droid. */
-extern BOOL fpathGroundBlockingTile(SDWORD x, SDWORD y);
-extern BOOL fpathHoverBlockingTile(SDWORD x, SDWORD y);
-extern BOOL fpathLiftSlideBlockingTile(SDWORD x, SDWORD y);
-
-/** Set the correct blocking tile function. */
-extern void fpathSetBlockingTile( UBYTE ubPropulsionType );
-
-/** Set pointer for current fpath object - hack. */
-extern void fpathSetCurrentObject( BASE_OBJECT *psDroid );
-
-/**
- *	Set direct path to position. Plan a path from psObj's current position to given position 
- *	without taking obstructions into consideration. Used for instance by VTOLs.
+/** Find a route for a droid to a location.
+ *  
+ *  @ingroup pathfinding
  */
-extern void fpathSetDirectRoute(BASE_OBJECT *psObj, SDWORD targetX, SDWORD targetY);
+extern FPATH_RETVAL fpathRoute(DROID* psDroid, SDWORD targetX, SDWORD targetY);
+
+/** Function pointer to the currently in-use blocking tile check function.
+ *  
+ *  This function will check if the map tile at the given location blocks droids
+ *  with the currently selected propulsion type.
+ *
+ *  @param x,y the parameters of the map tile to check
+ *  @return true if the given tile is blocking for this droid
+ *
+ *  @ingroup pathfinding
+ */
+extern BOOL fpathBlockingTile(SDWORD x, SDWORD y, PROPULSION_TYPE propulsion);
+
+/** Set a direct path to position.
+ *
+ *  Plan a path from @c psDroid's current position to given position without
+ *  taking obstructions into consideration.
+ *
+ *  Used for instance by VTOLs.
+ *
+ *  @ingroup pathfinding
+ */
+extern void fpathSetDirectRoute(DROID* psDroid, SDWORD targetX, SDWORD targetY);
 
 #endif // __INCLUDED_SRC_FPATH_H__

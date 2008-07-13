@@ -24,10 +24,10 @@
  *
  */
 
+#include "lib/ivis_opengl/GLee.h"
 #include "lib/framework/frame.h"
 
 #include <SDL.h>
-#include <SDL_opengl.h>
 #include <physfs.h>
 #include <png.h>
 #include "lib/ivis_common/png_util.h"
@@ -47,9 +47,9 @@ UDWORD		screenDepth = 0;
 int wz_texture_compression;
 
 static SDL_Surface	*screen = NULL;
-static BOOL		bBackDrop = FALSE;
+static BOOL		bBackDrop = false;
 static char		screendump_filename[PATH_MAX];
-static BOOL		screendump_required = FALSE;
+static BOOL		screendump_required = false;
 static GLuint		backDropTexture = ~0;
 
 /* Initialise the double buffered display */
@@ -75,7 +75,7 @@ BOOL screenInitialise(
 		const SDL_VideoInfo* video_info = SDL_GetVideoInfo();
 
 		if (!video_info) {
-			return FALSE;
+			return false;
 		}
 
 		// The flags to pass to SDL_SetVideoMode.
@@ -105,7 +105,7 @@ BOOL screenInitialise(
 		bpp = SDL_VideoModeOK(width, height, bitDepth, video_flags);
 		if (!bpp) {
 			debug( LOG_ERROR, "Error: Video mode %dx%d@%dbpp is not supported!\n", width, height, bitDepth );
-			return FALSE;
+			return false;
 		}
 		switch ( bpp )
 		{
@@ -141,29 +141,30 @@ BOOL screenInitialise(
 	screen = SDL_SetVideoMode(width, height, bpp, video_flags);
 	if ( !screen ) {
 		debug( LOG_ERROR, "Error: SDL_SetVideoMode failed (%s).", SDL_GetError() );
-		return FALSE;
+		return false;
 	}
 	if ( SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &value) == -1)
 	{
 		debug( LOG_ERROR, "OpenGL initialization did not give double buffering!" );
 	}
-	debug(LOG_3D, "OpenGL extensions supported:");
-	if (check_extension("GL_ARB_texture_compression"))
-	{
-		debug(LOG_3D, "  * Texture compression supported.");
-	}
-	if (check_extension("GL_EXT_stencil_two_side"))
-	{
-		debug(LOG_3D, "  * Two side stencil supported.");
-	}
-	if (check_extension("GL_EXT_stencil_wrap"))
-	{
-		debug(LOG_3D, "  * Stencil wrap supported.");
-	}
-	if (check_extension("GL_EXT_texture_filter_anisotropic"))
-	{
-		debug(LOG_3D, "  * Anisotropic filtering supported.");
-	}
+	// Note that no initialisation of GLee is required, since this is handled automatically.
+
+	/* Dump information about OpenGL implementation to the console */
+	debug(LOG_3D, "OpenGL Vendor : %s", glGetString(GL_VENDOR));
+	debug(LOG_3D, "OpenGL Renderer : %s", glGetString(GL_RENDERER));
+	debug(LOG_3D, "OpenGL Version : %s", glGetString(GL_VERSION));
+	debug(LOG_3D, "OpenGL Extensions : %s", glGetString(GL_EXTENSIONS)); // FIXME This is too much for MAX_LEN_LOG_LINE
+	debug(LOG_3D, "Supported OpenGL extensions:");
+	debug(LOG_3D, "  * OpenGL 1.2 %s supported!", GLEE_VERSION_1_2 ? "is" : "is NOT");
+	debug(LOG_3D, "  * OpenGL 1.3 %s supported!", GLEE_VERSION_1_3 ? "is" : "is NOT");
+	debug(LOG_3D, "  * OpenGL 1.4 %s supported!", GLEE_VERSION_1_4 ? "is" : "is NOT");
+	debug(LOG_3D, "  * OpenGL 1.5 %s supported!", GLEE_VERSION_1_5 ? "is" : "is NOT");
+	debug(LOG_3D, "  * OpenGL 2.0 %s supported!", GLEE_VERSION_2_0 ? "is" : "is NOT");
+	debug(LOG_3D, "  * OpenGL 2.1 %s supported!", GLEE_VERSION_2_1 ? "is" : "is NOT");
+	debug(LOG_3D, "  * Texture compression %s supported.", GLEE_ARB_texture_compression ? "is" : "is NOT");
+	debug(LOG_3D, "  * Two side stencil %s supported.", GLEE_EXT_stencil_two_side ? "is" : "is NOT");
+	debug(LOG_3D, "  * Stencil wrap %s supported.", GLEE_EXT_stencil_wrap ? "is" : "is NOT");
+	debug(LOG_3D, "  * Anisotropic filtering %s supported.", GLEE_EXT_texture_filter_anisotropic ? "is" : "is NOT");
 
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
@@ -181,7 +182,7 @@ BOOL screenInitialise(
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-	return TRUE;
+	return true;
 }
 
 
@@ -240,12 +241,12 @@ void screen_SetBackDropFromFile(const char* filename)
 
 void screen_StopBackDrop(void)
 {
-	bBackDrop = FALSE;	//checking [movie]
+	bBackDrop = false;	//checking [movie]
 }
 
 void screen_RestartBackDrop(void)
 {
-	bBackDrop = TRUE;
+	bBackDrop = true;
 }
 
 BOOL screen_GetBackDrop(void)
@@ -258,8 +259,15 @@ BOOL screen_GetBackDrop(void)
 //bitmap MUST be (BACKDROP_HACK_WIDTH * BACKDROP_HACK_HEIGHT) for now.
 void screen_Upload(const char *newBackDropBmp)
 {
+	static bool processed = false;
+
 	if(newBackDropBmp != NULL)
 	{
+		if (processed)	// lets free a texture when we use a new one.
+		{
+			glDeleteTextures( 1, &backDropTexture );
+		}
+
 		glGenTextures(1, &backDropTexture);
 		pie_SetTexturePage(TEXPAGE_NONE);
 		glBindTexture(GL_TEXTURE_2D, backDropTexture);
@@ -272,6 +280,7 @@ void screen_Upload(const char *newBackDropBmp)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		processed = true;
 	}
 
 	glDisable(GL_DEPTH_TEST);
@@ -342,7 +351,7 @@ void screenDoDumpToDiskIfRequired(void)
 	// Write the screen to a PNG
 	iV_saveImage_PNG(fileName, &image);
 
-	screendump_required = FALSE;
+	screendump_required = false;
 }
 
 void screenDumpToDisk(const char* path) {
@@ -361,5 +370,5 @@ void screenDumpToDisk(const char* path) {
 
 	// If we have an integer overflow, we don't want to go about and overwrite files
 	if (screendump_num != 0)
-		screendump_required = TRUE;
+		screendump_required = true;
 }

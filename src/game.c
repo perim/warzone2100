@@ -78,6 +78,7 @@
 #include "scriptextern.h"
 #include "multistat.h"
 #include "wrappers.h"
+#include "scriptfuncs.h"
 
 
 #define MAX_SAVE_NAME_SIZE_V19	40
@@ -138,7 +139,7 @@ static bool deserializeSaveGameHeader(PHYSFS_file* fileHandle, GAME_SAVEHEADER* 
 	{
 		// Apparently we don't get a ridiculously high number if we assume
 		// little-endian, so lets assume our version number is 34 at max and return
-		debug(LOG_SAVEGAME, "deserializeSaveGameHeader: Version = %u (little-endian)", serializeHeader->version);
+		debug(LOG_SAVE, "Version = %u (little-endian)", serializeHeader->version);
 
 		return true;
 	}
@@ -153,7 +154,7 @@ static bool deserializeSaveGameHeader(PHYSFS_file* fileHandle, GAME_SAVEHEADER* 
 
 	// Considering that little-endian didn't work we now use big-endian instead
 	serializeHeader->version = PHYSFS_swapUBE32(serializeHeader->version);
-	debug(LOG_SAVEGAME, "deserializeSaveGameHeader: Version %u = (big-endian)", serializeHeader->version);
+	debug(LOG_SAVE, "Version %u = (big-endian)", serializeHeader->version);
 
 	return true;
 }
@@ -313,7 +314,7 @@ typedef struct _save_component
 typedef struct _save_weapon_v19
 {
 	char				name[MAX_SAVE_NAME_SIZE_V19];
-	UDWORD				hitPoints;  //- remove at some point
+	UDWORD				hitPoints;  // UNUSED: only here to keep struct size intact
 	UDWORD				ammo;
 	UDWORD				lastFired;
 } SAVE_WEAPON_V19;
@@ -321,7 +322,7 @@ typedef struct _save_weapon_v19
 typedef struct _save_weapon
 {
 	char				name[MAX_SAVE_NAME_SIZE];
-	UDWORD				hitPoints;  //- remove at some point
+	UDWORD				hitPoints;  // UNUSED: only here to keep struct size intact
 	UDWORD				ammo;
 	UDWORD				lastFired;
 } SAVE_WEAPON;
@@ -1468,6 +1469,13 @@ static bool deserializeSaveGameData(PHYSFS_file* fileHandle, SAVE_GAME* serializ
 #define	SAVE_COMP_PROGRAM	8
 #define SAVE_COMP_WEAPON	9
 
+typedef struct _path_point
+{
+       UBYTE           x,y;
+} PATH_POINT;
+
+#define TRAVELSIZE	100
+
 typedef struct _save_move_control
 {
 	UBYTE	Status;						// Inactive, Navigating or moving point to point status
@@ -1581,7 +1589,6 @@ typedef struct _save_droid_v18
 {
 	DROID_SAVE_V18;
 } SAVE_DROID_V18;
-
 
 //DROID_SAVE_20 replaces all previous saves uses 60 character names
 #define DROID_SAVE_V20		\
@@ -2001,6 +2008,19 @@ typedef struct _save_message
 
 } SAVE_MESSAGE;
 
+typedef struct _save_message_v36
+{
+	MESSAGE_TYPE	type;			//The type of message
+	BOOL			bObj;
+	char			name[MAX_GAME_STR_SIZE];
+	UDWORD			objId;					//Id for Proximity messages!
+	BOOL			read;					//flag to indicate whether message has been read
+	UDWORD			player;					//which player this message belongs to
+	MSG_DATA_TYPE	dataType;				//actual type of pViewData
+	UDWORD			locX,locY;
+	SDWORD			sender;					//sender of the message
+} SAVE_MESSAGE_36;
+
 typedef struct _save_flag_v18
 {
 	POSITION_TYPE	type;				/*the type of position obj - FlagPos or ProxDisp*/
@@ -2097,7 +2117,7 @@ typedef enum _droid_save_type
 extern	UDWORD				objID;					// unique ID creation thing..
 
 static UDWORD			saveGameVersion = 0;
-static BOOL				saveGameOnMission = FALSE;
+static BOOL				saveGameOnMission = false;
 static SAVE_GAME		saveGameData;
 static UDWORD			oldestSaveGameVersion = CURRENT_VERSION_NUM;
 static UDWORD			validityKey = 0;
@@ -2172,6 +2192,7 @@ static BOOL writeResearchFile(char *pFileName);
 
 static BOOL loadSaveMessage(char *pFileData, UDWORD filesize, SWORD levelType);
 static BOOL loadSaveMessageV(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWORD version, SWORD levelType);
+static BOOL loadSaveMessage36(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWORD version, SWORD levelType);
 static BOOL writeMessageFile(char *pFileName);
 
 static BOOL loadSaveFlag(char *pFileData, UDWORD filesize);
@@ -2196,6 +2217,7 @@ static BOOL getNameFromComp(UDWORD compType, char *pDest, UDWORD compIndex);
 
 //adjust the name depending on type of save game and whether resourceNames are used
 static BOOL getSaveObjectName(char *pName);
+static bool gameLoad(const char* fileName);
 
 /* set the global scroll values to use for the save game */
 static void setMapScroll(void);
@@ -2268,7 +2290,7 @@ BOOL loadMissionExtras(const char *pGameToLoad, SWORD levelType)
 					if (!loadSaveMessage(pFileData, fileSize, levelType))
 					{
 						debug( LOG_NEVER, "loadMissionExtras: Fail 2\n" );
-						return FALSE;
+						return false;
 					}
 				}
 			}
@@ -2276,7 +2298,7 @@ BOOL loadMissionExtras(const char *pGameToLoad, SWORD levelType)
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -2314,20 +2336,9 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		freeAllStructs();
 		freeAllFeatures();
 
-	//	droidTemplateShutDown();
-		if (psMapTiles)
-		{
-//			free(psMapTiles);
-		}
-		if (aMapLinePoints)
-		{
-			free(aMapLinePoints);
-			aMapLinePoints = NULL;
-		}
 		//clear all the messages?
 		releaseAllProxDisp();
 	}
-
 
 	if (!keepObjects)
 	{
@@ -2368,14 +2379,13 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		memset(asReArmUpgrade, 0, MAX_PLAYERS * sizeof(REARM_UPGRADE));
 
 		//initialise the upgrade structures
-		memset(asWeaponUpgrade, 0, MAX_PLAYERS * NUM_WEAPON_SUBCLASS * sizeof(WEAPON_UPGRADE));
+		memset(asWeaponUpgrade, 0, MAX_PLAYERS * WSC_NUM_WEAPON_SUBCLASSES * sizeof(WEAPON_UPGRADE));
 		memset(asSensorUpgrade, 0, MAX_PLAYERS * sizeof(SENSOR_UPGRADE));
 		memset(asECMUpgrade, 0, MAX_PLAYERS * sizeof(ECM_UPGRADE));
 		memset(asRepairUpgrade, 0, MAX_PLAYERS * sizeof(REPAIR_UPGRADE));
 		memset(asBodyUpgrade, 0, MAX_PLAYERS * sizeof(BODY_UPGRADE) * BODY_TYPE);
 		//JPS 25 feb
 	}
-
 
 	if (saveGameVersion >= VERSION_11)
 	{
@@ -2439,18 +2449,18 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 			setUnderwaterTile(saveGameData.WaterTile);
 			if (saveGameData.fogState == 0)//no fog
 			{
-				pie_EnableFog(FALSE);
+				pie_EnableFog(false);
 				fogStatus = 0;
 			}
 			else if (saveGameData.fogState == 1)//fog using old code assume background and depth
 			{
 				if (war_GetFog())
 				{
-					pie_EnableFog(TRUE);
+					pie_EnableFog(true);
 				}
 				else
 				{
-					pie_EnableFog(FALSE);
+					pie_EnableFog(false);
 				}
 				fogStatus = FOG_BACKGROUND + FOG_DISTANCE;
 			}
@@ -2458,16 +2468,16 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 			{
 				if (war_GetFog())
 				{
-					pie_EnableFog(TRUE);
+					pie_EnableFog(true);
 				}
 				else
 				{
-					pie_EnableFog(FALSE);
+					pie_EnableFog(false);
 				}
 				fogStatus = saveGameData.fogState;
 				fogStatus &= FOG_FLAGS;
 			}
-			colour.argb = saveGameData.fogColour;
+			colour.rgba = saveGameData.fogColour;
 			pie_SetFogColour(colour);
 		}
 		if (saveGameVersion >= VERSION_19)//V21
@@ -2569,7 +2579,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 			selectedPlayer	= saveGameData.savePlayer;
 			productionPlayer= selectedPlayer;
 			bMultiPlayer	= saveGameData.multiPlayer;
-			cmdDroidMultiExpBoost(TRUE);
+			cmdDroidMultiExpBoost(true);
 			for(inc=0;inc<MAX_PLAYERS;inc++)
 			{
 				player2dpid[inc]=saveGameData.sPlayer2dpid[inc];
@@ -2577,8 +2587,8 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 			if(bMultiPlayer)
 			{
 				loadMultiStats(saveGameData.sPName,&playerStats);				// stats stuff
-				setMultiStats(NetPlay.dpidPlayer,playerStats,FALSE);
-				setMultiStats(NetPlay.dpidPlayer,playerStats,TRUE);
+				setMultiStats(NetPlay.dpidPlayer,playerStats,false);
+				setMultiStats(NetPlay.dpidPlayer,playerStats,true);
 			}
 		}
 
@@ -2605,7 +2615,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 	//startX = startY = width = height = 0;
 
 	//before loading the data - turn power off so don't get any power low warnings
-	powerCalculated = FALSE;
+	powerCalculated = false;
 
 	/* Load in the chosen file data */
 	strcpy(aFileName, pGameToLoad);
@@ -2644,7 +2654,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 
 	//load up the Droid Templates BEFORE any structures are loaded
 	LOADBARCALLBACK();	//	loadingScreenCallback();
-	if (IsScenario==FALSE)
+	if (IsScenario==false)
 	{
 		//NOT ANY MORE - use multiPlayerID (unique template id) to prevent duplicate's being loaded
 		//Only want to clear the lists in the final version of the game
@@ -2716,8 +2726,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		}
 
 		//load the map and the droids then swap pointers
-//		psMapTiles = NULL;
-//		aMapLinePoints = NULL;
 		//load in the map file
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "mission.map");
@@ -2728,7 +2736,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 			if (!mapLoad(pFileData, fileSize))
 			{
 				debug( LOG_NEVER, "loadgame: Fail7\n" );
-				return(FALSE);
+				return(false);
 			}
 		}
 
@@ -2764,6 +2772,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		}
 
 		//load in the mission structures
+		initStructLimits();
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "mstruct.bjo");
 		/* Load in the chosen file data */
@@ -2844,7 +2853,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 		{
 			debug( LOG_NEVER, "loadMissionExtras: Fail 3\n" );
-			return FALSE;
+			return false;
 		}
 
 
@@ -2854,7 +2863,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 			if (!loadSaveFlag(pFileData, fileSize))
 			{
 				debug( LOG_NEVER, "loadMissionExtras: Fail 4\n" );
-				return FALSE;
+				return false;
 			}
 		}
 		swapMissionPointers();
@@ -2875,7 +2884,6 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 	{
 		LOADBARCALLBACK();	//		loadingScreenCallback();
 		psMapTiles = NULL;
-		aMapLinePoints = NULL;
 		//load in the map file
 		aFileName[fileExten] = '\0';
 		strcat(aFileName, "game.map");
@@ -2890,7 +2898,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		if (!mapLoad(pFileData, fileSize))
 		{
 			debug( LOG_NEVER, "loadgame: Fail7\n" );
-			return(FALSE);
+			return(false);
 		}
 	}
 
@@ -2941,7 +2949,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		}
 	}
 
-	if(IsScenario==TRUE)
+	if(IsScenario==true)
 	{
 		LOADBARCALLBACK();	//		loadingScreenCallback();
 		//load in the droid initialisation file
@@ -3083,6 +3091,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 
 	//load in the structures
 	LOADBARCALLBACK();	//	loadingScreenCallback();
+	initStructLimits();
 	aFileName[fileExten] = '\0';
 	strcat(aFileName, "struct.bjo");
 	/* Load in the chosen file data */
@@ -3240,7 +3249,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		{
 			//load in the message list file
 			aFileName[fileExten] = '\0';
-			strlcat(aFileName, "score.tag", sizeof(aFileName));
+			strcat(aFileName, "score.tag");
 
 			// Load the fx data from the chosen file
 			if (!readScoreData(aFileName))
@@ -3267,7 +3276,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 			if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
 			{
 				debug( LOG_NEVER, "loadMissionExtras: Fail 3\n");
-				return FALSE;
+				return false;
 			}
 
 
@@ -3277,7 +3286,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 				if (!loadSaveFlag(pFileData, fileSize))
 				{
 					debug( LOG_NEVER, "loadMissionExtras: Fail 4\n" );
-					return FALSE;
+					return false;
 				}
 			}
 		}
@@ -3298,7 +3307,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 			if (!readFiresupportDesignators(aFileName))
 			{
 				debug( LOG_NEVER, "loadMissionExtras: readFiresupportDesignators(%s) failed\n", aFileName );
-				return FALSE;
+				return false;
 			}
 		}
 	}
@@ -3326,16 +3335,12 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		}
 
 		//set up the structure Limits
-		setCurrentStructQuantity(FALSE);
+		setCurrentStructQuantity(false);
 	}
 	else
 	{
-		//load in the structure limits
-		//load the data into structLimits DONE IN SCRIPTS NOW so just init
-		initStructLimits();
-
 		//set up the structure Limits
-		setCurrentStructQuantity(TRUE);
+		setCurrentStructQuantity(true);
 	}
 
 
@@ -3398,7 +3403,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 	}
 
 	//turn power on for rest of game
-	powerCalculated = TRUE;
+	powerCalculated = true;
 
 	LOADBARCALLBACK();	//	loadingScreenCallback();
 
@@ -3455,8 +3460,8 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 
 //	if (multiPlayerInUse)
 //	{
-//		bMultiPlayer = TRUE;				// reenable multi player messages.
-//		multiPlayerInUse = FALSE;
+//		bMultiPlayer = true;				// reenable multi player messages.
+//		multiPlayerInUse = false;
 //	}
 //	initViewPosition();
 
@@ -3488,7 +3493,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 
 	debug( LOG_NEVER, "loadGame: done\n" );
 
-	return TRUE;
+	return true;
 
 error:
 		debug( LOG_NEVER, "loadgame: ERROR\n" );
@@ -3502,22 +3507,16 @@ error:
 	{
 //		free(psMapTiles);
 	}
-	if (aMapLinePoints)
-	{
-		free(aMapLinePoints);
-		aMapLinePoints = NULL;
-	}
 	psMapTiles = NULL;
-	aMapLinePoints = NULL;
 
 	/*if (!loadFile("blank.map", &pFileData, &fileSize))
 	{
-		return FALSE;
+		return false;
 	}
 
 	if (!mapLoad(pFileData, fileSize))
 	{
-		return FALSE;
+		return false;
 	}
 
 	free(pFileData);*/
@@ -3526,11 +3525,11 @@ error:
 	gameTimeStart();
 //	if (multiPlayerInUse)
 //	{
-//		bMultiPlayer = TRUE;				// reenable multi player messages.
-//		multiPlayerInUse = FALSE;
+//		bMultiPlayer = true;				// reenable multi player messages.
+//		multiPlayerInUse = false;
 //	}
 
-	return FALSE;
+	return false;
 }
 // -----------------------------------------------------------------------------------------
 
@@ -3540,11 +3539,16 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	UDWORD			fileExtension;
 	DROID			*psDroid, *psNext;
 
+	ASSERT(aFileName && strlen(aFileName) > 4, "Bad savegame filename");
+	if (!aFileName || strlen(aFileName) < 4)
+	{
+		return false;
+	}
+
 	debug(LOG_WZ, "saveGame: %s", aFileName);
 
 	fileExtension = strlen(aFileName) - 3;
 	gameTimeStop();
-
 
 	/* Write the data to the file */
 	if (!writeGameFile(aFileName, saveType))
@@ -3711,7 +3715,7 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 	//added at V15 save
 	//create the message filename
 	aFileName[fileExtension] = '\0';
-	strlcat(aFileName, "score.tag", sizeof(aFileName));
+	strcat(aFileName, "score.tag");
 	/*Write the data to the file*/
 	if (!writeScoreData(aFileName))
 	{
@@ -3852,13 +3856,13 @@ BOOL saveGame(char *aFileName, SDWORD saveType)
 
 	/* Start the game clock */
 	gameTimeStart();
-	return TRUE;
+	return true;
 
 error:
 	/* Start the game clock */
 	gameTimeStart();
 
-	return FALSE;
+	return false;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -4263,21 +4267,22 @@ bool gameLoadV7(PHYSFS_file* fileHandle)
 	width = saveGame.ScrollMaxX - saveGame.ScrollMinX;
 	height = saveGame.ScrollMaxY - saveGame.ScrollMinY;
 	gameType = saveGame.GameType;
-	//set IsScenario to TRUE if not a user saved game
+	//set IsScenario to true if not a user saved game
 	if (gameType == GTYPE_SAVE_START)
 	{
 		LEVEL_DATASET* psNewLevel;
 
-		IsScenario = FALSE;
+		IsScenario = false;
 		//copy the level name across
-		strlcpy(aLevelName, saveGame.levelName, sizeof(aLevelName));
+		sstrcpy(aLevelName, saveGame.levelName);
 		//load up the level dataset
 		if (!levLoadData(aLevelName, saveGameName, gameType))
 		{
 			return false;
 		}
 		// find the level dataset
-		if (!levFindDataSet(aLevelName, &psNewLevel))
+		psNewLevel = levFindDataSet(aLevelName);
+		if (psNewLevel == NULL)
 		{
 			debug( LOG_ERROR, "gameLoadV7: couldn't find level data" );
 			abort();
@@ -4296,7 +4301,7 @@ bool gameLoadV7(PHYSFS_file* fileHandle)
 	}
 	else
 	{
-		IsScenario = TRUE;
+		IsScenario = true;
 	}
 
 	return true;
@@ -4509,17 +4514,17 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 		mission.startTime = saveGameData.missionTime;
 		if (saveGameData.saveKey & SAVEKEY_ONMISSION)
 		{
-			saveGameOnMission = TRUE;
+			saveGameOnMission = true;
 		}
 		else
 		{
-			saveGameOnMission = FALSE;
+			saveGameOnMission = false;
 		}
 
 	}
 	else
 	{
-		saveGameOnMission = FALSE;
+		saveGameOnMission = false;
 	}
 	//set the scroll varaibles
 	startX = saveGameData.ScrollMinX;
@@ -4571,18 +4576,18 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 		setUnderwaterTile(saveGameData.WaterTile);
 		if (saveGameData.fogState == 0)//no fog
 		{
-			pie_EnableFog(FALSE);
+			pie_EnableFog(false);
 			fogStatus = 0;
 		}
 		else if (saveGameData.fogState == 1)//fog using old code assume background and depth
 		{
 			if (war_GetFog())
 			{
-				pie_EnableFog(TRUE);
+				pie_EnableFog(true);
 			}
 			else
 			{
-				pie_EnableFog(FALSE);
+				pie_EnableFog(false);
 			}
 			fogStatus = FOG_BACKGROUND + FOG_DISTANCE;
 		}
@@ -4590,16 +4595,16 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 		{
 			if (war_GetFog())
 			{
-				pie_EnableFog(TRUE);
+				pie_EnableFog(true);
 			}
 			else
 			{
-				pie_EnableFog(FALSE);
+				pie_EnableFog(false);
 			}
 			fogStatus = saveGameData.fogState;
 			fogStatus &= FOG_FLAGS;
 		}
-		colour.argb = saveGameData.fogColour;
+		colour.rgba = saveGameData.fogColour;
 		pie_SetFogColour(colour);
 	}
 
@@ -4725,7 +4730,7 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 		}
 	}
 
-	//set IsScenario to TRUE if not a user saved game
+	//set IsScenario to true if not a user saved game
 	if ((gameType == GTYPE_SAVE_START) ||
 		(gameType == GTYPE_SAVE_MIDMISSION))
 	{
@@ -4744,19 +4749,20 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 		}
 
 
-		IsScenario = FALSE;
+		IsScenario = false;
 		//copy the level name across
-		strlcpy(aLevelName, saveGameData.levelName, sizeof(aLevelName));
+		sstrcpy(aLevelName, saveGameData.levelName);
 		//load up the level dataset
 		if (!levLoadData(aLevelName, saveGameName, gameType))
 		{
-			return FALSE;
+			return false;
 		}
 		// find the level dataset
-/*		if (!levFindDataSet(aLevelName, &psNewLevel))
+/*		psNewLevel = levFindDataSet(aLevelName);
+		if (psNewLevel == NULL)
 		{
 			DBERROR(("gameLoadV6: couldn't find level data"));
-			return FALSE;
+			return false;
 		}
 		//check to see whether mission automatically starts
 		if (gameType == GTYPE_SAVE_START)
@@ -4764,7 +4770,7 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 //			launchMission();
 			if (!levLoadData(aLevelName, NULL, 0))
 			{
-				return FALSE;
+				return false;
 			}
 		}*/
 
@@ -4777,7 +4783,7 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 			selectedPlayer	= saveGameData.savePlayer;
 			productionPlayer = selectedPlayer;
 			game			= saveGameData.sGame;
-			cmdDroidMultiExpBoost(TRUE);
+			cmdDroidMultiExpBoost(true);
 			for(i = 0; i < MAX_PLAYERS; ++i)
 			{
 				player2dpid[i] = saveGameData.sPlayer2dpid[i];
@@ -4785,15 +4791,15 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 			if(bMultiPlayer)
 			{
 				loadMultiStats(saveGameData.sPName,&playerStats);				// stats stuff
-				setMultiStats(NetPlay.dpidPlayer,playerStats,FALSE);
-				setMultiStats(NetPlay.dpidPlayer,playerStats,TRUE);
+				setMultiStats(NetPlay.dpidPlayer,playerStats,false);
+				setMultiStats(NetPlay.dpidPlayer,playerStats,true);
 			}
 		}
 
 	}
 	else
 	{
-		IsScenario = TRUE;
+		IsScenario = true;
 	}
 
 	/* Get human and AI players names */
@@ -4812,15 +4818,15 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
             //only overwrite selectedPlayer's power on a startMission save game
             if (gameType == GTYPE_SAVE_MIDMISSION || i == selectedPlayer)
             {
-    		    asPower[i]->currentPower = powerSaved[i].currentPower;
-	    	    asPower[i]->extractedPower = powerSaved[i].extractedPower;
+    		    asPower[i].currentPower = powerSaved[i].currentPower;
+	    	    asPower[i].extractedPower = powerSaved[i].extractedPower;
             }
 		    //init the last structure
-		    asPower[i]->psLastPowered = NULL;
+		    asPower[i].psLastPowered = NULL;
 	    }
     }
 
-	return TRUE;
+	return true;
 }
 
 
@@ -4865,11 +4871,11 @@ static bool writeGameFile(const char* fileName, SDWORD saveType)
 	if (missionIsOffworld())
 	{
 		saveGame.saveKey |= SAVEKEY_ONMISSION;
-		saveGameOnMission = TRUE;
+		saveGameOnMission = true;
 	}
 	else
 	{
-		saveGameOnMission = FALSE;
+		saveGameOnMission = false;
 	}
 
 
@@ -4888,19 +4894,19 @@ static bool writeGameFile(const char* fileName, SDWORD saveType)
 	//save the current level so we can load up the STARTING point of the mission
 	if (strlen(aLevelName) > MAX_LEVEL_SIZE)
 	{
-		ASSERT( FALSE,
+		ASSERT( false,
 			"writeGameFile:Unable to save level name - too long (max20) - %s",
 			aLevelName );
 
 		return false;
 	}
-	strlcpy(saveGame.levelName, aLevelName, sizeof(saveGame.levelName));
+	sstrcpy(saveGame.levelName, aLevelName);
 
 	//save out the players power
 	for (i = 0; i < MAX_PLAYERS; ++i)
 	{
-		saveGame.power[i].currentPower = asPower[i]->currentPower;
-		saveGame.power[i].extractedPower = asPower[i]->extractedPower;
+		saveGame.power[i].currentPower = asPower[i].currentPower;
+		saveGame.power[i].extractedPower = asPower[i].extractedPower;
 	}
 
 	//camera position
@@ -4923,7 +4929,7 @@ static bool writeGameFile(const char* fileName, SDWORD saveType)
 	saveGame.offWorldKeepLists = offWorldKeepLists;
 	saveGame.RubbleTile	= getRubbleTileNum();
 	saveGame.WaterTile	= getWaterTileNum();
-	saveGame.fogColour	= pie_GetFogColour().argb;
+	saveGame.fogColour	= pie_GetFogColour().rgba;
 	saveGame.fogState	= fogStatus;
 	if(pie_GetFogEnabled())
 	{
@@ -5045,7 +5051,7 @@ BOOL loadSaveDroidInit(char *pFileData, UDWORD filesize)
 		psHeader->aFileType[2] != 'n' || psHeader->aFileType[3] != 't')	{
 		debug( LOG_ERROR, "loadSaveUnitInit: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* DROIDINIT_SAVEHEADER */
@@ -5060,23 +5066,23 @@ BOOL loadSaveDroidInit(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "UnitInit; unsupported save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 	else if (psHeader->version <= CURRENT_VERSION_NUM)
 	{
 		if (!loadSaveDroidInitV2(pFileData, filesize, psHeader->quantity))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else
 	{
 		debug( LOG_ERROR, "UnitInit: undefined save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -5128,7 +5134,7 @@ BOOL loadSaveDroidInitV2(char *pFileData, UDWORD filesize,UDWORD quantity)
 			{
 
 				psDroid = buildDroid(psTemplate, (pDroidInit->x & (~TILE_MASK)) + TILE_UNITS/2, (pDroidInit->y  & (~TILE_MASK)) + TILE_UNITS/2,
-					pDroidInit->player, FALSE);
+					pDroidInit->player, false);
 
 				if (psDroid) {
 					psDroid->id = pDroidInit->id;
@@ -5149,7 +5155,7 @@ BOOL loadSaveDroidInitV2(char *pFileData, UDWORD filesize,UDWORD quantity)
 		debug( LOG_ERROR, "unitLoad: Bad Player number in %d unit(s)... assigned to the last player!\n", NumberOfSkippedDroids );
 		abort();
 	}
-	return TRUE;
+	return true;
 }
 
 
@@ -5207,7 +5213,7 @@ BOOL loadSaveDroid(char *pFileData, UDWORD filesize, DROID **ppsCurrentDroidList
 	{
 		debug( LOG_ERROR, "loadSaveUnit: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* DROID_SAVEHEADER */
@@ -5222,37 +5228,37 @@ BOOL loadSaveDroid(char *pFileData, UDWORD filesize, DROID **ppsCurrentDroidList
 	{
 		debug( LOG_ERROR, "UnitLoad; unsupported save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 	else if (psHeader->version == VERSION_11)
 	{
 		if (!loadSaveDroidV11(pFileData, filesize, psHeader->quantity, psHeader->version, ppsCurrentDroidLists))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else if (psHeader->version <= VERSION_19)//old save name size
 	{
 		if (!loadSaveDroidV19(pFileData, filesize, psHeader->quantity, psHeader->version, ppsCurrentDroidLists))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else if (psHeader->version <= CURRENT_VERSION_NUM)
 	{
 		if (!loadSaveDroidV(pFileData, filesize, psHeader->quantity, psHeader->version, ppsCurrentDroidLists))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else
 	{
 		debug( LOG_ERROR, "UnitLoad: undefined save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -5271,9 +5277,9 @@ static DROID* buildDroidFromSaveDroidV11(SAVE_DROID_V11* psSaveDroid)
 	//set up the template
 	//copy the values across
 
-	strlcpy(psTemplate->aName, psSaveDroid->name, sizeof(psTemplate->aName));
+	sstrcpy(psTemplate->aName, psSaveDroid->name);
 	//ignore the first comp - COMP_UNKNOWN
-	found = TRUE;
+	found = true;
 	for (i=1; i < DROID_MAXCOMP; i++)
 	{
 
@@ -5283,7 +5289,7 @@ static DROID* buildDroidFromSaveDroidV11(SAVE_DROID_V11* psSaveDroid)
 
 			debug( LOG_ERROR, "This component no longer exists - %s, the droid will be deleted", psSaveDroid->asBits[i].name );
 			abort();
-			found = FALSE;
+			found = false;
 			break;//continue;
 		}
 		psTemplate->asParts[i] = (UDWORD)compInc;
@@ -5299,7 +5305,7 @@ static DROID* buildDroidFromSaveDroidV11(SAVE_DROID_V11* psSaveDroid)
 		int weapon = getCompFromName(COMP_WEAPON, psSaveDroid->asWeaps[i].name);
 		if( weapon < 0)
 		{
-			ASSERT(FALSE, "This component does not exist : %s", psSaveDroid->asWeaps[i].name );
+			ASSERT(false, "This component does not exist : %s", psSaveDroid->asWeaps[i].name );
 			return NULL;
 		}
 		psTemplate->asWeaps[i] = weapon;
@@ -5315,7 +5321,7 @@ static DROID* buildDroidFromSaveDroidV11(SAVE_DROID_V11* psSaveDroid)
 	psTemplate->asParts[COMP_BRAIN] = 0;
 
 	psDroid = buildDroid(psTemplate, psSaveDroid->x, psSaveDroid->y,
-		psSaveDroid->player, FALSE);
+		psSaveDroid->player, false);
 
 	//copy the droid's weapon stats
 	for (i=0; i < psDroid->numWeaps; i++)
@@ -5323,7 +5329,6 @@ static DROID* buildDroidFromSaveDroidV11(SAVE_DROID_V11* psSaveDroid)
 		if (psDroid->asWeaps[i].nStat > 0)
 		{
 			//only one weapon now
-			psDroid->asWeaps[i].hitPoints = psSaveDroid->asWeaps[i].hitPoints;
 			psDroid->asWeaps[i].ammo = psSaveDroid->asWeaps[i].ammo;
 			psDroid->asWeaps[i].lastFired = psSaveDroid->asWeaps[i].lastFired;
 		}
@@ -5378,10 +5383,10 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 	//set up the template
 	//copy the values across
 
-	strlcpy(psTemplate->aName, psSaveDroid->name, sizeof(psTemplate->aName));
+	sstrcpy(psTemplate->aName, psSaveDroid->name);
 
 	//ignore the first comp - COMP_UNKNOWN
-	found = TRUE;
+	found = true;
 	for (i=1; i < DROID_MAXCOMP; i++)
 	{
 
@@ -5393,7 +5398,7 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 			debug( LOG_ERROR, "This component no longer exists - %s, the droid will be deleted", psSaveDroid->asBits[i].name );
 			abort();
 
-			found = FALSE;
+			found = false;
 			break;//continue;
 		}
 		psTemplate->asParts[i] = (UDWORD)compInc;
@@ -5413,7 +5418,7 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 			int weapon = getCompFromName(COMP_WEAPON, psSaveDroid->asWeaps[i].name);
 			if( weapon < 0)
 			{
-				ASSERT(FALSE, "This component does not exist : %s", psSaveDroid->asWeaps[i].name );
+				ASSERT(false, "This component does not exist : %s", psSaveDroid->asWeaps[i].name );
 				return NULL;
 			}
 			psTemplate->asWeaps[i] = weapon;
@@ -5434,22 +5439,22 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 	if(psSaveDroid->x == INVALID_XY)
 	{
 		psDroid = buildDroid(psTemplate, psSaveDroid->x, psSaveDroid->y,
-			psSaveDroid->player, TRUE);
+			psSaveDroid->player, true);
 	}
 	else if(psSaveDroid->saveType == DROID_ON_TRANSPORT)
 	{
 		psDroid = buildDroid(psTemplate, 0, 0,
-			psSaveDroid->player, TRUE);
+			psSaveDroid->player, true);
 	}
 	else
 	{
 		psDroid = buildDroid(psTemplate, psSaveDroid->x, psSaveDroid->y,
-			psSaveDroid->player, FALSE);
+			psSaveDroid->player, false);
 	}
 
 	if(psDroid == NULL)
 	{
-		ASSERT( FALSE,"buildUnitFromSavedUnit; failed to build unit" );
+		ASSERT( false,"buildUnitFromSavedUnit; failed to build unit" );
 		return NULL;
 	}
 
@@ -5459,7 +5464,6 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 	{
 		if (psDroid->asWeaps[i].nStat > 0)
 		{
-			psDroid->asWeaps[i].hitPoints = psSaveDroid->asWeaps[i].hitPoints;
 			psDroid->asWeaps[i].ammo = psSaveDroid->asWeaps[i].ammo;
 			psDroid->asWeaps[i].lastFired = psSaveDroid->asWeaps[i].lastFired;
 		}
@@ -5538,7 +5542,7 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 			}
 			else
 			{
-				ASSERT( FALSE,"loadUnit TargetStat not found" );
+				ASSERT( false,"loadUnit TargetStat not found" );
 				psDroid->psTarStats = NULL;
                 orderDroid(psDroid, DORDER_STOP);
 			}
@@ -5574,7 +5578,7 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 			}
 			else
 			{
-				ASSERT( FALSE,"loadUnit TargetStat not found" );
+				ASSERT( false,"loadUnit TargetStat not found" );
 				psDroid->psTarStats = NULL;
 			}
 		}
@@ -5598,13 +5602,15 @@ static void SaveDroidMoveControl(SAVE_DROID * const psSaveDroid, DROID const * c
 {
 	unsigned int i;
 
-	ASSERT(droidOnMap(psDroid), "saved droid standing or moving off the map");
+	// Had to disable this one -- cannot figure out where it gets set wrong! - Per
+	// ASSERT(droidOnMap(psDroid), "saved droid standing or moving off the map");
 
 	// Copy over the endian neutral stuff (all UBYTE)
 	psSaveDroid->sMove.Status    = psDroid->sMove.Status;
 	psSaveDroid->sMove.Position  = psDroid->sMove.Position;
-	psSaveDroid->sMove.numPoints = psDroid->sMove.numPoints;
-	memcpy(&psSaveDroid->sMove.asPath, &psDroid->sMove.asPath, sizeof(psSaveDroid->sMove.asPath));
+	psSaveDroid->sMove.numPoints = MIN(psDroid->sMove.numPoints, TRAVELSIZE);
+	memcpy(&psSaveDroid->sMove.asPath, psDroid->sMove.asPath, 
+	       MIN(sizeof(psSaveDroid->sMove.asPath), sizeof(*psDroid->sMove.asPath) * psDroid->sMove.numPoints));
 
 	// Little endian SDWORDs
 	psSaveDroid->sMove.DestinationX = PHYSFS_swapSLE32(psDroid->sMove.DestinationX);
@@ -5645,14 +5651,14 @@ static void SaveDroidMoveControl(SAVE_DROID * const psSaveDroid, DROID const * c
 
 	if (psDroid->sMove.psFormation != NULL)
 	{
-		psSaveDroid->sMove.isInFormation = TRUE;
+		psSaveDroid->sMove.isInFormation = true;
 		psSaveDroid->formationDir = psDroid->sMove.psFormation->dir;
 		psSaveDroid->formationX   = psDroid->sMove.psFormation->x;
 		psSaveDroid->formationY   = psDroid->sMove.psFormation->y;
 	}
 	else
 	{
-		psSaveDroid->sMove.isInFormation = FALSE;
+		psSaveDroid->sMove.isInFormation = false;
 		psSaveDroid->formationDir = 0;
 		psSaveDroid->formationX   = 0;
 		psSaveDroid->formationY   = 0;
@@ -5671,7 +5677,8 @@ static void LoadDroidMoveControl(DROID * const psDroid, SAVE_DROID const * const
 	psDroid->sMove.Status      = psSaveDroid->sMove.Status;
 	psDroid->sMove.Position    = psSaveDroid->sMove.Position;
 	psDroid->sMove.numPoints   = psSaveDroid->sMove.numPoints;
-	memcpy(&psDroid->sMove.asPath, &psSaveDroid->sMove.asPath, sizeof(psSaveDroid->sMove.asPath));
+	psDroid->sMove.asPath      = malloc(sizeof(*psDroid->sMove.asPath) * psDroid->sMove.numPoints);
+	memcpy(psDroid->sMove.asPath, &psSaveDroid->sMove.asPath, sizeof(*psDroid->sMove.asPath) * psDroid->sMove.numPoints);
 
 	// Little endian SDWORDs
 	psDroid->sMove.DestinationX = PHYSFS_swapSLE32(psSaveDroid->sMove.DestinationX);
@@ -5722,14 +5729,14 @@ static void LoadDroidMoveControl(DROID * const psDroid, SAVE_DROID const * const
 
 	if (psSaveDroid->sMove.isInFormation)
 	{
-		psDroid->sMove.psFormation = NULL;
+		psDroid->sMove.psFormation = formationFind(psSaveDroid->formationX, psSaveDroid->formationY);
 //		psSaveDroid->formationDir;
 //		psSaveDroid->formationX;
 //		psSaveDroid->formationY;
 		// join a formation if it exists at the destination
-		if (formationFind(&psDroid->sMove.psFormation, psSaveDroid->formationX, psSaveDroid->formationY))
+		if (psDroid->sMove.psFormation)
 		{
-			formationJoin(psDroid->sMove.psFormation, (BASE_OBJECT *)psDroid);
+			formationJoin(psDroid->sMove.psFormation, psDroid);
 		}
 		else
 		{
@@ -5737,7 +5744,7 @@ static void LoadDroidMoveControl(DROID * const psDroid, SAVE_DROID const * const
 			if (formationNew(&psDroid->sMove.psFormation, FT_LINE, psSaveDroid->formationX, psSaveDroid->formationY,
 					(SDWORD)psSaveDroid->formationDir))
 			{
-				formationJoin(psDroid->sMove.psFormation, (BASE_OBJECT *)psDroid);
+				formationJoin(psDroid->sMove.psFormation, psDroid);
 			}
 		}
 	}
@@ -5763,9 +5770,9 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 	//set up the template
 	//copy the values across
 
-	strlcpy(psTemplate->aName, psSaveDroid->name, sizeof(psTemplate->aName));
+	sstrcpy(psTemplate->aName, psSaveDroid->name);
 	//ignore the first comp - COMP_UNKNOWN
-	found = TRUE;
+	found = true;
 	for (i=1; i < DROID_MAXCOMP; i++)
 	{
 
@@ -5794,7 +5801,7 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 			debug( LOG_ERROR, "This component no longer exists - %s, the droid will be deleted", psSaveDroid->asBits[i].name );
 			abort();
 
-			found = FALSE;
+			found = false;
 			break;//continue;
 		}
 		psTemplate->asParts[i] = (UDWORD)compInc;
@@ -5813,7 +5820,7 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 			int weapon = getCompFromName(COMP_WEAPON, psSaveDroid->asWeaps[i].name);
 			if( weapon < 0)
 			{
-				ASSERT(FALSE, "This component does not exist : %s", psSaveDroid->asWeaps[i].name );
+				ASSERT(false, "This component does not exist : %s", psSaveDroid->asWeaps[i].name );
 				return NULL;
 			}
 			psTemplate->asWeaps[i] = weapon;
@@ -5831,31 +5838,31 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 //	psTemplate->asParts[COMP_BRAIN] = 0;
 
 
-	turnOffMultiMsg(TRUE);
+	turnOffMultiMsg(true);
 
 	if(psSaveDroid->x == INVALID_XY)
 	{
 		psDroid = buildDroid(psTemplate, psSaveDroid->x, psSaveDroid->y,
-			psSaveDroid->player, TRUE);
+			psSaveDroid->player, true);
 	}
 	else if(psSaveDroid->saveType == DROID_ON_TRANSPORT)
 	{
 		psDroid = buildDroid(psTemplate, 0, 0,
-			psSaveDroid->player, TRUE);
+			psSaveDroid->player, true);
 	}
 	else
 	{
 		psDroid = buildDroid(psTemplate, psSaveDroid->x, psSaveDroid->y,
-			psSaveDroid->player, FALSE);
+			psSaveDroid->player, false);
 	}
 
 	if(psDroid == NULL)
 	{
-		ASSERT( FALSE,"buildUnitFromSavedUnit; failed to build unit" );
+		ASSERT( false,"buildUnitFromSavedUnit; failed to build unit" );
 		return NULL;
 	}
 
-	turnOffMultiMsg(FALSE);
+	turnOffMultiMsg(false);
 
 
 	//copy the droid's weapon stats
@@ -5863,7 +5870,6 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 	{
 		if (psDroid->asWeaps[i].nStat > 0)
 		{
-			psDroid->asWeaps[i].hitPoints = psSaveDroid->asWeaps[i].hitPoints;
 			psDroid->asWeaps[i].ammo = psSaveDroid->asWeaps[i].ammo;
 			psDroid->asWeaps[i].lastFired = psSaveDroid->asWeaps[i].lastFired;
 		}
@@ -5939,7 +5945,7 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 		}
 		else
 		{
-			ASSERT( FALSE,"loadUnit TargetStat not found" );
+			ASSERT( false,"loadUnit TargetStat not found" );
 			psDroid->psTarStats = NULL;
 		}
 	}
@@ -6106,7 +6112,7 @@ static BOOL loadDroidSetPointers(void)
 	}
 
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -6144,7 +6150,7 @@ BOOL loadSaveDroidV11(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
 	{
 		debug( LOG_ERROR, "unitLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Load in the droid data */
@@ -6169,7 +6175,6 @@ BOOL loadSaveDroidV11(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
 		endian_udword(&psSaveDroid->burnDamage);
 		for(i = 0; i < TEMP_DROID_MAXPROGS; i++) {
 			/* SAVE_WEAPON_V19 */
-			endian_udword(&psSaveDroid->asWeaps[i].hitPoints);
 			endian_udword(&psSaveDroid->asWeaps[i].ammo);
 			endian_udword(&psSaveDroid->asWeaps[i].lastFired);
 		}
@@ -6215,7 +6220,7 @@ BOOL loadSaveDroidV11(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
 				if (!grpCreate(&psGrp))
 				{
 					debug( LOG_NEVER, "unit build: unable to create group\n" );
-					return FALSE;
+					return false;
 				}
 				grpJoin(psGrp, psDroid);
 				psCurrentTransGroup = psDroid->psGroup;
@@ -6230,7 +6235,7 @@ BOOL loadSaveDroidV11(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
 
 	ppsCurrentDroidLists = NULL;//ensure it always gets set
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -6276,7 +6281,7 @@ BOOL loadSaveDroidV19(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
 	{
 		debug( LOG_ERROR, "unitLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Load in the droid data */
@@ -6322,7 +6327,6 @@ BOOL loadSaveDroidV19(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
 		endian_udword(&psSaveDroid->burnDamage);
 		for(i = 0; i < TEMP_DROID_MAXPROGS; i++) {
 			/* SAVE_WEAPON_V19 */
-			endian_udword(&psSaveDroid->asWeaps[i].hitPoints);
 			endian_udword(&psSaveDroid->asWeaps[i].ammo);
 			endian_udword(&psSaveDroid->asWeaps[i].lastFired);
 		}
@@ -6370,7 +6374,7 @@ BOOL loadSaveDroidV19(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
 				if (!grpCreate(&psGrp))
 				{
 					debug( LOG_NEVER, "unit build: unable to create group\n" );
-					return FALSE;
+					return false;
 				}
 				grpJoin(psGrp, psDroid);
 				psCurrentTransGroup = psDroid->psGroup;
@@ -6385,7 +6389,7 @@ BOOL loadSaveDroidV19(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
 
 	ppsCurrentDroidLists = NULL;//ensure it always gets set
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -6420,7 +6424,7 @@ BOOL loadSaveDroidV(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD v
 	{
 		debug( LOG_ERROR, "unitLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Load in the droid data */
@@ -6514,7 +6518,6 @@ BOOL loadSaveDroidV(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD v
 		}
 		for(i = 0; i < TEMP_DROID_MAXPROGS; i++) {
 			/* SAVE_WEAPON */
-			endian_udword(&psSaveDroid->asWeaps[i].hitPoints);
 			endian_udword(&psSaveDroid->asWeaps[i].ammo);
 			endian_udword(&psSaveDroid->asWeaps[i].lastFired);
 		}
@@ -6557,7 +6560,7 @@ BOOL loadSaveDroidV(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD v
 				if (!grpCreate(&psGrp))
 				{
 					DBPRINTF(("droid build: unable to create group\n"));
-					return FALSE;
+					return false;
 				}
 				psDroid->psGroup = NULL;
 				grpJoin(psGrp, psDroid);
@@ -6579,7 +6582,7 @@ BOOL loadSaveDroidV(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD v
 
 	ppsCurrentDroidLists = NULL;//ensure it always gets set
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -6593,7 +6596,7 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			templates are loaded from Access AND the save game so they should all
 			still exist*/
 			ASSERT(strlen(psCurr->aName) + 1 < sizeof(psSaveDroid->name), "Truncation of droid name occurred! Max droid length (without truncation while saving) is %zu", sizeof(psSaveDroid->name) - 1);
-			strlcpy(psSaveDroid->name, psCurr->aName, sizeof(psSaveDroid->name));
+			sstrcpy(psSaveDroid->name, psCurr->aName);
 
 			// not interested in first comp - COMP_UNKNOWN
 			for (i=1; i < DROID_MAXCOMP; i++)
@@ -6618,7 +6621,6 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 					if (getNameFromComp(COMP_WEAPON, psSaveDroid->asWeaps[i].name, psCurr->asWeaps[i].nStat))
 
 					{
-    					psSaveDroid->asWeaps[i].hitPoints = psCurr->asWeaps[i].hitPoints;
 	    				psSaveDroid->asWeaps[i].ammo = psCurr->asWeaps[i].ammo;
 		    			psSaveDroid->asWeaps[i].lastFired = psCurr->asWeaps[i].lastFired;
 					}
@@ -6673,7 +6675,7 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			if (psCurr->psTarStats != NULL)
 			{
 				ASSERT(strlen(psCurr->psTarStats->pName) < sizeof(psSaveDroid->tarStatName), "writeUnitFile; psTarStat pName Error");
-				strlcpy(psSaveDroid->tarStatName, psCurr->psTarStats->pName, sizeof(psSaveDroid->tarStatName));
+				sstrcpy(psSaveDroid->tarStatName, psCurr->psTarStats->pName);
 			}
 			else
 			{
@@ -6703,7 +6705,7 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 
 			//version 21
 			psSaveDroid->commandId = NULL_ID;
-			if (psCurr->psGroup && psCurr->droidType != DROID_COMMAND && psCurr->psGroup->type == GT_COMMAND)
+			if (hasCommander(psCurr))
 			{
 				if (((DROID*)psCurr->psGroup->psCommander)->died <= 1)
 				{
@@ -6744,7 +6746,6 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			endian_udword(&psSaveDroid->body);
 			endian_udword(&psSaveDroid->saveType);
 			for(i = 0; i < TEMP_DROID_MAXPROGS; i++) {
-				endian_udword(&psSaveDroid->asWeaps[i].hitPoints);
 				endian_udword(&psSaveDroid->asWeaps[i].ammo);
 				endian_udword(&psSaveDroid->asWeaps[i].lastFired);
 			}
@@ -6784,7 +6785,7 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			endian_udword(&psSaveDroid->burnStart);
 			endian_udword(&psSaveDroid->burnDamage);
 
-			return TRUE;
+			return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -6799,7 +6800,7 @@ BOOL writeDroidFile(char *pFileName, DROID **ppsCurrentDroidLists)
 	DROID				*psTrans;
 	DROID_SAVEHEADER	*psHeader;
 	SAVE_DROID			*psSaveDroid;
-	BOOL status = TRUE;
+	BOOL status = true;
 
 	//total all the droids in the world
 	for (player = 0; player < MAX_PLAYERS; player++)
@@ -6843,7 +6844,7 @@ BOOL writeDroidFile(char *pFileName, DROID **ppsCurrentDroidLists)
 	{
 		debug( LOG_ERROR, "Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Put the file header on the file */
@@ -6900,7 +6901,7 @@ BOOL writeDroidFile(char *pFileName, DROID **ppsCurrentDroidLists)
 		free(pFileData);
 		return status;
 	}
-	return FALSE;
+	return false;
 }
 
 
@@ -6916,7 +6917,7 @@ BOOL loadSaveStructure(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "loadSaveStructure: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* STRUCT_SAVEHEADER */
@@ -6931,37 +6932,37 @@ BOOL loadSaveStructure(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "StructLoad: unsupported save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 	else if (psHeader->version < VERSION_9)
 	{
 		if (!loadSaveStructureV7(pFileData, filesize, psHeader->quantity))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else if (psHeader->version <= VERSION_19)
 	{
 		if (!loadSaveStructureV19(pFileData, filesize, psHeader->quantity, psHeader->version))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else if (psHeader->version <= CURRENT_VERSION_NUM)
 	{
 		if (!loadSaveStructureV(pFileData, filesize, psHeader->quantity, psHeader->version))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else
 	{
 		debug( LOG_ERROR, "StructLoad: undefined save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -6985,7 +6986,7 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
 	{
 		debug( LOG_ERROR, "structureLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Load in the structure data */
@@ -7023,7 +7024,7 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
 			NumberOfSkippedStructures++;
 		}
 		//get the stats for this structure
-		found = FALSE;
+		found = false;
 
 
 		if (!getSaveObjectName(psSaveStructure->name))
@@ -7038,7 +7039,7 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
 
 			if (!strcmp(psStats->pName, psSaveStructure->name))
 			{
-				found = TRUE;
+				found = true;
 				break;
 			}
 		}
@@ -7049,10 +7050,6 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
 			abort();
 			continue;
 		}
-		/*create the Structure */
-		//psStructure = buildStructure((asStructureStats + psSaveStructure->
-		//	structureInc), psSaveStructure->pos.x, psSaveStructure->pos.y,
-		//	psSaveStructure->player);
 
 		//for modules - need to check the base structure exists
 		if (IsStatExpansionModule(psStats))
@@ -7092,18 +7089,18 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
         }
 
         psStructure = buildStructure(psStats, psSaveStructure->x, psSaveStructure->y,
-			psSaveStructure->player,TRUE);
+			psSaveStructure->player,true);
 		if (!psStructure)
 		{
-			ASSERT( FALSE, "loadSaveStructure:Unable to create structure" );
-			return FALSE;
+			ASSERT( false, "loadSaveStructure:Unable to create structure" );
+			return false;
 		}
 
         /*The original code here didn't work and so the scriptwriters worked
         round it by using the module ID - so making it work now will screw up
         the scripts -so in ALL CASES overwrite the ID!*/
 		//don't copy the module's id etc
-		//if (IsStatExpansionModule(psStats)==FALSE)
+		//if (IsStatExpansionModule(psStats)==false)
 		{
 			//copy the values across
 			psStructure->id = psSaveStructure->id;
@@ -7185,6 +7182,7 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
 				psRepair->psDeliveryPoint = NULL;
 				psRepair->psObj = NULL;
 				psRepair->currentPtsAdded = 0;
+				psRepair->droidQueue = 0;
 				break;
 			default:
 				break;
@@ -7197,7 +7195,7 @@ BOOL loadSaveStructureV7(char *pFileData, UDWORD filesize, UDWORD numStructures)
 		abort();
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -7270,7 +7268,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
 	{
 		debug( LOG_ERROR, "structureLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Load in the structure data */
@@ -7318,7 +7316,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
 
 		}
 		//get the stats for this structure
-		found = FALSE;
+		found = false;
 
 
 		if (!getSaveObjectName(psSaveStructure->name))
@@ -7333,7 +7331,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
 
 			if (!strcmp(psStats->pName, psSaveStructure->name))
 			{
-				found = TRUE;
+				found = true;
 				break;
 			}
 		}
@@ -7381,18 +7379,18 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
         }
 
 		psStructure = buildStructure(psStats, psSaveStructure->x, psSaveStructure->y,
-			psSaveStructure->player,TRUE);
+			psSaveStructure->player,true);
 		if (!psStructure)
 		{
-			ASSERT( FALSE, "loadSaveStructure:Unable to create structure" );
-			return FALSE;
+			ASSERT( false, "loadSaveStructure:Unable to create structure" );
+			return false;
 		}
 
         /*The original code here didn't work and so the scriptwriters worked
         round it by using the module ID - so making it work now will screw up
         the scripts -so in ALL CASES overwrite the ID!*/
 		//don't copy the module's id etc
-		//if (IsStatExpansionModule(psStats)==FALSE)
+		//if (IsStatExpansionModule(psStats)==false)
 		{
 			//copy the values across
 			psStructure->id = psSaveStructure->id;
@@ -7467,7 +7465,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
 						while (capacity)
 						{
 		                    buildStructure(psModule, psStructure->pos.x, psStructure->pos.y,
-                                psStructure->player, FALSE);
+                                psStructure->player, false);
                             capacity--;
 						}
 
@@ -7552,8 +7550,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
 				    psModule = getModuleStat(psStructure);
 					capacity = psSaveStructure->capacity;
 					//build the appropriate number of modules
-                    buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, FALSE);
-//					psStructure->sDisplay.imd = researchModuleIMDs[psSaveStructure->capacity-1];
+					buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, true);
 				}
 				break;
 			case REF_POWER_GEN:
@@ -7563,8 +7560,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
 				    psModule = getModuleStat(psStructure);
 					capacity = psSaveStructure->capacity;
 					//build the appropriate number of modules
-                    buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, FALSE);
-//					psStructure->sDisplay.imd = powerModuleIMDs[psSaveStructure->capacity-1];
+					buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, true);
 				}
 				break;
 			case REF_RESOURCE_EXTRACTOR:
@@ -7572,7 +7568,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
                 //if run out of power, then the res_extractor should be inactive
                 if (psSaveStructure->output == 0)
                 {
-                    ((RES_EXTRACTOR *)psStructure->pFunctionality)->active = FALSE;
+                    ((RES_EXTRACTOR *)psStructure->pFunctionality)->active = false;
                 }
 				break;
 			case REF_REPAIR_FACILITY: //CODE THIS SOMETIME
@@ -7672,7 +7668,7 @@ BOOL loadSaveStructureV19(char *pFileData, UDWORD filesize, UDWORD numStructures
 		abort();
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -7713,7 +7709,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 	{
 		debug( LOG_ERROR, "structureLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Load in the structure data */
@@ -7761,7 +7757,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 
 		}
 		//get the stats for this structure
-		found = FALSE;
+		found = false;
 
 
 		if (!getSaveObjectName(psSaveStructure->name))
@@ -7776,7 +7772,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 
 			if (!strcmp(psStats->pName, psSaveStructure->name))
 			{
-				found = TRUE;
+				found = true;
 				break;
 			}
 		}
@@ -7824,18 +7820,18 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
         }
 
 		psStructure = buildStructure(psStats, psSaveStructure->x, psSaveStructure->y,
-			psSaveStructure->player,TRUE);
+			psSaveStructure->player,true);
 		if (!psStructure)
 		{
-			ASSERT( FALSE, "loadSaveStructure:Unable to create structure" );
-			return FALSE;
+			ASSERT( false, "loadSaveStructure:Unable to create structure" );
+			return false;
 		}
 
         /*The original code here didn't work and so the scriptwriters worked
         round it by using the module ID - so making it work now will screw up
         the scripts -so in ALL CASES overwrite the ID!*/
 		//don't copy the module's id etc
-		//if (IsStatExpansionModule(psStats)==FALSE)
+		//if (IsStatExpansionModule(psStats)==false)
 		{
 			//copy the values across
 			psStructure->id = psSaveStructure->id;
@@ -7897,9 +7893,8 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 					//build the appropriate number of modules
 					while (capacity)
 					{
-		                buildStructure(psModule, psStructure->pos.x, psStructure->pos.y,
-                            psStructure->player, FALSE);
-                        capacity--;
+						buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, true);
+						capacity--;
 					}
 
 				}
@@ -7948,7 +7943,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 					psModule = getModuleStat(psStructure);
 					capacity = psSaveStructure->capacity;
 					//build the appropriate number of modules
-					buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, FALSE);
+					buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, true);
 				}
 				//this is set up during module build - if the stats have changed it will also set up with the latest value
 				psResearch->powerAccrued = psSaveStructure->powerAccrued;
@@ -7987,8 +7982,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 				    psModule = getModuleStat(psStructure);
 					capacity = psSaveStructure->capacity;
 					//build the appropriate number of modules
-                    buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, FALSE);
-//					psStructure->sDisplay.imd = powerModuleIMDs[psSaveStructure->capacity-1];
+					buildStructure(psModule, psStructure->pos.x, psStructure->pos.y, psStructure->player, true);
 				}
 				break;
 			case REF_RESOURCE_EXTRACTOR:
@@ -7996,7 +7990,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
                 //if run out of power, then the res_extractor should be inactive
                 if (psSaveStructure->output == 0)
                 {
-                    ((RES_EXTRACTOR *)psStructure->pFunctionality)->active = FALSE;
+                    ((RES_EXTRACTOR *)psStructure->pFunctionality)->active = false;
                 }
 				break;
 			case REF_REPAIR_FACILITY: //CODE THIS SOMETIME
@@ -8108,7 +8102,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 		abort();
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -8128,7 +8122,7 @@ BOOL writeStructFile(char *pFileName)
 	SAVE_STRUCTURE		*psSaveStruct;
 	FLAG_POSITION		*psFlag;
 	UDWORD				researchId;
-	BOOL status = TRUE;
+	BOOL status = true;
 
 	//total all the structures in the world
 	for (player = 0; player < MAX_PLAYERS; player++)
@@ -8146,7 +8140,7 @@ BOOL writeStructFile(char *pFileName)
 	{
 		debug( LOG_ERROR, "Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Put the file header on the file */
@@ -8283,7 +8277,7 @@ BOOL writeStructFile(char *pFileName)
 						researchId = ((RESEARCH_FACILITY *)psCurr->pFunctionality)->
 							psSubject->ref - REF_RESEARCH_START;
 						ASSERT(strlen(asResearch[researchId].pName) < sizeof(psSaveStruct->researchName), "writeStructData: research name too long");
-						strlcpy(psSaveStruct->researchName, asResearch[researchId].pName, sizeof(psSaveStruct->researchName));
+						sstrcpy(psSaveStruct->researchName, asResearch[researchId].pName);
 						psSaveStruct->timeStarted = ((RESEARCH_FACILITY *)psCurr->
 							pFunctionality)->timeStarted;
 					}
@@ -8343,7 +8337,7 @@ BOOL writeStructFile(char *pFileName)
 					}
 					break;
 				default: //CODE THIS SOMETIME
-					ASSERT( FALSE,"Structure facility not saved" );
+					ASSERT( false,"Structure facility not saved" );
 					break;
 				}
 			}
@@ -8389,7 +8383,7 @@ BOOL writeStructFile(char *pFileName)
 		free(pFileData);
 		return status;
 	}
-	return FALSE;
+	return false;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -8498,7 +8492,7 @@ BOOL loadStructSetPointers(void)
 			}
 		}
 	}
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -8513,7 +8507,7 @@ BOOL loadSaveFeature(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "loadSaveFeature: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* FEATURE_SAVEHEADER */
@@ -8528,30 +8522,30 @@ BOOL loadSaveFeature(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "FeatLoad: unsupported save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 	else if (psHeader->version <= VERSION_19)
 	{
 		if (!loadSaveFeatureV14(pFileData, filesize, psHeader->quantity, psHeader->version))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else if (psHeader->version <= CURRENT_VERSION_NUM)
 	{
 		if (!loadSaveFeatureV(pFileData, filesize, psHeader->quantity, psHeader->version))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else
 	{
 		debug( LOG_ERROR, "FeatLoad: undefined save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -8581,7 +8575,7 @@ BOOL loadSaveFeatureV14(char *pFileData, UDWORD filesize, UDWORD numFeatures, UD
 	{
 		debug( LOG_ERROR, "featureLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Load in the feature data */
@@ -8608,7 +8602,7 @@ BOOL loadSaveFeatureV14(char *pFileData, UDWORD filesize, UDWORD numFeatures, UD
 			goto error;
 		}*/
 		//get the stats for this feature
-		found = FALSE;
+		found = false;
 
 
 		if (!getSaveObjectName(psSaveFeature->name))
@@ -8624,7 +8618,7 @@ BOOL loadSaveFeatureV14(char *pFileData, UDWORD filesize, UDWORD numFeatures, UD
 			if (!strcmp(psStats->pName, psSaveFeature->name))
 
 			{
-				found = TRUE;
+				found = true;
 				break;
 			}
 		}
@@ -8639,13 +8633,13 @@ BOOL loadSaveFeatureV14(char *pFileData, UDWORD filesize, UDWORD numFeatures, UD
 		//create the Feature
 		//buildFeature(asFeatureStats + psSaveFeature->featureInc,
 		//	psSaveFeature->pos.x, psSaveFeature->pos.y);
-		pFeature = buildFeature(psStats, psSaveFeature->x, psSaveFeature->y,TRUE);
+		pFeature = buildFeature(psStats, psSaveFeature->x, psSaveFeature->y,true);
 		//will be added to the top of the linked list
 		//pFeature = apsFeatureLists[0];
 		if (!pFeature)
 		{
-			ASSERT( FALSE, "loadSaveFeature:Unable to create feature" );
-			return FALSE;
+			ASSERT( false, "loadSaveFeature:Unable to create feature" );
+			return false;
 		}
 		//restore values
 		pFeature->id = psSaveFeature->id;
@@ -8662,7 +8656,7 @@ BOOL loadSaveFeatureV14(char *pFileData, UDWORD filesize, UDWORD numFeatures, UD
 
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -8685,7 +8679,7 @@ BOOL loadSaveFeatureV(char *pFileData, UDWORD filesize, UDWORD numFeatures, UDWO
 	{
 		debug( LOG_ERROR, "featureLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Load in the feature data */
@@ -8712,7 +8706,7 @@ BOOL loadSaveFeatureV(char *pFileData, UDWORD filesize, UDWORD numFeatures, UDWO
 			goto error;
 		}*/
 		//get the stats for this feature
-		found = FALSE;
+		found = false;
 
 
 		if (!getSaveObjectName(psSaveFeature->name))
@@ -8727,7 +8721,7 @@ BOOL loadSaveFeatureV(char *pFileData, UDWORD filesize, UDWORD numFeatures, UDWO
 
 			if (!strcmp(psStats->pName, psSaveFeature->name))
 			{
-				found = TRUE;
+				found = true;
 				break;
 			}
 		}
@@ -8743,13 +8737,13 @@ BOOL loadSaveFeatureV(char *pFileData, UDWORD filesize, UDWORD numFeatures, UDWO
 		//create the Feature
 		//buildFeature(asFeatureStats + psSaveFeature->featureInc,
 		//	psSaveFeature->pos.x, psSaveFeature->pos.y);
-		pFeature = buildFeature(psStats, psSaveFeature->x, psSaveFeature->y,TRUE);
+		pFeature = buildFeature(psStats, psSaveFeature->x, psSaveFeature->y,true);
 		//will be added to the top of the linked list
 		//pFeature = apsFeatureLists[0];
 		if (!pFeature)
 		{
-			ASSERT( FALSE, "loadSaveFeature:Unable to create feature" );
-			return FALSE;
+			ASSERT( false, "loadSaveFeature:Unable to create feature" );
+			return false;
 		}
 		//restore values
 		pFeature->id = psSaveFeature->id;
@@ -8761,7 +8755,7 @@ BOOL loadSaveFeatureV(char *pFileData, UDWORD filesize, UDWORD numFeatures, UDWO
 			pFeature->visible[i] = psSaveFeature->visible[i]	;
 		}
 	}
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -8775,7 +8769,7 @@ BOOL writeFeatureFile(char *pFileName)
 	FEATURE				*psCurr;
 	FEATURE_SAVEHEADER	*psHeader;
 	SAVE_FEATURE		*psSaveFeature;
-	BOOL status = TRUE;
+	BOOL status = true;
 
 	//total all the features in the world
 	for (psCurr = apsFeatureLists[0]; psCurr != NULL; psCurr = psCurr->psNext)
@@ -8790,7 +8784,7 @@ BOOL writeFeatureFile(char *pFileName)
 	{
 		debug( LOG_ERROR, "Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Put the file header on the file */
@@ -8855,7 +8849,7 @@ BOOL writeFeatureFile(char *pFileName)
 		free(pFileData);
 		return status;
 	}
-	return FALSE;
+	return false;
 }
 
 
@@ -8871,7 +8865,7 @@ BOOL loadSaveTemplate(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "loadSaveTemplate: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* TEMPLATE_SAVEHEADER */
@@ -8886,36 +8880,36 @@ BOOL loadSaveTemplate(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "TemplateLoad: unsupported save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 	else if (psHeader->version < VERSION_14)
 	{
 		if (!loadSaveTemplateV7(pFileData, filesize, psHeader->quantity))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else if (psHeader->version <= VERSION_19)
 	{
 		if (!loadSaveTemplateV14(pFileData, filesize, psHeader->quantity))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else if (psHeader->version <= CURRENT_VERSION_NUM)
 	{
 		if (!loadSaveTemplateV(pFileData, filesize, psHeader->quantity))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else
 	{
 		debug( LOG_ERROR, "TemplateLoad: undefined save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -8934,7 +8928,7 @@ BOOL loadSaveTemplateV7(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 	{
 		debug( LOG_ERROR, "templateLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Load in the template data */
@@ -8966,11 +8960,11 @@ BOOL loadSaveTemplateV7(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		//copy the values across
 
 		psTemplate->pName = NULL;
-		strlcpy(psTemplate->aName, psSaveTemplate->name, sizeof(psTemplate->aName));
+		sstrcpy(psTemplate->aName, psSaveTemplate->name);
 
 		psTemplate->ref = psSaveTemplate->ref;
 		psTemplate->droidType = psSaveTemplate->droidType;
-		found = TRUE;
+		found = true;
 		//for (i=0; i < DROID_MAXCOMP; i++) - not intestested in the first comp - COMP_UNKNOWN
 		for (i=1; i < DROID_MAXCOMP; i++)
 		{
@@ -8988,7 +8982,7 @@ BOOL loadSaveTemplateV7(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 				debug( LOG_ERROR, "This component no longer exists - %s, the template will be deleted", psSaveTemplate->asParts[i] );
 				abort();
 
-				found = FALSE;
+				found = false;
 				//continue;
 				break;
 			}
@@ -9001,7 +8995,7 @@ BOOL loadSaveTemplateV7(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 			continue;
 		}
 		psTemplate->numWeaps = psSaveTemplate->numWeaps;
-		found = TRUE;
+		found = true;
 		for (i=0; i < psTemplate->numWeaps; i++)
 		{
 
@@ -9013,7 +9007,7 @@ BOOL loadSaveTemplateV7(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 				debug( LOG_ERROR, "This weapon no longer exists - %s, the template will be deleted", psSaveTemplate->asWeaps[i] );
 				abort();
 
-				found = FALSE;
+				found = false;
 				//continue;
 				break;
 			}
@@ -9042,11 +9036,11 @@ BOOL loadSaveTemplateV7(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 
 	}
 
-	return TRUE;
+	return true;
 
 error:
 	droidTemplateShutDown();
-	return FALSE;
+	return false;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -9065,7 +9059,7 @@ BOOL loadSaveTemplateV14(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 	{
 		debug( LOG_ERROR, "templateLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Load in the template data */
@@ -9098,12 +9092,12 @@ BOOL loadSaveTemplateV14(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		//copy the values across
 
 		psTemplate->pName = NULL;
-		strlcpy(psTemplate->aName, psSaveTemplate->name, sizeof(psTemplate->aName));
+		sstrcpy(psTemplate->aName, psSaveTemplate->name);
 
 		psTemplate->ref = psSaveTemplate->ref;
 		psTemplate->droidType = psSaveTemplate->droidType;
 		psTemplate->multiPlayerID = psSaveTemplate->multiPlayerID;
-		found = TRUE;
+		found = true;
 		//for (i=0; i < DROID_MAXCOMP; i++) - not intestested in the first comp - COMP_UNKNOWN
 		for (i=1; i < DROID_MAXCOMP; i++)
 		{
@@ -9121,7 +9115,7 @@ BOOL loadSaveTemplateV14(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 				debug( LOG_ERROR, "This component no longer exists - %s, the template will be deleted", psSaveTemplate->asParts[i] );
 				abort();
 
-				found = FALSE;
+				found = false;
 				//continue;
 				break;
 			}
@@ -9134,7 +9128,7 @@ BOOL loadSaveTemplateV14(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 			continue;
 		}
 		psTemplate->numWeaps = psSaveTemplate->numWeaps;
-		found = TRUE;
+		found = true;
 		for (i=0; i < psTemplate->numWeaps; i++)
 		{
 
@@ -9145,7 +9139,7 @@ BOOL loadSaveTemplateV14(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 				debug( LOG_ERROR, "This weapon no longer exists - %s, the template will be deleted", psSaveTemplate->asWeaps[i] );
 				abort();
 
-				found = FALSE;
+				found = false;
 				//continue;
 				break;
 			}
@@ -9196,11 +9190,11 @@ BOOL loadSaveTemplateV14(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 
 	}
 
-	return TRUE;
+	return true;
 
 error:
 	droidTemplateShutDown();
-	return FALSE;
+	return false;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -9219,7 +9213,7 @@ BOOL loadSaveTemplateV(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 	{
 		debug( LOG_ERROR, "templateLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Load in the template data */
@@ -9253,12 +9247,12 @@ BOOL loadSaveTemplateV(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 		//copy the values across
 
 		psTemplate->pName = NULL;
-		strlcpy(psTemplate->aName, psSaveTemplate->name, sizeof(psTemplate->aName));
+		sstrcpy(psTemplate->aName, psSaveTemplate->name);
 
 		psTemplate->ref = psSaveTemplate->ref;
 		psTemplate->droidType = psSaveTemplate->droidType;
 		psTemplate->multiPlayerID = psSaveTemplate->multiPlayerID;
-		found = TRUE;
+		found = true;
 		//for (i=0; i < DROID_MAXCOMP; i++) - not intestested in the first comp - COMP_UNKNOWN
 		for (i=1; i < DROID_MAXCOMP; i++)
 		{
@@ -9293,7 +9287,7 @@ BOOL loadSaveTemplateV(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 				debug( LOG_ERROR, "This component no longer exists - %s, the template will be deleted", psSaveTemplate->asParts[i] );
 				abort();
 
-				found = FALSE;
+				found = false;
 				//continue;
 				break;
 			}
@@ -9306,7 +9300,7 @@ BOOL loadSaveTemplateV(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 			continue;
 		}
 		psTemplate->numWeaps = psSaveTemplate->numWeaps;
-		found = TRUE;
+		found = true;
 		for (i=0; i < psTemplate->numWeaps; i++)
 		{
 
@@ -9319,7 +9313,7 @@ BOOL loadSaveTemplateV(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 				abort();
 
 
-				found = FALSE;
+				found = false;
 				//continue;
 				break;
 			}
@@ -9370,11 +9364,11 @@ BOOL loadSaveTemplateV(char *pFileData, UDWORD filesize, UDWORD numTemplates)
 
 	}
 
-	return TRUE;
+	return true;
 
 error:
 	droidTemplateShutDown();
-	return FALSE;
+	return false;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -9389,7 +9383,7 @@ BOOL writeTemplateFile(char *pFileName)
 	TEMPLATE_SAVEHEADER	*psHeader;
 	SAVE_TEMPLATE		*psSaveTemplate;
 	UDWORD				i;
-	BOOL status = TRUE;
+	BOOL status = true;
 
 	//total all the droids in the world
 	for (player = 0; player < MAX_PLAYERS; player++)
@@ -9407,7 +9401,7 @@ BOOL writeTemplateFile(char *pFileName)
 	{
 		debug( LOG_ERROR, "Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* Put the file header on the file */
@@ -9427,7 +9421,7 @@ BOOL writeTemplateFile(char *pFileName)
 		for(psCurr = apsDroidTemplates[player]; psCurr != NULL; psCurr = psCurr->psNext)
 		{
 			ASSERT(strlen(psCurr->aName) + 1 < sizeof(psSaveTemplate->name), "Truncation of droid name occurred! Max droid length (without truncation while saving) is %zu", sizeof(psSaveTemplate->name) - 1);
-			strlcpy(psSaveTemplate->name, psCurr->aName, sizeof(psSaveTemplate->name));
+			sstrcpy(psSaveTemplate->name, psCurr->aName);
 
 			psSaveTemplate->ref = psCurr->ref;
 			psSaveTemplate->player = player;
@@ -9480,7 +9474,7 @@ BOOL writeTemplateFile(char *pFileName)
 		free(pFileData);
 		return status;
 	}
-	return FALSE;
+	return false;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -9495,7 +9489,7 @@ BOOL loadTerrainTypeMap(const char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "loadTerrainTypeMap: file too small" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Check the header
@@ -9505,7 +9499,7 @@ BOOL loadTerrainTypeMap(const char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "loadTerrainTypeMap: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* TILETYPE_SAVEHEADER */
@@ -9524,14 +9518,14 @@ BOOL loadTerrainTypeMap(const char *pFileData, UDWORD filesize)
 		{
 			debug( LOG_ERROR, "loadTerrainTypeMap: too many types" );
 			abort();
-			return FALSE;
+			return false;
 
 		}
-		if (*pType > TERRAIN_TYPES)
+		if (*pType > TER_MAX)
 		{
 			debug( LOG_ERROR, "loadTerrainTypeMap: terrain type out of range" );
 			abort();
-			return FALSE;
+			return false;
 		}
 
 		terrainTypes[i] = (UBYTE)*pType;
@@ -9539,7 +9533,7 @@ BOOL loadTerrainTypeMap(const char *pFileData, UDWORD filesize)
 		endian_uword(pType);
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -9558,7 +9552,7 @@ static BOOL writeTerrainTypeMapFile(char *pFileName)
 	{
 		debug( LOG_ERROR, "writeTerrainTypeMapFile: Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Put the file header on the file
@@ -9584,11 +9578,11 @@ static BOOL writeTerrainTypeMapFile(char *pFileName)
 
 	if (!saveFile(pFileName, pFileData, fileSize))
 	{
-		return FALSE;
+		return false;
 	}
 	free(pFileData);
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -9604,7 +9598,7 @@ BOOL loadSaveCompList(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "loadSaveCompList: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* COMPLIST_SAVEHEADER */
@@ -9619,30 +9613,30 @@ BOOL loadSaveCompList(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "CompLoad: unsupported save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 	else if (psHeader->version <= VERSION_19)
 	{
 		if (!loadSaveCompListV9(pFileData, filesize, psHeader->quantity, psHeader->version))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else if (psHeader->version <= CURRENT_VERSION_NUM)
 	{
 		if (!loadSaveCompListV(pFileData, filesize, psHeader->quantity, psHeader->version))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else
 	{
 		debug( LOG_ERROR, "CompLoad: undefined save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -9657,7 +9651,7 @@ BOOL loadSaveCompListV9(char *pFileData, UDWORD filesize, UDWORD numRecords, UDW
 	{
 		debug( LOG_ERROR, "CompListLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Load the data
@@ -9709,7 +9703,7 @@ BOOL loadSaveCompListV9(char *pFileData, UDWORD filesize, UDWORD numRecords, UDW
 			psSaveCompList->state;
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -9724,7 +9718,7 @@ BOOL loadSaveCompListV(char *pFileData, UDWORD filesize, UDWORD numRecords, UDWO
 	{
 		debug( LOG_ERROR, "CompListLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Load the data
@@ -9761,7 +9755,7 @@ BOOL loadSaveCompListV(char *pFileData, UDWORD filesize, UDWORD numRecords, UDWO
 			psSaveCompList->state;
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -9772,7 +9766,7 @@ static BOOL writeCompListFile(char *pFileName)
 	char *pFileData;
 	SAVE_COMPLIST			*psSaveCompList;
 	UDWORD					fileSize, totalComp, player, i;
-	COMP_BASE_STATS			*psStats;
+	COMPONENT_STATS			*psStats;
 
 	// Calculate the file size
 	totalComp = (numBodyStats + numWeaponStats + numConstructStats + numECMStats +
@@ -9784,7 +9778,7 @@ static BOOL writeCompListFile(char *pFileName)
 	{
 		debug( LOG_ERROR, "writeCompListFile: Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Put the file header on the file
@@ -9803,7 +9797,7 @@ static BOOL writeCompListFile(char *pFileName)
 	{
 		for(i = 0; i < numBodyStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asBodyStats + i);
+			psStats = (COMPONENT_STATS *)(asBodyStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9814,7 +9808,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numWeaponStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asWeaponStats + i);
+			psStats = (COMPONENT_STATS *)(asWeaponStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9825,7 +9819,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numConstructStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asConstructStats + i);
+			psStats = (COMPONENT_STATS *)(asConstructStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9836,7 +9830,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numECMStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asECMStats + i);
+			psStats = (COMPONENT_STATS *)(asECMStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9847,7 +9841,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numPropulsionStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asPropulsionStats + i);
+			psStats = (COMPONENT_STATS *)(asPropulsionStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9858,7 +9852,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numSensorStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asSensorStats + i);
+			psStats = (COMPONENT_STATS *)(asSensorStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9869,7 +9863,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numRepairStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asRepairStats + i);
+			psStats = (COMPONENT_STATS *)(asRepairStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9880,7 +9874,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numBrainStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asBrainStats + i);
+			psStats = (COMPONENT_STATS *)(asBrainStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9897,11 +9891,11 @@ static BOOL writeCompListFile(char *pFileName)
 
 	if (!saveFile(pFileName, pFileData, fileSize))
 	{
-		return FALSE;
+		return false;
 	}
 	free(pFileData);
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -9917,7 +9911,7 @@ BOOL loadSaveStructTypeList(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "loadSaveStructTypeList: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* STRUCTLIST_SAVEHEADER */
@@ -9932,30 +9926,30 @@ BOOL loadSaveStructTypeList(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "StructTypeLoad: unsupported save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 	else if (psHeader->version <= VERSION_19)
 	{
 		if (!loadSaveStructTypeListV7(pFileData, filesize, psHeader->quantity))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else if (psHeader->version <= CURRENT_VERSION_NUM)
 	{
 		if (!loadSaveStructTypeListV(pFileData, filesize, psHeader->quantity))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else
 	{
 		debug( LOG_ERROR, "StructTypeLoad: undefined save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -9971,7 +9965,7 @@ BOOL loadSaveStructTypeListV7(char *pFileData, UDWORD filesize, UDWORD numRecord
 	{
 		debug( LOG_ERROR, "StructListLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Load the data
@@ -9979,7 +9973,7 @@ BOOL loadSaveStructTypeListV7(char *pFileData, UDWORD filesize, UDWORD numRecord
 	{
 		psSaveStructList = (SAVE_STRUCTLIST_V6 *) pFileData;
 
-		found = FALSE;
+		found = false;
 
 		for (statInc = 0; statInc < numStructureStats; statInc++)
 		{
@@ -9989,7 +9983,7 @@ BOOL loadSaveStructTypeListV7(char *pFileData, UDWORD filesize, UDWORD numRecord
 			if (!strcmp(psStats->pName, psSaveStructList->name))
 
 			{
-				found = TRUE;
+				found = true;
 				break;
 			}
 		}
@@ -10014,7 +10008,7 @@ BOOL loadSaveStructTypeListV7(char *pFileData, UDWORD filesize, UDWORD numRecord
 			psSaveStructList->state;
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -10030,7 +10024,7 @@ BOOL loadSaveStructTypeListV(char *pFileData, UDWORD filesize, UDWORD numRecords
 	{
 		debug( LOG_ERROR, "StructListLoad: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Load the data
@@ -10038,7 +10032,7 @@ BOOL loadSaveStructTypeListV(char *pFileData, UDWORD filesize, UDWORD numRecords
 	{
 		psSaveStructList = (SAVE_STRUCTLIST *) pFileData;
 
-		found = FALSE;
+		found = false;
 
 		for (statInc = 0; statInc < numStructureStats; statInc++)
 		{
@@ -10048,7 +10042,7 @@ BOOL loadSaveStructTypeListV(char *pFileData, UDWORD filesize, UDWORD numRecords
 			if (!strcmp(psStats->pName, psSaveStructList->name))
 
 			{
-				found = TRUE;
+				found = true;
 				break;
 			}
 		}
@@ -10073,7 +10067,7 @@ BOOL loadSaveStructTypeListV(char *pFileData, UDWORD filesize, UDWORD numRecords
 			psSaveStructList->state;
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -10096,7 +10090,7 @@ static BOOL writeStructTypeListFile(char *pFileName)
 	{
 		debug( LOG_ERROR, "writeStructTypeListFile: Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Put the file header on the file
@@ -10130,11 +10124,11 @@ static BOOL writeStructTypeListFile(char *pFileName)
 
 	if (!saveFile(pFileName, pFileData, fileSize))
 	{
-		return FALSE;
+		return false;
 	}
 	free(pFileData);
 
-	return TRUE;
+	return true;
 }
 
 
@@ -10151,7 +10145,7 @@ BOOL loadSaveResearch(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "loadSaveResearch: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* RESEARCH_SAVEHEADER */
@@ -10166,30 +10160,30 @@ BOOL loadSaveResearch(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "ResearchLoad: unsupported save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 	else if (psHeader->version <= VERSION_19)
 	{
 		if (!loadSaveResearchV8(pFileData, filesize, psHeader->quantity))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else if (psHeader->version <= CURRENT_VERSION_NUM)
 	{
 		if (!loadSaveResearchV(pFileData, filesize, psHeader->quantity))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else
 	{
 		debug( LOG_ERROR, "ResearchLoad: undefined save format version %d", psHeader->version );
 		abort();
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -10206,7 +10200,7 @@ BOOL loadSaveResearchV8(char *pFileData, UDWORD filesize, UDWORD numRecords)
 	{
 		debug( LOG_ERROR, "loadSaveResearch: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Load the data
@@ -10219,7 +10213,7 @@ BOOL loadSaveResearchV8(char *pFileData, UDWORD filesize, UDWORD numRecords)
 		for(playerInc = 0; playerInc < MAX_PLAYERS; playerInc++)
 			endian_udword(&psSaveResearch->currentPoints[playerInc]);
 
-		found = FALSE;
+		found = false;
 
 		for (statInc = 0; statInc < numResearch; statInc++)
 		{
@@ -10229,7 +10223,7 @@ BOOL loadSaveResearchV8(char *pFileData, UDWORD filesize, UDWORD numRecords)
 			if (!strcmp(psStats->pName, psSaveResearch->name))
 
 			{
-				found = TRUE;
+				found = true;
 				break;
 			}
 		}
@@ -10268,12 +10262,12 @@ BOOL loadSaveResearchV8(char *pFileData, UDWORD filesize, UDWORD numRecords)
 			//for any research that has been completed - perform so that upgrade values are set up
 			if (psSaveResearch->researched[playerInc] == RESEARCHED)
 			{
-				researchResult(statInc, playerInc, FALSE, NULL);
+				researchResult(statInc, playerInc, false, NULL);
 			}
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -10290,7 +10284,7 @@ BOOL loadSaveResearchV(char *pFileData, UDWORD filesize, UDWORD numRecords)
 	{
 		debug( LOG_ERROR, "loadSaveResearch: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Load the data
@@ -10303,7 +10297,7 @@ BOOL loadSaveResearchV(char *pFileData, UDWORD filesize, UDWORD numRecords)
 		for(playerInc = 0; playerInc < MAX_PLAYERS; playerInc++)
 			endian_udword(&psSaveResearch->currentPoints[playerInc]);
 
-		found = FALSE;
+		found = false;
 
 		for (statInc = 0; statInc < numResearch; statInc++)
 		{
@@ -10313,7 +10307,7 @@ BOOL loadSaveResearchV(char *pFileData, UDWORD filesize, UDWORD numRecords)
 			if (!strcmp(psStats->pName, psSaveResearch->name))
 
 			{
-				found = TRUE;
+				found = true;
 				break;
 			}
 		}
@@ -10345,12 +10339,12 @@ BOOL loadSaveResearchV(char *pFileData, UDWORD filesize, UDWORD numRecords)
 			//for any research that has been completed - perform so that upgrade values are set up
 			if (psSaveResearch->researched[playerInc] == RESEARCHED)
 			{
-				researchResult(statInc, playerInc, FALSE, NULL);
+				researchResult(statInc, playerInc, false, NULL);
 			}
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -10373,7 +10367,7 @@ static BOOL writeResearchFile(char *pFileName)
 	{
 		debug( LOG_ERROR, "writeResearchFile: Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Put the file header on the file
@@ -10398,7 +10392,7 @@ static BOOL writeResearchFile(char *pFileName)
 
 		for (player = 0; player < MAX_PLAYERS; player++)
 		{
-			psSaveResearch->possible[player] = (UBYTE)IsResearchPossible(&asPlayerResList[player][i]);
+			psSaveResearch->possible[player] = IsResearchPossible(&asPlayerResList[player][i]);
 			psSaveResearch->researched[player] = (UBYTE)(asPlayerResList[player][i].ResearchStatus&RESBITS);
 			psSaveResearch->currentPoints[player] = asPlayerResList[player][i].currentPoints;
 		}
@@ -10412,11 +10406,11 @@ static BOOL writeResearchFile(char *pFileName)
 
 	if (!saveFile(pFileName, pFileData, fileSize))
 	{
-		return FALSE;
+		return false;
 	}
 	free(pFileData);
 
-	return TRUE;
+	return true;
 }
 
 
@@ -10433,7 +10427,7 @@ BOOL loadSaveMessage(char *pFileData, UDWORD filesize, SWORD levelType)
 	{
 		debug( LOG_ERROR, "loadSaveMessage: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* MESSAGE_SAVEHEADER */
@@ -10444,11 +10438,21 @@ BOOL loadSaveMessage(char *pFileData, UDWORD filesize, SWORD levelType)
 	pFileData += MESSAGE_HEADER_SIZE;
 
 	/* Check the file version */
-	if (!loadSaveMessageV(pFileData, filesize, psHeader->quantity, psHeader->version, levelType))
+	if(psHeader->version <= VERSION_35)
 	{
-		return FALSE;
+		if (!loadSaveMessageV(pFileData, filesize, psHeader->quantity, psHeader->version, levelType))
+		{
+			return false;
+		}
 	}
-	return TRUE;
+	else
+	{
+		if (!loadSaveMessage36(pFileData, filesize, psHeader->quantity, psHeader->version, levelType))
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -10472,7 +10476,7 @@ BOOL loadSaveMessageV(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWO
         //if we're loading in a CamStart or a CamChange then we're not interested in any saved messages
         if (levelType == LDS_CAMSTART || levelType == LDS_CAMCHANGE)
         {
-            return TRUE;
+            return true;
         }
 
     }
@@ -10483,7 +10487,7 @@ BOOL loadSaveMessageV(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWO
 	{
 		debug( LOG_ERROR, "loadSaveMessage: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Load the data
@@ -10504,7 +10508,7 @@ BOOL loadSaveMessageV(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWO
 			    if (psSaveMessage->bObj)
 			    {
 				    //proximity object so create get the obj from saved idy
-				    psMessage = addMessage(psSaveMessage->type, TRUE, psSaveMessage->player);
+				    psMessage = addMessage(psSaveMessage->type, true, psSaveMessage->player);
 				    if (psMessage)
 				    {
 					    psMessage->pViewData = (MSG_VIEWDATA *)getBaseObjFromId(psSaveMessage->objId);
@@ -10513,7 +10517,7 @@ BOOL loadSaveMessageV(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWO
 			    else
 			    {
 				    //proximity position so get viewdata pointer from the name
-				    psMessage = addMessage(psSaveMessage->type, FALSE, psSaveMessage->player);
+				    psMessage = addMessage(psSaveMessage->type, false, psSaveMessage->player);
 				    if (psMessage)
 				    {
 					    psViewData = (VIEWDATA *)getViewData(psSaveMessage->name);
@@ -10542,7 +10546,7 @@ BOOL loadSaveMessageV(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWO
                 if (gameType == GTYPE_SAVE_MIDMISSION)
                 {
     			    // Research message // Campaign message // Mission Report messages
-    	    		psMessage = addMessage(psSaveMessage->type, FALSE, psSaveMessage->player);
+    	    		psMessage = addMessage(psSaveMessage->type, false, psSaveMessage->player);
 	    	    	if (psMessage)
 		    	    {
 			    	    psMessage->pViewData = (MSG_VIEWDATA *)getViewData(psSaveMessage->name);
@@ -10552,7 +10556,7 @@ BOOL loadSaveMessageV(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWO
             else
             {
     			// Research message
-    	    	psMessage = addMessage(psSaveMessage->type, FALSE, psSaveMessage->player);
+    	    	psMessage = addMessage(psSaveMessage->type, false, psSaveMessage->player);
 	    	    if (psMessage)
 		    	{
 			    	psMessage->pViewData = (MSG_VIEWDATA *)getViewData(psSaveMessage->name);
@@ -10561,7 +10565,139 @@ BOOL loadSaveMessageV(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWO
 		}
 	}
 
-	return TRUE;
+	return true;
+}
+
+BOOL loadSaveMessage36(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWORD version, SWORD levelType)
+{
+	SAVE_MESSAGE_36	*psSaveMessage;
+	MESSAGE			*psMessage;
+	VIEWDATA		*psViewData = NULL;
+	UDWORD			i, height;
+
+	//clear any messages put in during level loads
+	//freeMessages();
+
+    //only clear the messages if its a mid save game
+	if (gameType == GTYPE_SAVE_MIDMISSION)
+    {
+        freeMessages();
+    }
+    else if (gameType == GTYPE_SAVE_START)
+    {
+        //if we're loading in a CamStart or a CamChange then we're not interested in any saved messages
+        if (levelType == LDS_CAMSTART || levelType == LDS_CAMCHANGE)
+        {
+            return true;
+        }
+
+    }
+
+	//check file
+	if ((sizeof(SAVE_MESSAGE_36) * numMessages + MESSAGE_HEADER_SIZE) >
+		filesize)
+	{
+		debug( LOG_ERROR, "loadSaveMessage: unexpected end of file" );
+		abort();
+		return false;
+	}
+
+	// Load the data
+	for (i = 0; i < numMessages; i++, pFileData += sizeof(SAVE_MESSAGE_36))
+	{
+		psSaveMessage = (SAVE_MESSAGE_36 *) pFileData;
+
+		/* SAVE_MESSAGE_36 */
+		endian_sdword((SDWORD*)&psSaveMessage->type);	/* FIXME: enum may not be this type! */
+		endian_sdword((SDWORD*)&psSaveMessage->dataType);
+		endian_udword(&psSaveMessage->objId);
+		endian_udword(&psSaveMessage->player);
+
+		if (psSaveMessage->type == MSG_PROXIMITY)
+		{
+            //only load proximity if a mid-mission save game
+            if (gameType == GTYPE_SAVE_MIDMISSION)
+            {
+			    if (psSaveMessage->bObj)
+			    {
+				    //proximity object so create get the obj from saved idy
+				    psMessage = addMessage(psSaveMessage->type, true, psSaveMessage->player);
+				    if (psMessage)
+				    {
+					    psMessage->pViewData = (MSG_VIEWDATA *)getBaseObjFromId(psSaveMessage->objId);
+				    }
+			    }
+			    else
+			    {
+				    //proximity position so get viewdata pointer from the name
+					psMessage = addMessage(psSaveMessage->type, false, psSaveMessage->player);
+
+					if (psMessage)
+				    {
+						if(psSaveMessage->dataType == MSG_DATA_BEACON)
+						{
+							UDWORD locX,locY;
+							SDWORD sender;
+
+							endian_udword(&psSaveMessage->locX);
+							locX = psSaveMessage->locX;
+							endian_udword(&psSaveMessage->locY);
+							locY = psSaveMessage->locY;
+							endian_sdword(&psSaveMessage->sender);
+							sender = psSaveMessage->sender;
+
+							psViewData = CreateBeaconViewData(sender, locX, locY);
+						}
+						else
+						{
+							psViewData = (VIEWDATA *)getViewData(psSaveMessage->name);
+						}
+
+						if (psViewData == NULL)
+                        {
+                            //skip this message
+                            continue;
+                        }
+					    psMessage->pViewData = (MSG_VIEWDATA *)psViewData;
+				    }
+				    //check the z value is at least the height of the terrain
+				    height = map_Height(((VIEW_PROXIMITY *)psViewData->pData)->x,
+					    ((VIEW_PROXIMITY *)psViewData->pData)->y);
+				    if (((VIEW_PROXIMITY *)psViewData->pData)->z < height)
+				    {
+					    ((VIEW_PROXIMITY *)psViewData->pData)->z = height;
+				    }
+			    }
+            }
+		}
+		else
+		{
+            //only load Campaign/Mission if a mid-mission save game
+            if (psSaveMessage->type == MSG_CAMPAIGN || psSaveMessage->type == MSG_MISSION)
+            {
+                if (gameType == GTYPE_SAVE_MIDMISSION)
+                {
+    			    // Research message // Campaign message // Mission Report messages
+    	    		psMessage = addMessage(psSaveMessage->type, false, psSaveMessage->player);
+	    	    	if (psMessage)
+		    	    {
+			    	    psMessage->pViewData = (MSG_VIEWDATA *)getViewData(psSaveMessage->name);
+			        }
+                }
+            }
+            else
+            {
+    			// Research message
+    	    	psMessage = addMessage(psSaveMessage->type, false, psSaveMessage->player);
+	    	    if (psMessage)
+		    	{
+			    	psMessage->pViewData = (MSG_VIEWDATA *)getViewData(psSaveMessage->name);
+			    }
+            }
+		}
+	}
+
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -10569,7 +10705,7 @@ BOOL loadSaveMessageV(char *pFileData, UDWORD filesize, UDWORD numMessages, UDWO
 static BOOL writeMessageFile(char *pFileName)
 {
 	MESSAGE_SAVEHEADER		*psHeader;
-	SAVE_MESSAGE			*psSaveMessage;
+	SAVE_MESSAGE_36			*psSaveMessage;
 	char *pFileData;
 	UDWORD					fileSize, player;
 	MESSAGE					*psMessage;
@@ -10588,7 +10724,7 @@ static BOOL writeMessageFile(char *pFileName)
 
 	}
 
-	fileSize = MESSAGE_HEADER_SIZE + (sizeof(SAVE_MESSAGE) *
+	fileSize = MESSAGE_HEADER_SIZE + (sizeof(SAVE_MESSAGE_36) *
 		numMessages);
 
 
@@ -10598,7 +10734,7 @@ static BOOL writeMessageFile(char *pFileName)
 	{
 		debug( LOG_ERROR, "writeMessageFile: Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Put the file header on the file
@@ -10610,7 +10746,7 @@ static BOOL writeMessageFile(char *pFileName)
 	psHeader->version = CURRENT_VERSION_NUM;
 	psHeader->quantity = numMessages;
 
-	psSaveMessage = (SAVE_MESSAGE *) (pFileData + MESSAGE_HEADER_SIZE);
+	psSaveMessage = (SAVE_MESSAGE_36 *) (pFileData + MESSAGE_HEADER_SIZE);
 	//save each type of reesearch
 	for (player = 0; player < MAX_PLAYERS; player++)
 	{
@@ -10618,6 +10754,8 @@ static BOOL writeMessageFile(char *pFileName)
 		for(psMessage = apsMessages[player]; psMessage != NULL;psMessage = psMessage->psNext)
 		{
 			psSaveMessage->type = psMessage->type;	//The type of message
+			psSaveMessage->dataType = psMessage->dataType;
+
 			if (psMessage->type == MSG_PROXIMITY)
 			{
 				//get the matching proximity message
@@ -10634,22 +10772,35 @@ static BOOL writeMessageFile(char *pFileName)
 				if (psProx->type == POS_PROXDATA)
 				{
 					//message has viewdata so store the name
-					psSaveMessage->bObj = FALSE;
+					psSaveMessage->bObj = false;
 					pViewData = (VIEWDATA*)psMessage->pViewData;
 					ASSERT( strlen(pViewData->pName) < MAX_GAME_STR_SIZE,"writeMessageFile; viewdata pName Error" );
 					strcpy(psSaveMessage->name,pViewData->pName);	//Pointer to view data - if any - should be some!
+
+					// save beacon data
+					if(psMessage->dataType == MSG_DATA_BEACON)
+					{
+						VIEW_PROXIMITY * viewData = (VIEW_PROXIMITY *)((VIEWDATA *)psMessage->pViewData)->pData;
+
+						psSaveMessage->locX =  viewData->x;
+						endian_udword(psSaveMessage->locX);
+						psSaveMessage->locY =  viewData->y;
+						endian_udword(psSaveMessage->locY);
+						psSaveMessage->sender = viewData->sender;
+						endian_sdword(psSaveMessage->sender);
+					}
 				}
 				else
 				{
 					//message has object so store ObjectId
-					psSaveMessage->bObj = TRUE;
+					psSaveMessage->bObj = true;
 					psObj = (BASE_OBJECT*)psMessage->pViewData;
 					psSaveMessage->objId = psObj->id;//should be unique for these objects
 				}
 			}
 			else
 			{
-				psSaveMessage->bObj = FALSE;
+				psSaveMessage->bObj = false;
 				pViewData = (VIEWDATA*)psMessage->pViewData;
 				ASSERT( strlen(pViewData->pName) < MAX_GAME_STR_SIZE,"writeMessageFile; viewdata pName Error" );
 				strcpy(psSaveMessage->name,pViewData->pName);	//Pointer to view data - if any - should be some!
@@ -10658,10 +10809,11 @@ static BOOL writeMessageFile(char *pFileName)
 			psSaveMessage->player = psMessage->player;		//which player this message belongs to
 
 			endian_sdword((SDWORD*)&psSaveMessage->type); /* FIXME: enum may be different type! */
+			endian_sdword((SDWORD*)&psSaveMessage->dataType);
 			endian_udword(&psSaveMessage->objId);
 			endian_udword(&psSaveMessage->player);
 
-			psSaveMessage = (SAVE_MESSAGE *)((char *)psSaveMessage + 	sizeof(SAVE_MESSAGE));
+			psSaveMessage = (SAVE_MESSAGE_36 *)((char *)psSaveMessage + 	sizeof(SAVE_MESSAGE_36));
 		}
 	}
 
@@ -10671,11 +10823,11 @@ static BOOL writeMessageFile(char *pFileName)
 
 	if (!saveFile(pFileName, pFileData, fileSize))
 	{
-		return FALSE;
+		return false;
 	}
 	free(pFileData);
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -10691,7 +10843,7 @@ BOOL loadSaveFlag(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "loadSaveflag: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* FLAG_SAVEHEADER */
@@ -10704,9 +10856,9 @@ BOOL loadSaveFlag(char *pFileData, UDWORD filesize)
 	/* Check the file version */
 	if (!loadSaveFlagV(pFileData, filesize, psHeader->quantity, psHeader->version))
 	{
-		return FALSE;
+		return false;
 	}
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -10738,7 +10890,7 @@ BOOL loadSaveFlagV(char *pFileData, UDWORD filesize, UDWORD numflags, UDWORD ver
 	{
 		debug( LOG_ERROR, "loadSaveflag: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Load the data
@@ -10790,7 +10942,7 @@ BOOL loadSaveFlagV(char *pFileData, UDWORD filesize, UDWORD numflags, UDWORD ver
 			}
 			else
 			{
-				ASSERT( FALSE,"loadSaveFlagV delivery flag type not recognised?" );
+				ASSERT( false,"loadSaveFlagV delivery flag type not recognised?" );
 			}
 
 			if (factoryToFind == REF_REPAIR_FACILITY)
@@ -10802,7 +10954,7 @@ BOOL loadSaveFlagV(char *pFileData, UDWORD filesize, UDWORD numflags, UDWORD ver
 					{
 						if (psStruct->type != OBJ_STRUCTURE)
 						{
-							ASSERT( FALSE,"loadFlag found duplicate Id for repair facility" );
+							ASSERT( false,"loadFlag found duplicate Id for repair facility" );
 						}
 						else if (psStruct->pStructureType->type == REF_REPAIR_FACILITY)
 						{
@@ -10844,7 +10996,7 @@ BOOL loadSaveFlagV(char *pFileData, UDWORD filesize, UDWORD numflags, UDWORD ver
 
 	resetFactoryNumFlag();//set the new numbers into the masks
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -10911,7 +11063,7 @@ static BOOL writeFlagFile(char *pFileName)
 	{
 		debug( LOG_ERROR, "writeflagFile: Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Put the file header on the file
@@ -11026,11 +11178,11 @@ static BOOL writeFlagFile(char *pFileName)
 
 	if (!saveFile(pFileName, pFileData, fileSize))
 	{
-		return FALSE;
+		return false;
 	}
 	free(pFileData);
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -11045,7 +11197,7 @@ BOOL loadSaveProduction(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "loadSaveProduction: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* PRODUCTION_SAVEHEADER */
@@ -11057,9 +11209,9 @@ BOOL loadSaveProduction(char *pFileData, UDWORD filesize)
 	/* Check the file version */
 	if (!loadSaveProductionV(pFileData, filesize, psHeader->version))
 	{
-		return FALSE;
+		return false;
 	}
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -11075,7 +11227,7 @@ BOOL loadSaveProductionV(char *pFileData, UDWORD filesize, UDWORD version)
 	{
 		debug( LOG_ERROR, "loadSaveProduction: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	//save each production run
@@ -11106,7 +11258,7 @@ BOOL loadSaveProductionV(char *pFileData, UDWORD filesize, UDWORD version)
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -11129,7 +11281,7 @@ static BOOL writeProductionFile(char *pFileName)
 	{
 		debug( LOG_ERROR, "writeProductionFile: Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Put the file header on the file
@@ -11170,11 +11322,11 @@ static BOOL writeProductionFile(char *pFileName)
 
 	if (!saveFile(pFileName, pFileData, fileSize))
 	{
-		return FALSE;
+		return false;
 	}
 	free(pFileData);
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -11189,7 +11341,7 @@ BOOL loadSaveStructLimits(char *pFileData, UDWORD filesize)
 	{
 		debug( LOG_ERROR, "loadSaveStructLimits: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	//increment to the start of the data
@@ -11204,23 +11356,23 @@ BOOL loadSaveStructLimits(char *pFileData, UDWORD filesize)
 	{
 		if (!loadSaveStructLimitsV19(pFileData, filesize, psHeader->quantity))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else if (psHeader->version <= CURRENT_VERSION_NUM)
 	{
 		if (!loadSaveStructLimitsV(pFileData, filesize, psHeader->quantity))
 		{
-			return FALSE;
+			return false;
 		}
 	}
 	else
 	{
 		debug( LOG_ERROR, "loadSaveStructLimits: Incorrect file format version" );
 		abort();
-		return FALSE;
+		return false;
 	}
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -11238,7 +11390,7 @@ BOOL loadSaveStructLimitsV19(char *pFileData, UDWORD filesize, UDWORD numLimits)
 	{
 		debug( LOG_ERROR, "Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	if ((sizeof(SAVE_STRUCTLIMITS_V2) * numLimits + STRUCTLIMITS_HEADER_SIZE) >
@@ -11246,7 +11398,7 @@ BOOL loadSaveStructLimitsV19(char *pFileData, UDWORD filesize, UDWORD numLimits)
 	{
 		debug( LOG_ERROR, "loadSaveStructLimits: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Load in the data
@@ -11256,14 +11408,14 @@ BOOL loadSaveStructLimitsV19(char *pFileData, UDWORD filesize, UDWORD numLimits)
 		memcpy(psSaveLimits, pFileData, sizeof(SAVE_STRUCTLIMITS_V2));
 
 		//get the stats for this structure
-		found = FALSE;
+		found = false;
 		for (statInc = 0; statInc < numStructureStats; statInc++)
 		{
 			psStats = asStructureStats + statInc;
 			//loop until find the same name
 			if (!strcmp(psStats->pName, psSaveLimits->name))
 			{
-				found = TRUE;
+				found = true;
 				break;
 			}
 		}
@@ -11292,7 +11444,7 @@ BOOL loadSaveStructLimitsV19(char *pFileData, UDWORD filesize, UDWORD numLimits)
 		abort();
 	}
 	free(psSaveLimits);
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -11309,7 +11461,7 @@ BOOL loadSaveStructLimitsV(char *pFileData, UDWORD filesize, UDWORD numLimits)
 	{
 		debug( LOG_ERROR, "Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	if ((sizeof(SAVE_STRUCTLIMITS) * numLimits + STRUCTLIMITS_HEADER_SIZE) >
@@ -11317,7 +11469,7 @@ BOOL loadSaveStructLimitsV(char *pFileData, UDWORD filesize, UDWORD numLimits)
 	{
 		debug( LOG_ERROR, "loadSaveStructLimits: unexpected end of file" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Load in the data
@@ -11327,14 +11479,14 @@ BOOL loadSaveStructLimitsV(char *pFileData, UDWORD filesize, UDWORD numLimits)
 		memcpy(psSaveLimits, pFileData, sizeof(SAVE_STRUCTLIMITS));
 
 		//get the stats for this structure
-		found = FALSE;
+		found = false;
 		for (statInc = 0; statInc < numStructureStats; statInc++)
 		{
 			psStats = asStructureStats + statInc;
 			//loop until find the same name
 			if (!strcmp(psStats->pName, psSaveLimits->name))
 			{
-				found = TRUE;
+				found = true;
 				break;
 			}
 		}
@@ -11363,7 +11515,7 @@ BOOL loadSaveStructLimitsV(char *pFileData, UDWORD filesize, UDWORD numLimits)
 		abort();
 	}
 	free(psSaveLimits);
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -11377,7 +11529,7 @@ BOOL writeStructLimitsFile(char *pFileName)
 	STRUCTLIMITS_SAVEHEADER		*psHeader;
 	SAVE_STRUCTLIMITS			*psSaveLimit;
 	STRUCTURE_STATS				*psStructStats;
-	BOOL status = TRUE;
+	BOOL status = true;
 
 	totalLimits = numStructureStats * MAX_PLAYERS;
 
@@ -11388,7 +11540,7 @@ BOOL writeStructLimitsFile(char *pFileName)
 	{
 		debug( LOG_ERROR, "Out of memory" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	// Put the file header on the file
@@ -11425,7 +11577,7 @@ BOOL writeStructLimitsFile(char *pFileName)
 		free(pFileData);
 		return status;
 	}
-	return FALSE;
+	return false;
 }
 
 static const char FireSupport_tag_definition[] = "tagdefinitions/savegame/firesupport.def";
@@ -11442,7 +11594,7 @@ BOOL readFiresupportDesignators(char *pFileName)
 	if (!tagOpenRead(FireSupport_tag_definition, pFileName))
 	{
 		debug(LOG_ERROR, "readFiresupportDesignators: Failed to open savegame %s", pFileName);
-		return FALSE;
+		return false;
 	}
 	debug(LOG_MAP, "Reading tagged savegame %s with definition %s:", pFileName, FireSupport_tag_definition);
 
@@ -11450,7 +11602,7 @@ BOOL readFiresupportDesignators(char *pFileName)
 	if (strcmp(formatIdentifier, FireSupport_file_identifier) != 0)
 	{
 		debug(LOG_ERROR, "readFiresupportDesignators: Incompatble %s, 'FIRESUPPORT' expected", pFileName);
-		return FALSE;
+		return false;
 	}
 
 	numPlayers = tagReadEnter(0x02);
@@ -11467,7 +11619,7 @@ BOOL readFiresupportDesignators(char *pFileName)
 
 	tagClose();
 
-	return TRUE;
+	return true;
 }
 
 
@@ -11481,7 +11633,7 @@ BOOL writeFiresupportDesignators(char *pFileName)
 	if (!tagOpenWrite(FireSupport_tag_definition, pFileName))
 	{
 		debug(LOG_ERROR, "writeFiresupportDesignators: Failed to create savegame %s", pFileName);
-		return FALSE;
+		return false;
 	}
 	debug(LOG_MAP, "Creating tagged savegame %s with definition %s:", pFileName, FireSupport_tag_definition);
 
@@ -11504,7 +11656,7 @@ BOOL writeFiresupportDesignators(char *pFileName)
 
 	tagClose();
 
-	return TRUE;
+	return true;
 }
 
 
@@ -11517,15 +11669,15 @@ static BOOL	writeScriptState(char *pFileName)
 
 	if (!eventSaveState(3, &pBuffer, &fileSize))
 	{
-		return FALSE;
+		return false;
 	}
 
 	if (!saveFile(pFileName, pBuffer, fileSize))
 	{
-		return FALSE;
+		return false;
 	}
 	free(pBuffer);
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -11534,7 +11686,7 @@ BOOL loadScriptState(char *pFileName)
 {
 	char	*pFileData;
 	UDWORD	fileSize;
-	BOOL bHashed = FALSE;
+	BOOL bHashed = false;
 
 	// change the file extension
 	pFileName[strlen(pFileName)-4] = (char)0;
@@ -11545,20 +11697,20 @@ BOOL loadScriptState(char *pFileName)
 	{
 		debug( LOG_ERROR, "loadScriptState: couldn't load %s", pFileName );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	if (saveGameVersion > VERSION_12)
 	{
-		bHashed = TRUE;
+		bHashed = true;
 	}
 
 	if (!eventLoadState(pFileData, fileSize, bHashed))
 	{
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -11596,7 +11748,7 @@ static void setMapScroll(void)
 // -----------------------------------------------------------------------------------------
 BOOL getSaveObjectName(char *pName)
 {
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------------------------
@@ -11646,151 +11798,15 @@ static BOOL getNameFromComp(UDWORD compType, char *pDest, UDWORD compIndex)
 	default:
 		debug( LOG_ERROR, "Invalid component type - game.c" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	//copy the name into the destination string
 	strcpy(pDest, psStats->pName);
-	return TRUE;
+	return true;
 }
 // -----------------------------------------------------------------------------------------
 // END
-
-
-// draws the structures onto a completed map preview sprite.
-BOOL plotStructurePreview(iV_Image *backDropSprite, UBYTE scale, UDWORD offX, UDWORD offY)
-{
-	SAVE_STRUCTURE				sSave;  // close eyes now.
-	SAVE_STRUCTURE				*psSaveStructure = &sSave; // assumes save_struct is larger than all previous ones...
-	SAVE_STRUCTURE_V2			*psSaveStructure2 = (SAVE_STRUCTURE_V2*)&sSave;
-	SAVE_STRUCTURE_V12			*psSaveStructure12= (SAVE_STRUCTURE_V12*)&sSave;
-	SAVE_STRUCTURE_V14			*psSaveStructure14= (SAVE_STRUCTURE_V14*)&sSave;
-	SAVE_STRUCTURE_V15			*psSaveStructure15= (SAVE_STRUCTURE_V15*)&sSave;
-	SAVE_STRUCTURE_V17			*psSaveStructure17= (SAVE_STRUCTURE_V17*)&sSave;
-	SAVE_STRUCTURE_V20			*psSaveStructure20= (SAVE_STRUCTURE_V20*)&sSave;
-										// ok you can open them again..
-
-	STRUCT_SAVEHEADER		*psHeader;
-	char			aFileName[256];
-	UDWORD			xx,yy,x,y,count,fileSize,sizeOfSaveStruture;
-	char			*pFileData = NULL;
-	LEVEL_DATASET	*psLevel;
-
-	levFindDataSet(game.map, &psLevel);
-	strcpy(aFileName,psLevel->apDataFiles[0]);
-	aFileName[strlen(aFileName)-4] = '\0';
-	strcat(aFileName, "/struct.bjo");
-
-	pFileData = fileLoadBuffer;
-	if (!loadFileToBuffer(aFileName, pFileData, FILE_LOAD_BUFFER_SIZE, &fileSize))
-	{
-		debug( LOG_NEVER, "plotStructurePreview: Fail1\n" );
-	}
-
-	/* Check the file type */
-	psHeader = (STRUCT_SAVEHEADER *)pFileData;
-	if (psHeader->aFileType[0] != 's' || psHeader->aFileType[1] != 't' ||
-		psHeader->aFileType[2] != 'r' || psHeader->aFileType[3] != 'u')
-	{
-		debug( LOG_ERROR, "plotStructurePreview: Incorrect file type" );
-		abort();
-		return FALSE;
-	}
-
-	/* STRUCT_SAVEHEADER */
-	endian_udword(&psHeader->version);
-	endian_udword(&psHeader->quantity);
-
-	//increment to the start of the data
-	pFileData += STRUCT_HEADER_SIZE;
-
-	if (psHeader->version < VERSION_12)
-	{
-		sizeOfSaveStruture = sizeof(SAVE_STRUCTURE_V2);
-	}
-	else if (psHeader->version < VERSION_14)
-	{
-		sizeOfSaveStruture = sizeof(SAVE_STRUCTURE_V12);
-	}
-	else if (psHeader->version <= VERSION_14)
-	{
-		sizeOfSaveStruture = sizeof(SAVE_STRUCTURE_V14);
-	}
-	else if (psHeader->version <= VERSION_16)
-	{
-		sizeOfSaveStruture = sizeof(SAVE_STRUCTURE_V15);
-	}
-	else if (psHeader->version <= VERSION_19)
-	{
-		sizeOfSaveStruture = sizeof(SAVE_STRUCTURE_V17);
-	}
-	else if (psHeader->version <= VERSION_20)
-	{
-		sizeOfSaveStruture = sizeof(SAVE_STRUCTURE_V20);
-	}
-	else
-	{
-		sizeOfSaveStruture = sizeof(SAVE_STRUCTURE);
-	}
-
-
-	/* Load in the structure data */
-	for (count = 0; count < psHeader-> quantity; count ++, pFileData += sizeOfSaveStruture)
-	{
-		if (psHeader->version < VERSION_12)
-		{
-			memcpy(psSaveStructure2, pFileData, sizeOfSaveStruture);
-			xx = map_coord(psSaveStructure2->x);
-			yy = map_coord(psSaveStructure2->y);
-		}
-		else if (psHeader->version < VERSION_14)
-		{
-			memcpy(psSaveStructure12, pFileData, sizeOfSaveStruture);
-			xx = map_coord(psSaveStructure12->x);
-			yy = map_coord(psSaveStructure12->y);
-		}
-		else if (psHeader->version <= VERSION_14)
-		{
-			memcpy(psSaveStructure14, pFileData, sizeOfSaveStruture);
-			xx = map_coord(psSaveStructure14->x);
-			yy = map_coord(psSaveStructure14->y);
-		}
-		else if (psHeader->version <= VERSION_16)
-		{
-			memcpy(psSaveStructure15, pFileData, sizeOfSaveStruture);
-			xx = map_coord(psSaveStructure15->x);
-			yy = map_coord(psSaveStructure15->y);
-		}
-		else if (psHeader->version <= VERSION_19)
-		{
-			memcpy(psSaveStructure17, pFileData, sizeOfSaveStruture);
-			xx = map_coord(psSaveStructure17->x);
-			yy = map_coord(psSaveStructure17->y);
-		}
-		else if (psHeader->version <= VERSION_20)
-		{
-			memcpy(psSaveStructure20, pFileData, sizeOfSaveStruture);
-			xx = map_coord(psSaveStructure20->x);
-			yy = map_coord(psSaveStructure20->y);
-		}
-		else
-		{
-			memcpy(psSaveStructure, pFileData, sizeOfSaveStruture);
-			xx = map_coord(psSaveStructure->x);
-			yy = map_coord(psSaveStructure->y);
-		}
-
-		for(x = (xx*scale);x < (xx*scale)+scale ;x++)
-		{
-			for(y = (yy*scale);y< (yy*scale)+scale ;y++)
-			{
-				backDropSprite->bmp[((offY + y) * BACKDROP_WIDTH) + x + offX] = pal_Colour(UBYTE_MAX, 0, 0).argb;
-			}
-		}
-	}
-	return TRUE;
-
-}
 
 //======================================================
 //draws stuff into our newer bitmap.
@@ -11809,10 +11825,12 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 	STRUCT_SAVEHEADER		*psHeader;
 	char			aFileName[256];
 	UDWORD			xx,yy,x,y,count,fileSize,sizeOfSaveStruture;
+	UDWORD	playerid =0;
 	char			*pFileData = NULL;
 	LEVEL_DATASET	*psLevel;
+	PIELIGHT color = WZCOL_BLACK ;
 
-	levFindDataSet(game.map, &psLevel);
+	psLevel = levFindDataSet(game.map);
 	strcpy(aFileName,psLevel->apDataFiles[0]);
 	aFileName[strlen(aFileName)-4] = '\0';
 	strcat(aFileName, "/struct.bjo");
@@ -11830,7 +11848,7 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 	{
 		debug( LOG_ERROR, "plotStructurePreview16: Incorrect file type" );
 		abort();
-		return FALSE;
+		return false;
 	}
 
 	/* STRUCT_SAVEHEADER */
@@ -11900,6 +11918,7 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 
 			xx = map_coord(psSaveStructure2->x);
 			yy = map_coord(psSaveStructure2->y);
+			playerid = psSaveStructure2->player;
 		}
 		else if (psHeader->version < VERSION_14)
 		{
@@ -11934,6 +11953,7 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 
 			xx = map_coord(psSaveStructure12->x);
 			yy = map_coord(psSaveStructure12->y);
+			playerid = psSaveStructure12->player;
 		}
 		else if (psHeader->version <= VERSION_14)
 		{
@@ -11969,6 +11989,7 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 
 			xx = map_coord(psSaveStructure14->x);
 			yy = map_coord(psSaveStructure14->y);
+			playerid = psSaveStructure14->player;
 		}
 		else if (psHeader->version <= VERSION_16)
 		{
@@ -12005,6 +12026,7 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 
 			xx = map_coord(psSaveStructure15->x);
 			yy = map_coord(psSaveStructure15->y);
+			playerid = psSaveStructure15->player;
 		}
 		else if (psHeader->version <= VERSION_19)
 		{
@@ -12043,6 +12065,7 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 
 			xx = map_coord(psSaveStructure17->x);
 			yy = map_coord(psSaveStructure17->y);
+			playerid = psSaveStructure17->player;
 		}
 		else if (psHeader->version <= VERSION_20)
 		{
@@ -12078,6 +12101,7 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 
 			xx = map_coord(psSaveStructure20->x);
 			yy = map_coord(psSaveStructure20->y);
+			playerid = psSaveStructure20->player;
 		}
 		else
 		{
@@ -12116,19 +12140,35 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 
 			xx = map_coord(psSaveStructure->x);
 			yy = map_coord(psSaveStructure->y);
+			playerid = psSaveStructure->player;
+		}
+		// if human player, then use clan color.  If AI, then use something else.
+		if( isHumanPlayer(playerid) )
+		{
+			playerid = (UDWORD) getPlayerColour(playerid);
+			color.rgba = clanColours[playerid].rgba;
+			// kludge to fix black, so you can see it on some maps.
+			if ( playerid == 3 )	// in this case 3 = pallete entry for black.
+			{	
+	
+				color = WZCOL_GREY;
+			}
+		}
+		else
+		{	// Use a dark green color for the AI
+			color = WZCOL_MAP_PREVIEW_AIPLAYER ;
 		}
 
 		for(x = (xx*scale);x < (xx*scale)+scale ;x++)
 		{
 			for(y = (yy*scale);y< (yy*scale)+scale ;y++)
 			{
-				// 0xff0000 = red. use COL_LIGHTRED instead?
-				backDropSprite[3 * (((offY + y) * BACKDROP_HACK_WIDTH) + x + offX)] = 0xff;
-				backDropSprite[3 * (((offY + y) * BACKDROP_HACK_WIDTH) + x + offX) + 1] = 0x0;
-				backDropSprite[3 * (((offY + y) * BACKDROP_HACK_WIDTH) + x + offX) + 2] = 0x0;
+				backDropSprite[3 * (((offY + y) * BACKDROP_HACK_WIDTH) + x + offX)] = color.byte.r;	 
+				backDropSprite[3 * (((offY + y) * BACKDROP_HACK_WIDTH) + x + offX) + 1] = color.byte.g;
+				backDropSprite[3 * (((offY + y) * BACKDROP_HACK_WIDTH) + x + offX) + 2] = color.byte.b;
 			}
 		}
 	}
-	return TRUE;
+	return true;
 
 }

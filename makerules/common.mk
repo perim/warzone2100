@@ -1,14 +1,20 @@
+ifeq ($(MAKELEVEL),0)
+include $(top_srcdir)/makerules/configure.mk
+endif
+
+RM_CPPFLAGS:=-I$(top_srcdir)
+
 %.o: %.rc
-	$(WINDRES) -o$@ $<
+	$(WINDRES) $(RM_CPPFLAGS) $(CPPFLAGS) -o $(subst /,\\,$@) $(subst /,\\,$<)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c -o$@ $<
+	$(CC) $(RM_CPPFLAGS) $(CPPFLAGS) $(CFLAGS) -c -o $(subst /,\\,$@) $(subst /,\\,$<)
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c -o$@ $<
+	$(CXX) $(RM_CPPFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c -o $(subst /,\\,$@) $(subst /,\\,$<)
 
-%.lex.c: %.l
-	$(FLEX) $(FLEXFLAGS) -o$@ $<
+%.lex.h %.lex.c: %.l
+	$(FLEX) $(FLEXFLAGS) -o$(subst /,\\,$@) $(subst /,\\,$<)
 
 %.tab.h %.tab.c: %.y
-	$(BISON) -d $(BISONFLAGS) -o$@ $<
+	$(BISON) -d $(BISONFLAGS) -o $(subst /,\\,$@) $(subst /,\\,$<)

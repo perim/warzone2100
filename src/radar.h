@@ -23,16 +23,19 @@
 
 void radarColour(UDWORD tileNumber, uint8_t r, uint8_t g, uint8_t b);
 
-#define MAX_RADARZOOM	1
+#define MAX_RADARZOOM	2.50f
+#define MIN_RADARZOOM	0.75f
+#define RADARZOOM_STEP	0.25f
 
 /* Radar.h */
 extern void resetRadarRedraw(void);
 extern BOOL InitRadar(void);
 extern BOOL ShutdownRadar(void);
+extern BOOL resizeRadar(void);
 extern void	drawRadar(void);
 extern void CalcRadarPosition(UDWORD mX,UDWORD mY,UDWORD *PosX,UDWORD *PosY);
-extern void SetRadarZoom(UWORD ZoomLevel);
-extern UDWORD GetRadarZoom(void);
+extern void SetRadarZoom(float ZoomLevel);
+extern float GetRadarZoom(void);
 extern BOOL CoordInRadar(int x,int y);
 
 //different mini-map draw modes
@@ -48,5 +51,8 @@ typedef enum _radar_draw_mode
 
 extern BOOL		bEnemyAllyRadarColor;		//enemy/ally radar color
 extern RADAR_DRAW_MODE	radarDrawMode;		//current mini-map mode
+
+extern void radarInitVars(void);
+extern PIELIGHT clanColours[MAX_PLAYERS];
 
 #endif // __INCLUDED_SRC_RADAR_H__

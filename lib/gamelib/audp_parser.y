@@ -23,12 +23,18 @@
 #include "lib/gamelib/parser.h"
 #include "lib/sound/audio.h"
 #include "lib/gamelib/anim.h"
+#include "lib/framework/lexer_input.h"
 
 static int		g_iCurAnimID = 0;
 static Vector3i vecPos, vecRot, vecScale;
 
-int audp_lex();
-void audp_error(char *pMessage,...);
+extern int audp_lex(void);
+extern int audp_lex_destroy(void);
+extern int audp_get_lineno(void);
+extern char* audp_get_text(void);
+extern void audp_set_extra(YY_EXTRA_TYPE user_defined);
+
+void yyerror(const char* fmt, ...) WZ_DECL_FORMAT(printf, 1, 2);
 
 %}
 
@@ -37,18 +43,28 @@ void audp_error(char *pMessage,...);
 %union {
 	float		fval;
 	long		ival;
-	signed char	bval;
-	char		sval[100];
+	bool            bval;
+	char*		sval;
 }
 
 	/* value tokens */
 %token <fval> FLOAT_T
 %token <ival> INTEGER
 %token <sval> QTEXT /* Text with double quotes surrounding it */
-%token <ival> LOOP
-%token <ival> ONESHOT
+
+%destructor {
+#ifndef WZ_OS_WIN
+	// Force type checking by the compiler
+	char * const s = $$;
+
+	if (s)
+		free(s);
+#endif
+} QTEXT
 
 	/* keywords */
+%token ONESHOT
+%token LOOP
 %token AUDIO
 %token ANIM3DFRAMES
 %token ANIM3DTRANS
@@ -57,7 +73,8 @@ void audp_error(char *pMessage,...);
 %token ANIM_MODULE
 %token ANIMOBJECT
 
-	/* module names */
+	/* rule types */
+%type <bval> looping
 
 %%
 
@@ -85,15 +102,18 @@ audio_list:				audio_list audio_track |
 	 * unsigned int audio_SetTrackVals(const char* fileName, BOOL loop, unsigned int volume, unsigned int audibleRadius)
 	 */
 
-audio_track:			AUDIO QTEXT LOOP INTEGER INTEGER
-						{
-							audio_SetTrackVals( $2, TRUE, $4, $5 );
-						}
-						| AUDIO QTEXT ONESHOT INTEGER INTEGER
-						{
-							audio_SetTrackVals( $2, FALSE, $4, $5 );
-						}
-						;
+audio_track:			AUDIO QTEXT looping INTEGER INTEGER
+				{
+					audio_SetTrackVals($2, $3, $4, $5);
+					free($2);
+				}
+				;
+
+looping:			LOOP
+				{ $$ = true; }
+				| ONESHOT
+				{ $$ = false; }
+				;
 
 anim_module_header:		ANIM_MODULE '{'
 						{
@@ -122,6 +142,7 @@ anim_config:			QTEXT INTEGER
 						{
 							g_iCurAnimID = $2;
 							anim_SetVals( $1, $2 );
+							free($1);
 						}
 						;
 
@@ -133,6 +154,7 @@ anim_config:			QTEXT INTEGER
 anim_trans:				ANIM3DTRANS QTEXT INTEGER INTEGER INTEGER
 						{
 							anim_Create3D( $2, $3, $4, $5, ANIM_3D_TRANS, g_iCurAnimID );
+							free($2);
 						}
 						'{' anim_obj_list '}'
 						{
@@ -143,6 +165,7 @@ anim_trans:				ANIM3DTRANS QTEXT INTEGER INTEGER INTEGER
 anim_frames:			ANIM3DFRAMES QTEXT INTEGER INTEGER
 						{
 							anim_Create3D( $2, $3, $4, 1, ANIM_3D_FRAMES, g_iCurAnimID );
+							free($2);
 						}
 						'{'
 						{
@@ -162,6 +185,7 @@ anim_obj_list:			anim_obj anim_obj_list |
 anim_obj:				ANIMOBJECT INTEGER QTEXT '{'
 						{
 							anim_BeginScript();
+							free($3);
 						}
 						anim_script '}'
 						{
@@ -190,37 +214,38 @@ anim_state:				INTEGER INTEGER INTEGER INTEGER INTEGER INTEGER INTEGER INTEGER I
 
 %%
 
-/***************************************************************************/
 /* A simple error reporting routine */
-
-void audp_error(char *pMessage,...)
+void yyerror(const char* msg, ...)
 {
-	int		line;
-	char	*pText;
-	char	aTxtBuf[1024];
+	char* txtBuf;
 	va_list	args;
+	size_t size;
 
-	va_start(args, pMessage);
-	vsnprintf(aTxtBuf, sizeof(aTxtBuf), pMessage, args);
+	va_start(args, msg);
+	size = vsnprintf(NULL, 0, msg, args);
 	va_end(args);
-	// Guarantee to nul-terminate
-	aTxtBuf[sizeof(aTxtBuf) - 1] = '\0';
 
-	parseGetErrorData( &line, &pText );
-	debug( LOG_ERROR, "RES file parse error:\n%s at line %d\nToken: %d, Text: '%s'\n", aTxtBuf, line, audp_char, pText );
-	abort();
+	txtBuf = alloca(size + 1);
+	va_start(args, msg);
+	vsprintf(txtBuf, msg, args);
+	va_end(args);
+
+	debug(LOG_ERROR, "RES file parse error:\n%s at line %d\nToken: %d, Text: '%s'\n", txtBuf, audp_get_lineno(), audp_char, audp_get_text());
 }
 
-/***************************************************************************/
-/* Read a resource file */
-BOOL ParseResourceFile(PHYSFS_file* fileHandle)
+/** Read an audio properties file
+ */
+bool ParseResourceFile(PHYSFS_file* fileHandle)
 {
-	// Tell lex about the input file
-	parserSetInputFile(fileHandle);
+	bool retval;
+	lexerinput_t input;
+	input.type = LEXINPUT_PHYSFS;
+	input.input.physfsfile = fileHandle;
 
-	audp_parse();
+	audp_set_extra(&input);
 
-	return TRUE;
+	retval = (audp_parse() == 0);
+	audp_lex_destroy();
+
+	return retval;
 }
-
-/***************************************************************************/

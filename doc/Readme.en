@@ -2,27 +2,33 @@ Warzone 2100 - Readme
 =====================
 Content
 -------
-1. Contents of Warzone 2100 GPL
+1. Contents of Warzone 2100
 2. State of the game
  2.1 Reporting bugs
 3. Configuration
- 3.1 WZ-dir and configuration file
- 3.2 Command-line options
- 3.3 Music
- 3.4 Multiplaying via internet
-4. Important hotkeys
-5. Additional resources
+ 3.1 Warzone directory
+ 3.2 Configuration file
+ 3.3 Command-line options
+ 3.4 Music
+ 3.5 Multiplaying via internet
+4. Cheats
+ 4.1 Cheat-mode
+ 4.2 Cheats lists
+5. Debug-keys
+6. Important hotkeys
+7. Additional resources
 
-1. Contents of Warzone 2100 GPL
-===============================
-Warzone 2100, released in 1999 and developed by Pumpkin Studios,
-was a groundbreaking and innovative 3D real-time strategy game.
+1. Contents of Warzone 2100
+===========================
+Warzone 2100, released in 1999 and developed by Pumpkin Studios, was a ground-
+breaking and innovative 3D real-time strategy game.
+
 In 2004 Eidos, in collaboration with Pumpkin Studios, decided to release
 the source for the game under the terms of the GNU GPL, including everything
 but the music and in-game video sequences.
 
 Additionally all multiplayer-maps that were available in Warzone 2100 1.10,
-the last official patch by Pumpkin Studios, are available in Warzone 2100 GPL as
+the last official version by Pumpkin Studios, are available in Warzone 2100 as
 well.
 
 2. State of the game
@@ -31,17 +37,17 @@ After the liberation of the Warzone 2100 source-code on December 6th, 2004, all
 proprietary technologies had been replaced with open-source-counterparts.
 
 Right now supported platforms are GNU/Linux, Mac OS X 10.4 (Tiger) and Windows
-(98 - XP). There are reports that Warzone 2100 GPL is working on BSD, too. Some
-people even run it under Windows Vista, which is not directly supported.
+(98 - XP). There are reports that Warzone 2100 is working on BSD, too. While 
+Warzone 2100 may work under Windows Vista it is not supported by us.
 
-The game is still in a beta-state, so do not expect the game to run without any
-issues.
+The game is becoming more and more stable over time, but you should not expect
+the game to run without any issues.
 
 2.1 Reporting Bugs
 ------------------
 This game still has bugs and if you run into one, please use the bugtracker
 (https://gna.org/bugs/?group=warzone) to report this bug. In order to faster fix
-those bugs the developers require that you follow these rules:
+those bugs we require that you follow these rules:
 
    1. If the game crashes you may save a memory dump. Please do so and upload it
       when reporting the bug. (Linux locates that file at /tmp/warzone2100.gdmp)
@@ -60,99 +66,320 @@ those bugs the developers require that you follow these rules:
 
 3. Configuration
 ================
-3.1 WZ-dir and configuration file
----------------------------------
-Warzone saves your configuration data in a file named "config". Where this file
-is located depends on your operating system.
+3.1 Warzone directory
+---------------------
+Warzone 2100 uses an own sub-directory in a user's home direcoty to save
+configuration data, save-games and certain other things. Additionally you can
+use this directory to place custom maps and mods so the game can find them. The
+location of this directory depends on the operating system.
 
-Warzone-dir under GNU/Linux
-***************************
+Warzone directory under GNU/Linux
+*********************************
 Under GNU/Linux the warzone-dir can be found in your home-directory, it's called
-".warzone2100". The leading dot indicates that it is a hidden folder so
+".warzone2100-2.1". The leading dot indicates that it is a hidden directory so
 depending on your configuration you may not be able to see it. However, you can
 still access it by typing the path into your address-bar.
 
-Warzone-dir under Windows
-*************************
-The folder is called "Warzone 2100" and is located in "My Documents".
+Warzone directory under Windows
+*******************************
+The directory is called "Warzone 2100 2.1" and is located in "My Documents".
 
-3.2 Command-line options
+Warzone directory under Mac OS X
+********************************
+The directory "Warzone 2100 2.1" can be found in your home-directory at:
+~/Library/Application Support/
+
+3.2 Configuration file
+----------------------
+The configuration file is just called 'config' and contains several configura-
+tion options, some of them can be changed by using command-line options or using
+the in-game menus, others can only be changed by editing the file by hand.
+
+If at any point you did something wrong, you may delete the old configuration
+file and just restart Warzone 2100. Then the game will regenerate a new configu-
+ration file with default values. It may be wise to not delete and instead backup
+your old configuration file in case you want to keep other options.
+
+The shown values are the default values.
+
+alliance=0
+       Toggles permission to play with allies in Skirmish and multi player mode
+       on (1) and off (0).
+
+allowSubtitles=0
+       Toggles subtitles during video sequences on (1) and off (0).
+
+base=1
+       Sets the level of start bases: No bases (0), bases (1) and advanced bases
+       (2).
+
+bpp=32
+       Sets the colour depth in bpp = bits per pixel.
+
+cdvol=50
+       Sets the volume for music ranging from 0 (no sound) to 100 (loudest.
+
+colour=0
+       Sets your colour in the single player mode: Green (0), red (4), blue (5),
+       pink (6) and cyan (7).
+
+debugmode=0
+       Toggles debug mode on (1) and off (0). --cheat sets this to 1. In order
+       to unset to 0 the file has be to edited by hand.
+
+difficulty=1
+       Sets the difficulty for campaign game: easy (0), medium (1) or hard (2).
+       This value is not changed by difficulty-cheats.
+
+fog=1
+       Sets fog to fog of war (1) or distance fog (0).
+
+framerate=60
+       Sets the frame rate limit.
+
+fullscreen=1
+       Specifies whether to start in fullscreen mode (1) or not (0).
+
+fxvol=100
+       Sets the volume for sound effects (user interface sounds and advisor)
+       ranging from 0 (no sound) to 100 (loudest).
+
+gameName=My Game
+       Sets the game name for skirmish and multi player games; limited to 79
+       bytes, so beware when using multi-byte characters such as German umlaute
+       or Japanese kanji.
+
+gameserver_port=9999
+       Sets the port Warzone 2100 will listen to when hosting games, so make
+       sure that you can communicate on that port.
+
+gamma=20
+       Sets the gamma value Warzone 2100 will use. This will have an effect on
+       the whole screen, so do not be surprised to see your whole screen getting
+       brighter/darker when playing in windowed mode. Minimum value is 10 and
+       stands for 0.5 times the normal screen intensity, maximum value is 200
+       and stands for 10 times the normal screen intensity.
+
+height=480
+       Sets the height of the resolution Warzone 2100 will use; equivalent to
+       the height value of --resolution.
+
+mapName=Rush
+       Sets the default map name of the map Warzone 2100 will use when starting
+       skirmish or multi player games.
+
+masterserver_name=lobby.wz2100.net
+       Sets the lobby server Warzone 2100 will use when entering the lobby and
+       for showing your open multi player games.
+
+masterserver_port=9997
+       Sets the port used to communicate with the lobby server specified in
+       'masterserver_name'.
+
+mouseflip=1
+       Toggles behaviour of camera movement when holding down the right mouse
+       button and moving the mouse up and down. Tilt to the opposite direction
+       of mouse movement (0) or tilt in the same direction of the mouse movement
+       (1).
+
+phrase0= to phrase4=
+       Sets five predefinable messages used for multi player mode to throw at
+       your opponent. Enter chat mode and then press F1 (phrase0) to F5
+       (phrase4) to send the corresponding phrase. It is not recommended to use
+       these as it may not always work as expected. These are limited to 79
+       bytes, so beware if you are using multi-byte characters such as German
+       umlaute or Japanese kanji.
+
+playaudiocds=1
+       Toggles playing of audio CDs on (1) and off (0).
+
+playername=
+       Sets your name used in skirmish and multi player games. There is a
+       profile for every playername you ever played with in your warzone
+       directory.
+
+power=400
+       Sets the default power level to use. You may choose any value between
+       -2147483648 and 2147483647 (both times inclusively) but Warzone 2100 will
+       recognise exactly three values only and fallback to medium power levels
+       (400), if you specify an unknown value. You can choose from low power
+       levels (100), medium power levels (400) and high power levels (700).
+
+radarObjectMode=0
+       Toggles friend-foe-colours on (1) and off (0). The value is not affected
+       by using Ctrl+Tab.
+
+radarTerrainMode=0
+       Sets the radar mode Warzone 2100 will use: Terrain only (0 or 1),
+       heightmap only (2), terrain and heightmap combined (3) or no terrain and
+       no heightmap (4). Any value greater than or equal to 5 will make the game
+       use terrain only mode.
+
+reopenBuild=1
+       Toggles the reopening of the build menu on (1) and off (0).
+
+scroll=1000
+       Defines the maximum scroll speed and scroll speed acceleration. Sane
+       values range from 200 (slow) to 4000 (fast). A value of 0 would stop
+       scrolling at all, which is why a hardcoded default value of 100 is used
+       then. The built-in range of values in the options menu ranges from 100 to
+       1600.
+
+sequences=0
+       Toggles the replay of video sequences on (1) and off (0). The default
+       value is likely to be changed in future releases as the videos have been
+       liberated.
+
+shadows=1
+       Toggles the rendering of shadows on (1) and off (0). Older graphics cards
+       may be unable to render the game at an acceptable speed while using
+       shadows. This value can be changed by --shadows (1) and --noshadows (0).
+
+shake=0
+       Toggles shaking of the camera when buildings are destroyed on (1) and off
+       (0). This option is not affected by the shakey-cheat.
+
+showFPS=0
+       Toggles the display of the frames per seconds on (1) and off (0).
+
+sound=1
+       Toggles sound on (1) and off (0).
+
+subtitles=1
+       Toggles the display of subtitles during videos on (1) and off (0). Note
+       that subtitles are shown even if the video does not exist.
+
+textureSize=128
+       Sets the texture size of terrain tiles in pixels. Valid values are 16,
+       32, 64 and 128. Using lower values can increase the game's performance.
+
+trapCursor=0
+       Toggles the trapping of the cursor in the game window. Only useful when
+       playing in windowed mode. It prevents getting off the window and clicking
+       something behind it like another application or the desktop, so the game
+       itself loses the focus or becomes hidden behind another window.
+
+type=12
+       Used for selecting a game-type, do not edit this.
+
+visfog=1
+       Toggles the effect used for unexplored terrain: Black tiles (1) or dimmed
+       tiles (0).
+
+voicevol=100
+       Sets the volume for voices (weapon sounds etc.) ranging from 0 (no sound)
+       to 100 (loudest).
+
+width=640
+       Sets the width of the resolution Warzone 2100 will use; equivalent to the
+       WIDTH value of --resolution.
+
+
+3.3 Command-line options
 ------------------------
-Additionally to the configuration-file Warzone can be started with different
-parameters.
+Additionally to the configuration-file Warzone 2100 can be started with dif-
+ferent options and arguments.
 
-Note: This parameters all have two dashes (--), not one dash only (-). Trying to
-use the parameters with one dash only will not work.
-Parameter			Effect
---fullscreen 			play in fullscreen-mode
---window 			play in windowed mode
---resolution WIDTHxHEIGHT 	sets the size of the viewport, usable with
-				fullscreen and windowed
---datadir DIR 			sets the default data-dir to DIR
---shadows 			enables shadows
---noshadows 			disables shadows
---sound 			enables sound
---nosound 			disables sound
---cheat 			enables the usage of cheats and debug-keys
+Notes: These options all have two dashes (--), not one dash only (-). Trying to
+use the options with one dash only will not work. The game will display a notice
+when trying to use invalid command-line options. Arguments that need paths need
+them in the form they are used on the operating system.
 
-Note: All mentioned command-line parameters except --datadir change the appro-
-priate value in your config-file. Starting warzone by double-clicking the exe-
-cutable/binary will then start the game with the settings used last time. So
-don't wonder, if there is no sound, when you started warzone with --nosound last
-time.
+--fullscreen
+       Starts the game in fullscreen-mode.
 
-Note: This is list is not complete. A complete list and further information on
-command-line options (http://wiki.wz2100.net/command_line_options) can be found
-at the Wiki of Warzone Resurrection Project (http://wiki.wz2100.net/).
+--window
+       Starts the game in windowed mode.
 
-3.3 Music
+--resolution WIDTHxHEIGHT
+       Sets the resolution Warzone 2100 will use; usable for fullscreen mode and
+       windowed mode.
+
+--shadows
+       Enables shadows.
+
+--noshadows
+       Disables shadows.
+
+--sound
+       Enables sound.
+
+--nosound
+       Disables sound.
+
+--datadir path
+       Sets the data-directory to the path specified.
+
+--configdir path
+       Sets the configuration-directory to the path specified.
+
+--savegame name
+       Loads a saved game.
+
+--cheat
+       Enables the usage of cheats and debug-keys, see cheats and debug-keys.
+
+--help
+       Outputs a help message and exits; only useful when run from command-line.
+
+--debug option
+       Shows debug information; option can be any of the following: all, main,
+       sound, video, wz, 3d, texture, net, memory, error, script. If you want
+       more than one option, you will have to use another --debug. The option
+       "all" contains every other option.
+
+--debugfile file
+       Directs debug output to the specified file.
+
+--version
+       Outputs the Warzone 2100 version and exits.
+
+--mod_ca mod-file
+       Enables the specified campaign mod. You have to specify the full name of
+       the mod-file.
+
+--mod_mp mod-file
+       Enables the specified multiplayer mod. You have to specify the full name
+       of the mod-file.
+
+--mod mod-file
+       Enables the specified mod globally - for campaign and multiplayer. You
+       have to specify the full name of the mod-file. Global mods are only
+       useful when things are changed that affect both, campaign and multi-
+       player.
+
+
+Note: Some options have corresponding entries in the configuration-file and will
+persist from one start of Warzone 2100 to the next. For example starting the
+game with --nosound only once will silence it as long as you do not start it
+with --sound or change the corresponding value in the configuration file. Fur-
+ther information on command-line options can be found at the Wiki of the War-
+zone 2100 Resurrection Project (http://wiki.wz2100.net/command_line_options).
+
+3.4 Music
 ---------
-As the original game music is part of the data that was not liberated, we are
-reintroducing music, but in a different way. We use a playlist system that can
-point to any *.ogg or *.mp3-file in your warzone-data-path. This is still
-experimental and we are gradually making this more usable.
+A playlist-system is used that can point to any *.ogg in your warzone music
+path.
 
-Warzone reads the following two playlists (in the order they are mentioned) and
-the first playlist found will be used:
+Warzone 2100 reads the playlist from the first location it is found, searching
+in this order:
 
 * Warzone-directory in your personal directory:
 	o for GNU/Linux: ~/.warzone2100/music/music.wpl
 	o for Windows: ~/My Documents/Warzone 2100/music/music.wpl
+	o for Mac OS X: ~/Library/Application Support/Warzone 2100/music/music.wpl
 * Warzone-install-path:
 	o <whereverwarzoneisinstalled>/music/music.wpl
 
-Using the playlist
-******************
-The playlist contains two sections, [game] and [menu]. For each section you can
-define a list of songs you want to played in-game. Supported file-formats are
-OGG and MP3 as long as all necessary libraries are installed.
+The playlist is just a list of songs you want to be played in-game, one song per
+line. The only supported file format is Ogg Vorbis.
 
-With "shuffle=yes" you specify that you want the songs to played in random
-order. You need to set this for each section individually.
+Note: Since we are using PhysFS we recommend you to use only Latin letters in
+directory and file-names (more exactly this means: A to Z, a to z, 0 to 9, _-+
+and space). You will receive the following error (running with --debug sound) if
+"bad" characters are used: Failed opening [[PATH TO FILE]]: Insecure filename.
 
-Using "path=." you specify that the following files are found in the folder the
-playlist was found. If you do not specify a path all file-names have to be given
-with "absolute" path. This "absolute" path is still relative to your
-warzone-data-dir. All file-names should be lower-case. However file-names have
-to match those in the file-system.
-
-This example shows how a playlist-file could look like:
---------------------------------------------------------------------------------
-[game]
-path=.
-shuffle=yes
-neos_aurore.ogg
-neos_chocolat.ogg
-neos_down.ogg
-neos_esperance.ogg
-neos_indy.ogg
-
-[menu]
-path=.
-neos_symphonie_du_vide.ogg
---------------------------------------------------------------------------------
-
-3.4 Multiplaying via internet
+3.5 Multiplaying via internet
 -----------------------------
 There are two methods to start a multiplayer-game via internet: using the host's
 IP or using the lobby-server. Make sure to be able to communicate on TCP-ports
@@ -180,7 +407,126 @@ enter "lobby.wz2100.net" when prompted to enter the host's IP or change the
 entry in the config-file back. You will have to restart Warzone 2100 in order
 for config-changes to take effect.
 
-4. Important hotkeys
+4. Cheats
+=========
+Like many other games Warzone 2100 features a certain set of cheats that can be
+used to have an advantage in the singleplayer-campaign and skirmish-games or to
+just help mod- and map-makers with testing. Cheats do not work in multiplayer-
+mode (except skirmish).
+
+4.1 Cheat-mode
+--------------
+To be able to use cheats in the first place, you will have to start Warzone 2100
+with the option --cheat. While playing, press right shift and backspace simul-
+taneously. An on-screen message should appear telling you that cheat-mode has
+been enabled. You can disable it using the same key combination again. Enab-
+ling/disabling cheat-mode is only possible while playing, not while in the
+menus.
+
+4.2 Cheats lists
+----------------
+After activating cheat-mode cheats can be entered using the normal chat-
+function. Cheats are ordered by their use and where they can be used.
+
+General purpose cheats
+**********************
+General purpose cheats work in both, campaign-mode and skirmish/tutorial/fast-
+play.
+
+biffer baker
+       Your units do more damage and are stronger
+
+double up
+       Your units are twice as strong
+
+give all
+       Allows you to build and research everything
+
+work harder
+       All currently active research topics are instantly researched
+
+research all
+       Everything is researched instantly
+
+
+Note: Using 'give all' will make research topics available which have an
+artifact as 3D-model. Do not click those as this will cause the game to
+instantly crash.
+
+Campaign-only cheats
+********************
+easy
+       Sets difficulty to easy
+
+normal
+       Sets difficulty to normal
+
+hard
+       Sets difficulty to hard
+
+get off my land
+       Removes all enemy units
+
+kill
+       Kills the selected units or building
+
+let me win
+       You win the current mission
+
+time toggle
+       Starts/stops the mission timer
+
+whale fin
+       Toggles infinite power on and off; everything is for free
+
+superpower
+       Gives you maximum power
+
+more power
+       Adds 1000 power to your pool
+
+
+Note: The difficulty cheats do not stack. This means that you cannot make the
+game easier by entering the easy-cheat multiple times.
+
+Miscellaneous cheats
+********************
+Cheats listed here do not have to be advantageous when used. Some are helpful
+for getting specific data or to help with debugging and thus aid people in
+working with the game.
+
+build info
+       Outputs the build-date of the game
+
+count me
+       Outputs the number of objects in the game
+
+deity
+       Toggles the fog of war on and off
+
+demo
+       Starts/stops the demonstration mode
+
+droidinfo
+       Outputs unit information and statistics
+
+john kettley
+       Cycles through different weathers: rain, snow and clear
+
+no faults
+       Plays audio clip: "There are no faults in the renderer at the moment"
+
+sensors
+       Toggles display of the sensor ranges of units and buildings on and off
+
+timedemo
+       Outputs network and renderer information
+
+
+5. Debug-keys
+=============
+
+6. Important hotkeys
 ====================
 Hotkey                         Effect
 Ctrl + Tab                     Toggle display of terrain in map
@@ -191,7 +537,7 @@ Alt + S                        Toggle shadows
 Shift + Backspace              Allow/disallow usage of cheats
 Ctrl + O                       Display debug-menu
 
-5. Additional resources
+7. Additional resources
 =======================
 Homepage of the Warzone Resurrection Project (English):
 http://wz2100.net/
@@ -206,4 +552,4 @@ Warzone2100.de (German):
 http://warzone2100.de/
 
 AUTHOR: Kreuvf (kreuvf@warzone2100.de)
-LAST UPDATE: 2007/09/29
+LAST UPDATE: 2008/06/27

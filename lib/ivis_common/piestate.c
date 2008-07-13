@@ -22,17 +22,15 @@
 unsigned int pieStateCount = 0; // Used in pie_GetResetCounts
 RENDER_STATE rendStates;
 
-void pie_SetTranslucencyMode(TRANSLUCENCY_MODE transMode);
-
 void pie_SetDefaultStates(void)//Sets all states
 {
 	PIELIGHT black;
 
 	//fog off
-	rendStates.fogEnabled = FALSE;// enable fog before renderer
-	rendStates.fog = FALSE;//to force reset to false
-	pie_SetFogStatus(FALSE);
-	black.argb = 0;
+	rendStates.fogEnabled = false;// enable fog before renderer
+	rendStates.fog = false;//to force reset to false
+	pie_SetFogStatus(false);
+	black.rgba = 0;
 	black.byte.a = 255;
 	pie_SetFogColour(black);//nicks colour
 
@@ -43,8 +41,8 @@ void pie_SetDefaultStates(void)//Sets all states
 	pie_SetTranslucencyMode(TRANS_DECAL);
 
 	//chroma keying on black
-	rendStates.keyingOn = FALSE;//to force reset to true
-	pie_SetAlphaTest(TRUE);
+	rendStates.keyingOn = false;//to force reset to true
+	pie_SetAlphaTest(true);
 }
 
 
@@ -62,7 +60,7 @@ void pie_EnableFog(BOOL val)
 	{
 		debug(LOG_FOG, "pie_EnableFog: Setting fog to %s", val ? "ON" : "OFF");
 		rendStates.fogEnabled = val;
-		if (val == TRUE)
+		if (val == true)
 		{
 			PIELIGHT nickscolour;
 
@@ -76,7 +74,7 @@ void pie_EnableFog(BOOL val)
 		{
 			PIELIGHT black;
 
-			black.argb = 0;
+			black.rgba = 0;
 			black.byte.a = 255;
 			pie_SetFogColour(black); // clear background to black
 		}

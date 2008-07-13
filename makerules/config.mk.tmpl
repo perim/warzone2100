@@ -1,40 +1,19 @@
-# Version of Warzone you are compiling
-VERSION=TRUNK
-INSTALLER_VERSION=9.9.9.9
-PACKAGE_BUGREPORT=http://wz2100.net/
-PACKAGE_NAME=Warzone 2100
-PACKAGE_VERSION=$(VERSION)
-
-# Platform you are running
-#PLATFORM=windows
-#PLATFORM=linux
-#PLATFORM=mingw32
+# Metadata of the version of Warzone 2100 you are compiling
+PACKAGE_VERSION:=TRUNK
+INSTALLER_VERSION:=9.9.9.9
 
 # Compilation mode
-#MODE=debug
-#MODE=release
+#MODE:=debug
+#MODE:=release
 
 # Directory where you store your dev stuff (lib and include)
-#DEVDIR=C:/devpkg
-
-# Remind the user to install Flex and Bison
-#BISON=bison
-#FLEX=flex
-
-## This is only needed for people planning to distribute this package and/or
-## create installers from it.
-# Path to makensis
-#MAKENSIS="wine C:/Program\ Files/NSIS/makensis.exe"
-#MAKENSIS=makensis
+#DEVDIR:=C:/devpkg
 
 # Whether to build data package and installer
-#DATA=yes
-#INSTALLER=yes
-#USE_GETTEXT=yes
+#INSTALLER:=yes
+#TRANSLATION:=yes
 
-# Gettext stuff
-#PACKAGE=warzone2100
-#LOCALEDIR=""
-#XGETTEXT="xgettext"
-#MSGMERGE="msgmerge"
-#MSGFMT="msgfmt"
+# Make config known throughout the whole buildsystem
+export PACKAGE_VERSION INSTALLER_VERSION
+export MODE DEVDIR
+export INSTALLER TRANSLATION

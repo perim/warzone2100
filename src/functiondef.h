@@ -196,7 +196,7 @@ typedef struct _weapon_upgrade_function
 	FUNCTION_STATS;
 
 // GNU C complains about this...
-//	enum _weapon_class	subClass;		/*which weapons are affected */
+//	WEAPON_CLASS            subClass;		/*which weapons are affected */
 // So need to do it this way...
 	WEAPON_SUBCLASS		subClass;			/*which weapons are affected */
 	UBYTE			firePause;			/*The % to decrease the fire pause or reload time */
@@ -240,7 +240,7 @@ typedef struct _droidBody_upgrade_function
 {
 	UPGRADE_FUNCTION_STATS;
 	UWORD					body;		//The % to increase the whole vehicle body points by*/
-	UWORD					armourValue[NUM_WEAPON_CLASS];
+	UWORD					armourValue[WC_NUM_WEAPON_CLASSES];
 	UBYTE					cyborg;		//flag to specify the upgrade is valid for cyborgs
 	UBYTE					droid;		/*flag to specify the upgrade is valid
 										  for droids (non cyborgs!)*/
@@ -322,7 +322,7 @@ typedef struct _function_upgrade
 	//common stats
 //	FUNCTION_STATS;
 
-//	struct _repair_stats*	pRepair;		/*The repair unit to be upgraded*/
+//	struct REPAIR_STATS*	pRepair;		/*The repair unit to be upgraded*/
 //	UDWORD			repairPoints;	/*The percentage to increase the repair points by*/
 //	UDWORD			buildPoints;	/*The number of build points required to upgrade
 //									  the structure*/
@@ -356,8 +356,8 @@ typedef struct _function_upgrade
 //	//common stats
 //	FUNCTION_STATS;
 //
-//	struct _sensor_stats*	pSensor;		/*The Sensor fitted, if any*/
-//	struct _ecm_stats*		pECM;			/*The ECM fitted, if any*/
+//	struct SENSOR_STATS*	pSensor;		/*The Sensor fitted, if any*/
+//	struct ECM_STATS*		pECM;			/*The ECM fitted, if any*/
 //	UDWORD			weaponCapacity;	/*The size of weapon in system points that may
 //									  be added. 0 = no weapons can be added*/
 //} DEFENSIVE_STRUCTURE_FUNCTION;

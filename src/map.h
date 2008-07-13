@@ -46,9 +46,6 @@ typedef enum _terrain_type
 	TER_MAX,
 } TYPE_OF_TERRAIN;
 
-/* change these if you change above - maybe wrap up in enumerate? */
-#define	TERRAIN_TYPES	TER_MAX
-
 #define TALLOBJECT_YMAX		(200)
 #define TALLOBJECT_ADJUST	(300)
 
@@ -59,9 +56,6 @@ typedef enum _terrain_type
 #define TILE_ROTSHIFT	12
 #define TILE_TRIFLIP	0x0800	// This bit describes the direction the tile is split into 2 triangles (same as triangleFlip)
 #define TILE_HILIGHT	0x0400	// set when the tile has the structure cursor over it
-
-// NASTY - this should be in tileInfoBits but there isn't any room left
-#define TILE_NOTBLOCKING	0x0200	// units can drive on this even if there is a structure or feature on it
 
 #define TILE_NUMMASK	0x01ff
 
@@ -77,28 +71,87 @@ static inline unsigned short TileNumber_texture(unsigned short tilenumber)
 	return tilenumber & ~TILE_NUMMASK;
 }
 
-
+#define BITS_NOTBLOCKING 0x01 // units can drive on this even if there is a structure or feature on it
 #define BITS_FPATHBLOCK	0x10		// bit set temporarily by find path to mark a blocking tile
 #define BITS_GATEWAY	0x40		// bit set to show a gateway on the tile
+#define BITS_TALLSTRUCTURE 0x80		// bit set to show a tall structure which camera needs to avoid.
 
-#define TILE_IS_NOTBLOCKING(x)	(x->texture & TILE_NOTBLOCKING)
+/* Information stored with each tile */
+typedef struct _maptile
+{
+	uint8_t			tileInfoBits;
+	uint8_t			tileVisBits;	// COMPRESSED - bit per player
+	UBYTE			height;			// The height at the top left of the tile
+	UBYTE			illumination;	// How bright is this tile?
+	UWORD			texture;		// Which graphics texture is on this tile
+	bool			bMaxed;
+	bool			activeSensor;	// selected player can see through fog of war here
+	float			level;
+	BASE_OBJECT		*psObject;		// Any object sitting on the location (e.g. building)
+	PIELIGHT		colour;
 
-#define TILE_OCCUPIED(x)		(x->psObject)
-#define TILE_HAS_STRUCTURE(x)		(x->psObject && x->psObject->type == OBJ_STRUCTURE)
-#define TILE_HAS_FEATURE(x)		(x->psObject && x->psObject->type == OBJ_FEATURE)
-#define TILE_HAS_WALL(x)		(TILE_HAS_STRUCTURE(x) \
-					&& (((STRUCTURE*)x->psObject)->pStructureType->type == REF_WALL \
-					    || ((STRUCTURE*)x->psObject)->pStructureType->type == REF_WALLCORNER))
-#define TILE_HIGHLIGHT(x)		(x->texture & TILE_HILIGHT)
-#define TILE_HAS_TALLSTRUCTURE(x)	((TILE_HAS_STRUCTURE(x) && ((STRUCTURE*)x->psObject)->sDisplay.imd->max.y > TALLOBJECT_YMAX) \
-                                         || (TILE_HAS_FEATURE(x) && ((FEATURE*)x->psObject)->sDisplay.imd->max.y > TALLOBJECT_YMAX))
-#define TILE_HAS_SMALLSTRUCTURE(x)	(TILE_HAS_STRUCTURE(x) && ((STRUCTURE*)x->psObject)->pStructureType->height == 1)
+//	TYPE_OF_TERRAIN	type;			// The terrain type for the tile
+} MAPTILE;
 
-#define SET_TILE_NOTBLOCKING(x)	(x->texture |= TILE_NOTBLOCKING)
-#define CLEAR_TILE_NOTBLOCKING(x)	(x->texture &= ~TILE_NOTBLOCKING)
+
+/**
+ * Check if tile contains a structure or feature. Function is thread-safe,
+ * but do not rely on the result if you mean to alter the object pointer.
+ */
+static inline bool TileIsOccupied(const MAPTILE* tile)
+{
+	return (tile->psObject != NULL);
+}
+
+/** Check if tile contains a structure. Function is NOT thread-safe. */
+static inline bool TileHasStructure(const MAPTILE* tile)
+{
+	return TileIsOccupied(tile)
+	    && tile->psObject->type == OBJ_STRUCTURE;
+}
+
+/** Check if tile contains a feature. Function is NOT thread-safe. */
+static inline bool TileHasFeature(const MAPTILE* tile)
+{
+	return TileIsOccupied(tile)
+	    && tile->psObject->type == OBJ_FEATURE;
+}
+
+/** Check if tile contains a wall structure. Function is NOT thread-safe. */
+static inline bool TileHasWall(const MAPTILE* tile)
+{
+	return TileHasStructure(tile)
+	    && (((STRUCTURE*)tile->psObject)->pStructureType->type == REF_WALL
+	     || ((STRUCTURE*)tile->psObject)->pStructureType->type == REF_WALLCORNER);
+}
+
+/** Check if tile is highlighted by the user. Function is thread-safe. */
+static inline bool TileIsHighlighted(const MAPTILE* tile)
+{
+	return tile->texture & TILE_HILIGHT;
+}
+
+/** Check if tile contains a tall structure. Function is thread-safe. */
+static inline WZ_DECL_PURE bool TileHasTallStructure(const MAPTILE* tile)
+{
+	return (tile->tileInfoBits & BITS_TALLSTRUCTURE);
+}
+
+/** Check if tile contains a small structure. Function is NOT thread-safe. */
+static inline bool TileHasSmallStructure(const MAPTILE* tile)
+{
+	return TileHasStructure(tile)
+	    && ((STRUCTURE*)tile->psObject)->pStructureType->height == 1;
+}
+
+#define TILE_IS_NOTBLOCKING(x)	(x->tileInfoBits & BITS_NOTBLOCKING)
+#define SET_TILE_NOTBLOCKING(x)	(x->tileInfoBits |= BITS_NOTBLOCKING)
+#define CLEAR_TILE_NOTBLOCKING(x)	(x->tileInfoBits &= ~BITS_NOTBLOCKING)
 
 #define SET_TILE_HIGHLIGHT(x)	(x->texture = (UWORD)((x)->texture | TILE_HILIGHT))
 #define CLEAR_TILE_HIGHLIGHT(x)	(x->texture = (UWORD)((x)->texture & (~TILE_HILIGHT)))
+#define SET_TILE_TALLSTRUCTURE(x)	(x->tileInfoBits = (UBYTE)((x)->tileInfoBits | BITS_TALLSTRUCTURE))
+#define CLEAR_TILE_TALLSTRUCTURE(x)	(x->tileInfoBits = (UBYTE)((x)->tileInfoBits & (~BITS_TALLSTRUCTURE)))
 
 // Multiplier for the tile height
 #define	ELEVATION_SCALE	2
@@ -117,27 +170,9 @@ static inline unsigned short TileNumber_texture(unsigned short tilenumber)
 /* Arbitrary maximum number of terrain textures - used in look up table for terrain type */
 #define MAX_TILE_TEXTURES	255
 
-/* Information stored with each tile */
-typedef struct _maptile
-{
-	UBYTE			tileInfoBits;
-	uint8_t			tileVisBits;	// COMPRESSED - bit per player
-	UBYTE			height;			// The height at the top left of the tile
-	UBYTE			illumination;	// How bright is this tile?
-	UWORD			texture;		// Which graphics texture is on this tile
-	bool			bMaxed;
-	bool			activeSensor;	// selected player can see through fog of war here
-	float			level;
-	BASE_OBJECT		*psObject;		// Any object sitting on the location (e.g. building)
-	PIELIGHT		colour;
-
-//	TYPE_OF_TERRAIN	type;			// The terrain type for the tile
-} MAPTILE;
-
-
 extern UBYTE terrainTypes[MAX_TILE_TEXTURES];
 
-static inline unsigned char terrainType(MAPTILE * tile)
+static inline unsigned char terrainType(const MAPTILE * tile)
 {
 	return terrainTypes[TileNumber_tile(tile->texture)];
 }
@@ -185,15 +220,16 @@ static inline int32_t map_coord(int32_t worldCoord)
 /** Clip world coordinates to make sure they're inside the map's boundaries
  *  \param worldX a pointer to a X coordinate inside the map
  *  \param worldY a pointer to a Y coordinate inside the map
- *  \post 0 <= *worldX <= world_coord(mapWidth) and
- *        0 <= *worldy <= world_coord(mapHeight)
+ *  \post 1 <= *worldX <= world_coord(mapWidth)-1 and
+ *        1 <= *worldy <= world_coord(mapHeight)-1
  */
 static inline void clip_world_offmap(int* worldX, int* worldY)
 {
-	*worldX = MAX(0, *worldX);
-	*worldY = MAX(0, *worldY);
-	*worldX = MIN(world_coord(mapWidth), *worldX);
-	*worldY = MIN(world_coord(mapHeight), *worldY);
+	// x,y must be > 0
+	*worldX = MAX(1, *worldX);
+	*worldY = MAX(1, *worldY);
+	*worldX = MIN(world_coord(mapWidth) - 1, *worldX);
+	*worldY = MIN(world_coord(mapHeight) - 1, *worldY);
 }
 
 /* maps a position down to the corner of a tile */
@@ -262,11 +298,26 @@ static inline BOOL tileInsideBuildRange(SDWORD x, SDWORD y)
 }
 
 /* Return whether a world coordinate is on the map */
-static inline BOOL worldOnMap(SDWORD x, SDWORD y)
+static inline BOOL worldOnMap(int x, int y)
 {
 	return (x >= 0) && (x < ((SDWORD)mapWidth << TILE_SHIFT)) &&
 		   (y >= 0) && (y < ((SDWORD)mapHeight << TILE_SHIFT));
 }
+
+
+/* Return whether a world coordinate is on the map */
+static inline bool worldOnMap2i(Vector2i pos)
+{
+	return worldOnMap(pos.x, pos.y);
+}
+
+
+/* Return whether a world coordinate is on the map */
+static inline bool worldOnMap3i(Vector3i pos)
+{
+	return worldOnMap(pos.x, pos.y);
+}
+
 
 /* Store a map coordinate and it's associated tile */
 typedef struct _tile_coord
@@ -275,13 +326,10 @@ typedef struct _tile_coord
 	MAPTILE	*psTile;
 } TILE_COORD;
 
-/* The map tiles generated by map calc line */
-extern TILE_COORD	*aMapLinePoints;
-
 /* Return height of x,y */
-extern SWORD map_Height(UDWORD x, UDWORD y);
+extern SWORD map_Height(int x, int y);
 
-/* returns TRUE if object is above ground */
+/* returns true if object is above ground */
 extern BOOL mapObjIsAboveGround( BASE_OBJECT *psObj );
 
 /* returns the max and min height of a tile by looking at the four corners
@@ -295,5 +343,7 @@ extern bool	writeVisibilityData(const char* fileName);
 
 //scroll min and max values
 extern SDWORD		scrollMinX, scrollMaxX, scrollMinY, scrollMaxY;
+
+extern void mapTest(void);
 
 #endif // __INCLUDED_SRC_MAP_H__

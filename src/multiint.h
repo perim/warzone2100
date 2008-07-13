@@ -35,14 +35,10 @@ extern	void	runMultiOptions			(void);
 extern	BOOL	startMultiOptions		(BOOL bReenter);
 extern	void	frontendMultiMessages	(void);
 
-extern	void	runForceSelect			(void);
-extern	BOOL	startForceSelect		(void);
-
 extern	BOOL	chooseColour			(UDWORD);
 
-extern BOOL addMultiBut(W_SCREEN *screen, UDWORD formid, UDWORD id, UDWORD x, UDWORD y, UDWORD width, UDWORD height, const char* tipres, UDWORD norm, UDWORD hi, BOOL showmouseover);
+extern BOOL addMultiBut(W_SCREEN *screen, UDWORD formid, UDWORD id, UDWORD x, UDWORD y, UDWORD width, UDWORD height, const char* tipres, UDWORD norm, UDWORD down, UDWORD hi);
 
-extern  char	sForceName[256];
 extern	char	sPlayer[128];
 extern	SDWORD	playerTeamGUI[MAX_PLAYERS];
 extern	SDWORD	playerTeam[MAX_PLAYERS];
@@ -146,6 +142,15 @@ void loadMapPreview(void);
 #define MULTIOP_TEAMCHOOSER_FORM	102800
 #define MULTIOP_TEAMCHOOSER			102810
 #define MULTIOP_TEAMCHOOSER_END		102817
+
+// 'Ready' button
+#define MULTIOP_READY_FORM_ID		102900
+#define MULTIOP_READY_START			(MULTIOP_READY_FORM_ID + MAX_PLAYERS + 1)
+#define	MULTIOP_READY_END			(MULTIOP_READY_START + 7)
+#define MULTIOP_READY_WIDTH			41
+#define MULTIOP_READY_HEIGHT		36
+#define MULTIOP_READY_IMG_OFFSET_X	3
+#define MULTIOP_READY_IMG_OFFSET_Y	6
 
 #define MULTIOP_PLAYERWIDTH		230
 #define	MULTIOP_PLAYERHEIGHT		36
@@ -262,6 +267,9 @@ void loadMapPreview(void);
 
 #define MULTIOP_PLAYCHOOSER		10321
 #define MULTIOP_PLAYCHOOSER_END	10330
+
+#define MULTIOP_MAP_PREVIEW 920000
+#define MULTIOP_MAP_BUT		920002
 // ///////////////////////////////
 // Many Button Variations..
 

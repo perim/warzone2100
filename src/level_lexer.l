@@ -18,47 +18,60 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
 %{
-/*
- * Level.l
+/* @file
  *
  * lexer for loading level description files
- *
  */
+
 #include "lib/framework/frame.h"
 
-#include "src/levels.h"
-#include "src/levelint.h"
+#include "levels.h"
+#include "levelint.h"
 
 /* Maximum length for any TEXT value */
 #ifndef YYLMAX
 #define YYLMAX	255
 #endif
 
+#include "lib/framework/lexer_input.h"
+
 /* Store for any string values */
 static char aText[YYLMAX];
 
-// Note if we are in a comment
-static BOOL inComment = FALSE;
+#ifndef yyextra
+# define yyextra yyget_extra()
+#endif
 
-/* Pointer to the input buffer */
-static const char *pInputBuffer = NULL;
-static const char *pEndBuffer = NULL;
+/* Older GNU Flex versions don't define yyget_extra(), yyset_extra(),
+ * yyget_text() and yyget_lineno().
+ * (and neither define a subminor version)
+ */
+#if !defined(YY_FLEX_SUBMINOR_VERSION) || (YY_FLEX_SUBMINOR_VERSION < 9)
+# define yyget_extra  lev_get_extra
+# define yyset_extra  lev_set_extra
+# define yyget_lineno lev_get_lineno
+# define yyget_text   lev_get_text
+extern void yyset_extra(YY_EXTRA_TYPE user_defined);
+extern YY_EXTRA_TYPE yyget_extra(void);
+extern int yyget_lineno(void);
+int yyget_lineno()
+{
+	return yylineno;
+}
 
-#define YY_INPUT(buf, result, max_size) \
-      if (pInputBuffer != pEndBuffer) { \
-        buf[0] = *(pInputBuffer++); result = 1; \
-      } else { \
-        buf[0] = EOF; result = YY_NULL; \
-      }
-
-#undef lev_getc
-#define lev_getc() (pInputBuffer != pEndBuffer ? *(pInputBuffer++) : EOF)
+extern char* yyget_text(void);
+char* yyget_text()
+{
+	return yytext;
+}
+#elif defined(YY_FLEX_SUBMINOR_VERSION) && YY_FLEX_SUBMINOR_VERSION == 33
+extern YY_EXTRA_TYPE yyget_extra(void);
+#endif
 
 %}
 
-%option nounput
+%option yylineno noyywrap nounput
 %option prefix="lev_"
-%option yylineno
 
 %x COMMENT
 %x SLCOMMENT
@@ -67,25 +80,25 @@ static const char *pEndBuffer = NULL;
 %%
 
 	/* Keywords */
-level						return LTK_LEVEL;
-players						return LTK_PLAYERS;
-type						return LTK_TYPE;
-data						return LTK_DATA;
-game						return LTK_GAME;
-campaign					return LTK_CAMPAIGN;
-camstart					return LTK_CAMSTART;
-camchange					return LTK_CAMCHANGE;
-dataset						return LTK_DATASET;
-expand						return LTK_EXPAND;
-expand_limbo				return LTK_EXPAND_LIMBO;
-between						return LTK_BETWEEN;
-miss_keep					return LTK_MKEEP;
-miss_keep_limbo				return LTK_MKEEP_LIMBO;
-miss_clear					return LTK_MCLEAR;
+level                                           return LTK_LEVEL;
+players                                         return LTK_PLAYERS;
+type                                            return LTK_TYPE;
+data                                            return LTK_DATA;
+game                                            return LTK_GAME;
+campaign                                        return LTK_CAMPAIGN;
+camstart                                        return LTK_CAMSTART;
+camchange                                       return LTK_CAMCHANGE;
+dataset                                         return LTK_DATASET;
+expand                                          return LTK_EXPAND;
+expand_limbo                                    return LTK_EXPAND_LIMBO;
+between                                         return LTK_BETWEEN;
+miss_keep                                       return LTK_MKEEP;
+miss_keep_limbo                                 return LTK_MKEEP_LIMBO;
+miss_clear                                      return LTK_MCLEAR;
 
 	/* Match text values */
 [a-zA-Z][-0-9_a-zA-Z]*		{
-								strlcpy(aText, lev_text, sizeof(aText));
+								sstrcpy(aText, yytext);
 								pLevToken = aText;
 								return LTK_IDENT;
 							}
@@ -93,23 +106,23 @@ miss_clear					return LTK_MCLEAR;
 	/* Match quoted text */
 \"							{ BEGIN QUOTE; }
 <QUOTE>\"					{ BEGIN 0; }
-<QUOTE>\n					{ levError("Unexpected end of line in string"); }
+<QUOTE>\n					{ lev_error("Unexpected end of line in string"); }
 <QUOTE>[^\"]*				{
-								strlcpy(aText, lev_text, sizeof(aText));
+								sstrcpy(aText, yytext);
 								pLevToken = aText;
 								return LTK_STRING;
 							}
 
 	/* Match integer numbers */
--?[0-9]+					{ levVal = atol(lev_text); return LTK_INTEGER; }
+-?[0-9]+					{ levVal = atol(yytext); return LTK_INTEGER; }
 
 	/* Skip white space */
 [ \t\n\x0d\x0a]						;
 
 	/* Strip comments */
-"/*"						{ inComment=TRUE; BEGIN COMMENT; }
+"/*"						{ BEGIN COMMENT; }
 <COMMENT>"*/" |
-<COMMENT>"*/"\n				{ inComment=FALSE; BEGIN 0; }
+<COMMENT>"*/"\n				{ BEGIN 0; }
 <COMMENT>. |
 <COMMENT>\n					;
 
@@ -119,34 +132,30 @@ miss_clear					return LTK_MCLEAR;
 <SLCOMMENT>[^\n]*			;
 
 	/* Match anything that's been missed and pass it as a char */
-.							return lev_text[0];
+.							return yytext[0];
 
 %%
 
-/* Set the current input buffer for the lexer */
-void levSetInputBuffer(char *pBuffer, UDWORD size)
-{
-	pInputBuffer = pBuffer;
-	pEndBuffer = pBuffer + size;
+static YY_EXTRA_TYPE pBuffer = NULL;
 
-	/* Reset the lexer incase it's been used before */
-	lev__flush_buffer(YY_CURRENT_BUFFER);
-	inComment = FALSE;
+void yyset_extra(YY_EXTRA_TYPE user_defined)
+{
+	pBuffer = user_defined;
 }
 
-void levGetErrorData(int *pLine, char **ppText)
+YY_EXTRA_TYPE yyget_extra()
 {
-	*pLine = lev_lineno;
-	*ppText = lev_text;
+	return pBuffer;
 }
 
-int lev_wrap(void)
+/* Older GNU Flex versions don't define yylex_destroy()
+ * (and neither define a subminor version)
+ */
+#if !defined(YY_FLEX_SUBMINOR_VERSION) || (YY_FLEX_SUBMINOR_VERSION < 9)
+int lev_lex_destroy(void)
 {
-	if (inComment)
-	{
-		debug( LOG_ERROR, "Warning: reched end of file in a comment" );
-		abort();
-	}
-	return 1;
+	/* For non-reentrant C scanner only. */
+	yy_delete_buffer(YY_CURRENT_BUFFER);
+	yy_init = 1;
 }
-
+#endif

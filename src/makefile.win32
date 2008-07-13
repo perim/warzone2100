@@ -1,0 +1,132 @@
+top_srcdir=..
+top_builddir=$(top_srcdir)
+
+include $(top_srcdir)/makerules/common.mk
+
+SRC=ai.c \
+	aiexperience.c \
+	astar.c \
+	action.c \
+	advvis.c \
+	atmos.c \
+	bridge.c \
+	cheat.c \
+	cluster.c \
+	cmddroid.c \
+	combat.c \
+	component.c \
+	console.c \
+	data.c \
+	design.c \
+	difficulty.c \
+	display.c \
+	droid.c \
+	e3demo.c \
+	edit3d.c \
+	effects.c \
+	environ.c \
+	fpath.c \
+	feature.c \
+	formation.c \
+	frontend.c \
+	gateway.c \
+	geometry.c \
+	group.c \
+	hci.c \
+	init.c \
+	intdisplay.c \
+	intimage.c \
+	intorder.c \
+	intelmap.c \
+	keybind.c \
+	keymap.c \
+	level_lexer.lex.c \
+	levels.c \
+	lighting.c \
+	loop.c \
+	map.c \
+	mapdisplay.c \
+	mapgrid.c \
+	mechanics.c \
+	message.c \
+	miscimd.c \
+	move.c \
+	multiint.c \
+	multimenu.c \
+	multiopt.c \
+	multisync.c \
+	multibot.c \
+	multistat.c \
+	objmem.c \
+	objects.c \
+	order.c \
+	parsetest.c \
+	radar.c \
+	raycast.c \
+	research.c \
+	scores.c \
+	scriptai.c \
+	scriptcb.c \
+	scriptextern.c \
+	scriptfuncs.c \
+	scriptobj.c \
+	scripttabs.c \
+	scriptvals.c \
+	scriptvals_parser.tab.c \
+	scriptvals_lexer.lex.c \
+	selection.c \
+	stats.c \
+	text.c \
+	texture.c \
+	transporter.c \
+	visibility.c \
+	warcam.c \
+	wrappers.c \
+	aud.c \
+	bucket3d.c \
+	clparse.c \
+	configuration.c \
+	display3d.c \
+	drive.c \
+	function.c \
+	game.c \
+	ingameop.c \
+	keyedit.c \
+	loadsave.c \
+	main.c \
+	mission.c \
+	multigifts.c \
+	multijoin.c \
+	multilimit.c \
+	multiplay.c \
+	multistruct.c \
+	oprint.c \
+	power.c \
+	projectile.c \
+	seqdisp.c \
+	structure.c \
+	target.c \
+	version.c \
+	warzoneconfig.c
+
+LIBS=$(top_builddir)/lib/libgamelib.a \
+	$(top_builddir)/lib/libivis_common.a \
+	$(top_builddir)/lib/libivis_opengl.a \
+	$(top_builddir)/lib/libnetplay.a \
+	$(top_builddir)/lib/libscript.a \
+	$(top_builddir)/lib/libsequence.a \
+	$(top_builddir)/lib/libsound.a \
+	$(top_builddir)/lib/libwidget.a \
+	$(top_builddir)/lib/libframework.a \
+	$(top_builddir)/lib/libexceptionhandler.a \
+	$(top_builddir)/lib/libsqlite3.a
+
+ifeq ($(strip $(TARGET)),windows)
+LIBS += $(top_builddir)/win32/warzone2100.o
+endif
+
+EXE=warzone2100
+
+CLEANFILES=scriptvals_parser.tab.h
+
+include $(top_srcdir)/makerules/exe.mk

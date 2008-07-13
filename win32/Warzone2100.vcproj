@@ -6,7 +6,6 @@
 	ProjectGUID="{BDDCCB7B-F4F7-4768-A1C3-AE20E9F5FDFC}"
 	RootNamespace="Warzone2100"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -35,6 +34,7 @@
 				Name="BisonParser"
 				ExecutionBucket="2"
 				Defines="true"
+				NoGenLineDirectives="true"
 				OutputFile="$(SolutionDir)..\src\$(InputName).tab.c"
 			/>
 			<Tool
@@ -369,10 +369,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\src\gatewayroute.c"
-					>
-				</File>
-				<File
 					RelativePath="..\src\geometry.c"
 					>
 				</File>
@@ -534,6 +530,10 @@
 				</File>
 				<File
 					RelativePath="..\src\order.c"
+					>
+				</File>
+				<File
+					RelativePath="..\src\parsetest.c"
 					>
 				</File>
 				<File
@@ -856,10 +856,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\gatewayroute.h"
-				>
-			</File>
-			<File
 				RelativePath="..\src\geometry.h"
 				>
 			</File>
@@ -1048,6 +1044,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\parsetest.h"
+				>
+			</File>
+			<File
 				RelativePath="..\src\power.h"
 				>
 			</File>
@@ -1073,10 +1073,6 @@
 			</File>
 			<File
 				RelativePath="..\src\researchdef.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\resource.h"
 				>
 			</File>
 			<File

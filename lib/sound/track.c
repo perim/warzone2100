@@ -38,7 +38,7 @@ static TRACK                    *g_apTrack[MAX_TRACKS];
 static SDWORD			g_iCurTracks = 0;
 
 // flag set when system is active (for callbacks etc)
-static BOOL				g_bSystemActive = FALSE;
+static BOOL				g_bSystemActive = false;
 static AUDIO_CALLBACK	g_pStopTrackCallback = NULL;
 
 //*
@@ -51,15 +51,15 @@ BOOL sound_Init()
 	if (!sound_InitLibrary())
 	{
 		debug(LOG_ERROR, "Cannot init sound library");
-		return FALSE;
+		return false;
 	}
 
 	// init audio array (with NULL pointers; which calloc ensures by setting all allocated memory to zero)
 	memset(g_apTrack, 0, sizeof(g_apTrack));
 
 	// set system active flag for callbacks
-	g_bSystemActive = TRUE;
-	return TRUE;
+	g_bSystemActive = true;
+	return true;
 }
 
 //*
@@ -69,9 +69,9 @@ BOOL sound_Init()
 BOOL sound_Shutdown( void )
 {
 	// set inactive flag to prevent callbacks coming after shutdown
-	g_bSystemActive = FALSE;
+	g_bSystemActive = false;
 	sound_ShutdownLibrary();
-	return TRUE;
+	return true;
 }
 
 //*
@@ -180,7 +180,7 @@ void sound_CheckAllUnloaded( void )
 
 	for (currTrack = &g_apTrack[0]; currTrack != &g_apTrack[MAX_TRACKS]; ++currTrack)
 	{
-		ASSERT(*currTrack == NULL, "sound_CheckAllUnloaded: a track is not unloaded yet (%s); check audio.cfg for duplicate IDs", (*currTrack)->fileName);
+		ASSERT(*currTrack == NULL, "A track is not unloaded yet (%s); check audio.cfg for duplicate IDs", (*currTrack)->fileName);
 	}
 }
 
@@ -212,17 +212,17 @@ BOOL sound_CheckTrack( SDWORD iTrack )
 {
 	if ( iTrack < 0 || iTrack > g_iCurTracks - 1 )
 	{
-		debug( LOG_SOUND, "sound_CheckTrack: track number %i outside max %i\n", iTrack, g_iCurTracks );
-		return FALSE;
+		debug(LOG_SOUND, "Track number %i outside max %i\n", iTrack, g_iCurTracks);
+		return false;
 	}
 
 	if ( g_apTrack[iTrack] == NULL )
 	{
-		debug( LOG_SOUND, "sound_CheckTrack: track %i NULL\n", iTrack );
-		return FALSE;
+		debug(LOG_SOUND, "Track %i NULL\n", iTrack);
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 //*
@@ -286,7 +286,7 @@ BOOL sound_Play2DTrack( AUDIO_SAMPLE *psSample, BOOL bQueued )
 	// Check to make sure the requested track is loaded
 	if (!sound_CheckTrack(psSample->iTrack))
 	{
-		return FALSE;
+		return false;
 	}
 
 	psTrack = g_apTrack[psSample->iTrack];
@@ -304,7 +304,7 @@ BOOL sound_Play3DTrack( AUDIO_SAMPLE *psSample )
 	// Check to make sure the requested track is loaded
 	if (!sound_CheckTrack(psSample->iTrack))
 	{
-		return FALSE;
+		return false;
 	}
 
 	psTrack = g_apTrack[psSample->iTrack];
@@ -317,7 +317,7 @@ BOOL sound_Play3DTrack( AUDIO_SAMPLE *psSample )
 //
 void sound_StopTrack( AUDIO_SAMPLE *psSample )
 {
-	ASSERT( psSample != NULL, "sound_StopTrack: sample pointer invalid\n" );
+	ASSERT(psSample != NULL, "Sample pointer invalid");
 
 #ifndef WZ_NOSOUND
 	sound_StopSample(psSample);
@@ -361,7 +361,7 @@ void sound_FinishedCallback( AUDIO_SAMPLE *psSample )
 	}
 
 	// set finished flag
-	psSample->bFinishedPlaying = TRUE;
+	psSample->bFinishedPlaying = true;
 }
 
 //*

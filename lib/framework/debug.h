@@ -57,9 +57,9 @@ extern char last_called_script_event[MAX_EVENT_NAME_LEN];
  * Arguments:	ASSERT( condition, "Format string with variables: %d, %d", var1, var2 );
  */
 #define ASSERT( expr, ... ) \
-	( (expr) ? (void)0 : (void)_debug( LOG_ERROR, __VA_ARGS__ ) ); \
-	( (expr) ? (void)0 : (void)_debug( LOG_ERROR, "Assert in Warzone: %s:%d : %s (%s), last script event: '%s'", \
-		__FILE__, __LINE__, __FUNCTION__, (#expr), last_called_script_event ) ); \
+	( (expr) ? (void)0 : (void)_debug( LOG_ERROR, __FUNCTION__, __VA_ARGS__ ) ); \
+	( (expr) ? (void)0 : (void)_debug( LOG_ERROR, __FUNCTION__, "Assert in Warzone: %s:%d (%s), last script event: '%s'", \
+		__FILE__, __LINE__, (#expr), last_called_script_event ) ); \
 	assert( expr );
 
 
@@ -100,10 +100,11 @@ typedef enum {
   LOG_SENSOR,
   LOG_GUI,
   LOG_MAP,
-  LOG_SAVEGAME,
-  LOG_MULTISYNC,
+  LOG_SAVE,
+  LOG_SYNC,
   LOG_DEATH,
   LOG_GATEWAY,
+  LOG_MSG,
   LOG_LAST /**< _must_ be last! */
 } code_part;
 
@@ -149,6 +150,10 @@ void debug_callback_file_exit(void **data);
 
 void debug_callback_stderr(void **data, const char *outputBuffer);
 
+#if defined WIN32 && defined DEBUG
+void debug_callback_win32debug(void** data, const char* outputBuffer);
+#endif
+
 /**
  * Toggle debug output for part associated with str
  *
@@ -164,9 +169,9 @@ BOOL debug_enable_switch(const char *str);
  * \param	part	Code part to associate with this message
  * \param	str		printf style formatstring
  */
-#define debug(part, ...) do { if (enabled_debug[part]) _debug(part, __VA_ARGS__); } while(0)
-void _debug( code_part part, const char *str, ...)
-		WZ_DECL_FORMAT(printf, 2, 3);
+#define debug(part, ...) do { if (enabled_debug[part]) _debug(part, __FUNCTION__, __VA_ARGS__); } while(0)
+void _debug( code_part part, const char *function, const char *str, ...)
+		WZ_DECL_FORMAT(printf, 3, 4);
 
 /** Global to keep track of which game object to trace. */
 extern UDWORD traceID;
@@ -176,16 +181,21 @@ extern UDWORD traceID;
  * has been enabled.
  * @see debug
  */
-#define objTrace(part, id, ...) do { if (enabled_debug[part] && id == traceID) _debug(part, __VA_ARGS__); } while(0)
+#define objTrace(id, ...) do { if (id == traceID) _realObjTrace(id, __FUNCTION__, __VA_ARGS__); } while(0)
+void _realObjTrace(int id, const char *function, const char *str, ...) WZ_DECL_FORMAT(printf, 3, 4);
 static inline void objTraceEnable(UDWORD id) { traceID = id; }
-static inline void objTraceDisable(void) { traceID = 0; }
+static inline void objTraceDisable(void) { traceID = (UDWORD)-1; }
 
 #if defined(__cplusplus)
 }
 #endif
 
 /** Dump last two debug log calls into given file descriptor. For exception handler. */
-void dumpLog(int filedesc);
+#if defined(WZ_OS_WIN)
+extern void dumpLog(HANDLE file);
+#else
+extern void dumpLog(int file);
+#endif
 
 /** Checks if a particular debub flag was enabled */
 extern bool debugPartEnabled(code_part codePart);

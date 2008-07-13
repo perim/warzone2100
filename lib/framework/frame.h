@@ -25,6 +25,11 @@
 
 #include "wzglobal.h"
 
+// Workaround X11 headers #defining Status
+#ifdef Status
+# undef Status
+#endif
+
 #include "types.h"
 
 // Provides the safer functions strlcpy and strlcat
@@ -37,18 +42,24 @@
 #include "i18n.h"
 #include "treap.h"
 #include "trig.h"
+#include "cursors.h"
 
 extern UDWORD selectedPlayer;
 #define MAX_PLAYERS	8	/**< Maximum number of players in the game. */
 
-/** Initialise the frame work library */
-extern BOOL frameInitialise(
-					const char *pWindowName,// The text to appear in the window title bar
-					UDWORD width,			// The display width
-					UDWORD height,			// The display height
-					UDWORD bitDepth,		// The display bit depth
-					BOOL fullScreen		// Whether to start full screen or windowed
-					);
+/** Initialise the framework library
+ *  @param pWindowName the text to appear in the window title bar
+ *  @param width the display widget
+ *  @param height the display height
+ *  @param bitDepth the display bit depth
+ *  @param fullScreen whether to start full screen or windowed
+ *
+ *  @return true when the framework library is successfully initialised, false
+ *          when a part of the initialisation failed.
+ */
+extern BOOL frameInitialise(const char* pWindowName, UDWORD width, UDWORD height, UDWORD bitDepth, BOOL fullScreen);
+
+extern bool selfTest;
 
 /** Shut down the framework library.
  * This clears up all the Direct Draw stuff and ensures
@@ -81,12 +92,7 @@ extern int getFramerateLimit(void);
  */
 extern void frameUpdate(void);
 
-/** Set the current cursor from a Resource ID
- * This is the same as calling:
- *       frameSetCursor(LoadCursor(MAKEINTRESOURCE(resID)));
- * but with a bit of extra error checking.
- */
-extern void frameSetCursorFromRes(SWORD resID);
+extern void frameSetCursor(CURSOR cur);
 
 /** Returns the current frame we're on - used to establish whats on screen. */
 extern UDWORD frameGetFrameNumber(void);
@@ -96,6 +102,12 @@ extern UDWORD frameGetAverageRate(void);
 
 extern UDWORD HashString( const char *String );
 extern UDWORD HashStringIgnoreCase( const char *String );
+
+
+static inline WZ_DECL_CONST const char * bool2string(bool var)
+{
+	return (var ? "true" : "false");
+}
 
 
 /* Endianness hacks */
@@ -174,7 +186,5 @@ static inline void endian_fract(float *fract) {
 #else
 # define endian_fract(x) ((void) (x))
 #endif
-
-void setupExceptionHandler(const char * programCommand);
 
 #endif

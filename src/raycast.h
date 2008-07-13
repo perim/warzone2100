@@ -24,43 +24,51 @@
 #ifndef __INCLUDED_SRC_RAYCAST_H__
 #define __INCLUDED_SRC_RAYCAST_H__
 
-#define NUM_RAYS		360
+#include "lib/ivis_common/pievector.h"
 
-#define RAY_ANGLE		((float)(2 * M_PI / NUM_RAYS))
-
-#define RAY_LENGTH		(TILE_UNITS * 5)
+#define NUM_RAYS 360
 
 // maximum length for a visiblity ray
-#define RAY_MAXLEN	0x7ffff
+#define RAY_MAXLEN INT_MAX
 
-/* Initialise the visibility rays */
-extern BOOL rayInitialise(void);
 
-/* The raycast intersection callback.
- * Return FALSE if no more points are required, TRUE otherwise
+/*!
+ * The raycast intersection callback.
+ * \param pos Current position
+ * \param distSq Current distance from start, squared
+ * \param data Payload (store intermediate results here)
+ * \return true if ore points are required, false otherwise
  */
-typedef BOOL (*RAY_CALLBACK)(SDWORD x, SDWORD y, SDWORD dist);
+typedef bool (*RAY_CALLBACK)(Vector3i pos, int distSq, void* data);
 
-/* cast a ray from x,y (world coords) at angle ray (0-NUM_RAYS) */
-extern void rayCast(UDWORD x, UDWORD y, UDWORD ray, UDWORD length,
-					RAY_CALLBACK callback);
 
-// Calculate the angle to cast a ray between two points
-extern UDWORD rayPointsToAngle(SDWORD x1,SDWORD y1, SDWORD x2,SDWORD y2);
-
-/* Distance of a point from a line.
- * NOTE: This is not 100% accurate - it approximates to get the square root
- *
- * This is based on Graphics Gems II setion 1.3
+/*!
+ * Cast a ray from a position into a certain direction
+ * \param pos Position to cast from
+ * \param dir Direction to cast into
+ * \param length Maximum length
+ * \param callback Callback to call for each passed tile
+ * \param data Data to pass through to the callback
  */
-extern SDWORD rayPointDist(SDWORD x1,SDWORD y1, SDWORD x2,SDWORD y2,
-						   SDWORD px,SDWORD py);
+extern void rayCast(Vector3i pos, Vector3i dir, int length, RAY_CALLBACK callback, void * data);
+
+
+static inline Vector3i rayAngleToVector3i(float angle)
+{
+	Vector3i dest = {
+		cosf(deg2radf(angle)) * INT_MAX,
+		sinf(deg2radf(angle)) * INT_MAX,
+		0
+	};
+	return dest;
+}
+
 
 // Calculates the maximum height and distance found along a line from any
 // point to the edge of the grid
 extern void	getBestPitchToEdgeOfGrid(UDWORD x, UDWORD y, UDWORD direction, SDWORD *pitch);
 
-extern void	getPitchToHighestPoint( UDWORD x, UDWORD y, UDWORD direction, 
+extern void	getPitchToHighestPoint( UDWORD x, UDWORD y, UDWORD direction,
 								   UDWORD thresholdDistance, SDWORD *pitch );
 
 #endif // __INCLUDED_SRC_RAYCAST_H__

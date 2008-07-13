@@ -42,7 +42,7 @@ static char aText[TEXT_BUFFERS][YYLMAX];
 static UDWORD currText=0;
 
 // Note if we are in a comment
-static BOOL inComment = FALSE;
+static BOOL inComment = false;
 
 /* FLEX include buffer stack */
 static YY_BUFFER_STATE include_stack[MAX_SCR_INCLUDE_DEPTH];
@@ -84,14 +84,14 @@ static char *pScrMacroBuffer[MAX_SCR_MACRO_DEPTH];
 static YYSTYPE dummy;
 
 /* Get the token type for a variable symbol */
-SDWORD scriptGetVarToken(VAR_SYMBOL *psVar)
+static SDWORD scriptGetVarToken(VAR_SYMBOL *psVar)
 {
 	BOOL	object;
 
 	// See if this is an object pointer
 	if (!asScrTypeTab || psVar->type < VAL_USERTYPESTART)
 	{
-		object = FALSE;
+		object = false;
 	}
 	else
 	{
@@ -198,14 +198,14 @@ SDWORD scriptGetVarToken(VAR_SYMBOL *psVar)
 }
 
 /* Get the token type for a constant symbol */
-SDWORD scriptGetConstToken(CONST_SYMBOL *psConst)
+static SDWORD scriptGetConstToken(CONST_SYMBOL *psConst)
 {
 	BOOL	object;
 
 	// See if this is an object constant
 	if (!asScrTypeTab || psConst->type < VAL_USERTYPESTART)
 	{
-		object = FALSE;
+		object = false;
 	}
 	else
 	{
@@ -239,7 +239,7 @@ SDWORD scriptGetConstToken(CONST_SYMBOL *psConst)
 }
 
 /* Get the token type for a function symbol */
-SDWORD scriptGetFuncToken(FUNC_SYMBOL *psFunc)
+static SDWORD scriptGetFuncToken(FUNC_SYMBOL *psFunc)
 {
 	BOOL	object;
 
@@ -277,14 +277,14 @@ SDWORD scriptGetFuncToken(FUNC_SYMBOL *psFunc)
 }
 
 /* Get the token type for a custom function symbol */
-SDWORD scriptGetCustomFuncToken(EVENT_SYMBOL *psFunc)
+static SDWORD scriptGetCustomFuncToken(EVENT_SYMBOL *psFunc)
 {
 	BOOL	object;
 
 	// See if this is an object pointer
 	if (!asScrTypeTab || psFunc->retType < VAL_USERTYPESTART)
 	{
-		object = FALSE;
+		object = false;
 	}
 	else
 	{
@@ -328,7 +328,7 @@ SDWORD scriptGetCustomFuncToken(EVENT_SYMBOL *psFunc)
 }
 
 /* Look up defined macro and return new define buffer */
-BOOL scriptLoopUpMacro(const char *pMacro, char **ppMacroBody)
+static BOOL scriptLoopUpMacro(const char *pMacro, char **ppMacroBody)
 {
 	unsigned int i;
 
@@ -339,15 +339,15 @@ BOOL scriptLoopUpMacro(const char *pMacro, char **ppMacroBody)
 			*ppMacroBody = (char *)malloc(MAXSTRLEN);
 			strcpy( *ppMacroBody, &(scr_macro[i].scr_define_body[0]) );		//copy macro body into buffer so we can process it
 			//*pMacroBody = &(scr_macro[i].scr_define_body[0]);	//return macro body
-			return TRUE;
+			return true;
 		}
 	}
 
-	return FALSE;
+	return false;
 }
 
 /* Return to the previous macto buffer */
-void popMacroStack(void)
+static void popMacroStack(void)
 {
 	ASSERT(scr_macro_stack_ptr <= MAX_SCR_MACRO_DEPTH,
 		"FLEX: macro stack pointer out of bounds: %d", scr_macro_stack_ptr);
@@ -366,7 +366,7 @@ void popMacroStack(void)
 }
 
 /* Store macro name */
-void storeMacroName(const char *pMacroName)
+static void storeMacroName(const char *pMacroName)
 {
 	ASSERT(scr_num_macros < MAX_SCR_MACROS,
 		"FLEX: macro count out of bounds: %u", scr_num_macros);
@@ -385,23 +385,23 @@ void storeMacroName(const char *pMacroName)
 	}
 
 	/* Store define macro */
-	strlcpy(scr_macro[scr_num_macros].scr_define_macro, pMacroName, sizeof(scr_macro[scr_num_macros].scr_define_macro));
+	sstrcpy(scr_macro[scr_num_macros].scr_define_macro, pMacroName);
 }
 
 /* Store macro body */
-void storeMacroBody(const char *pMacroBody)
+static void storeMacroBody(const char *pMacroBody)
 {
 	ASSERT(scr_num_macros < MAX_SCR_MACROS,
 		"FLEX: macro count out of bounds: %u", scr_num_macros);
 
 	/* Store macro body */
-	strlcpy(scr_macro[scr_num_macros].scr_define_body, pMacroBody, sizeof(scr_macro[scr_num_macros].scr_define_body));
+	sstrcpy(scr_macro[scr_num_macros].scr_define_body, pMacroBody);
 
 	scr_num_macros++;
 }
 
 /* include directive encountered - push current buffer, set up new one */
-void pushInclude(const char *pIncludePath)
+static void pushInclude(const char *pIncludePath)
 {
 	PHYSFS_file* newInput;
 
@@ -464,10 +464,8 @@ link					return LINK;
 ref						return REF;
 return					return	RET;
 function				return	FUNCTION;
-"("int")"				{ RULE("(int)"); return TO_INT_CAST; }
-"("float")"				{ RULE("(float)"); return TO_FLOAT_CAST; }
-"("INT")"				{ RULE("(INT)"); return TO_INT_CAST; }
-"("FLOAT")"				{ RULE("(FLOAT)"); return TO_FLOAT_CAST; }
+"("int")"|"("INT")"			{ RULE(yytext); return TO_INT_CAST; }
+"("float")"|"("FLOAT")"			{ RULE(yytext); return TO_FLOAT_CAST; }
 public					{ scr_lval.stype = ST_PUBLIC; return STORAGE; }
 private					{ scr_lval.stype = ST_PRIVATE; return STORAGE; }
 local					{ scr_lval.stype = ST_LOCAL; return STORAGE; }
@@ -478,22 +476,15 @@ exit					return EXIT;
 pause					return PAUSE;
 
 	/* Match type keywords */
-void					{ scr_lval.tval = VAL_VOID; return _VOID; }
-VOID					{ scr_lval.tval = VAL_VOID; return _VOID; }
-string					{ scr_lval.tval = VAL_STRING; return TYPE; }
-STRING					{ scr_lval.tval = VAL_STRING; return TYPE; }
-bool					{ scr_lval.tval = VAL_BOOL; return TYPE; }
-BOOL					{ scr_lval.tval = VAL_BOOL; return TYPE; }
-int						{ scr_lval.tval = VAL_INT; return TYPE; }
-INT						{ scr_lval.tval = VAL_INT; return TYPE; }
-float					{ scr_lval.tval = VAL_FLOAT; return TYPE; }
-FLOAT					{ scr_lval.tval = VAL_FLOAT; return TYPE; }
+void|VOID				{ scr_lval.tval = VAL_VOID; return _VOID; }
+string|STRING				{ scr_lval.tval = VAL_STRING; return TYPE; }
+bool|BOOL				{ scr_lval.tval = VAL_BOOL; return TYPE; }
+int|INT					{ scr_lval.tval = VAL_INT; return TYPE; }
+float|FLOAT				{ scr_lval.tval = VAL_FLOAT; return TYPE; }
 
 	/* Match boolean values */
-TRUE					{ scr_lval.bval = TRUE; return BOOLEAN_T; }
-true					{ scr_lval.bval = TRUE; return BOOLEAN_T; }
-FALSE					{ scr_lval.bval = FALSE; return BOOLEAN_T; }
-false					{ scr_lval.bval = FALSE; return BOOLEAN_T; }
+true|TRUE				{ scr_lval.bval = true; return BOOLEAN_T; }
+false|FALSE				{ scr_lval.bval = false; return BOOLEAN_T; }
 
 	/* Match increment/decrement operators */
 "++"					{RULE("++"); return _INC; }
@@ -506,15 +497,9 @@ false					{ scr_lval.bval = FALSE; return BOOLEAN_T; }
 "<="					return LESSEQUAL;
 ">"						return GREATER;
 "<"						return LESS;
-and						return _AND;
-AND						return _AND;
-"&&"					return _AND;
-or						return _OR;
-OR						return _OR;
-"||"					return _OR;
-not						return _NOT;
-NOT						return _NOT;
-"!"						return _NOT;
+and|AND|"&&"				return _AND;
+or|OR|"||"				return _OR;
+not|NOT|"!"				return _NOT;
 
 	/* Start of a #define */
 "#define"[ \t]+				{ BEGIN (_DEF_MACRO); }
@@ -747,7 +732,7 @@ NOT						return _NOT;
 								{
 									RULE( "'%s' is an ident", scr_text);
 
-									strlcpy(aText[currText], scr_text, sizeof(aText[currText]));
+									sstrcpy(aText[currText], scr_text);
 									scr_lval.sval = aText[currText];
 									currText = (currText + 1) % TEXT_BUFFERS;
 									return IDENT;
@@ -762,7 +747,7 @@ NOT						return _NOT;
 \"							{ BEGIN (QUOTE); }
 <QUOTE>\"					{ BEGIN (INITIAL); }
 <QUOTE>[^\"\n]*				{
-								strlcpy(aText[currText], scr_text, sizeof(aText[currText]));
+								sstrcpy(aText[currText], scr_text);
 								scr_lval.sval = aText[currText];
 								currText = (currText + 1) % TEXT_BUFFERS;
 								//debug(LOG_SCRIPT, "%s is QTEXT", scr_text);
@@ -773,9 +758,9 @@ NOT						return _NOT;
 [ \t\n\x0d\x0a]				;
 
 	/* Strip comments */
-"/*"						{ inComment=TRUE; BEGIN (COMMENT); }
+"/*"						{ inComment=true; BEGIN (COMMENT); }
 <COMMENT>"*/" |
-<COMMENT>"*/"\n				{ inComment=FALSE; BEGIN (INITIAL); }
+<COMMENT>"*/"\n				{ inComment=false; BEGIN (INITIAL); }
 <COMMENT>. |
 <COMMENT>\n					;
 
@@ -843,3 +828,16 @@ int scr_wrap(void)
 	}
 	return 1;
 }
+
+
+/* Older GNU Flex versions don't define yylex_destroy()
+ * (and neither define a subminor version)
+ */
+#if !defined(YY_FLEX_SUBMINOR_VERSION) || (YY_FLEX_SUBMINOR_VERSION < 9)
+int scr_lex_destroy(void)
+{
+	/* For non-reentrant C scanner only. */
+	yy_delete_buffer(YY_CURRENT_BUFFER);
+	yy_init = 1;
+}
+#endif

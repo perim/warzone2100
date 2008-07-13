@@ -1,7 +1,7 @@
 /*
 	This file is part of Warzone 2100.
-	Copyright (C) 1999-2004  Eidos Interactive
-	Copyright (C) 2005-2007  Warzone Resurrection Project
+	Copyright (C) 2006-2008  Roman
+	Copyright (C) 2006-2008  Warzone Resurrection Project
 
 	Warzone 2100 is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -18,12 +18,9 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
 %{
-/*
- * chat_lexer.l
+/** @file
  *
- * lexer for multiplayer chat messages.
- * IMPORTANT: must be compiled with -i switch (case-insensitive scanner)
- *
+ *  Lexical analyser for multiplayer chat messages.
  */
 
 #include "lib/framework/frame.h"
@@ -99,6 +96,7 @@ static SDWORD playerIndex;
 "do"						{ return _T_DO; }
 "drop"						{ return _T_DROP; }
 "fine"						{ return _T_FINE; }
+"for"						{ return _T_FOR; }
 "force"						{ return _T_FORCE; }
 "get"						{ return _T_GET; }
 "getting"					{ return _T_GETTING; }
@@ -110,6 +108,7 @@ static SDWORD playerIndex;
 "have"						{ return _T_HAVE; }
 "has"						{ return _T_HAS; }
 "help"						{ return _T_HELP; }
+"hold"						{ return _T_HOLD; }
 "i"							{ return _T_I; }
 "i'm"						{ return _T_IM; }
 "is"						{ return _T_IS; }
@@ -122,6 +121,7 @@ static SDWORD playerIndex;
 "now"						{ return _T_NOW; }
 "of course"					{ return _T_OFCOURSE; }
 "ok"+						{ return _T_OK; }
+"on"						{ return _T_ON; }
 "place"						{ return _T_PLACE; }
 "possession"				{ return _T_POSSESSION; }
 "power"						{ return _T_POWER; }
@@ -130,6 +130,8 @@ static SDWORD playerIndex;
 "ready"						{ return _T_READY; }
 "require"					{ return _T_REQUIRE; }
 "roger"						{ return _T_ROGER; }
+"rush"						{ return _T_RUSH; }
+"sec"						{ return _T_SEC; }
 "see"						{ return _T_SEE; }
 "some"						{ return _T_SOME; }
 "status"					{ return _T_STATUS; }
@@ -143,9 +145,9 @@ static SDWORD playerIndex;
 "vtols"						{ return _T_VTOLS; }
 "wait"						{ return _T_WAIT; }
 "where"						{ return _T_WHERE; }
-"yea"						{ return _T_YEA; }
-"yeah"						{ return _T_YEAH; }
-"yep"						{ return _T_YEP; }
+"yea"						{ return _T_YES; }
+"yeah"						{ return _T_YES; }
+"yep"						{ return _T_YES; }
 "yes"						{ return _T_YES; }
 "you"						{ return _T_YOU; }
 
@@ -199,3 +201,14 @@ int chat_wrap(void)
 }
 
 
+/* Older GNU Flex versions don't define yylex_destroy()
+ * (and neither define a subminor version)
+ */
+#if !defined(YY_FLEX_SUBMINOR_VERSION) || (YY_FLEX_SUBMINOR_VERSION < 9)
+int chat_lex_destroy(void)
+{
+	/* For non-reentrant C scanner only. */
+	yy_delete_buffer(YY_CURRENT_BUFFER);
+	yy_init = 1;
+}
+#endif

@@ -26,13 +26,13 @@
 
 #include <string.h>
 #include "lib/framework/frame.h"
-#include "lib/widget/widget.h"
 #include <popt.h>
 
 #include "main.h"
 #include "frontend.h"
 
 #include "lib/ivis_common/pieclip.h"
+#include "lib/netplay/netplay.h"
 #include "warzoneconfig.h"
 
 #include "clparse.h"
@@ -47,14 +47,17 @@
 #include "display.h"
 #include "version.h"
 
+// these are all global variables
 extern char	datadir[PATH_MAX];
 extern char	configdir[PATH_MAX];
 extern char * global_mods[MAX_MODS];
 extern char * campaign_mods[MAX_MODS];
 extern char * multiplay_mods[MAX_MODS];
+extern char iptoconnect[PATH_MAX];
+extern BOOL hostlaunch;
 
 //! Let the end user into debug mode....
-BOOL	bAllowDebugMode = FALSE;
+BOOL	bAllowDebugMode = false;
 
 typedef enum
 {
@@ -79,9 +82,12 @@ typedef enum
 	CLI_NOSHADOWS,
 	CLI_SOUND,
 	CLI_NOSOUND,
+	CLI_SELFTEST,
+	CLI_CONNECTTOIP,
+	CLI_HOSTLAUNCH,
 } CLI_OPTIONS;
 
-static const struct poptOption* getOptionsTable()
+static const struct poptOption* getOptionsTable(void)
 {
 	static const struct poptOption optionsTable[] =
 	{
@@ -106,9 +112,11 @@ static const struct poptOption* getOptionsTable()
 		{ "noshadows",  '\0', POPT_ARG_NONE,   NULL, CLI_NOSHADOWS,  N_("Disable shadows"),                   NULL },
 		{ "sound",      '\0', POPT_ARG_NONE,   NULL, CLI_SOUND,      N_("Enable sound"),                      NULL },
 		{ "nosound",    '\0', POPT_ARG_NONE,   NULL, CLI_NOSOUND,    N_("Disable sound"),                     NULL },
-
+		{ "selftest",   '\0', POPT_ARG_NONE,   NULL, CLI_SELFTEST,   N_("Activate self-test"),                NULL },
+		{ "join",       '\0', POPT_ARG_STRING, NULL, CLI_CONNECTTOIP,N_("connect directly to IP/hostname"),   NULL },
+		{ "host",       '\0', POPT_ARG_NONE,   NULL, CLI_HOSTLAUNCH, N_("go directly to host screen"),        NULL },
 		// Terminating entry
-		{ NULL,         '\0', 0,               NULL,          0,              NULL,                                    NULL },
+		{ NULL,         '\0', 0,               NULL, 0,              NULL,                                    NULL },
 	};
 
 	static struct poptOption TranslatedOptionsTable[sizeof(optionsTable) / sizeof(struct poptOption)];
@@ -145,7 +153,7 @@ static const struct poptOption* getOptionsTable()
  * set up first.
  * \param argc number of arguments given
  * \param argv string array of the arguments
- * \return Returns TRUE on success, FALSE on error */
+ * \return Returns true on success, false on error */
 bool ParseCommandLineEarly(int argc, const char** argv)
 {
 	poptContext poptCon = poptGetContext(NULL, argc, argv, getOptionsTable(), 0);
@@ -156,10 +164,16 @@ bool ParseCommandLineEarly(int argc, const char** argv)
 #endif /* WZ_OS_MAC && DEBUG */
 
 	/* loop through command line */
-	while ((iOption = poptGetNextOpt(poptCon)) > 0)
+	while ((iOption = poptGetNextOpt(poptCon)) > 0 || iOption == POPT_ERROR_BADOPT)
 	{
 		CLI_OPTIONS option = iOption;
 		const char* token;
+
+		if (iOption == POPT_ERROR_BADOPT)
+		{
+			debug(LOG_ERROR, "Unrecognized option: %s", poptBadOption(poptCon, 0));
+			exit(1);
+		}
 
 		switch (option)
 		{
@@ -204,7 +218,7 @@ bool ParseCommandLineEarly(int argc, const char** argv)
 					poptFreeContext(poptCon);
 					return false;
 				}
-				strlcpy(configdir, token, sizeof(configdir));
+				sstrcpy(configdir, token);
 				break;
 
 			case CLI_HELP:
@@ -238,7 +252,7 @@ bool ParseCommandLineEarly(int argc, const char** argv)
  * the first half. Note that render mode must come before resolution flag.
  * \param argc number of arguments given
  * \param argv string array of the arguments
- * \return Returns TRUE on success, FALSE on error */
+ * \return Returns true on success, false on error */
 bool ParseCommandLine(int argc, const char** argv)
 {
 	poptContext poptCon = poptGetContext(NULL, argc, argv, getOptionsTable(), 0);
@@ -263,7 +277,7 @@ bool ParseCommandLine(int argc, const char** argv)
 
 			case CLI_CHEAT:
 				printf("  ** DEBUG MODE UNLOCKED! **\n");
-				bAllowDebugMode = TRUE;
+				bAllowDebugMode = true;
 				break;
 
 			case CLI_DATADIR:
@@ -275,13 +289,28 @@ bool ParseCommandLine(int argc, const char** argv)
 					poptFreeContext(poptCon);
 					return false;
 				}
-				strlcpy(datadir, token, sizeof(datadir));
+				sstrcpy(datadir, token);
 				break;
 
 			case CLI_FULLSCREEN:
-				war_setFullscreen(TRUE);
+				war_setFullscreen(true);
 				break;
-
+			case CLI_CONNECTTOIP:
+				//get the ip we want to connect with, and go directly to join screen.
+				token = poptGetOptArg(poptCon);
+				if (token == NULL)
+				{
+					debug(LOG_ERROR, "No IP/hostname given");
+					poptFreeContext(poptCon);
+					abort();
+					return false;
+				}
+				sstrcpy(iptoconnect, token);
+				break;
+			case CLI_HOSTLAUNCH:
+				// go directly to host screen, bypass all others.
+				hostlaunch = true;
+				break;
 			case CLI_GAME:
 				// retrieve the game name
 				token = poptGetOptArg(poptCon);
@@ -299,7 +328,8 @@ bool ParseCommandLine(int argc, const char** argv)
 					fprintf(stderr, "\tCAM_1A\n\tCAM_2A\n\tCAM_3A\n\tTUTORIAL3\n\tFASTPLAY\n");
 					exit(1);
 				}
-				strlcpy(aLevelName, token, sizeof(aLevelName));
+				NetPlay.bComms = false;
+				sstrcpy(aLevelName, token);
 				SetGameMode(GS_NORMAL);
 				break;
 			case CLI_MOD_GLOB:
@@ -382,7 +412,7 @@ bool ParseCommandLine(int argc, const char** argv)
 				{
 					debug(LOG_ERROR, "Invalid resolution");
 					abort();
-					return FALSE;
+					return false;
 				}
 				// tell the display system of the desired resolution
 				pie_SetVideoBufferWidth(width);
@@ -407,23 +437,27 @@ bool ParseCommandLine(int argc, const char** argv)
 				break;
 
 			case CLI_WINDOW:
-				war_setFullscreen(FALSE);
+				war_setFullscreen(false);
 				break;
 
 			case CLI_SHADOWS:
-				setDrawShadows(TRUE);
+				setDrawShadows(true);
 				break;
 
 			case CLI_NOSHADOWS:
-				setDrawShadows(FALSE);
+				setDrawShadows(false);
 				break;
 
 			case CLI_SOUND:
-				war_setSoundEnabled(TRUE);
+				war_setSoundEnabled(true);
 				break;
 
 			case CLI_NOSOUND:
-				war_setSoundEnabled(FALSE);
+				war_setSoundEnabled(false);
+				break;
+
+			case CLI_SELFTEST:
+				selfTest = true;
 				break;
 		};
 	}

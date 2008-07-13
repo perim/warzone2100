@@ -27,6 +27,7 @@
  *
  */
 #include "frame.h"
+#include "file.h"
 
 #include <SDL.h>
 #include <physfs.h>
@@ -36,18 +37,23 @@
 #include "input.h"
 #include "SDL_framerate.h"
 
+#include "cursors.h"
+
+static const enum CURSOR_TYPE cursor_type =
 #ifdef __APPLE__
-#  include "cursors16.h"
+	CURSOR_16;
 #else
-#  include "cursors.h"
+	CURSOR_32;
 #endif
 
 /* Linux specific stuff */
 
-static UWORD currentCursorResID = UWORD_MAX;
-SDL_Cursor *aCursors[MAX_CURSORS];
+static CURSOR currentCursor = ~(CURSOR)0;
+static SDL_Cursor* aCursors[CURSOR_MAX];
 
 FOCUS_STATE focusState = FOCUS_IN;
+
+bool selfTest = false;
 
 /************************************************************************************
  *
@@ -76,7 +82,7 @@ static Uint64	lastFrames = 0;
 static Uint32	curTicks = 0; // Number of ticks since execution started
 static Uint32	lastTicks = 0;
 static FPSmanager wzFPSmanager;
-static BOOL	initFPSmanager = FALSE;
+static BOOL	initFPSmanager = false;
 
 void setFramerateLimit(int fpsLimit)
 {
@@ -84,7 +90,7 @@ void setFramerateLimit(int fpsLimit)
 	{
 		/* Initialize framerate handler */
 		SDL_initFramerate(&wzFPSmanager);
-		initFPSmanager = TRUE;
+		initFPSmanager = true;
 	}
 	SDL_setFramerate(&wzFPSmanager, fpsLimit);
 }
@@ -151,58 +157,58 @@ UDWORD	frameGetFrameNumber(void)
 }
 
 
-/** Set the current cursor from a Resource ID */
-void frameSetCursorFromRes(SWORD resID)
+/** Set the current cursor from a Resource ID
+ */
+void frameSetCursor(CURSOR cur)
 {
-	ASSERT( resID >= CURSOR_OFFSET, "frameSetCursorFromRes: bad resource ID" );
-	ASSERT( resID < CURSOR_OFFSET + MAX_CURSORS, "frameSetCursorFromRes: bad resource ID" );
+	ASSERT(cur < CURSOR_MAX, "frameSetCursorFromRes: bad resource ID" );
 
 	//If we are already using this cursor then  return
-	if (resID != currentCursorResID)
+	if (cur != currentCursor)
         {
-		SDL_SetCursor(aCursors[resID - CURSOR_OFFSET]);
-		currentCursorResID = resID;
+		SDL_SetCursor(aCursors[cur]);
+		currentCursor = cur;
         }
 }
 
 
 static void initCursors(void)
 {
-	aCursors[CURSOR_ARROW - CURSOR_OFFSET] = init_system_cursor(cursor_arrow);
-	aCursors[CURSOR_DEST - CURSOR_OFFSET] = init_system_cursor(cursor_dest);
-	aCursors[CURSOR_SIGHT - CURSOR_OFFSET] = init_system_cursor(cursor_sight);
-	aCursors[CURSOR_TARGET - CURSOR_OFFSET] = init_system_cursor(cursor_target);
-	aCursors[CURSOR_LARROW - CURSOR_OFFSET] = init_system_cursor(cursor_larrow);
-	aCursors[CURSOR_RARROW - CURSOR_OFFSET] = init_system_cursor(cursor_rarrow);
-	aCursors[CURSOR_DARROW - CURSOR_OFFSET] = init_system_cursor(cursor_darrow);
-	aCursors[CURSOR_UARROW - CURSOR_OFFSET] = init_system_cursor(cursor_uarrow);
-	aCursors[CURSOR_DEFAULT - CURSOR_OFFSET] = init_system_cursor(cursor_default);
-	aCursors[CURSOR_EDGEOFMAP - CURSOR_OFFSET] = init_system_cursor(cursor_default);
-	aCursors[CURSOR_ATTACH - CURSOR_OFFSET] = init_system_cursor(cursor_attach);
-	aCursors[CURSOR_ATTACK - CURSOR_OFFSET] = init_system_cursor(cursor_attack);
-	aCursors[CURSOR_BOMB - CURSOR_OFFSET] = init_system_cursor(cursor_bomb);
-	aCursors[CURSOR_BRIDGE - CURSOR_OFFSET] = init_system_cursor(cursor_bridge);
-	aCursors[CURSOR_BUILD - CURSOR_OFFSET] = init_system_cursor(cursor_build);
-	aCursors[CURSOR_EMBARK - CURSOR_OFFSET] = init_system_cursor(cursor_embark);
-	aCursors[CURSOR_FIX - CURSOR_OFFSET] = init_system_cursor(cursor_fix);
-	aCursors[CURSOR_GUARD - CURSOR_OFFSET] = init_system_cursor(cursor_guard);
-	aCursors[CURSOR_JAM - CURSOR_OFFSET] = init_system_cursor(cursor_jam);
-	aCursors[CURSOR_LOCKON - CURSOR_OFFSET] = init_system_cursor(cursor_lockon);
-	aCursors[CURSOR_MENU - CURSOR_OFFSET] = init_system_cursor(cursor_menu);
-	aCursors[CURSOR_MOVE - CURSOR_OFFSET] = init_system_cursor(cursor_move);
-	aCursors[CURSOR_NOTPOSSIBLE - CURSOR_OFFSET] = init_system_cursor(cursor_notpossible);
-	aCursors[CURSOR_PICKUP - CURSOR_OFFSET] = init_system_cursor(cursor_pickup);
-	aCursors[CURSOR_SEEKREPAIR - CURSOR_OFFSET] = init_system_cursor(cursor_seekrepair);
-	aCursors[CURSOR_SELECT - CURSOR_OFFSET] = init_system_cursor(cursor_select);
+	aCursors[CURSOR_ARROW]       = init_system_cursor(CURSOR_ARROW, cursor_type);
+	aCursors[CURSOR_DEST]        = init_system_cursor(CURSOR_DEST, cursor_type);
+	aCursors[CURSOR_SIGHT]       = init_system_cursor(CURSOR_SIGHT, cursor_type);
+	aCursors[CURSOR_TARGET]      = init_system_cursor(CURSOR_TARGET, cursor_type);
+	aCursors[CURSOR_LARROW]      = init_system_cursor(CURSOR_LARROW, cursor_type);
+	aCursors[CURSOR_RARROW]      = init_system_cursor(CURSOR_RARROW, cursor_type);
+	aCursors[CURSOR_DARROW]      = init_system_cursor(CURSOR_DARROW, cursor_type);
+	aCursors[CURSOR_UARROW]      = init_system_cursor(CURSOR_UARROW, cursor_type);
+	aCursors[CURSOR_DEFAULT]     = init_system_cursor(CURSOR_DEFAULT, cursor_type);
+	aCursors[CURSOR_EDGEOFMAP]   = init_system_cursor(CURSOR_EDGEOFMAP, cursor_type);
+	aCursors[CURSOR_ATTACH]      = init_system_cursor(CURSOR_ATTACH, cursor_type);
+	aCursors[CURSOR_ATTACK]      = init_system_cursor(CURSOR_ATTACK, cursor_type);
+	aCursors[CURSOR_BOMB]        = init_system_cursor(CURSOR_BOMB, cursor_type);
+	aCursors[CURSOR_BRIDGE]      = init_system_cursor(CURSOR_BRIDGE, cursor_type);
+	aCursors[CURSOR_BUILD]       = init_system_cursor(CURSOR_BUILD, cursor_type);
+	aCursors[CURSOR_EMBARK]      = init_system_cursor(CURSOR_EMBARK, cursor_type);
+	aCursors[CURSOR_FIX]         = init_system_cursor(CURSOR_FIX, cursor_type);
+	aCursors[CURSOR_GUARD]       = init_system_cursor(CURSOR_GUARD, cursor_type);
+	aCursors[CURSOR_JAM]         = init_system_cursor(CURSOR_JAM, cursor_type);
+	aCursors[CURSOR_LOCKON]      = init_system_cursor(CURSOR_LOCKON, cursor_type);
+	aCursors[CURSOR_MENU]        = init_system_cursor(CURSOR_MENU, cursor_type);
+	aCursors[CURSOR_MOVE]        = init_system_cursor(CURSOR_MOVE, cursor_type);
+	aCursors[CURSOR_NOTPOSSIBLE] = init_system_cursor(CURSOR_NOTPOSSIBLE, cursor_type);
+	aCursors[CURSOR_PICKUP]      = init_system_cursor(CURSOR_PICKUP, cursor_type);
+	aCursors[CURSOR_SEEKREPAIR]  = init_system_cursor(CURSOR_SEEKREPAIR, cursor_type);
+	aCursors[CURSOR_SELECT]      = init_system_cursor(CURSOR_SELECT, cursor_type);
 }
 
 
 static void freeCursors(void)
 {
-	unsigned int i = 0;
-	for( ; i < MAX_CURSORS; i++ )
+	unsigned int i;
+	for(i = 0 ; i < ARRAY_SIZE(aCursors); ++i)
 	{
-		SDL_FreeCursor( aCursors[i] );
+		SDL_FreeCursor(aCursors[i]);
 	}
 }
 
@@ -222,7 +228,7 @@ BOOL frameInitialise(
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
 	{
 		debug( LOG_ERROR, "Error: Could not initialise SDL (%s).\n", SDL_GetError() );
-		return FALSE;
+		return false;
 	}
 
 	SDL_WM_SetCaption(pWindowName, NULL);
@@ -230,7 +236,7 @@ BOOL frameInitialise(
 	/* Initialise the trig stuff */
 	if (!trigInitialise())
 	{
-		return FALSE;
+		return false;
 	}
 
 	/* initialise all cursors */
@@ -238,7 +244,7 @@ BOOL frameInitialise(
 
 	if (!screenInitialise(width, height, bitDepth, fullScreen))
 	{
-		return FALSE;
+		return false;
 	}
 
 	/* Initialise the input system */
@@ -250,10 +256,10 @@ BOOL frameInitialise(
 	// Initialise the resource stuff
 	if (!resInitialise())
 	{
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -299,11 +305,11 @@ PHYSFS_file* openLoadFile(const char* fileName, bool hard_fail)
 	{
 		if (hard_fail)
 		{
-			ASSERT(!"unable to open file", "openLoadFile: file %s could not be opened: %s", fileName, PHYSFS_getLastError());
+			ASSERT(!"unable to open file", "file %s could not be opened: %s", fileName, PHYSFS_getLastError());
 		}
 		else
 		{
-			debug(LOG_WARNING, "openLoadFile: optional file %s could not be opened: %s", fileName, PHYSFS_getLastError());
+			debug(LOG_WARNING, "optional file %s could not be opened: %s", fileName, PHYSFS_getLastError());
 		}
 	}
 
@@ -328,7 +334,7 @@ static BOOL loadFile2(const char *pFileName, char **ppFileData, UDWORD *pFileSiz
 	pfile = openLoadFile(pFileName, hard_fail);
 	if (!pfile)
 	{
-		return FALSE;
+		return false;
 	}
 
 	filesize = PHYSFS_fileLength(pfile);
@@ -342,8 +348,8 @@ static BOOL loadFile2(const char *pFileName, char **ppFileData, UDWORD *pFileSiz
 		if (*ppFileData == NULL)
 		{
 			debug(LOG_ERROR, "loadFile2: Out of memory loading %s", pFileName);
-			assert(FALSE);
-			return FALSE;
+			assert(false);
+			return false;
 		}
 	}
 	else
@@ -351,8 +357,8 @@ static BOOL loadFile2(const char *pFileName, char **ppFileData, UDWORD *pFileSiz
 		if (filesize > *pFileSize)
 		{
 			debug(LOG_ERROR, "loadFile2: No room for file %s, buffer is too small! Got: %d Need: %ld", pFileName, *pFileSize, (long)filesize);
-			assert(FALSE);
-			return FALSE;
+			assert(false);
+			return false;
 		}
 		assert(*ppFileData != NULL);
 	}
@@ -369,8 +375,8 @@ static BOOL loadFile2(const char *pFileName, char **ppFileData, UDWORD *pFileSiz
 
 		debug(LOG_ERROR, "loadFile2: Reading %s short: %s",
 		      pFileName, PHYSFS_getLastError());
-		assert(FALSE);
-		return FALSE;
+		assert(false);
+		return false;
 	}
 
 	if (!PHYSFS_close(pfile))
@@ -383,8 +389,8 @@ static BOOL loadFile2(const char *pFileName, char **ppFileData, UDWORD *pFileSiz
 
 		debug(LOG_ERROR, "loadFile2: Error closing %s: %s", pFileName,
 		      PHYSFS_getLastError());
-		assert(FALSE);
-		return FALSE;
+		assert(false);
+		return false;
 	}
 
 	// Add the terminating zero
@@ -393,7 +399,7 @@ static BOOL loadFile2(const char *pFileName, char **ppFileData, UDWORD *pFileSiz
 	// always set to correct size
 	*pFileSize = filesize;
 
-	return TRUE;
+	return true;
 }
 
 PHYSFS_file* openSaveFile(const char* fileName)
@@ -427,20 +433,20 @@ BOOL saveFile(const char *pFileName, const char *pFileData, UDWORD fileSize)
 	pfile = openSaveFile(pFileName);
 	if (!pfile)
 	{
-		return FALSE;
+		return false;
 	}
 
 	if (PHYSFS_write(pfile, pFileData, 1, size) != size) {
 		debug(LOG_ERROR, "saveFile: %s could not write: %s", pFileName,
 		      PHYSFS_getLastError());
-		assert(FALSE);
-		return FALSE;
+		assert(false);
+		return false;
 	}
 	if (!PHYSFS_close(pfile)) {
 		debug(LOG_ERROR, "saveFile: Error closing %s: %s", pFileName,
 		      PHYSFS_getLastError());
-		assert(FALSE);
-		return FALSE;
+		assert(false);
+		return false;
 	}
 
 	if (PHYSFS_getRealDir(pFileName) == NULL) {
@@ -452,26 +458,26 @@ BOOL saveFile(const char *pFileName, const char *pFileData, UDWORD fileSize)
 		      PHYSFS_getRealDir(pFileName), PHYSFS_getDirSeparator(),
 		      pFileName, size);
 	}
-	return TRUE;
+	return true;
 }
 
 BOOL loadFile(const char *pFileName, char **ppFileData, UDWORD *pFileSize)
 {
-	return loadFile2(pFileName, ppFileData, pFileSize, TRUE, TRUE);
+	return loadFile2(pFileName, ppFileData, pFileSize, true, true);
 }
 
 // load a file from disk into a fixed memory buffer
 BOOL loadFileToBuffer(const char *pFileName, char *pFileBuffer, UDWORD bufferSize, UDWORD *pSize)
 {
 	*pSize = bufferSize;
-	return loadFile2(pFileName, &pFileBuffer, pSize, FALSE, TRUE);
+	return loadFile2(pFileName, &pFileBuffer, pSize, false, true);
 }
 
 // as above but returns quietly if no file found
 BOOL loadFileToBufferNoError(const char *pFileName, char *pFileBuffer, UDWORD bufferSize, UDWORD *pSize)
 {
 	*pSize = bufferSize;
-	return loadFile2(pFileName, &pFileBuffer, pSize, FALSE, FALSE);
+	return loadFile2(pFileName, &pFileBuffer, pSize, false, false);
 }
 
 

@@ -180,6 +180,11 @@
 
 #if defined(_MSC_VER)
 #  define WZ_CC_MSVC
+/* All ISO C89 compliant compilers _should_ define the macro __STDC__, MSVC
+ * however is known _not_ to do this, so work around that here. */
+#  if !defined(__STDC__)
+#    define __STDC__ 1
+#  endif
 /* Visual C++.Net issues for _MSC_VER >= 1300 */
 #  if _MSC_VER >= 1300
 #    define WZ_CC_MSVC_NET
@@ -333,7 +338,7 @@
  *
  */
 #if WZ_CC_GNU_PREREQ(3,2) || WZ_CC_INTEL_PREREQ(10,0)
-#  define WZ_DECL_DEPRECATED __attribute__ ((__deprecated__))
+#  define WZ_DECL_DEPRECATED __attribute__((deprecated))
 #elif defined(WZ_CC_MSVC) && (_MSC_VER >= 1300)
 #  define WZ_DECL_DEPRECATED __declspec(deprecated)
 #else
@@ -346,7 +351,7 @@
  * This function is not used, but shall not generate an unused warning either.
  */
 #if WZ_CC_GNU_PREREQ(3,2) || WZ_CC_INTEL_PREREQ(10,0)
-#  define WZ_DECL_UNUSED __attribute__((__unused__))
+#  define WZ_DECL_UNUSED __attribute__((unused))
 #else
 #  define WZ_DECL_UNUSED
 #endif
@@ -357,7 +362,7 @@
  * Warn if return value is unused.
  */
 #if defined(WZ_CC_GNU)
-#  define WZ_DECL_WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
+#  define WZ_DECL_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #else
 #  define WZ_DECL_WARN_UNUSED_RESULT
 #endif
@@ -365,21 +370,35 @@
 
 /*!
  * \def WZ_DECL_PURE
- * "Many functions have no effects except the return value and their return value depends only on the parameters and/or global variables. Such a function can be subject to common subexpression elimination and loop optimization just as an arithmetic operator would be."
+ * "Many functions have no effects except the return value and their return value depends only on the parameters and/or global variables. Such a function can
+ *  be subject to common subexpression elimination and loop optimization just as an arithmetic operator would be."
  */
 #if WZ_CC_GNU_PREREQ(2,96) && !defined(WZ_CC_INTEL)
-#  define WZ_DECL_PURE __attribute__((__pure__))
+#  define WZ_DECL_PURE __attribute__((pure))
 #else
 #  define WZ_DECL_PURE
 #endif
 
 
 /*!
+ * \def WZ_DECL_RESTRICT
+ */
+#if WZ_CC_GNU_PREREQ(4,1) && !defined(WZ_CC_INTEL) && !defined(__cplusplus)
+#  define WZ_DECL_RESTRICT restrict
+#elif defined(WZ_CC_MSVC) && (_MSC_VER >= 1300)
+#  define WZ_DECL_RESTRICT __restrict
+#else
+#  define WZ_DECL_RESTRICT
+#endif
+
+
+/*!
  * \def WZ_DECL_CONST
- * "Many functions do not examine any values except their arguments, and have no effects except the return value. Basically this is just slightly more strict class than the pure attribute below, since function is not allowed to read global memory."
+ * GCC: "Many functions do not examine any values except their arguments, and have no effects except the return value. Basically this is just slightly more strict
+ *       class than the pure attribute below, since function is not allowed to read global memory."
  */
 #if WZ_CC_GNU_PREREQ(2,5) && !defined(WZ_CC_INTEL)
-#  define WZ_DECL_CONST __attribute__((__const__))
+#  define WZ_DECL_CONST __attribute__((const,warn_unused_result))
 #else
 #  define WZ_DECL_CONST
 #endif
@@ -390,7 +409,7 @@
  */
 #if WZ_CC_GNU_PREREQ(2,5) && !defined(WZ_CC_INTEL)
 #  define WZ_DECL_FORMAT(archetype, string_index, first_to_check) \
-          __attribute__((__format__ (archetype, string_index, first_to_check)))
+          __attribute__((format(archetype, string_index, first_to_check)))
 #else
 #  define WZ_DECL_FORMAT(archetype, string_index, first_to_check)
 #endif
@@ -400,10 +419,33 @@
  * "Accesses to objects with types with this attribute are not subjected to type-based alias analysis, but are instead assumed to be able to alias any other type of objects, just like the char type. See -fstrict-aliasing for more information on aliasing issues."
  */
 #if WZ_CC_GNU_PREREQ(3,3) && !defined(WZ_CC_INTEL)
-#  define WZ_DECL_MAY_ALIAS __attribute__((__may_alias__))
+#  define WZ_DECL_MAY_ALIAS __attribute__((may_alias))
 #else
 #  define WZ_DECL_MAY_ALIAS
 #endif
+
+
+/*! \def WZ_DECL_THREAD
+ * Declares a variable to be local to the running thread, and not shared between threads.
+ */
+#if defined(WZ_CC_GNU) || defined(WZ_CC_INTEL)
+#  define WZ_DECL_THREAD __thread
+#elif defined(WZ_CC_MSVC)
+#  define __declspec(thread)
+#else
+#  error "Thread local storage attribute required"
+#endif
+
+
+/*! \def WZ_ASSERT_STATIC_STRING
+ * Asserts that two types are equal
+ */
+#if defined(WZ_CC_GNU) || defined(WZ_CC_INTEL)
+#  define WZ_ASSERT_STATIC_STRING(_var) assert(__builtin_types_compatible_p(typeof(_var), char[]))
+#else
+#  define WZ_ASSERT_STATIC_STRING(_var) (void)_var
+#endif
+
 
 /* ---- Global constants ---- */
 
@@ -436,11 +478,14 @@
 
 #  if defined(WZ_CC_MSVC)
 //   notify people we are disabling these warning messages.
-#    pragma message (" *** Warnings 4100,4127,4204 & 4244 have been squelched. ***")
+#    pragma message (" *** Warnings 4018,4100,4127,4204,4244,4267,4389 have been squelched. ***")
+#    pragma warning (disable : 4018) // Shut up: '>' : signed/unsigned mismatch
 #    pragma warning (disable : 4100) // Shut up: unreferenced formal parameter (FIXME)
 #    pragma warning (disable : 4127) // Shut up: conditional expression is constant (eg. "while(0)")
 #    pragma warning (disable : 4204) // Shut up: non-constant aggregate initializer
 #    pragma warning (disable : 4244) // Shut up: conversion from 'float' to 'int', possible loss of data
+#    pragma warning (disable : 4267) // Shut up: conversion from 'size_t' to 'type', possible loss of data
+#    pragma warning (disable : 4389) // Shut up: '==' : signed/unsigned mismatch
 
 #    define strcasecmp _stricmp
 #    define strncasecmp _strnicmp

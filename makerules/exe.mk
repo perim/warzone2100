@@ -1,7 +1,13 @@
-include $(MAKERULES)/common.mk
+include $(top_srcdir)/makerules/common.mk
 
-DEPS=$(patsubst %.c,%.o, $(SRC:%.rc=%.o)) $(LIBS)
+DEPS=$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(patsubst %.rc,%.o,$(SRC)))) $(LIBS)
 
-all: $(EXE)$(EXEEXT)
-$(EXE)$(EXEEXT): $(DEPS) ; $(CC) $(CFLAGS) -o $(EXE)$(EXEEXT) $(DEPS) $(LDFLAGS)
-clean: ; $(RMF) $(EXE)$(EXEEXT) *.o
+.PHONY: all clean
+
+all: $(BUILT_SOURCES) $(EXE)$(EXEEXT)
+
+$(EXE)$(EXEEXT): $(DEPS)
+	$(CXX) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+clean:
+	$(RM_F) $(EXE)$(EXEEXT) *.o $(CLEANFILES)

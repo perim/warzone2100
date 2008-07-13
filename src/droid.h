@@ -27,6 +27,7 @@
 #include "objectdef.h"
 #include "lib/gamelib/gtime.h"
 #include "stats.h"
+#include "visibility.h"
 
 #define OFF_SCREEN 9999		// world->screen check - alex
 
@@ -62,6 +63,7 @@ extern bool runningMultiplayer(void);
 /* Experience modifies */
 #define EXP_REDUCE_DAMAGE		6		// damage of a droid is reduced by this value per experience level, in %
 #define EXP_ACCURACY_BONUS		5		// accuracy of a droid is increased by this value per experience level, in %
+#define EXP_SPEED_BONUS			5		// speed of a droid is increased by this value per experience level, in %
 
 /* Misc accuracy modifiers */
 #define	FOM_PARTIAL_ACCURACY_PENALTY	50	// penalty for not being fully able to fire while moving, in %
@@ -137,7 +139,7 @@ extern UDWORD calcDroidBaseBody(DROID *psDroid);
 extern UDWORD calcDroidBaseSpeed(DROID_TEMPLATE *psTemplate, UDWORD weight, UBYTE player);
 
 /* Calculate the speed of a droid over a terrain */
-extern UDWORD calcDroidSpeed(UDWORD baseSpeed, UDWORD terrainType, UDWORD propIndex);
+extern UDWORD calcDroidSpeed(UDWORD baseSpeed, UDWORD terrainType, UDWORD propIndex, UDWORD level);
 
 /* Calculate the points required to build the template */
 extern UDWORD calcTemplateBuild(DROID_TEMPLATE *psTemplate);
@@ -164,27 +166,27 @@ extern BOOL droidStartBuild(DROID *psDroid);
 extern BOOL	droidStartDemolishing( DROID *psDroid );
 
 /* Update a construction droid while it is demolishing
-   returns TRUE while demolishing */
+   returns true while demolishing */
 extern BOOL	droidUpdateDemolishing( DROID *psDroid );
 
 /* Sets a droid to start repairing - returns true if successful */
 extern BOOL	droidStartRepair( DROID *psDroid );
 
 /* Update a construction droid while it is repairing
-   returns TRUE while repairing */
+   returns true while repairing */
 extern BOOL	droidUpdateRepair( DROID *psDroid );
 
-/*Start a Repair Droid working on a damaged droid - returns TRUE if successful*/
+/*Start a Repair Droid working on a damaged droid - returns true if successful*/
 extern BOOL droidStartDroidRepair( DROID *psDroid );
 
-/*Updates a Repair Droid working on a damaged droid - returns TRUE whilst repairing*/
+/*Updates a Repair Droid working on a damaged droid - returns true whilst repairing*/
 extern BOOL droidUpdateDroidRepair(DROID *psRepairDroid);
 
 /*checks a droids current body points to see if need to self repair*/
 extern void droidSelfRepair(DROID *psDroid);
 
 /* Update a construction droid while it is building
-   returns TRUE while building continues */
+   returns true while building continues */
 extern BOOL droidUpdateBuild(DROID *psDroid);
 
 /*Start a EW weapon droid working on a low resistance structure*/
@@ -209,7 +211,7 @@ extern void	vanishDroid(DROID *psDel);
 extern void droidBurn( DROID * psDroid );
 
 /* Remove a droid from the apsDroidLists so doesn't update or get drawn etc*/
-//returns TRUE if successfully removed from the list
+//returns true if successfully removed from the list
 extern BOOL droidRemove(DROID *psDroid, DROID *pList[MAX_PLAYERS]);
 
 //free the storage for the droid templates
@@ -232,7 +234,7 @@ extern UDWORD	getNumDroidsForLevel(UDWORD	level);
 
 extern BOOL activateGroupAndMove(UDWORD playerNumber, UDWORD groupNumber);
 /* calculate muzzle tip location in 3d world added int weapon_slot to fix the always slot 0 hack*/
-extern BOOL calcDroidMuzzleLocation(DROID *psDroid, Vector3i *muzzle, int weapon_slot);
+extern BOOL calcDroidMuzzleLocation(DROID *psDroid, Vector3f *muzzle, int weapon_slot);
 
 /* gets a template from its name - relies on the name being unique */
 extern DROID_TEMPLATE * getTemplateFromUniqueName(const char *pName, unsigned int player);
@@ -262,13 +264,10 @@ extern void templateSetName(DROID_TEMPLATE *psTemplate,char *pName);
 
 // returns true when no droid on x,y square.
 extern BOOL	noDroid					(UDWORD x, UDWORD y);				// true if no droid at x,y
-// returns true if it's a sensible place to put that droid.
-extern BOOL	sensiblePlace			(SDWORD x, SDWORD y);				// true if x,y is an ok place
 // returns an x/y coord to place a droid
 extern BOOL pickATile				(UDWORD *x0,UDWORD *y0, UBYTE numIterations);
 extern PICKTILE pickHalfATile		(UDWORD *x, UDWORD *y, UBYTE numIterations);
 extern BOOL	pickATile2				(UDWORD *x, UDWORD *y, UDWORD numIterations);
-extern	BOOL	normalPAT(UDWORD x, UDWORD y);
 extern	BOOL	zonedPAT(UDWORD x, UDWORD y);
 extern	BOOL	pickATileGen(UDWORD *x, UDWORD *y, UBYTE numIterations,
 					 BOOL (*function)(UDWORD x, UDWORD y));
@@ -280,15 +279,15 @@ extern	BOOL	pickATileGenThreat(UDWORD *x, UDWORD *y, UBYTE numIterations, SDWORD
 extern void initDroidMovement(DROID *psDroid);
 
 /* Looks through the players list of droids to see if any of them are
-building the specified structure - returns TRUE if finds one*/
+building the specified structure - returns true if finds one*/
 extern BOOL checkDroidsBuilding(STRUCTURE *psStructure);
 
 /* Looks through the players list of droids to see if any of them are
-demolishing the specified structure - returns TRUE if finds one*/
+demolishing the specified structure - returns true if finds one*/
 extern BOOL checkDroidsDemolishing(STRUCTURE *psStructure);
 
 /* checks the structure for type and capacity and orders the droid to build
-a module if it can - returns TRUE if order is set */
+a module if it can - returns true if order is set */
 extern BOOL buildModule(STRUCTURE *psStruct);
 
 /*Deals with building a module - checking if any droid is currently doing this
@@ -327,7 +326,7 @@ extern UBYTE checkCommandExist(UBYTE player);
 /* Set up a droid to clear a wrecked building feature - returns true if successful */
 extern BOOL droidStartClearing( DROID *psDroid );
 /* Update a construction droid while it is clearing
-   returns TRUE while continues */
+   returns true while continues */
 extern BOOL droidUpdateClearing( DROID *psDroid );
 
 /*For a given repair droid, check if there are any damaged droids within
@@ -335,12 +334,12 @@ a defined range*/
 extern BASE_OBJECT * checkForRepairRange(DROID *psDroid,DROID *psTarget);
 
 //access function
-extern BOOL vtolDroid(DROID *psDroid);
-/*returns TRUE if a VTOL Weapon Droid which has completed all runs*/
+extern BOOL isVtolDroid(const DROID* psDroid);
+/*returns true if a VTOL Weapon Droid which has completed all runs*/
 extern BOOL vtolEmpty(DROID *psDroid);
 /*Checks a vtol for being fully armed and fully repaired to see if ready to
 leave reArm pad */
-extern BOOL  vtolHappy(DROID *psDroid);
+extern BOOL  vtolHappy(const DROID* psDroid);
 /*this mends the VTOL when it has been returned to home base whilst on an
 offworld mission*/
 extern void mendVtol(DROID *psDroid);
@@ -374,7 +373,7 @@ extern SWORD   droidResistance(DROID *psDroid);
 
 /*this is called to check the weapon is 'allowed'. Check if VTOL, the weapon is
 direct fire. Also check numVTOLattackRuns for the weapon is not zero - return
-TRUE if valid weapon*/
+true if valid weapon*/
 extern BOOL checkValidWeaponForProp(DROID_TEMPLATE *psTemplate);
 
 extern const char *getDroidNameForRank(UDWORD rank);
@@ -397,8 +396,8 @@ extern UWORD repairPowerPoint(DROID *psDroid);
 /* audio finished callback */
 extern BOOL droidAudioTrackStopped( void *psObj );
 
-/*returns TRUE if droid type is one of the Cyborg types*/
-extern BOOL cyborgDroid(DROID *psDroid);
+/*returns true if droid type is one of the Cyborg types*/
+extern BOOL cyborgDroid(const DROID* psDroid);
 
 // check for illegal references to droid we want to release
 BOOL droidCheckReferences(DROID *psVictimDroid);
@@ -406,11 +405,32 @@ BOOL droidCheckReferences(DROID *psVictimDroid);
 /** Check if droid is in a legal world position and is not on its way to drive off the map. */
 BOOL droidOnMap(const DROID *psDroid);
 
-#define droidSensorRange(_psDroid) objSensorRange((BASE_OBJECT *)_psDroid)
-#define droidSensorPower(_psDroid) objSensorPower((BASE_OBJECT *)_psDroid)
-#define droidJammerRange(_psDroid) objJammerRange((BASE_OBJECT *)_psDroid)
-#define droidJammerPower(_psDroid) objJammerPower((BASE_OBJECT *)_psDroid)
-#define droidConcealment(_psDroid) objConcealment((BASE_OBJECT *)_psDroid)
+void droidSetPosition(DROID *psDroid, int x, int y);
+
+static inline int droidSensorRange(const DROID* psDroid)
+{
+	return objSensorRange((const BASE_OBJECT*)psDroid);
+}
+
+static inline int droidSensorPower(const DROID* psDroid)
+{
+	return objSensorPower((const BASE_OBJECT*)psDroid);
+}
+
+static inline int droidJammerRange(const DROID* psDroid)
+{
+	return objJammerRange((const BASE_OBJECT*)psDroid);
+}
+
+static inline int droidJammerPower(const DROID* psDroid)
+{
+	return objJammerPower((const BASE_OBJECT*)psDroid);
+}
+
+static inline int droidConcealment(const DROID* psDroid)
+{
+	return objConcealment((const BASE_OBJECT*)psDroid);
+}
 
 /*
  * Component stat helper functions
@@ -437,7 +457,7 @@ static inline SENSOR_STATS *getSensorStats(DROID *psDroid)
 
 static inline ECM_STATS *getECMStats(DROID *psDroid)
 {
-	return asECMStats + psDroid->asBits[COMP_SENSOR].nStat;
+	return asECMStats + psDroid->asBits[COMP_ECM].nStat;
 }
 
 static inline REPAIR_STATS *getRepairStats(DROID *psDroid)
@@ -461,7 +481,7 @@ static inline void _setDroidTarget(DROID *psDroid, BASE_OBJECT *psNewTarget, int
 	       "setDroidTarget: Set dead target");
 #ifdef DEBUG
 	psDroid->targetLine = line;
-	strlcpy(psDroid->targetFunc, func, MAX_EVENT_NAME_LEN);
+	sstrcpy(psDroid->targetFunc, func);
 #endif
 }
 
@@ -473,7 +493,7 @@ static inline void _setDroidActionTarget(DROID *psDroid, BASE_OBJECT *psNewTarge
 	       "setDroidActionTarget: Set dead target");
 #ifdef DEBUG
 	psDroid->actionTargetLine[idx] = line;
-	strlcpy(psDroid->actionTargetFunc[idx], func, MAX_EVENT_NAME_LEN);
+	sstrcpy(psDroid->actionTargetFunc[idx], func);
 #endif
 }
 
@@ -484,7 +504,7 @@ static inline void _setDroidBase(DROID *psDroid, STRUCTURE *psNewBase, int line,
 	ASSERT(psNewBase == NULL || !psNewBase->died, "setDroidBase: Set dead target");
 #ifdef DEBUG
 	psDroid->baseLine = line;
-	strlcpy(psDroid->baseFunc, func, MAX_EVENT_NAME_LEN);
+	sstrcpy(psDroid->baseFunc, func);
 #endif
 }
 
@@ -493,7 +513,7 @@ static inline void setSaveDroidTarget(DROID *psSaveDroid, BASE_OBJECT *psNewTarg
 	psSaveDroid->psTarget = psNewTarget;
 #ifdef DEBUG
 	psSaveDroid->targetLine = 0;
-	strlcpy(psSaveDroid->targetFunc, "savegame", MAX_EVENT_NAME_LEN);
+	sstrcpy(psSaveDroid->targetFunc, "savegame");
 #endif
 }
 
@@ -502,7 +522,7 @@ static inline void setSaveDroidActionTarget(DROID *psSaveDroid, BASE_OBJECT *psN
 	psSaveDroid->psActionTarget[idx] = psNewTarget;
 #ifdef DEBUG
 	psSaveDroid->actionTargetLine[idx] = 0;
-	strlcpy(psSaveDroid->actionTargetFunc[idx], "savegame", MAX_EVENT_NAME_LEN);
+	sstrcpy(psSaveDroid->actionTargetFunc[idx], "savegame");
 #endif
 }
 
@@ -511,36 +531,14 @@ static inline void setSaveDroidBase(DROID *psSaveDroid, STRUCTURE *psNewBase)
 	psSaveDroid->psBaseStruct = psNewBase;
 #ifdef DEBUG
 	psSaveDroid->baseLine = 0;
-	strlcpy(psSaveDroid->baseFunc, "savegame", MAX_EVENT_NAME_LEN);
+	sstrcpy(psSaveDroid->baseFunc, "savegame");
 #endif
 }
 
+void checkDroid(const DROID *droid, const int line, const char *file);
+
 /* assert if droid is bad */
-#define CHECK_DROID(droid) \
-do { \
-	unsigned int i; \
-\
-	assert(droid != NULL); \
-\
-	/* Make sure to know we actually have a droid in our hands */ \
-	assert(droid->type == OBJ_DROID); \
-\
-	assert(droid->direction <= 360.0f && droid->direction >= 0.0f); \
-	assert(droid->numWeaps <= DROID_MAXWEAPS); \
-	assert(droid->listSize <= ORDER_LIST_MAX); \
-	assert(droid->player < MAX_PLAYERS); \
-	assert(droidOnMap(droid)); \
-\
-	for (i = 0; i < DROID_MAXWEAPS; ++i) \
-		assert(droid->turretRotation[i] <= 360); \
-\
-	for (i = 0; i < DROID_MAXWEAPS; ++i) \
-		assert(droid->asWeaps[i].lastFired <= gameTime); \
-\
-	for (i = 0; i < DROID_MAXWEAPS; ++i) \
-		if (droid->psActionTarget[i]) \
-			assert(droid->psActionTarget[i]->direction >= 0.0f); \
-} while (0)
+#define CHECK_DROID(droid) checkDroid(droid, __LINE__, __FILE__)
 
 // Minimum damage a weapon will deal to its target
 #define	MIN_WEAPON_DAMAGE	1

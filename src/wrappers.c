@@ -34,7 +34,6 @@
 #include "lib/ivis_common/piefunc.h"
 
 #include "hci.h"		// access to widget screen.
-#include "lib/widget/widget.h"
 #include "wrappers.h"
 #include "main.h"
 #include "objects.h"
@@ -54,12 +53,13 @@
 #include "seqdisp.h"
 // FIXME Direct iVis implementation include!
 #include "lib/ivis_common/rendmode.h"
-#include "resource.h"
+#include "lib/framework/cursors.h"
 #include "lib/netplay/netplay.h"	// multiplayer
 #include "multiplay.h"
 #include "multiint.h"
 #include "multistat.h"
 #include "multilimit.h"
+#include "warzoneconfig.h"
 
 typedef struct _star
 {
@@ -70,10 +70,10 @@ typedef struct _star
 #define MAX_STARS 20
 static STAR	stars[MAX_STARS];	// quick hack for loading stuff
 
-static BOOL		firstcall = FALSE;
+static BOOL		firstcall = false;
 static UDWORD	loadScreenCallNo=0;
-static BOOL		bPlayerHasLost = FALSE;
-static BOOL		bPlayerHasWon = FALSE;
+static BOOL		bPlayerHasLost = false;
+static BOOL		bPlayerHasWon = false;
 static UBYTE    scriptWinLoseVideo = PLAY_NONE;
 
 void	startCreditsScreen	( void );
@@ -81,7 +81,8 @@ void	runCreditsScreen	( void );
 
 static	UDWORD	lastTick = 0;
 static	UDWORD	lastChange = 0;
-
+extern char iptoconnect[PATH_MAX];		// holds our ip/hostname from the command line
+BOOL hostlaunch = false;				// used to detect if we are hosting a game via command line option.
 
 static void initStars(void)
 {
@@ -99,10 +100,10 @@ static void initStars(void)
 //
 BOOL frontendInitVars(void)
 {
-	firstcall = TRUE;
+	firstcall = true;
 	initStars();
 
-	return TRUE;
+	return true;
 }
 
 // ///////////////// /////////////////////////////////////////////////
@@ -112,16 +113,30 @@ TITLECODE titleLoop(void)
 	TITLECODE RetCode = TITLECODE_CONTINUE;
 
 	pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_ON);
-	pie_SetFogStatus(FALSE);
+	pie_SetFogStatus(false);
 	screen_RestartBackDrop();
 
+	// When we first init the game, firstcall is true.
 	if (firstcall)
 	{
-		firstcall = FALSE;
-
-		changeTitleMode(TITLE);
-
-		frameSetCursorFromRes(IDC_DEFAULT); // reset cursor (sw)
+		firstcall = false;
+		// First check to see if --host was given as a command line option, if not,
+		// then check --join and if neither, run the normal game menu.
+		if( hostlaunch )
+		{
+			changeTitleMode(MULTIOPTION);
+			hostlaunch = false;			// reset the bool to default state.
+		}
+		else if(strlen(iptoconnect) )
+		{
+			changeTitleMode(GAMEFIND);		// a ip/hostname was found, so go directly to the GAMEFIND screen
+		}
+		else
+		{
+			changeTitleMode(TITLE);			// normal game, run main title screen.
+		}
+		// Using software cursors (when on) for these menus due to a bug in SDL's SDL_ShowCursor()
+		pie_SetMouse(CURSOR_DEFAULT, war_GetColouredCursor());
 	}
 
 	switch(titleMode) // run relevant title screen code.
@@ -199,7 +214,7 @@ TITLECODE titleLoop(void)
 
 		case STARTGAME:
 		case LOADSAVEGAME:
-			initLoadingScreen(TRUE);//render active
+			initLoadingScreen(true);//render active
   			if (titleMode == LOADSAVEGAME)
 			{
 				RetCode = TITLECODE_SAVEGAMELOAD;
@@ -211,7 +226,7 @@ TITLECODE titleLoop(void)
 			return RetCode;			// don't flip!
 
 		case SHOWINTRO:
-			pie_SetFogStatus(FALSE);
+			pie_SetFogStatus(false);
 	  		pie_ScreenFlip(CLEAR_BLACK);
 			changeTitleMode(TITLE);
 			RetCode = TITLECODE_SHOWINTRO;
@@ -224,7 +239,7 @@ TITLECODE titleLoop(void)
 
 	audio_Update();
 
-	pie_SetFogStatus(FALSE);
+	pie_SetFogStatus(false);
 	pie_ScreenFlip(CLEAR_BLACK);//title loop
 
 	if ((keyDown(KEY_LALT) || keyDown(KEY_RALT))
@@ -304,14 +319,14 @@ void initLoadingScreen( BOOL drawbdrop )
 	{
 		//just init the load bar with the current screen
 		// setup the callback....
-		pie_SetFogStatus(FALSE);
+		pie_SetFogStatus(false);
 		pie_ScreenFlip(CLEAR_BLACK);
 		resSetLoadCallback(loadingScreenCallback);
 		loadScreenCallNo = 0;
 		return;
 	}
 
-	pie_SetFogStatus(FALSE);
+	pie_SetFogStatus(false);
 	pie_ScreenFlip(CLEAR_BLACK);//init loading
 
 	// setup the callback....
@@ -332,7 +347,7 @@ void startCreditsScreen(void)
 
 	pie_LoadBackDrop(screen);
 
-	pie_SetFogStatus(FALSE);
+	pie_SetFogStatus(false);
 	pie_ScreenFlip(CLEAR_BLACK);//init loading
 }
 
@@ -366,17 +381,17 @@ void closeLoadingScreen(void)
 BOOL displayGameOver(BOOL bDidit)
 {
 // AlexL says take this out......
-//	setConsolePermanence(TRUE,TRUE);
+//	setConsolePermanence(true,true);
 //	flushConsoleMessages( );
 
-//	addConsoleMessage(" ", CENTRE_JUSTIFY );
-//	addConsoleMessage(_("Game Over"), CENTRE_JUSTIFY );
-//	addConsoleMessage(" ", CENTRE_JUSTIFY );
+//	addConsoleMessage(" ", CENTRE_JUSTIFY, SYSTEM_MESSAGE);
+//	addConsoleMessage(_("Game Over"), CENTRE_JUSTIFY, SYSTEM_MESSAGE);
+//	addConsoleMessage(" ", CENTRE_JUSTIFY, SYSTEM_MESSAGE);
 
 	if(bDidit)
 	{
-		setPlayerHasWon(TRUE);
-		multiplayerWinSequence(TRUE);
+		setPlayerHasWon(true);
+		multiplayerWinSequence(true);
 		if(bMultiPlayer)
 		{
 			updateMultiStatsWins();
@@ -384,7 +399,7 @@ BOOL displayGameOver(BOOL bDidit)
 	}
 	else
 	{
-		setPlayerHasLost(TRUE);
+		setPlayerHasLost(true);
 		if(bMultiPlayer)
 		{
 			updateMultiStatsLoses();
@@ -393,9 +408,9 @@ BOOL displayGameOver(BOOL bDidit)
 
 	//clear out any mission widgets - timers etc that may be on the screen
 	clearMissionWidgets();
-	intAddMissionResult(bDidit, TRUE);
+	intAddMissionResult(bDidit, true);
 
-	return TRUE;
+	return true;
 }
 
 

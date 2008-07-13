@@ -55,7 +55,7 @@
 #include "projectile.h"
 
 static void unsetMatrix(void);
-static void setMatrix(Vector3i *Position, Vector3i *Rotation, Vector3i *CameraPos, BOOL RotXYZ);
+static void setMatrix(Vector3i *Position, Vector3i *Rotation, BOOL RotXYZ);
 
 #define BLIP_ANIM_DURATION			200
 #define	DEFAULT_COMPONENT_TRANSLUCENCY	128
@@ -86,10 +86,10 @@ BOOL setPlayerColour(UDWORD player, UDWORD col)
 	{
 		debug( LOG_ERROR, "setplayercolour: wrong values" );
 		abort();
-		return FALSE;
+		return false;
 	}
 	PlayerColour[(UBYTE)player] = (UBYTE)col;
-	return TRUE;
+	return true;
 }
 
 UBYTE getPlayerColour(UDWORD pl)
@@ -128,7 +128,7 @@ void updateLightLevels(void)
 }
 
 
-static void setMatrix(Vector3i *Position, Vector3i *Rotation, Vector3i *CameraPos, BOOL RotXYZ)
+static void setMatrix(Vector3i *Position, Vector3i *Rotation, BOOL RotXYZ)
 {
 	pie_PerspectiveBegin();
    	pie_MatBegin();
@@ -154,13 +154,13 @@ static void unsetMatrix(void)
 }
 
 
-UDWORD getComponentDroidRadius(DROID *psDroid)
+UDWORD getComponentDroidRadius(WZ_DECL_UNUSED DROID *psDroid)
 {
 	return 100;
 }
 
 
-UDWORD getComponentDroidTemplateRadius(DROID_TEMPLATE *psDroid)
+UDWORD getComponentDroidTemplateRadius(WZ_DECL_UNUSED DROID_TEMPLATE *psDroid)
 {
 	return 100;
 }
@@ -183,10 +183,11 @@ UDWORD getComponentRadius(BASE_STATS *psComponent)
 	}
 
 	/* VTOL bombs are only stats allowed to have NULL ComponentIMD */
-	if ( (StatIsComponent(psComponent) != COMP_WEAPON) ||
-		  ((WEAPON_STATS *)psComponent)->weaponSubClass != WSC_BOMB )
+	if (StatIsComponent(psComponent) != COMP_WEAPON
+	    || (((WEAPON_STATS *)psComponent)->weaponSubClass != WSC_BOMB
+	        && ((WEAPON_STATS *)psComponent)->weaponSubClass != WSC_EMP))
 	{
-		debug(LOG_ERROR, "getComponentRadius: ComponentPIE == NULL");
+		ASSERT(ComponentIMD, "No ComponentIMD!");
 	}
 
 	return COMPONENT_RADIUS;
@@ -251,12 +252,10 @@ UDWORD getStructureStatHeight(STRUCTURE_STATS *psStat)
 
 void displayIMDButton(iIMDShape *IMDShape, Vector3i *Rotation, Vector3i *Position, BOOL RotXYZ, SDWORD scale)
 {
-	Vector3i TmpCamPos = {0,0,0};
-
-	setMatrix(Position,Rotation,&TmpCamPos,RotXYZ);
+	setMatrix(Position, Rotation, RotXYZ);
 	pie_MatScale(scale);
 
-	pie_SetFogStatus(FALSE);
+	pie_SetFogStatus(false);
 	pie_Draw3DShape(IMDShape, 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 	unsetMatrix();
 }
@@ -269,7 +268,6 @@ void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i
 	iIMDShape *mountImd[STRUCT_MAXWEAPS];
 	iIMDShape *weaponImd[STRUCT_MAXWEAPS];
 	UDWORD			nWeaponStat;
-	Vector3i TmpCamPos = {0,0,0};
 	int		i;
 
 	/*HACK HACK HACK!
@@ -281,9 +279,8 @@ void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i
 		Position->y -= 20;
 	}
 
-	setMatrix(Position,Rotation,&TmpCamPos,RotXYZ);
+	setMatrix(Position, Rotation, RotXYZ);
 	pie_MatScale(scale);
-
 
 	/* Draw the building's base first */
 	baseImd = psStructure->pStructureType->pBaseIMD;
@@ -415,13 +412,11 @@ void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i
 	unsetMatrix();
 }
 
-void displayStructureStatButton(STRUCTURE_STATS *Stats,UDWORD Player, Vector3i *Rotation, Vector3i *Position, BOOL RotXYZ, SDWORD scale)
+void displayStructureStatButton(STRUCTURE_STATS *Stats, UDWORD Player, Vector3i *Rotation, Vector3i *Position, BOOL RotXYZ, SDWORD scale)
 {
 	iIMDShape		*baseImd,*strImd;//*mountImd,*weaponImd;
 	iIMDShape *mountImd[STRUCT_MAXWEAPS];
 	iIMDShape *weaponImd[STRUCT_MAXWEAPS];
-	Vector3i TmpCamPos = {0,0,0};
-	//UDWORD			nWeaponStat;
 	UBYTE	i;
 
 	/*HACK HACK HACK!
@@ -433,7 +428,7 @@ void displayStructureStatButton(STRUCTURE_STATS *Stats,UDWORD Player, Vector3i *
 		Position->y -= 20;
 	}
 
-	setMatrix(Position,Rotation,&TmpCamPos,RotXYZ);
+	setMatrix(Position, Rotation, RotXYZ);
 	pie_MatScale(scale);
 
 	/* Draw the building's base first */
@@ -584,9 +579,8 @@ void displayComponentButton(BASE_STATS *Stat, Vector3i *Rotation, Vector3i *Posi
 	iIMDShape *ComponentIMD = NULL;
 	iIMDShape *MountIMD = NULL;
 	SDWORD compID;
-	Vector3i TmpCamPos = {0,0,0};
 
-	setMatrix(Position,Rotation,&TmpCamPos,RotXYZ);
+	setMatrix(Position, Rotation, RotXYZ);
 	pie_MatScale(scale);
 
 	compID = StatIsComponent(Stat);
@@ -600,11 +594,11 @@ void displayComponentButton(BASE_STATS *Stat, Vector3i *Rotation, Vector3i *Posi
 	}
 
 	/* VTOL bombs are only stats allowed to have NULL ComponentIMD */
-	if ( (ComponentIMD == NULL) &&
-		 ((StatIsComponent(Stat) != COMP_WEAPON) ||
-		  ((WEAPON_STATS *)Stat)->weaponSubClass != WSC_BOMB) )
+	if (StatIsComponent(Stat) != COMP_WEAPON
+	    || (((WEAPON_STATS *)Stat)->weaponSubClass != WSC_BOMB
+	        && ((WEAPON_STATS *)Stat)->weaponSubClass != WSC_EMP))
 	{
-		debug(LOG_ERROR, "ComponentPIE == NULL");
+		ASSERT(ComponentIMD, "No ComponentIMD");
 	}
 
 	if(MountIMD)
@@ -626,11 +620,10 @@ void displayResearchButton(BASE_STATS *Stat, Vector3i *Rotation, Vector3i *Posit
 {
 	iIMDShape *ResearchIMD = ((RESEARCH *)Stat)->pIMD;
 	iIMDShape *MountIMD = ((RESEARCH *)Stat)->pIMD2;
-	Vector3i TmpCamPos = {0,0,0};
 
 	if(ResearchIMD)
 	{
-		setMatrix(Position,Rotation,&TmpCamPos,RotXYZ);
+		setMatrix(Position, Rotation, RotXYZ);
 		pie_MatScale(scale);
 
 		if(MountIMD) {
@@ -654,12 +647,11 @@ void displayComponentButtonTemplate(DROID_TEMPLATE *psTemplate, Vector3i *Rotati
 {
 	static DROID Droid;	// Made static to reduce stack usage.
 	SDWORD difference;
- 	Vector3i TmpCamPos = {0,0,0};
 
 	/* init to NULL */
 	memset( &Droid, 0, sizeof(DROID) );
 
-	setMatrix(Position,Rotation,&TmpCamPos,RotXYZ);
+	setMatrix(Position, Rotation, RotXYZ);
 	pie_MatScale(scale);
 
 // Decide how to sort it.
@@ -668,11 +660,11 @@ void displayComponentButtonTemplate(DROID_TEMPLATE *psTemplate, Vector3i *Rotati
 
 	if((difference>0 && difference <180) || difference<-180)
 	{
-		leftFirst = FALSE;
+		leftFirst = false;
 	}
 	else
 	{
-		leftFirst = TRUE;
+		leftFirst = true;
 	}
 
 	droidSetBits(psTemplate,&Droid);
@@ -681,7 +673,7 @@ void displayComponentButtonTemplate(DROID_TEMPLATE *psTemplate, Vector3i *Rotati
 	Droid.pos.x = Droid.pos.y = Droid.pos.z = 0;
 
 	//draw multi component object as a button object
-	displayCompObj((BASE_OBJECT*)&Droid, TRUE);
+	displayCompObj((BASE_OBJECT*)&Droid, true);
 
 
 	unsetMatrix();
@@ -693,9 +685,8 @@ void displayComponentButtonTemplate(DROID_TEMPLATE *psTemplate, Vector3i *Rotati
 void displayComponentButtonObject(DROID *psDroid, Vector3i *Rotation, Vector3i *Position, BOOL RotXYZ, SDWORD scale)
 {
 	SDWORD		difference;
- 	Vector3i TmpCamPos = {0,0,0};
 
-	setMatrix(Position,Rotation,&TmpCamPos,RotXYZ);
+	setMatrix(Position, Rotation, RotXYZ);
 	pie_MatScale(scale);
 
 // Decide how to sort it.
@@ -703,16 +694,16 @@ void displayComponentButtonObject(DROID *psDroid, Vector3i *Rotation, Vector3i *
 
 	if((difference>0 && difference <180) || difference<-180)
 	{
-		leftFirst = FALSE;
+		leftFirst = false;
 	}
 	else
 	{
-		leftFirst = TRUE;
+		leftFirst = true;
 	}
 
 // And render the composite object.
 	//draw multi component object as a button object
-	displayCompObj((BASE_OBJECT*)psDroid, TRUE);
+	displayCompObj((BASE_OBJECT*)psDroid, true);
 
 	unsetMatrix();
 }
@@ -739,11 +730,11 @@ void displayComponentObject(BASE_OBJECT *psObj)
 
 	if((difference>0 && difference <180) || difference<-180)
 	{
-		leftFirst = FALSE;
+		leftFirst = false;
 	}
 	else
 	{
-		leftFirst = TRUE;
+		leftFirst = true;
 	}
 
 	/* Push the matrix */
@@ -794,14 +785,14 @@ void displayComponentObject(BASE_OBJECT *psObj)
 		position.y = psDroid->pos.z + rand()%8;;
 		position.z = psDroid->pos.y + DROID_EMP_SPREAD;
 		effectGiveAuxVar(90+rand()%20);
-		addEffect(&position,EFFECT_EXPLOSION,EXPLOSION_TYPE_PLASMA,FALSE,NULL,0);
+		addEffect(&position,EFFECT_EXPLOSION,EXPLOSION_TYPE_PLASMA,false,NULL,0);
 	}
 
 	if (godMode || (psDroid->visible[selectedPlayer] == UBYTE_MAX) || demoGetStatus())
 	{
 		//ingame not button object
 		//Watermelon:should render 3 mounted weapons now
-		displayCompObj(psObj,FALSE);
+		displayCompObj(psObj,false);
 	}
 	else
 	{
@@ -841,7 +832,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 	PIELIGHT			brightness;
 	const PIELIGHT			specular = WZCOL_BLACK;
 	UDWORD				colour;
-	UDWORD				bDarkSide = FALSE;
+	UDWORD				bDarkSide = false;
 	UBYTE	i;
 
    	/* Cast the droid pointer */
@@ -849,7 +840,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 	if( (gameTime-psDroid->timeLastHit < GAME_TICKS_PER_SEC/4 ) && psDroid->lastHitWeapon == WSC_ELECTRONIC && !gamePaused())
 	{
 		colour = getPlayerColour(rand()%MAX_PLAYERS);
-		bDarkSide = TRUE;
+		bDarkSide = true;
 	}
 	else
 	{
@@ -918,7 +909,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 		if ( psDroid->droidType == DROID_PERSON)
 		{
 			/* draw body if not animating */
-			if ( psDroid->psCurAnim == NULL  || psDroid->psCurAnim->bVisible == FALSE )
+			if ( psDroid->psCurAnim == NULL  || psDroid->psCurAnim->bVisible == false )
 			{
 				// FIXME - hideous....!!!!
 				pie_MatScale(75);
@@ -929,7 +920,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 	else if (cyborgDroid(psDroid))
 		{
 			/* draw body if cyborg not animating */
-			if ( psDroid->psCurAnim == NULL || psDroid->psCurAnim->bVisible == FALSE )
+			if ( psDroid->psCurAnim == NULL || psDroid->psCurAnim->bVisible == false )
 			{
 				pie_Draw3DShape(psShapeTemp, 0, colour, brightness, specular, pieFlag, iPieData);
 			}
@@ -946,7 +937,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 			"moveUpdateUnit: invalid propulsion stats pointer" );
 
 	/* render vtol jet if flying - horrible hack - GJ */
-	if (((psPropStats->propulsionType == LIFT) &&
+	if (((psPropStats->propulsionType == PROPULSION_TYPE_LIFT) &&
 	    //(psDroid->droidType != DROID_CYBORG)) && (!bButton))
 	    (!cyborgDroid(psDroid))) && (!bButton))
 	{
@@ -998,7 +989,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 			 * all others to connector 1 */
 			/* Watermelon:VTOL's now skip the first 5 connectors(0 to 4),
 			VTOL's use 5,6,7,8 etc now */
-			if ( (psPropStats->propulsionType == LIFT) &&
+			if ( (psPropStats->propulsionType == PROPULSION_TYPE_LIFT) &&
 				  psDroid->droidType == DROID_WEAPON )
 			{
 				iConnector = VTOL_CONNECTOR_START;
@@ -1453,11 +1444,11 @@ void destroyFXDroid(DROID	*psDroid)
 		}
 		if(psImd)
 		{
-			addEffect(&pos,EFFECT_GRAVITON,GRAVITON_TYPE_EMITTING_DR,TRUE,psImd,getPlayerColour(psDroid->player));
+			addEffect(&pos,EFFECT_GRAVITON,GRAVITON_TYPE_EMITTING_DR,true,psImd,getPlayerColour(psDroid->player));
 		}
 		else
 		{
-			addEffect(&pos,EFFECT_GRAVITON,GRAVITON_TYPE_EMITTING_DR,TRUE,getRandomDebrisImd(),0);
+			addEffect(&pos,EFFECT_GRAVITON,GRAVITON_TYPE_EMITTING_DR,true,getRandomDebrisImd(),0);
 		}
 	}
 }
@@ -1501,10 +1492,10 @@ void	compPersonToBits(DROID *psDroid)
 	/* Tell about player colour */
 	col = getPlayerColour(psDroid->player);
 
-	addEffect(&position,EFFECT_GRAVITON,GRAVITON_TYPE_GIBLET,TRUE,headImd,col);
-	addEffect(&position,EFFECT_GRAVITON,GRAVITON_TYPE_GIBLET,TRUE,legsImd,col);
-	addEffect(&position,EFFECT_GRAVITON,GRAVITON_TYPE_GIBLET,TRUE,armImd,col);
-	addEffect(&position,EFFECT_GRAVITON,GRAVITON_TYPE_GIBLET,TRUE,bodyImd,col);
+	addEffect(&position,EFFECT_GRAVITON,GRAVITON_TYPE_GIBLET,true,headImd,col);
+	addEffect(&position,EFFECT_GRAVITON,GRAVITON_TYPE_GIBLET,true,legsImd,col);
+	addEffect(&position,EFFECT_GRAVITON,GRAVITON_TYPE_GIBLET,true,armImd,col);
+	addEffect(&position,EFFECT_GRAVITON,GRAVITON_TYPE_GIBLET,true,bodyImd,col);
 }
 
 

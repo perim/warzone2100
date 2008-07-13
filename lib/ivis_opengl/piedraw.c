@@ -21,8 +21,8 @@
  *  Render routines for 3D coloured and shaded transparency rendering.
  */
 
+#include "lib/ivis_opengl/GLee.h"
 #include <string.h>
-#include <SDL_opengl.h>
 #include <SDL_video.h>
 
 #include "lib/framework/frame.h"
@@ -35,6 +35,7 @@
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/pieclip.h"
 #include "piematrix.h"
+#include "screen.h"
 
 #define SHADOW_END_DISTANCE (8000*8000) // Keep in sync with lighting.c:FOG_END
 
@@ -48,75 +49,10 @@
 static GLubyte *aColour = NULL;
 static GLfloat *aTexCoord = NULL;
 static GLfloat *aVertex = NULL;
-static GLuint rowLength;	///< Length of one array table row in tiles
+static GLuint allocX = 0, allocY = 0;
+static size_t sizeColour = 0, sizeTexCoord = 0, sizeVertex = 0;
 
 extern BOOL drawing_interface;
-
-/*
- *	OpenGL extensions for shadows
- */
-
-BOOL check_extension(const char *extName)
-{
-	char *p = (char *) glGetString(GL_EXTENSIONS);
-	char *end;
-	size_t extNameLen= strlen(extName);
-
-	end = p + strlen(p);
-	while (p < end)
-	{
-		int n = strcspn(p, " ");
-		if ((extNameLen == n) && (strncmp(extName, p, n) == 0))
-		{
-			return TRUE;
-		}
-		p += (n + 1);
-	}
-	return FALSE;
-}
-
-// EXT_stencil_two_side
-#ifndef GL_EXT_stencil_two_side
-# define GL_EXT_stencil_two_side 1
-# define GL_STENCIL_TEST_TWO_SIDE_EXT      0x8910
-# define GL_ACTIVE_STENCIL_FACE_EXT        0x8911
-typedef void (APIENTRY * PFNGLACTIVESTENCILFACEEXTPROC) (GLenum face);
-#endif
-
-#ifndef WZ_OS_MAC
-PFNGLACTIVESTENCILFACEEXTPROC glActiveStencilFaceEXT;
-#endif
-
-
-/** Check if we can use one-pass stencil in the shadow draw code. */
-static BOOL stencil_one_pass(void)
-{
-	// tribool, -1: uninitialized, 0: FALSE, 1: TRUE
-	static int can_do_stencil_one_pass = -1;
-
-	if (can_do_stencil_one_pass < 0) {
-		can_do_stencil_one_pass = 0; // can't use it until we decide otherwise
-
-		// let's check if we have the needed extensions
-#ifdef WZ_OS_MAC
-		can_do_stencil_one_pass = 1;
-#else
-		if( check_extension("GL_EXT_stencil_two_side")
-		 && check_extension("GL_EXT_stencil_wrap"))
-		{
-			// retrieve the function pointer
-			glActiveStencilFaceEXT = (PFNGLACTIVESTENCILFACEEXTPROC) SDL_GL_GetProcAddress("glActiveStencilFaceEXT");
-			if(glActiveStencilFaceEXT)
-			{
-				// all went well
-				can_do_stencil_one_pass = 1;
-			}
-		}
-#endif /* WZ_OS_MAC */
-	}
-
-	return (1 == can_do_stencil_one_pass); // to get the types right
-}
 
 /*
  *	Local Variables
@@ -125,8 +61,8 @@ static BOOL stencil_one_pass(void)
 static unsigned int pieCount = 0;
 static unsigned int tileCount = 0;
 static unsigned int polyCount = 0;
-static BOOL lighting = FALSE;
-static BOOL shadows = FALSE;
+static BOOL lighting = false;
+static BOOL shadows = false;
 
 /*
  *	Source
@@ -148,14 +84,14 @@ void pie_BeginLighting(const Vector3f * light)
 	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
 	glEnable(GL_LIGHT0);
 
-//	lighting = TRUE;
-	shadows = TRUE;
+//	lighting = true;
+	shadows = true;
 }
 
 void pie_EndLighting(void)
 {
-	shadows = FALSE;
-	lighting = FALSE;
+	shadows = false;
+	lighting = false;
 }
 
 /***************************************************************************
@@ -191,39 +127,39 @@ static transluscent_shape_t* tshapes = NULL;
 static unsigned int tshapes_size = 0;
 static unsigned int nb_tshapes = 0;
 
-static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELIGHT specular, int pieFlag, int pieFlagData)
+static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, WZ_DECL_UNUSED PIELIGHT specular, int pieFlag, int pieFlagData)
 {
 	Vector3f *pVertices, *pPixels, scrPoints[pie_MAX_VERTICES];
 	iIMDPoly *pPolys;
 	BOOL light = lighting;
 
-	pie_SetAlphaTest(TRUE);
+	pie_SetAlphaTest(true);
 
 	/* Set tranlucency */
 	if (pieFlag & pie_ADDITIVE)
 	{ //Assume also translucent
-		pie_SetFogStatus(FALSE);
+		pie_SetFogStatus(false);
 		pie_SetRendMode(REND_ADDITIVE_TEX);
 		colour.byte.a = (UBYTE)pieFlagData;
-		light = FALSE;
+		light = false;
 	}
 	else if (pieFlag & pie_TRANSLUCENT)
 	{
-		pie_SetFogStatus(FALSE);
+		pie_SetFogStatus(false);
 		pie_SetRendMode(REND_ALPHA_TEX);
 		colour.byte.a = (UBYTE)pieFlagData;
-		light = FALSE;
+		light = false;
 	}
 	else
 	{
 		if (pieFlag & pie_BUTTON)
 		{
-			pie_SetFogStatus(FALSE);
+			pie_SetFogStatus(false);
 			pie_SetDepthBufferStatus(DEPTH_CMP_LEQ_WRT_ON);
 		}
 		else
 		{
-			pie_SetFogStatus(TRUE);
+			pie_SetFogStatus(true);
 		}
 		pie_SetRendMode(REND_GOURAUD_TEX);
 	}
@@ -361,19 +297,19 @@ static int compare_edge (EDGE *A, EDGE *B, const Vector3f *pVertices )
 	{
 		if(A->to == B->from)
 		{
-			return TRUE;
+			return true;
 		}
 		return Vector3f_Compare(pVertices[A->to], pVertices[B->from]);
 	}
 
 	if(!Vector3f_Compare(pVertices[A->from], pVertices[B->to]))
 	{
-		return FALSE;
+		return false;
 	}
 
 	if(A->to == B->from)
 	{
-		return TRUE;
+		return true;
 	}
 	return Vector3f_Compare(pVertices[A->to], pVertices[B->from]);
 }
@@ -384,7 +320,7 @@ static void addToEdgeList(int a, int b, EDGE *edgelist, unsigned int* edge_count
 {
 	EDGE newEdge = {a, b};
 	unsigned int i;
-	BOOL foundMatching = FALSE;
+	BOOL foundMatching = false;
 
 	for(i = 0; i < *edge_count; i++)
 	{
@@ -396,7 +332,7 @@ static void addToEdgeList(int a, int b, EDGE *edgelist, unsigned int* edge_count
 		if(compare_edge(&newEdge, &edgelist[i], pVertices)) {
 			// remove the other too
 			edgelist[i].from = -1;
-			foundMatching = TRUE;
+			foundMatching = true;
 			break;
 		}
 	}
@@ -452,7 +388,7 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 			for(j = 0; j < 3; j++)
 			{
 				current = pPolys->pindex[j];
-				Vector3f_Set(&p[j], pVertices[current].x, scale_y(pVertices[current].y, flag, flag_data), pVertices[current].z);
+				p[j] = Vector3f_New(pVertices[current].x, scale_y(pVertices[current].y, flag, flag_data), pVertices[current].z);
 			}
 
 			v[0] = Vector3f_Sub(p[2], p[0]);
@@ -698,13 +634,16 @@ static void pie_DrawShadows(void)
 
 	glPushMatrix();
 
-	pie_SetAlphaTest(FALSE);
+	pie_SetAlphaTest(false);
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_FALSE);
 	glEnable(GL_STENCIL_TEST);
 
-	if (stencil_one_pass()) {
+	// Check if we have the required extensions
+	if (GLEE_EXT_stencil_two_side
+	 && GLEE_EXT_stencil_wrap)
+	{
 		glEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);
 		glDisable(GL_CULL_FACE);
 		glStencilMask(~0);
@@ -718,7 +657,9 @@ static void pie_DrawShadows(void)
 		pie_ShadowDrawLoop();
 		glDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
 
-	} else {
+	}
+	else
+	{
 		// Setup stencil for back faces.
 		glStencilMask(~0);
 		glStencilFunc(GL_ALWAYS, 0, ~0);
@@ -827,19 +768,53 @@ void pie_DrawImage(PIEIMAGE *image, PIERECT *dest)
 	glEnd();
 }
 
+static inline void pie_ClearArrays(void)
+{
+	memset(aColour, 0, sizeColour);
+	memset(aVertex, 0, sizeVertex);
+}
+
 void pie_TerrainInit(int sizex, int sizey)
 {
 	int size = sizex * sizey;
 
 	assert(sizex > 0 && sizey > 0);
-	aColour = realloc(aColour, size * sizeof(GLubyte) * COLOUR_COMPONENTS * VERTICES_PER_TILE);
-	aTexCoord = realloc(aTexCoord, size * sizeof(GLfloat) * TEXCOORD_COMPONENTS * VERTICES_PER_TILE);
-	aVertex = realloc(aVertex, size * sizeof(GLfloat) * VERTEX_COMPONENTS * VERTICES_PER_TILE);
-	rowLength = sizex;
+	pie_TerrainCleanup();
+	sizeColour = size * sizeof(GLubyte) * COLOUR_COMPONENTS * VERTICES_PER_TILE;
+	sizeTexCoord = size * sizeof(GLfloat) * TEXCOORD_COMPONENTS * VERTICES_PER_TILE;
+	sizeVertex = size * sizeof(GLfloat) * VERTEX_COMPONENTS * VERTICES_PER_TILE;
+	aColour = malloc(sizeColour);
+	aTexCoord = malloc(sizeTexCoord);
+	aVertex = malloc(sizeVertex);
+	allocX = sizex;
+	allocY = sizey;
+	pie_ClearArrays();	// hack, removes seams
 }
 
-void pie_DrawTerrain(int mapx, int mapy)
+void pie_TerrainCleanup()
 {
+	if (aColour)
+	{
+		free(aColour);
+	}
+	if (aTexCoord)
+	{
+		free(aTexCoord);
+	}
+	if (aVertex)
+	{
+		free(aVertex);
+	}
+	aColour = NULL;
+	aTexCoord = NULL;
+	aVertex = NULL;
+}
+
+void pie_DrawTerrain(int x1, int y1, int x2, int y2)
+{
+	int y;
+
+	assert(x1 >= 0 && y1 >= 0 && x2 < allocX && y2 < allocY);
 	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -848,16 +823,24 @@ void pie_DrawTerrain(int mapx, int mapy)
 	glVertexPointer(VERTEX_COMPONENTS, GL_FLOAT, 0, aVertex);
 	glMatrixMode(GL_TEXTURE);
 	glLoadIdentity();
-	glDrawArrays(GL_TRIANGLES, 0, VERTICES_PER_TRIANGLE * mapx * mapy * 2);
+	for (y = y1; y < y2; y++)
+	{
+		glDrawArrays(GL_TRIANGLES, (y * allocX + x1) * VERTICES_PER_TILE, (x2 - x1) * VERTICES_PER_TILE);
+	}
+	pie_ClearArrays();
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
 // index gives us the triangle
-void pie_DrawTerrainTriangle(int index, const TERRAIN_VERTEX *aVrts)
+void pie_DrawTerrainTriangle(int x, int y, int triangle, const TERRAIN_VERTEX *aVrts)
 {
-	unsigned int i = 0, j = index * VERTICES_PER_TRIANGLE;
+	int i, j;
+
+	assert(x >= 0 && y >= 0 && triangle >= 0 && triangle < 3 && aVrts);
+
+	j = (y * allocX + x) * VERTICES_PER_TILE + triangle * VERTICES_PER_TRIANGLE;
 
 	tileCount++;
 

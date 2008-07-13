@@ -136,15 +136,9 @@ BOOL actionReachedBuildPos(DROID *psDroid, SDWORD x, SDWORD y, BASE_STATS *psSta
 // check if a droid is on the foundations of a new building
 BOOL actionDroidOnBuildPos(DROID *psDroid, SDWORD x, SDWORD y, BASE_STATS *psStats);
 
-// return the position of a players home base
-void actionHomeBasePos(SDWORD player, SDWORD *px, SDWORD *py);
-
 /*send the vtol droid back to the nearest rearming pad - if one otherwise
 return to base*/
 extern void moveToRearm(DROID *psDroid);
-
-// tell the action system of a potential location for walls blocking routing
-extern BOOL actionRouteBlockingPos(DROID *psDroid, SDWORD x, SDWORD y);
 
 // choose a landing position for a VTOL when it goes to rearm
 extern BOOL actionVTOLLandingPos(DROID *psDroid, UDWORD *px, UDWORD *py);

@@ -1,0 +1,10 @@
+top_srcdir=../..
+top_builddir=$(top_srcdir)
+
+include $(top_srcdir)/makerules/common.mk
+
+SRC=sequence.c
+
+LIB=sequence
+
+include $(top_srcdir)/makerules/lib.mk

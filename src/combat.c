@@ -26,6 +26,7 @@
 
 #include "lib/framework/frame.h"
 #include "lib/framework/math-help.h"
+#include "lib/netplay/netplay.h"
 
 #include "objects.h"
 #include "combat.h"
@@ -80,14 +81,14 @@ static BUL_DIR aScatterDir[BUL_MAXSCATTERDIR] =
 /* Initialise the combat system */
 BOOL combInitialise(void)
 {
-	return TRUE;
+	return true;
 }
 
 
 /* Shutdown the combat system */
 BOOL combShutdown(void)
 {
-	return TRUE;
+	return true;
 }
 
 // Watermelon:real projectile
@@ -97,16 +98,12 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	WEAPON_STATS	*psStats;
 	UDWORD			xDiff, yDiff, distSquared;
 	UDWORD			dice, damLevel;
-	SDWORD			missDir, missDist, missX,missY;
 	SDWORD			resultHitChance=0,baseHitChance=0,fireChance;
 	UDWORD			firePause;
 	SDWORD			targetDir,dirDiff;
 	SDWORD			longRange;
 	DROID			*psDroid = NULL;
 	int				minOffset = 5;
-	//Watermelon:predicted X,Y offset per sec
-	SDWORD			predictX;
-	SDWORD			predictY;
 	SDWORD			dist;
 
 	CHECK_OBJECT(psAttacker);
@@ -117,7 +114,7 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 
 	/* Watermelon:dont shoot if the weapon_slot of a vtol is empty */
 	if (psAttacker->type == OBJ_DROID &&
-		vtolDroid(((DROID *)psAttacker)))
+		isVtolDroid(((DROID *)psAttacker)))
 	{
 		if (((DROID *)psAttacker)->sMove.iAttackRuns[weapon_slot] >= getNumAttackRuns(((DROID *)psAttacker), weapon_slot))
 		{
@@ -187,11 +184,11 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 
 	/* Check we can see the target */
 	if ( (psAttacker->type == OBJ_DROID) &&
-		 !vtolDroid((DROID *)psAttacker) &&
+		 !isVtolDroid((DROID *)psAttacker) &&
 		 (proj_Direct(psStats) ||
 		 actionInsideMinRange(psDroid, psTarget, weapon_slot)) )
 	{
-		if(!visibleObjWallBlock(psAttacker, psTarget))
+		if(!visibleObject(psAttacker, psTarget, true))
 		{
 			// Can't see the target - can't hit it with direct fire
 			debug(LOG_SENSOR, "combFire(%u[%s]->%u): Droid has no direct line of sight to target",
@@ -204,7 +201,7 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 			 proj_Direct(psStats))
 	{
 		// a bunker can't shoot through walls
-		if (!visibleObjWallBlock(psAttacker, psTarget))
+		if (!visibleObject(psAttacker, psTarget, true))
 		{
 			// Can't see the target - can't hit it with direct fire
 			debug(LOG_SENSOR, "combFire(%u[%s]->%u): Structure has no direct line of sight to target",
@@ -215,7 +212,7 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	else if ( proj_Direct(psStats) )
 	{
 		// VTOL or tall building
-		if (!visibleObject(psAttacker, psTarget))
+		if (!visibleObject(psAttacker, psTarget, false))
 		{
 			// Can't see the target - can't hit it with direct fire
 			debug(LOG_SENSOR, "combFire(%u[%s]->%u): Tall object has no direct line of sight to target",
@@ -350,29 +347,34 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	// see if we were lucky to hit the target
 	if (dice <= resultHitChance)
 	{
+		//Watermelon:predicted X,Y offset per sec
+		Vector3i predict;
+
 		/* Kerrrbaaang !!!!! a hit */
 		//Watermelon:Target prediction
 		if(psTarget->type == OBJ_DROID)
 		{
-			predictX = (SDWORD)(trigSin( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed );
-			predictX += psTarget->pos.x;
-			predictY = (SDWORD)(trigCos( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed );
-			predictY += psTarget->pos.y;
+			predict.x = trigSin( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed;
+			predict.x += psTarget->pos.x;
+			predict.y = trigCos( ((DROID *)psTarget)->sMove.moveDir ) * ((DROID *)psTarget)->sMove.speed * dist / psStats->flightSpeed;
+			predict.y += psTarget->pos.y;
 
 			// Make sure we don't pass any negative or out of bounds numbers to proj_SendProjectile
-			predictX = MAX(predictX, 0);
-			predictX = MIN(predictX, world_coord(mapWidth - 1));
-			predictY = MAX(predictY, 0);
-			predictY = MIN(predictY, world_coord(mapHeight - 1));
+			predict.x = MAX(predict.x, 0);
+			predict.x = MIN(predict.x, world_coord(mapWidth - 1));
+			predict.y = MAX(predict.y, 0);
+			predict.y = MIN(predict.y, world_coord(mapHeight - 1));
 		}
 		else
 		{
-			predictX = psTarget->pos.x;
-			predictY = psTarget->pos.y;
+			predict.x = psTarget->pos.x;
+			predict.y = psTarget->pos.y;
 		}
+
+		predict.z = psTarget->pos.z;
+
 		debug(LOG_SENSOR, "combFire: Accurate prediction range (%d)", dice);
-		if (!proj_SendProjectile(psWeap, psAttacker, psAttacker->player,
-							predictX, predictY, psTarget->pos.z, psTarget, FALSE, FALSE, weapon_slot))
+		if (!proj_SendProjectile(psWeap, psAttacker, psAttacker->player, predict, psTarget, false, weapon_slot))
 		{
 			/* Out of memory - we can safely ignore this */
 			debug(LOG_ERROR, "Out of memory");
@@ -391,19 +393,20 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 
 missed:
 	/* Deal with a missed shot */
+	{
+		int missDir = rand() % BUL_MAXSCATTERDIR, missDist = 2 * (100 - resultHitChance);
+		Vector3i miss = {
+			aScatterDir[missDir].x * missDist + psTarget->pos.x + minOffset,
+			aScatterDir[missDir].y * missDist + psTarget->pos.y + minOffset,
+			psTarget->pos.z
+		};
 
-	missDist = 2 * (100 - resultHitChance);
-	missDir = rand() % BUL_MAXSCATTERDIR;
-	missX = aScatterDir[missDir].x * missDist + psTarget->pos.x + minOffset;
-	missY = aScatterDir[missDir].y * missDist + psTarget->pos.y + minOffset;
+		debug(LOG_NEVER, "combFire: Missed shot (%d) ended up at (%4d,%4d)", dice, miss.x, miss.y);
 
-	debug(LOG_NEVER, "combFire: Missed shot (%d) ended up at (%4d,%4d)", dice, missX, missY);
-
-	/* Fire off the bullet to the miss location. The miss is only visible if the player owns
-	 * the target. (Why? - Per) */
-	proj_SendProjectile(psWeap, psAttacker, psAttacker->player, missX,missY, psTarget->pos.z, NULL,
-	                    psTarget->player == selectedPlayer, FALSE, weapon_slot);
-
+		/* Fire off the bullet to the miss location. The miss is only visible if the player owns
+		* the target. (Why? - Per) */
+		proj_SendProjectile(psWeap, psAttacker, psAttacker->player, miss, NULL, psTarget->player == selectedPlayer, weapon_slot);
+	}
 	return;
 }
 
@@ -504,15 +507,20 @@ float objDamage(BASE_OBJECT *psObj, UDWORD damage, UDWORD originalhp, UDWORD wea
 		return 0;
 	}
 
-	if (psObj->player != selectedPlayer)
+
+	// apply game difficulty setting
+	if(!NetPlay.bComms)		// ignore multiplayer games
 	{
-		// Player inflicting damage on enemy.
-		damage = (UDWORD) modifyForDifficultyLevel(damage,TRUE);
-	}
-	else
-	{
-		// Enemy inflicting damage on player.
-		damage = (UDWORD) modifyForDifficultyLevel(damage,FALSE);
+		if (psObj->player != selectedPlayer)
+		{
+			// Player inflicting damage on enemy.
+			damage = (UDWORD) modifyForDifficultyLevel(damage,true);
+		}
+		else
+		{
+			// Enemy inflicting damage on player.
+			damage = (UDWORD) modifyForDifficultyLevel(damage,false);
+		}
 	}
 
 	armour = psObj->armour[impactSide][weaponClass];
@@ -542,7 +550,7 @@ float objDamage(BASE_OBJECT *psObj, UDWORD damage, UDWORD originalhp, UDWORD wea
 	// And at least MIN_WEAPON_DAMAGE points
 	actualDamage = MAX(actualDamage, MIN_WEAPON_DAMAGE);
 
-	objTrace(LOG_ATTACK, psObj->id, "objDamage: Penetrated %d", actualDamage);
+	objTrace(psObj->id, "objDamage: Penetrated %d", actualDamage);
 
 	// If the shell did sufficient damage to destroy the object, deal with it and return
 	if (actualDamage >= psObj->body)

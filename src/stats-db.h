@@ -27,8 +27,14 @@
 
 #include "lib/framework/frame.h"
 
-extern bool loadWeaponStatsFromDB(const char* filename);
-extern bool loadBodyStatsFromDB(const char* filename);
-extern bool loadBrainStatsFromDB(const char* filename);
+// Forward declaration so that we can use pointers to sqlite3 databases
+struct sqlite3;
+
+extern bool loadWeaponStatsFromDB(struct sqlite3* db, const char* tableName);
+extern bool loadBodyStatsFromDB(struct sqlite3* db, const char* tableName);
+extern bool loadBrainStatsFromDB(struct sqlite3* db, const char* tableName);
+extern bool loadPropulsionStatsFromDB(struct sqlite3* db, const char* tableName);
+extern bool loadSensorStatsFromDB(struct sqlite3* db, const char* tableName);
+extern bool loadECMStatsFromDB(struct sqlite3* db, const char* tableName);
 
 #endif // __INCLUDED_STATS_DB_H__
