@@ -56,12 +56,12 @@ BOOL cdAudio_Open(const char* user_musicdir)
 	  || !playlist->read(user_musicdir))
 	 && !playlist->read("music"))
 	{
-		return FALSE;
+		return false;
 	}
 
 	music_initialized = true;
 
-	return TRUE;
+	return true;
 }
 
 static void cdAudio_CloseTrack(void)
@@ -154,16 +154,16 @@ BOOL cdAudio_PlayTrack(SDWORD iTrack)
 	if (filename == NULL)
 	{
 		music_track = 0;
-		return FALSE;
+		return false;
 	}
 	else if (!cdAudio_OpenTrack(filename))
 	{
-		return FALSE; // break out to avoid infinite loops
+		return false; // break out to avoid infinite loops
 	}
 
 	music_track = iTrack;
 
-	return TRUE;
+	return true;
 }
 
 void cdAudio_Stop()
