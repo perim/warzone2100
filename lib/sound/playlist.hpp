@@ -42,6 +42,8 @@ namespace Sound
             const char* currentSong() const;
             const char* nextSong();
 
+            std::size_t numSongs() const;
+
         private:
 	    std::list<std::string> _playlist;
             

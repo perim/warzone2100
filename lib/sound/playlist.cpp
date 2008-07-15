@@ -19,10 +19,10 @@
 */
 
 #include "playlist.hpp"
+#include "playlist.h"
 #include "general/physfs_stream.hpp"
 #include <string>
-#include <algorithm>
-#include <boost/array.hpp>
+#include <sstream>
 #include <boost/bind.hpp>
 #include <stdio.h>
 #include <physfs.h>
@@ -38,9 +38,8 @@
 # undef bool
 #endif
 
-using boost::array;
-using std::for_each;
 using std::string;
+using std::istringstream;
 
 #define BUFFER_SIZE 2048
 
@@ -87,6 +86,14 @@ bool PlayList::read(std::istream& file, const std::string& base_path)
 		debug(LOG_SOUND, "Added song %s to playlist", filename.c_str());
 	}
 
+	/* Guarantee that (if the playlist contains any tracks) we can retrieve
+	 * them.
+	 */
+	if (_cur_song == _playlist.end())
+	{
+		_cur_song = _playlist.begin();
+	}
+
 	return true;
 }
 
@@ -111,5 +118,40 @@ const char* PlayList::nextSong()
 	}
 
 	return currentSong();
+}
+
+std::size_t PlayList::numSongs() const
+{
+	return _playlist.size();
+}
+
+void playListTest()
+{
+	for (unsigned int i = 0; i < 100; ++i)
+	{
+		static const string first_file ("track1.ogg");
+		static const string second_file("track2.ogg");
+		static const string playlist(first_file  + "\n" +
+		                             second_file + "\n");
+		istringstream plist(playlist);
+
+		PlayList list;
+		list.read(plist, "music");
+
+		ASSERT(list.numSongs() == 2, "Error occurred while parsing the playlist as it should contain 2 tracks but contains %zu tracks.", list.numSongs());
+
+		const char * const first = list.currentSong();
+		const char *       second = list.nextSong();
+
+		assert(first  == first_file);
+		assert(second == second_file);
+
+		// Loop around
+		second = list.nextSong();
+		assert(second == first_file);
+		assert(list.numSongs() == 2);
+	}
+
+	puts("\tPlaylist self-test: PASSED");
 }
 }
