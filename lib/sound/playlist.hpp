@@ -26,6 +26,8 @@
 #endif
 
 #include <istream>
+#include <list>
+#include <string>
 
 namespace Sound
 {
@@ -33,27 +35,17 @@ namespace Sound
     {
         public:
             PlayList();
-            PlayList(const char* path);
-            PlayList(std::istream& file);
-            ~PlayList();
 
             bool read(const char* base_path);
-            bool read(std::istream& file, const char* base_path);
-
-            void track(unsigned int t);
+            bool read(std::istream& file, const std::string& base_path);
 
             const char* currentSong() const;
             const char* nextSong();
 
         private:
-            void shuffle();
-
-        private:
-            unsigned int _cur_track;
-            unsigned int _cur_song;
+	    std::list<std::string> _playlist;
             
-            struct Track;
-            Track* _playlist;
+            std::list<std::string>::const_iterator _cur_song;
     };
 }
 

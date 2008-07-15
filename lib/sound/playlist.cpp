@@ -20,7 +20,6 @@
 
 #include "playlist.hpp"
 #include "general/physfs_stream.hpp"
-#include <vector>
 #include <string>
 #include <algorithm>
 #include <boost/array.hpp>
@@ -42,50 +41,14 @@
 using boost::array;
 using std::for_each;
 using std::string;
-using std::vector;
 
 #define BUFFER_SIZE 2048
 
 namespace Sound
 {
-struct PlayList::Track
-{
-	/** Default constructor.
-	 *  Initialises all values to their defaults.
-	 */
-	Track() :
-		shuffle(false)
-	{
-	}
-
-	vector<string>  songs;
-	bool            shuffle;
-};
-
 PlayList::PlayList() :
-		_cur_track(0),
-		_cur_song(0),
-		_playlist(new Track[playlist_last])
+		_cur_song(_playlist.begin())
 {
-}
-
-PlayList::PlayList(const char* path) :
-		_cur_track(0),
-		_cur_song(0),
-		_playlist(new Track[playlist_last])
-{
-}
-
-PlayList::PlayList(std::istream& file) :
-		_cur_track(0),
-		_cur_song(0),
-		_playlist(new Track[playlist_last])
-{
-}
-
-PlayList::~PlayList()
-{
-	delete [] _playlist;
 }
 
 bool PlayList::read(const char* base_path)
@@ -106,123 +69,47 @@ bool PlayList::read(const char* base_path)
 	return read(file, base_path);
 }
 
-bool PlayList::read(std::istream& file, const char* base_path)
+bool PlayList::read(std::istream& file, const std::string& base_path)
 {
-	string path_to_music;
-
 	while (!file.eof())
 	{
 		// Read a line from the file
-		string line;
-		std::getline(file, line);
+		string filename;
+		std::getline(file, filename);
 
-		if (line.substr(0, 6) == "[game]")
+		// Don't add empty filenames to the playlist
+		if (filename.empty())
 		{
-			_cur_track = 1;
-			path_to_music.clear();
-			_playlist[_cur_track].shuffle = false;
+			continue;
 		}
-		else if (line.substr(0, 6) == "[menu]")
-		{
-			_cur_track = 2;
-			path_to_music.clear();
-			_playlist[_cur_track].shuffle = false;
-		}
-		else if (line.substr(0, 5) == "path=")
-		{
-			path_to_music = line.substr(5);
-			if (path_to_music == ".")
-			{
-				path_to_music = base_path;
-			}
 
-			debug(LOG_SOUND, "playlist: path = %s", path_to_music.c_str());
-		}
-		else if (line.substr(0, 8) == "shuffle=")
-		{
-			if (line.substr(8) == "yes")
-			{
-				_playlist[_cur_track].shuffle = true;
-			}
-			debug(LOG_SOUND, "playlist: shuffle = yes");
-		}
-		else if (!line.empty())
-		{
-			string filepath;
-
-			if (path_to_music.empty())
-			{
-				filepath = line;
-			}
-			else
-			{
-				filepath = path_to_music + "/" + line;
-			}
-
-			debug(LOG_SOUND, "playlist: adding song %s", filepath.c_str());
-
-			_playlist[_cur_track].songs.push_back(filepath);
-		}
+		_playlist.push_back(base_path + "/" + filename);
+		debug(LOG_SOUND, "Added song %s to playlist", filename.c_str());
 	}
 
 	return true;
 }
 
-void PlayList::shuffle()
-{
-	if (!_playlist[_cur_track].shuffle)
-		return;
-
-	for (unsigned int i = _playlist[_cur_track].songs.size() - 1; i > 0; --i)
-	{
-		unsigned int j = rand() % (i + 1);
-
-		if (i != j)
-			std::swap(_playlist[_cur_track].songs[i], _playlist[_cur_track].songs[j]);
-	}
-}
-
-void PlayList::track(unsigned int t)
-{
-	if (t < playlist_last)
-	{
-		_cur_track = t;
-	}
-	else
-	{
-		_cur_track = 0;
-	}
-	shuffle();
-	_cur_song = 0;
-}
-
 const char* PlayList::currentSong() const
 {
-	if (_cur_song < _playlist[_cur_track].songs.size())
-	{
-		return _playlist[_cur_track].songs[_cur_song].c_str();
-	}
+	if (_cur_song == _playlist.end())
+		return NULL;
 
-	return NULL;
+	return _cur_song->c_str();
 }
 
 const char* PlayList::nextSong()
 {
-	// If we're at the end of the playlist
-	if (++_cur_song >= _playlist[_cur_track].songs.size())
+	if (_cur_song != _playlist.end())
 	{
-		// Shuffle the playlist (again)
-		shuffle();
-
-		// Jump to the start of the playlist
-		_cur_song = 0;
+		++_cur_song;
 	}
 
-	if (_playlist[_cur_track].songs.empty())
+	if (_cur_song == _playlist.end())
 	{
-		return NULL;
+		_cur_song = _playlist.begin();
 	}
 
-	return _playlist[_cur_track].songs[_cur_song].c_str();
+	return currentSong();
 }
 }

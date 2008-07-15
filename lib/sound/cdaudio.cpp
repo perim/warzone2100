@@ -41,7 +41,7 @@ using boost::scoped_ptr;
 
 static const size_t bufferSize = 16 * 1024;
 static const unsigned int buffer_count = 32;
-static bool		music_initialized;
+static bool		music_initialized = false;
 static unsigned int	music_track = 0;
 static float		music_volume = 0.5;
 static scoped_ptr<Sound::PlayList> playlist;
@@ -143,27 +143,29 @@ static void cdAudio_TrackFinished(void* user_data)
 	}
 }
 
-BOOL cdAudio_PlayTrack(SDWORD iTrack)
+BOOL cdAudio_PlayTrack(SONG_CONTEXT context)
 {
-	cdAudio_CloseTrack();
+	debug(LOG_SOUND, "called(%d)", (int)context);
 
-	playlist->track(iTrack);
-
-	const char* filename = playlist->currentSong();
-
-	if (filename == NULL)
+	switch (context)
 	{
-		music_track = 0;
-		return false;
-	}
-	else if (!cdAudio_OpenTrack(filename))
-	{
-		return false; // break out to avoid infinite loops
+		case SONG_FRONTEND:
+			return cdAudio_OpenTrack("music/menu.ogg");
+
+		case SONG_INGAME:
+		{
+			const char* filename = playlist->currentSong();
+		
+			if (filename == NULL)
+				return false;
+
+			return cdAudio_OpenTrack(filename);
+		}
 	}
 
-	music_track = iTrack;
+	ASSERT(!"Invalid songcontext", "Invalid song context specified for playing: %u", (unsigned int)context);
 
-	return true;
+	return false;
 }
 
 void cdAudio_Stop()
@@ -198,17 +200,11 @@ float sound_GetMusicVolume()
 
 void sound_SetMusicVolume(float volume)
 {
-	music_volume = volume;
+	music_volume = clipf(volume, 0.0f, 1.0f);
 
-	// Keep volume in the range of 0.0 - 1.0
-	if (music_volume < 0.0)
+	// Change the volume of the current stream as well (if any)
+	if (cdStream)
 	{
-		music_volume = 0.0;
+		sound_SetStreamVolume(cdStream, music_volume);
 	}
-	else if (music_volume > 1.0)
-	{
-		music_volume = 1.0;
-	}
-
-	// @todo Implement code to set the volume of the currently playing stream here
 }
