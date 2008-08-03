@@ -892,6 +892,11 @@ void aiUpdateDroid(DROID *psDroid)
 	ASSERT( psDroid != NULL,
 		"updateUnitAI: invalid Unit pointer" );
 
+	if (!myResponsibility(psDroid->player))
+	{
+		return;		// we should not order this droid around
+	}
+
 	lookForTarget = true;
 	updateTarget = true;
 
@@ -935,7 +940,7 @@ void aiUpdateDroid(DROID *psDroid)
 	// they would switch to the guard order in the order update loop
 	if ((psDroid->order == DORDER_NONE) &&
 		(psDroid->player == selectedPlayer) &&
-		!vtolDroid(psDroid) &&
+		!isVtolDroid(psDroid) &&
 		secondaryGetState(psDroid, DSO_HALTTYPE, &state) &&
 		(state == DSS_HALT_GUARD))
 	{
@@ -950,7 +955,7 @@ void aiUpdateDroid(DROID *psDroid)
 		updateTarget = false;
 	}
 
-	if(bMultiPlayer && vtolDroid(psDroid) && isHumanPlayer(psDroid->player))
+	if(bMultiPlayer && isVtolDroid(psDroid) && isHumanPlayer(psDroid->player))
 	{
 		lookForTarget = false;
 		updateTarget = false;
@@ -1018,7 +1023,6 @@ void aiUpdateDroid(DROID *psDroid)
 
 	if (lookForTarget && !updateTarget)
 	{
-		turnOffMultiMsg(true);
 		if (psDroid->droidType == DROID_SENSOR)
 		{
 			//Watermelon:only 1 target for sensor droid
@@ -1034,7 +1038,6 @@ void aiUpdateDroid(DROID *psDroid)
 				orderDroidObj(psDroid, DORDER_ATTACKTARGET, psTarget);
 			}
 		}
-		turnOffMultiMsg(false);
 	}
 }
 

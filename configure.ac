@@ -59,6 +59,8 @@ case ${host_os} in
 		;;
 	*)
 		AC_DEFINE([_XOPEN_SOURCE], 600, [Enable POSIX extensions if present])
+		# Make sure that backtrace_symbols_fd (GNU raw back trace extension) has some symbols to work  with
+		LDFLAGS="-rdynamic ${LDFLAGS}"
 		;;
 esac
 AM_CONDITIONAL([MINGW32], test "x$host_os_mingw32" = "xyes")
@@ -130,6 +132,13 @@ if test "x$enable_static" = "xyes" ; then
 	WIN32_LIBS="${WIN32_LIBS} -lz -lintl -liconv"
 	# Tell pkg-config to link against static libraries, incl. all dependencies
 	PKG_CONFIG="${PKG_CONFIG} --static"
+fi
+
+AC_ARG_ENABLE([sound],
+	AS_HELP_STRING([--disable-sound], [Disable sound [no]]),
+	[ enable_sound="${enableval}" ], [ enable_sound="yes" ])
+if test "x$enable_sound" != "xyes" ; then
+	AC_DEFINE([WZ_NOSOUND], [], [Causes sound to be disabled])
 fi
 
 # -O0 turns off all optimizations; this is necessary for accurate debugging
@@ -306,7 +315,6 @@ AC_CONFIG_FILES([Makefile
 		data/Makefile
 		data/mods/Makefile
 		data/mods/global/Makefile
-		data/mods/global/aivolution/multiplay/skirmish/Makefile
 		pkg/Makefile
 		pkg/nsis/Makefile
 		win32/Makefile

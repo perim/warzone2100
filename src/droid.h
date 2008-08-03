@@ -334,12 +334,12 @@ a defined range*/
 extern BASE_OBJECT * checkForRepairRange(DROID *psDroid,DROID *psTarget);
 
 //access function
-extern BOOL vtolDroid(DROID *psDroid);
+extern BOOL isVtolDroid(const DROID* psDroid);
 /*returns true if a VTOL Weapon Droid which has completed all runs*/
 extern BOOL vtolEmpty(DROID *psDroid);
 /*Checks a vtol for being fully armed and fully repaired to see if ready to
 leave reArm pad */
-extern BOOL  vtolHappy(DROID *psDroid);
+extern BOOL  vtolHappy(const DROID* psDroid);
 /*this mends the VTOL when it has been returned to home base whilst on an
 offworld mission*/
 extern void mendVtol(DROID *psDroid);
@@ -535,32 +535,10 @@ static inline void setSaveDroidBase(DROID *psSaveDroid, STRUCTURE *psNewBase)
 #endif
 }
 
+void checkDroid(const DROID *droid, const int line, const char *file);
+
 /* assert if droid is bad */
-#define CHECK_DROID(droid) \
-do { \
-	unsigned int i; \
-\
-	assert(droid != NULL); \
-\
-	/* Make sure to know we actually have a droid in our hands */ \
-	assert(droid->type == OBJ_DROID); \
-\
-	assert(droid->direction <= 360.0f && droid->direction >= 0.0f); \
-	assert(droid->numWeaps <= DROID_MAXWEAPS); \
-	assert(droid->listSize <= ORDER_LIST_MAX); \
-	assert(droid->player < MAX_PLAYERS); \
-	assert(droidOnMap(droid)); \
-\
-	for (i = 0; i < DROID_MAXWEAPS; ++i) \
-		assert(droid->turretRotation[i] <= 360); \
-\
-	for (i = 0; i < DROID_MAXWEAPS; ++i) \
-		assert(droid->asWeaps[i].lastFired <= gameTime); \
-\
-	for (i = 0; i < DROID_MAXWEAPS; ++i) \
-		if (droid->psActionTarget[i]) \
-			assert(droid->psActionTarget[i]->direction >= 0.0f); \
-} while (0)
+#define CHECK_DROID(droid) checkDroid(droid, __LINE__, __FILE__)
 
 // Minimum damage a weapon will deal to its target
 #define	MIN_WEAPON_DAMAGE	1

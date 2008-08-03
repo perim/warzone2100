@@ -514,7 +514,7 @@ BOOL loadStructureStats(const char *pStructData, UDWORD bufferSize)
 	const unsigned int NumStructures = numCR(pStructData, bufferSize);
 	UDWORD i, inc, player, numWeaps, weapSlots;
 	char				StructureName[MAX_STR_LENGTH], foundation[MAX_STR_LENGTH],
-						type[MAX_STR_LENGTH], techLevel[MAX_STR_LENGTH],
+						type[MAX_STR_LENGTH], dummy[MAX_STR_LENGTH],
 						strength[MAX_STR_LENGTH];
 	char				GfxFile[MAX_STR_LENGTH], baseIMD[MAX_STR_LENGTH];
 	char				ecmType[MAX_STR_LENGTH], sensorType[MAX_STR_LENGTH];
@@ -577,7 +577,7 @@ BOOL loadStructureStats(const char *pStructData, UDWORD bufferSize)
 		sscanf(pStructData,"%[^','],%[^','],%[^','],%[^','],%d,%d,%d,%[^','],\
 			%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%[^','],%[^','],%d,%[^','],%[^','],\
 			%d,%d",
-			StructureName, type, techLevel, strength, &psStructure->terrainType,
+			StructureName, type, dummy, strength, &psStructure->terrainType,
 			&psStructure->baseWidth, &psStructure->baseBreadth, foundation,
 			&psStructure->buildPoints, &psStructure->height,
 			&psStructure->armourValue, &psStructure->bodyPoints,
@@ -592,7 +592,8 @@ BOOL loadStructureStats(const char *pStructData, UDWORD bufferSize)
 #endif
 
 		//allocate storage for the name
-		if (!allocateName(&psStructure->pName, StructureName))
+		psStructure->pName = allocateName(StructureName);
+		if (!psStructure->pName)
 		{
 			return false;
 		}
@@ -601,12 +602,6 @@ BOOL loadStructureStats(const char *pStructData, UDWORD bufferSize)
 
 		//determine the structure type
 		psStructure->type = structureType(type);
-
-		//determine the tech level
-		if (!setTechLevel((BASE_STATS *)psStructure, techLevel))
-		{
-			return false;
-		}
 
 		//set the struct strength
 		psStructure->strength = getStructStrength(strength);
@@ -1042,8 +1037,7 @@ BOOL loadStructureStrengthModifiers(const char *pStrengthModData, UDWORD bufferS
 			weaponEffectName, strengthName, &modifier);
 
 		//get the weapon effect inc
-		effectInc = getWeaponEffect(weaponEffectName);
-		if (effectInc == INVALID_WEAPON_EFFECT)
+		if (!getWeaponEffect(weaponEffectName, &effectInc))
 		{
 			debug(LOG_ERROR, "Invalid Weapon Effect - %s", weaponEffectName);
 			abort();
@@ -1749,8 +1743,6 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 						psBuilding->asWeaps[0].lastFired = gameTime;
 					}
 					psBuilding->asWeaps[weapon].nStat =	pStructureType->psWeapStat[weapon] - asWeaponStats;
-					psBuilding->asWeaps[weapon].hitPoints = (asWeaponStats + psBuilding->
-						asWeaps[weapon].nStat)->hitPoints;
 					psBuilding->asWeaps[weapon].ammo = (asWeaponStats + psBuilding->
 						asWeaps[weapon].nStat)->numRounds;
 					psBuilding->asWeaps[weapon].recoilValue = 0;
@@ -1770,8 +1762,6 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 					psBuilding->asWeaps[0].lastFired = gameTime;
 				}
 				psBuilding->asWeaps[0].nStat =	pStructureType->psWeapStat[0] - asWeaponStats;
-				psBuilding->asWeaps[0].hitPoints = (asWeaponStats + psBuilding->
-					asWeaps[0].nStat)->hitPoints;
 				psBuilding->asWeaps[0].ammo = (asWeaponStats + psBuilding->
 					asWeaps[0].nStat)->numRounds;
 				psBuilding->asWeaps[0].recoilValue = 0;
@@ -1783,7 +1773,7 @@ STRUCTURE* buildStructure(STRUCTURE_STATS* pStructureType, UDWORD x, UDWORD y, U
 		{
 			int j;
 
-			for (j = 0; j < NUM_WEAPON_CLASS; j++)
+			for (j = 0; j < WC_NUM_WEAPON_CLASSES; j++)
 			{
 				psBuilding->armour[i][j] = (UWORD)structureArmour(pStructureType, (UBYTE)player);
 			}
@@ -2376,7 +2366,7 @@ static BOOL structClearTile(UWORD x, UWORD y)
 	DROID	*psCurr;
 
 	/* Check for a structure */
-	if (fpathBlockingTile(x, y, WHEELED))
+	if (fpathBlockingTile(x, y, PROPULSION_TYPE_WHEELED))
 	{
 		debug(LOG_NEVER, "failed - blocked");
 		return false;
@@ -2601,7 +2591,7 @@ static BOOL structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl,
 		if ( psFact->psCommander != NULL )
 		{
 			if (idfDroid(psNewDroid) ||
-				vtolDroid(psNewDroid))
+				isVtolDroid(psNewDroid))
 			{
 				orderDroidObj(psNewDroid, DORDER_FIRESUPPORT, (BASE_OBJECT *)psFact->psCommander);
 				moveToRearm(psNewDroid);
@@ -2625,7 +2615,7 @@ static BOOL structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl,
 			}
 			//if vtol droid - send it to ReArm Pad if one exists
 			placed = false;
-			if (vtolDroid(psNewDroid))
+			if (isVtolDroid(psNewDroid))
 			{
 				moveToRearm(psNewDroid);
 			}
@@ -3010,6 +3000,8 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 			    && (!orderState(psDroid, DORDER_RTR)
 			        || psDroid->psTarget != (BASE_OBJECT *)psStructure))
 			{
+				objTrace(psStructure->id, "Dropping repair target %d; wrong order=%d, wrong target=%d", 
+				         (int)psChosenObj->id, (int)(!orderState(psDroid, DORDER_RTR)), (int)(psDroid->psTarget != (BASE_OBJECT *)psStructure));
 				psChosenObj = NULL;
 				psDroid = NULL;
 				psRepairFac->psObj = NULL;
@@ -3041,6 +3033,11 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 					}
 				}
 				psDroid = (DROID *)psChosenObj;
+				if (psDroid)
+				{
+					objTrace(psStructure->id, "Chose to repair droid %d", (int)psDroid->id);
+					objTrace(psDroid->id, "Chosen to be repaired by repair structure %d", (int)psStructure->id);
+				}
 			}
 
 			/* Steal droid from another repair facility */
@@ -3070,6 +3067,11 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 					}
 				}
 				psDroid = (DROID *)psChosenObj;
+				if (psDroid)
+				{
+					objTrace(psStructure->id, "Chose to steal droid %d from another repair queue to repair it", (int)psDroid->id);
+					objTrace(psDroid->id, "Stolen by repair structure %d because current queue too long", (int)psStructure->id);
+				}
 			}
 
 			// send the droid to be repaired
@@ -3081,6 +3083,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 				psDroid->psTarget = (BASE_OBJECT *)psStructure;
 
 				/* move droid to repair point at rear of facility */
+				objTrace(psStructure->id, "Requesting droid %d to come to us", (int)psDroid->id);
 				actionDroidObjLoc( psDroid, DACTION_MOVETOREPAIRPOINT,
 						(BASE_OBJECT *) psStructure, psStructure->pos.x, psStructure->pos.y);
 				/* reset repair started */
@@ -3385,6 +3388,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 						if (!(psDroid->sMove.Status == MOVEINACTIVE &&
 							psDroid->sMove.iVertSpeed == 0))
 						{
+							objTrace(psStructure->id, "Waiting for transporter to land");
 							return;
 						}
 					}
@@ -3395,6 +3399,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 						if (psStructure->resistance < (SWORD)structureResistance(psStructure->
 							pStructureType, psStructure->player))
 						{
+							objTrace(psStructure->id, "Resistance too low for repair");
 							return;
 						}
 					}
@@ -3473,7 +3478,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 
 				if ( psDroid->body >= psDroid->originalBody )
 				{
-					debug(LOG_NEVER, "repair completed");
+					objTrace(psStructure->id, "Repair complete of droid %d", (int)psDroid->id);
 
 					psRepairFac->psObj = NULL;
 
@@ -3521,7 +3526,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure)
 			psDroid = (DROID *)psChosenObj;
 			ASSERT( psDroid != NULL,
 					"aiUpdateStructure: invalid droid pointer" );
-			ASSERT( vtolDroid(psDroid),"aiUpdateStructure: invalid droid type" );
+			ASSERT( isVtolDroid(psDroid),"aiUpdateStructure: invalid droid type" );
 
 			//check hasn't died whilst waiting to be rearmed
 			// also clear out any previously repaired droid
@@ -3956,7 +3961,6 @@ BOOL validLocation(BASE_STATS *psStats, UDWORD x, UDWORD y, UDWORD player,
 				BOOL bCheckBuildQueue)
 {
 	STRUCTURE			*psStruct;
-	FEATURE				*psFeat;
 	STRUCTURE_STATS		*psBuilding;
 	BOOL				valid = true;
 	SDWORD				i, j;
@@ -4297,7 +4301,8 @@ BOOL validLocation(BASE_STATS *psStats, UDWORD x, UDWORD y, UDWORD player,
 									//cannot build within one tile of a oil resource
 									if(TileHasFeature(mapTile(i,j)))
 									{
-										psFeat = getTileFeature(i,j);
+										FEATURE	*psFeat = getTileFeature(i, j);
+
 										if (psFeat && psFeat->psStats->subType ==
 											FEAT_OIL_RESOURCE)
 										{
@@ -4385,7 +4390,8 @@ BOOL validLocation(BASE_STATS *psStats, UDWORD x, UDWORD y, UDWORD player,
 				//check that there is a oil resource at the location
 				if(TileHasFeature(mapTile(x,y)))
 				{
-					psFeat = getTileFeature(x,y);
+					FEATURE	*psFeat = getTileFeature(x, y);
+
 					if(psFeat && psFeat->psStats->subType == FEAT_OIL_RESOURCE)
 					{
 						valid = true;
@@ -4476,14 +4482,18 @@ BOOL validLocation(BASE_STATS *psStats, UDWORD x, UDWORD y, UDWORD player,
 			}
 		}
 	}
+	else if (psStats->ref >= REF_TEMPLATE_START
+	         && psStats->ref < REF_TEMPLATE_START + REF_RANGE)
+	{
+		DROID_TEMPLATE	*psTemplate = (DROID_TEMPLATE *)psStats;
+		PROPULSION_STATS *psPropStats = asPropulsionStats + psTemplate->asParts[COMP_PROPULSION];
+
+		valid = !fpathBlockingTile(x, y, psPropStats->propulsionType);
+	}
 	else
 	{
-		// not positioning a structure
-		valid = true;
-		if (fpathBlockingTile(x, y, WHEELED))
-		{
-			valid = false;
-		}
+		// not positioning a structure or droid, ie positioning a feature
+		valid = !fpathBlockingTile(x, y, PROPULSION_TYPE_WHEELED);
 	}
 
 failed:
@@ -5982,7 +5992,7 @@ BOOL validTemplateForFactory(DROID_TEMPLATE *psTemplate, STRUCTURE *psFactory)
 	}
 	//check for VTOL droid
 	else if ((asPropulsionStats + psTemplate->asParts[COMP_PROPULSION])->
-		propulsionType == LIFT)
+		propulsionType == PROPULSION_TYPE_LIFT)
 	{
 		if (psFactory->pStructureType->type != REF_VTOL_FACTORY)
 		{
@@ -6006,7 +6016,7 @@ BOOL validTemplateForFactory(DROID_TEMPLATE *psTemplate, STRUCTURE *psFactory)
 	else if (psFactory->pStructureType->type == REF_VTOL_FACTORY)
 	{
 		if ((asPropulsionStats + psTemplate->asParts[COMP_PROPULSION])->
-			propulsionType != LIFT)
+			propulsionType != PROPULSION_TYPE_LIFT)
 		{
 			return false;
 		}
@@ -7196,7 +7206,7 @@ BOOL structSensorDroidWeapon(STRUCTURE *psStruct, DROID *psDroid)
 		//else if (structStandardSensor(psStruct) && (psDroid->numWeaps &&
 		if (structStandardSensor(psStruct) && (psDroid->asWeaps[0].nStat > 0 &&
 			!proj_Direct(asWeaponStats + psDroid->asWeaps[0].nStat)) &&
-			!vtolDroid(psDroid))
+			!isVtolDroid(psDroid))
 		{
 			return true;
 		}
@@ -7204,21 +7214,21 @@ BOOL structSensorDroidWeapon(STRUCTURE *psStruct, DROID *psDroid)
 		//if (structCBSensor(psStruct) && (psDroid->numWeaps &&
 		else if (structCBSensor(psStruct) && (psDroid->asWeaps[0].nStat > 0 &&
 			!proj_Direct(asWeaponStats + psDroid->asWeaps[0].nStat)) &&
-			!vtolDroid(psDroid))
+			!isVtolDroid(psDroid))
 		{
 			return true;
 		}
 		//VTOL Intercept Sensor Tower + any weapon VTOL droid
 		//else if (structVTOLSensor(psStruct) && psDroid->numWeaps &&
 		else if (structVTOLSensor(psStruct) && psDroid->asWeaps[0].nStat > 0 &&
-			vtolDroid(psDroid))
+			isVtolDroid(psDroid))
 		{
 			return true;
 		}
 		//VTOL CB Sensor Tower + any weapon VTOL droid
 		//else if (structVTOLCBSensor(psStruct) && psDroid->numWeaps &&
 		else if (structVTOLCBSensor(psStruct) && psDroid->asWeaps[0].nStat > 0 &&
-			vtolDroid(psDroid))
+			isVtolDroid(psDroid))
 		{
 			return true;
 		}
@@ -7387,7 +7397,7 @@ void ensureRearmPadClear(STRUCTURE *psStruct, DROID *psDroid)
 		if (psCurr != psDroid
 		 && map_coord(psCurr->pos.x) == tx
 		 && map_coord(psCurr->pos.y) == ty
-		 && vtolDroid(psCurr))
+		 && isVtolDroid(psCurr))
 		{
 			actionDroidObj(psCurr, DACTION_CLEARREARMPAD, (BASE_OBJECT *)psStruct);
 		}

@@ -258,7 +258,7 @@ BOOL fpathBlockingTile(SDWORD x, SDWORD y, PROPULSION_TYPE propulsion)
 	}
 
 	/* Check scroll limits (used in campaign to partition the map. */
-	if (propulsion != LIFT && (x < scrollMinX + 1 || y < scrollMinY + 1 || x >= scrollMaxX - 1 || y >= scrollMaxY - 1))
+	if (propulsion != PROPULSION_TYPE_LIFT && (x < scrollMinX + 1 || y < scrollMinY + 1 || x >= scrollMaxX - 1 || y >= scrollMaxY - 1))
 	{
 		// coords off map - auto blocking tile
 		return true;
@@ -267,17 +267,22 @@ BOOL fpathBlockingTile(SDWORD x, SDWORD y, PROPULSION_TYPE propulsion)
 	psTile = mapTile(x, y);
 
 	// Only tall structures are blocking VTOL now
-	if (propulsion == LIFT && !TileHasTallStructure(psTile))
+	if (propulsion == PROPULSION_TYPE_LIFT && !TileHasTallStructure(psTile))
 	{
 		return false;
 	}
-	else if (propulsion == LIFT)
+	else if (propulsion == PROPULSION_TYPE_LIFT)
+	{
+		return true;
+	}
+	else if (propulsion == PROPULSION_TYPE_PROPELLOR && terrainType(psTile) != TER_WATER)
 	{
 		return true;
 	}
 
 	if (psTile->tileInfoBits & BITS_FPATHBLOCK || (TileIsOccupied(psTile) && !TILE_IS_NOTBLOCKING(psTile))
-	    || terrainType(psTile) == TER_CLIFFFACE || (terrainType(psTile) == TER_WATER && propulsion != HOVER))
+	    || terrainType(psTile) == TER_CLIFFFACE 
+	    || (terrainType(psTile) == TER_WATER && propulsion != PROPULSION_TYPE_HOVER && propulsion != PROPULSION_TYPE_PROPELLOR))
 	{
 		return true;
 	}
@@ -496,20 +501,6 @@ static FPATH_RETVAL fpathRoute(MOVE_CONTROL *psMove, int id, int startX, int sta
 }
 
 
-/* Primarily for the AI */
-FPATH_RETVAL fpathNullRoute(int x, int y, int x2, int y2, int *length)
-{
-	FPATH_RETVAL r;
-	MOVE_CONTROL sMove;
-
-	sMove.asPath = NULL;
-	r = fpathRoute(&sMove, -1, x, y, x2, y2, WHEELED, DROID_WEAPON);
-	*length = sMove.numPoints;
-	free(sMove.asPath);
-	return r;
-}
-
-
 // Find a route for an DROID to a location in world coordinates
 FPATH_RETVAL fpathDroidRoute(DROID* psDroid, SDWORD tX, SDWORD tY)
 {
@@ -563,7 +554,6 @@ FPATH_RETVAL fpathDroidRoute(DROID* psDroid, SDWORD tX, SDWORD tY)
 	return fpathRoute(&psDroid->sMove, psDroid->id, psDroid->pos.x, psDroid->pos.y, tX, tY, psPropStats->propulsionType, psDroid->droidType);
 }
 
-
 // Run only from path thread
 static void fpathExecute(PATHJOB *psJob, PATHRESULT *psResult)
 {
@@ -579,7 +569,7 @@ static void fpathExecute(PATHJOB *psJob, PATHRESULT *psResult)
 	case ASR_FAILED:
 		objTrace(psJob->droidID, "** Failed route **");
 		// Is this really a good idea? Was in original code.
-		if (psJob->propulsion == LIFT && psJob->droidType != DROID_TRANSPORTER)
+		if (psJob->propulsion == PROPULSION_TYPE_LIFT && psJob->droidType != DROID_TRANSPORTER)
 		{
 			objTrace(psJob->droidID, "Doing fallback for non-transport VTOL");
 			fpathSetMove(&psResult->sMove, psJob->destX, psJob->destY);
@@ -621,16 +611,16 @@ void fpathTest(int x, int y, int x2, int y2)
 
 	/* Test one path */
 	sMove.Status = MOVEINACTIVE;
-	r = fpathRoute(&sMove, 1, x, y, x2, y2, WHEELED, DROID_WEAPON);
+	r = fpathRoute(&sMove, 1, x, y, x2, y2, PROPULSION_TYPE_WHEELED, DROID_WEAPON);
 	assert(r == FPR_WAIT);
 	sMove.Status = MOVEWAITROUTE;
 	assert(fpathJobQueueLength() == 1 || fpathResultQueueLength() == 1);
 	fpathRemoveDroidData(2);	// should not crash, nor remove our path
 	assert(fpathJobQueueLength() == 1 || fpathResultQueueLength() == 1);
-	while (fpathResultQueueLength() == 0) usleep(1);
+	while (fpathResultQueueLength() == 0) SDL_Delay(10);
 	assert(fpathJobQueueLength() == 0);
 	assert(fpathResultQueueLength() == 1);
-	r = fpathRoute(&sMove, 1, x, y, x2, y2, WHEELED, DROID_WEAPON);
+	r = fpathRoute(&sMove, 1, x, y, x2, y2, PROPULSION_TYPE_WHEELED, DROID_WEAPON);
 	assert(r == FPR_OK);
 	assert(sMove.numPoints > 0 && sMove.asPath);
 	assert(sMove.asPath[sMove.numPoints - 1].x == map_coord(x2));
@@ -641,15 +631,15 @@ void fpathTest(int x, int y, int x2, int y2)
 	sMove.Status = MOVEINACTIVE;
 	for (i = 1; i <= 100; i++)
 	{
-		r = fpathRoute(&sMove, i, x, y, x2, y2, WHEELED, DROID_WEAPON);
+		r = fpathRoute(&sMove, i, x, y, x2, y2, PROPULSION_TYPE_WHEELED, DROID_WEAPON);
 		assert(r == FPR_WAIT);
 	}
-	while (fpathResultQueueLength() != 100) usleep(1);
+	while (fpathResultQueueLength() != 100) SDL_Delay(10);
 	assert(fpathJobQueueLength() == 0);
 	for (i = 1; i <= 100; i++)
 	{
 		sMove.Status = MOVEWAITROUTE;
-		r = fpathRoute(&sMove, i, x, y, x2, y2, WHEELED, DROID_WEAPON);
+		r = fpathRoute(&sMove, i, x, y, x2, y2, PROPULSION_TYPE_WHEELED, DROID_WEAPON);
 		assert(r == FPR_OK);
 		assert(sMove.numPoints > 0 && sMove.asPath);
 		assert(sMove.asPath[sMove.numPoints - 1].x == map_coord(x2));
@@ -661,7 +651,7 @@ void fpathTest(int x, int y, int x2, int y2)
 	sMove.Status = MOVEINACTIVE;
 	for (i = 1; i <= 100; i++)
 	{
-		r = fpathRoute(&sMove, i, x, y, x2, y2, WHEELED, DROID_WEAPON);
+		r = fpathRoute(&sMove, i, x, y, x2, y2, PROPULSION_TYPE_WHEELED, DROID_WEAPON);
 		assert(r == FPR_WAIT);
 	}
 	for (i = 1; i <= 100; i++)

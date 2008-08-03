@@ -379,6 +379,193 @@ static void setFatalSignalHandler(SigActionHandler signalHandler)
 #endif // _XOPEN_UNIX
 }
 
+/**
+ * Spawn a new GDB process and attach it to the current process.
+ *
+ * @param dumpFile          a POSIX file descriptor to write GDB's output to,
+ *                          it will also be used to write failure messages to.
+ * @param[out] gdbWritePipe a POSIX file descriptor linked to GDB's stdin.
+ *
+ * @return 0 if we failed to spawn a new process, a non-zero process ID if we
+ *           successfully spawned a new process.
+ *
+ * @post If the function returned a non-zero process ID a new process has
+ *       successfully been spawned. This doesn't mean that 'gdb' was
+ *       successfully started though. If 'gdb' failed to start the read end of
+ *       the pipe will be closed, also the spawned process will give 1 as its
+ *       return code.
+ *
+ * @post If the function returned a non-zero process ID *gdbWritePipe will
+ *       contain a valid POSIX file descriptor representing GDB's stdin. If the
+ *       function was unsuccessful and returned zero *gdbWritePipe's value will
+ *       be unchanged.
+ */
+static pid_t execGdb(int const dumpFile, int* gdbWritePipe)
+{
+	/* Check if the "bare minimum" is available: GDB and an absolute path
+	 * to our program's binary.
+	 */
+	if (!programIsAvailable
+	 || !gdbIsAvailable)
+	{
+		write(dumpFile, "No extended backtrace dumped:\n",
+		         strlen("No extended backtrace dumped:\n"));
+
+		if (!programIsAvailable)
+		{
+			write(dumpFile, "- Program path not available\n",
+			         strlen("- Program path not available\n"));
+		}
+		if (!gdbIsAvailable)
+		{
+			write(dumpFile, "- GDB not available\n",
+			         strlen("- GDB not available\n"));
+		}
+
+		return 0;
+	}
+
+	// Create a pipe to use for communication with 'gdb'
+	int gdbPipe[2];
+	if (pipe(gdbPipe) == -1)
+	{
+		write(dumpFile, "Pipe failed\n",
+		         strlen("Pipe failed\n"));
+
+		printf("Pipe failed\n");
+
+		return 0;
+	}
+
+	// Fork a new child process
+	const pid_t pid = fork();
+	if (pid == -1)
+	{
+		write(dumpFile, "Fork failed\n",
+		         strlen("Fork failed\n"));
+
+		printf("Fork failed\n");
+
+		// Clean up our pipe
+		close(gdbPipe[0]);
+		close(gdbPipe[1]);
+
+		return 0;
+	}
+
+	// Check to see if we're the parent
+	if (pid != 0)
+	{
+		// Return the write end of the pipe
+		*gdbWritePipe = gdbPipe[1];
+
+		return pid;
+	}
+
+	char *gdbArgv[] = { gdbPath, programPath, programPID, NULL };
+	char *gdbEnv[] = { NULL };
+
+	close(gdbPipe[1]); // No output to pipe
+
+	dup2(gdbPipe[0], STDIN_FILENO); // STDIN from pipe
+	dup2(dumpFile, STDOUT_FILENO); // STDOUT to dumpFile
+
+	write(dumpFile, "GDB extended backtrace:\n",
+			strlen("GDB extended backtrace:\n"));
+
+	/* If execve() is successful it effectively prevents further
+	 * execution of this function.
+	 */
+	execve(gdbPath, (char **)gdbArgv, (char **)gdbEnv);
+
+	// If we get here it means that execve failed!
+	write(dumpFile, "execcv(\"gdb\") failed\n",
+	         strlen("execcv(\"gdb\") failed\n"));
+
+	// Terminate the child, indicating failure
+	exit(1);
+}
+
+/**
+ * Dumps a backtrace of the stack to the given output stream.
+ *
+ * @param dumpFile a POSIX file descriptor to write the resulting backtrace to.
+ *
+ * @return false if any failure occurred, preventing a full "extended"
+ *               backtrace.
+ */
+static bool gdbExtendedBacktrace(int const dumpFile)
+{
+	// Spawn a GDB instance and retrieve a pipe to its stdin
+	int gdbPipe;
+	const pid_t pid = execGdb(dumpFile, &gdbPipe);
+	if (pid == 0)
+	{
+		return false;
+	}
+
+	                                  // Retrieve a full stack backtrace
+	static const char gdbCommands[] = "backtrace full\n"
+
+	                                  // Move to the stack frame where we triggered the crash
+	                                  "frame 4\n"
+
+	                                  // Show the assembly code associated with that stack frame
+	                                  "disassemble\n"
+
+	                                  // Show the content of all registers
+	                                  "info registers\n"
+	                                  "quit\n";
+
+	write(gdbPipe, gdbCommands, sizeof(gdbCommands));
+
+	/* Flush our end of the pipe to make sure that GDB has all commands
+	 * directly available to it.
+	 */
+	fsync(gdbPipe);
+
+	// Wait for our child to terminate
+	int status;
+	const pid_t wpid = waitpid(pid, &status, 0);
+
+	// Clean up our end of the pipe
+	close(gdbPipe);
+
+	// waitpid(): on error, -1 is returned
+	if (wpid == -1)
+	{
+		write(dumpFile, "GDB failed\n",
+		         strlen("GDB failed\n"));
+		printf("GDB failed\n");
+
+		return false;
+	}
+
+	/* waitpid(): on success, returns the process ID of the child whose
+	 * state has changed
+	 *
+	 * We only have one child, from our fork() call above, thus these PIDs
+	 * should match.
+	 */
+	assert(pid == wpid);
+
+	/* Check wether our child (which presumably was GDB, but doesn't
+	 * necessarily have to be) didn't terminate normally or had a non-zero
+	 * return code.
+	 */
+	if (!WIFEXITED(status)
+	 || WEXITSTATUS(status) != 0)
+	{
+		write(dumpFile, "GDB failed\n",
+		         strlen("GDB failed\n"));
+		printf("GDB failed\n");
+
+		return false;
+	}
+
+	return true;
+}
+
 
 /**
  * Exception (signal) handling on POSIX systems.
@@ -401,11 +588,10 @@ static void posixExceptionHandler(int signum, siginfo_t * siginfo, WZ_DECL_UNUSE
 	uint32_t btSize = backtrace(btBuffer, MAX_BACKTRACE);
 # endif
 
-	pid_t pid = 0;
-	int gdbPipe[2] = {0}, dumpFile = open(gdmpPath, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR);
+	const int dumpFile = open(gdmpPath, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR);
 
 
-	if (!dumpFile)
+	if (dumpFile == -1)
 	{
 		printf("Failed to create dump file '%s'", gdmpPath);
 		return;
@@ -422,7 +608,7 @@ static void posixExceptionHandler(int signum, siginfo_t * siginfo, WZ_DECL_UNUSE
 	write(dumpFile, signal, strlen(signal));
 	write(dumpFile, "\n\n", 2);
 
-	dumpLog(dumpFile); // dump out the last two log calls
+	dbgDumpLog(dumpFile); // dump out the last several log calls
 
 # if defined(__GLIBC__)
 	// Dump raw backtrace in case GDB is not available or fails
@@ -438,67 +624,8 @@ static void posixExceptionHandler(int signum, siginfo_t * siginfo, WZ_DECL_UNUSE
 	// Make sure everything is written before letting GDB write to it
 	fsync(dumpFile);
 
-
-	if (programIsAvailable && gdbIsAvailable)
-	{
-		if (pipe(gdbPipe) == 0)
-		{
-			pid = fork();
-			if (pid == (pid_t)0)
-			{
-				char *gdbArgv[] = { gdbPath, programPath, programPID, NULL };
-				char *gdbEnv[] = { NULL };
-
-				close(gdbPipe[1]); // No output to pipe
-
-				dup2(gdbPipe[0], STDIN_FILENO); // STDIN from pipe
-				dup2(dumpFile, STDOUT_FILENO); // STDOUT to dumpFile
-
-				write(dumpFile, "GDB extended backtrace:\n",
-					  strlen("GDB extended backtrace:\n"));
-
-				execve(gdbPath, (char **)gdbArgv, (char **)gdbEnv);
-			}
-			else if (pid > (pid_t)0)
-			{
-				close(gdbPipe[0]); // No input from pipe
-
-				write(gdbPipe[1], "backtrace full\n" "quit\n",
-					  strlen("backtrace full\n" "quit\n"));
-
-				if (waitpid(pid, NULL, 0) < 0)
-				{
-					printf("GDB failed\n");
-				}
-
-				close(gdbPipe[1]);
-			}
-			else
-			{
-				printf("Fork failed\n");
-			}
-		}
-		else
-		{
-			printf("Pipe failed\n");
-		}
-	}
-	else
-	{
-		write(dumpFile, "No extended backtrace dumped:\n",
-			strlen("No extended backtrace dumped:\n"));
-		if (!programIsAvailable)
-		{
-			write(dumpFile, "- Program path not available\n",
-				strlen("- Program path not available\n"));
-		}
-		if (!gdbIsAvailable)
-		{
-			write(dumpFile, "- GDB not available\n",
-				strlen("- GDB not available\n"));
-		}
-	}
-
+	// Use 'gdb' to provide an "extended" backtrace
+	gdbExtendedBacktrace(dumpFile);
 
 	printf("Saved dump file to '%s'\n", gdmpPath);
 	close(dumpFile);
@@ -511,60 +638,77 @@ static void posixExceptionHandler(int signum, siginfo_t * siginfo, WZ_DECL_UNUSE
 
 #endif // WZ_OS_*
 
+#if defined(WZ_OS_UNIX) && !defined(WZ_OS_MAC)
+static bool fetchProgramPath(char * const programPath, size_t const bufSize, const char * const programCommand)
+{
+	// Construct the "which $(programCommand)" string
+	char whichProgramCommand[PATH_MAX];
+	snprintf(whichProgramCommand, sizeof(whichProgramCommand), "which %s", programCommand);
+
+	/* Fill the output buffer with zeroes so that we can rely on the output
+	 * string being NUL-terminated.
+	 */
+	memset(programPath, 0, bufSize);
+
+	/* Execute the "which" command (constructed above) and collect its
+	 * output in programPath.
+	 */
+	FILE * const whichProgramStream = popen(whichProgramCommand, "r");
+	size_t const bytesRead = fread(programPath, 1, bufSize, whichProgramStream);
+	pclose(whichProgramStream);
+
+	// Check whether our buffer is too small, indicate failure if it is
+	if (bytesRead == bufSize)
+	{
+		debug(LOG_WARNING, "Could not retrieve full path to \"%s\", as our buffer is too small. This may prevent creation of an extended backtrace.", programCommand);
+		return false;
+	}
+
+	// Cut of the linefeed (and everything following it) if it's present.
+	char * const linefeed = strchr(programPath, '\n');
+	if (linefeed)
+	{
+		*linefeed = '\0';
+	}
+
+	// Check to see whether we retrieved any meaning ful result
+	if (strlen(programPath) == 0)
+	{
+		debug(LOG_WARNING, "Could not retrieve full path to \"%s\". This may prevent creation of an extended backtrace.", programCommand);
+		return false;
+	}
+
+	debug(LOG_WZ, "Found program \"%s\" at path \"%s\"", programCommand, programPath);
+	return true;
+}
+#endif
 
 /**
  * Setup the exception handler responsible for target OS.
  *
  * \param programCommand Command used to launch this program. Only used for POSIX handler.
  */
-void setupExceptionHandler(const char * programCommand)
+void setupExceptionHandler(int argc, char * argv[])
 {
+#if !defined(WZ_OS_MAC)
+	// Initialize info required for the debug dumper
+	dbgDumpInit(argc, argv);
+#endif
+
 #if defined(WZ_OS_WIN)
-	dbgDumpInit(programCommand);
 # if defined(WZ_CC_MINGW)
 	ExchndlSetup();
 # else
 	prevExceptionHandler = SetUnhandledExceptionFilter(windowsExceptionHandler);
 # endif // !defined(WZ_CC_MINGW)
 #elif defined(WZ_OS_UNIX) && !defined(WZ_OS_MAC)
-	dbgDumpInit(programCommand);
-	// Prepare 'which' command for popen
-	char whichProgramCommand[PATH_MAX] = {'\0'};
-	snprintf( whichProgramCommand, PATH_MAX, "which %s", programCommand );
+	const char * const programCommand = argv[0];
 
 	// Get full path to this program. Needed for gdb to find the binary.
-	FILE * whichProgramStream = popen(whichProgramCommand, "r");
-	fread( programPath, 1, sizeof(programPath), whichProgramStream );
-	pclose(whichProgramStream);
-
-	// Were we able to find ourselves?
-	if (strlen(programPath) > 0)
-	{
-		programIsAvailable = true;
-		*(strrchr(programPath, '\n')) = '\0'; // `which' adds a \n which confuses exec()
-		debug(LOG_WZ, "Found us at %s", programPath);
-	}
-	else
-	{
-		debug(LOG_WARNING, "Could not retrieve full path to %s, will not create extended backtrace\n", programCommand);
-	}
+	programIsAvailable = fetchProgramPath(programPath, sizeof(programPath), programCommand);
 
 	// Get full path to 'gdb'
-	FILE * whichGDBStream = popen("which gdb", "r");
-	fread( gdbPath, 1, PATH_MAX, whichGDBStream );
-	pclose(whichGDBStream);
-
-	// Did we find GDB?
-	if (strlen(gdbPath) > 0)
-	{
-		gdbIsAvailable = true;
-		*(strrchr(gdbPath, '\n')) = '\0'; // `which' adds a \n which confuses exec()
-		debug(LOG_WZ, "Found gdb at %s", gdbPath);
-	}
-	else
-	{
-		debug(LOG_WARNING, "GDB not available, will not create extended backtrace\n");
-	}
+	gdbIsAvailable = fetchProgramPath(gdbPath, sizeof(gdbPath), "gdb");
 
 	sysInfoValid = (uname(&sysInfo) == 0);
 

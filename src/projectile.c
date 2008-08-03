@@ -395,7 +395,7 @@ BOOL proj_SendProjectile(WEAPON *psWeap, BASE_OBJECT *psAttacker, int player, Ve
 	setProjectileDestination(psObj, psTarget);
 
 	/* If target is a VTOL or higher than ground, it is an air target. */
-	if ((psTarget != NULL && psTarget->type == OBJ_DROID && vtolDroid((DROID*)psTarget))
+	if ((psTarget != NULL && psTarget->type == OBJ_DROID && isVtolDroid((DROID*)psTarget))
 		|| (psTarget == NULL && target.z > map_Height(target.x, target.y)))
 	{
 		psObj->airTarget = true;
@@ -694,7 +694,11 @@ static void proj_InFlightDirectFunc(PROJECTILE *psProj)
 			distanceExtensionFactor = 1.5f;
 			break;
 		default:
-			// NUM_WEAPON_SUBCLASS and INVALID_SUBCLASS
+			// WSC_NUM_WEAPON_SUBCLASSES
+			/* Uninitialized "marker", this can be used as a
+			 * condition to assert on (i.e. it shouldn't occur).
+			 */
+			distanceExtensionFactor = 0.f;
 			break;
 	}
 
@@ -792,7 +796,7 @@ static void proj_InFlightDirectFunc(PROJECTILE *psProj)
 		if (psStats->surfaceToAir == SHOOT_IN_AIR &&
 			(psTempObj->type == OBJ_STRUCTURE ||
 				psTempObj->type == OBJ_FEATURE ||
-				(psTempObj->type == OBJ_DROID && !vtolDroid((DROID *)psTempObj))
+				(psTempObj->type == OBJ_DROID && !isVtolDroid((DROID *)psTempObj))
 			))
 		{
 			// AA weapons should not hit buildings and non-vtol droids
@@ -823,7 +827,7 @@ static void proj_InFlightDirectFunc(PROJECTILE *psProj)
 				/* Buildings cannot be penetrated and we need a penetrating weapon */
 				if (psTempObj->type == OBJ_DROID && psStats->penetrate)
 				{
-					WEAPON asWeap = {psStats - asWeaponStats, 0, 0, 0, 0};
+					WEAPON asWeap = {psStats - asWeaponStats, 0, 0, 0};
 					// Determine position to fire a missile at
 					// (must be at least 0 because we don't use signed integers
 					//  this shouldn't be larger than the height and width of the map either)
@@ -832,6 +836,8 @@ static void proj_InFlightDirectFunc(PROJECTILE *psProj)
 						psProj->startY + move.y * distanceExtensionFactor,
 						psProj->srcHeight + move.z * distanceExtensionFactor
 					};
+
+					ASSERT(distanceExtensionFactor != 0.f, "Unitialized variable used! distanceExtensionFactor is not initialized.");
 
 					newDest.x = clip(newDest.x, 0, world_coord(mapWidth - 1));
 					newDest.y = clip(newDest.y, 0, world_coord(mapHeight - 1));
@@ -848,6 +854,8 @@ static void proj_InFlightDirectFunc(PROJECTILE *psProj)
 			}
 		}
 	}
+
+	ASSERT(distanceExtensionFactor != 0.f, "Unitialized variable used! distanceExtensionFactor is not initialized.");
 
 	if (distanceRatio > distanceExtensionFactor || /* We've traveled our maximum range */
 		!mapObjIsAboveGround((BASE_OBJECT*)psProj)) /* trying to travel through terrain */
@@ -1037,7 +1045,7 @@ static void proj_InFlightIndirectFunc(PROJECTILE *psProj)
 				/* Buildings cannot be penetrated and we need a penetrating weapon */
 				if (psTempObj->type == OBJ_DROID && psStats->penetrate)
 				{
-					WEAPON asWeap = {psStats - asWeaponStats, 0, 0, 0, 0};
+					WEAPON asWeap = {psStats - asWeaponStats, 0, 0, 0};
 					// Determine position to fire a missile at
 					// (must be at least 0 because we don't use signed integers
 					//  this shouldn't be larger than the height and width of the map either)
@@ -1688,7 +1696,7 @@ static void proj_checkBurnDamage( BASE_OBJECT *apsList, PROJECTILE *psProj, FIRE
 		psNext = psCurr->psNext;
 
 		if ((psCurr->type == OBJ_DROID) &&
-			vtolDroid((DROID*)psCurr) &&
+			isVtolDroid((DROID*)psCurr) &&
 			((DROID *)psCurr)->sMove.Status != MOVEINACTIVE)
 		{
 			// can't set flying vtols on fire
@@ -1772,7 +1780,6 @@ bool proj_Direct(const WEAPON_STATS* psStats)
 		return false;
 		break;
 	case NUM_MOVEMENT_MODEL:
-	case INVALID_MOVEMENT:
 		break; // error checking in assert above; this is for no-debug case
 	}
 
@@ -2049,12 +2056,7 @@ static void addProjNaybor(BASE_OBJECT *psObj, UDWORD distSqr)
 {
 	UDWORD	pos;
 
-	if (numProjNaybors >= MAX_NAYBORS)
-	{
-//		DBPRINTF(("Naybor list maxed out for id %d\n", psObj->id));
-		return;
-	}
-	else if (numProjNaybors == 0)
+	if (numProjNaybors == 0)
 	{
 		// No objects in the list
 		asProjNaybors[0].psObj = psObj;
@@ -2083,9 +2085,6 @@ static void addProjNaybor(BASE_OBJECT *psObj, UDWORD distSqr)
 		asProjNaybors[pos].distSqr = distSqr;
 		numProjNaybors++;
 	}
-
-	ASSERT( numProjNaybors <= MAX_NAYBORS,
-		"addNaybor: numNaybors > MAX_NAYBORS" );
 }
 
 //Watermelon: projGetNaybors ripped from droid.c
@@ -2094,13 +2093,13 @@ static void projGetNaybors(PROJECTILE *psObj)
 {
 	SDWORD		xdiff, ydiff;
 	UDWORD		dx,dy, distSqr;
-	//Watermelon:renamed to psTempObj from psObj
 	BASE_OBJECT	*psTempObj;
 
 	CHECK_PROJECTILE(psObj);
 
-// Ensure only called max of once per droid per game cycle.
-	if(CurrentProjNaybors == (BASE_OBJECT *)psObj && projnayborTime == gameTime) {
+	// Ensure only called max of once per droid per game cycle.
+	if (CurrentProjNaybors == (BASE_OBJECT *)psObj && projnayborTime == gameTime)
+	{
 		return;
 	}
 	CurrentProjNaybors = (BASE_OBJECT *)psObj;
@@ -2108,9 +2107,6 @@ static void projGetNaybors(PROJECTILE *psObj)
 
 	// reset the naybor array
 	numProjNaybors = 0;
-#ifdef DEBUG
-	memset(asProjNaybors, 0xcd, sizeof(asProjNaybors));
-#endif
 
 	// search for naybor objects
 	dx = ((BASE_OBJECT *)psObj)->pos.x;
@@ -2149,6 +2145,10 @@ static void projGetNaybors(PROJECTILE *psObj)
 			}
 
 			addProjNaybor(psTempObj, distSqr);
+			if (numProjNaybors >= MAX_NAYBORS)
+			{
+				break;
+			}
 		}
 	}
 }
@@ -2183,7 +2183,7 @@ static UDWORD	establishTargetHeight(BASE_OBJECT *psTarget)
 				return height;
 
 			// VTOL's don't have pIMD either it seems...
-			if (vtolDroid(psDroid))
+			if (isVtolDroid(psDroid))
 			{
 				return (height + VTOL_HITBOX_MODIFICATOR);
 			}

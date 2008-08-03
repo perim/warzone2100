@@ -184,16 +184,16 @@ static void CalcRadarPixelSize(float *SizeH, float *SizeV)
 
 // Given a position within the radar, return a world coordinate.
 //
-void CalcRadarPosition(UDWORD mX, UDWORD mY, UDWORD *PosX, UDWORD *PosY)
+void CalcRadarPosition(int mX, int mY, int *PosX, int *PosY)
 {
 	const int	posX = mX - radarX;		// pixel position within radar
 	const int	posY = mY - radarY;
 	int		sPosX, sPosY;
 	float		pixSizeH, pixSizeV;
 
-	if (mX < radarX || mY < radarY)
+	if (!CoordInRadar(mX, mY))
 	{
-		debug(LOG_ERROR, "clicked outside radar minimap (%u, %u)", mX, mY);
+		ASSERT(false, "clicked outside radar minimap (%d, %d)", mX, mY);
 		*PosX = 0;
 		*PosY = 0;
 		return;
@@ -205,7 +205,7 @@ void CalcRadarPosition(UDWORD mX, UDWORD mY, UDWORD *PosX, UDWORD *PosY)
 	sPosY -= scrollMinY;
 
 #if REALLY_DEBUG_RADAR
-	debug(LOG_ERROR, "m=(%u,%u) radar=(%u,%u) pos(%u,%u), scroll=(%u-%u,%u-%u) sPos=(%u,%u), pixSize=(%f,%f)",
+	debug(LOG_ERROR, "m=(%d,%d) radar=(%d,%d) pos(%d,%d), scroll=(%u-%u,%u-%u) sPos=(%d,%d), pixSize=(%f,%f)",
 	      mX, mY, radarX, radarY, posX, posY, scrollMinX, scrollMaxX, scrollMinY, scrollMaxY, sPosX, sPosY, pixSizeH, pixSizeV);
 #endif
 
@@ -295,12 +295,7 @@ static PIELIGHT appliedRadarColour(RADAR_DRAW_MODE radarDrawMode, MAPTILE *WTile
 		case RADAR_MODE_HEIGHT_MAP:
 		{
 			// draw radar terrain on/off feature
-			PIELIGHT col = tileColours[TileNumber_tile(WTile->texture)];
-
-			col.byte.r = (col.byte.r * 3 + WTile->height) / 4;
-			col.byte.b = (col.byte.b * 3 + WTile->height) / 4;
-			col.byte.g = (col.byte.g * 3 + WTile->height) / 4;
-			WScr = col;
+			WScr.byte.r = WScr.byte.g = WScr.byte.b = WTile->height;
 		}
 		break;
 		case RADAR_MODE_NO_TERRAIN:
@@ -412,7 +407,7 @@ static void DrawRadarObjects(UDWORD *screen)
 			MAPTILE		*psTile = mapTile(x, y);
 			STRUCTURE	*psStruct = (STRUCTURE *)psTile->psObject;
 
-			if (!TileHasTallStructure(psTile))
+			if (!TileHasStructure(psTile))
 			{
 				continue;
 			}
@@ -582,7 +577,7 @@ static void DrawRadarExtras(float pixSizeH, float pixSizeV)
 //
 BOOL CoordInRadar(int x,int y)
 {
-	if (x >= radarX - 1 && x < radarX + radarWidth + 1 && y >= radarY - 1 && y < radarY + radarHeight + 1)
+	if (x >= radarX && x < radarX + radarWidth && y >= radarY && y < radarY + radarHeight)
 	{
 		return true;
 	}

@@ -856,20 +856,20 @@ BOOL scrValDefSave(INTERP_VAL *psVal, char *pBuffer, UDWORD *pSize)
 		*pSize = sizeof(UDWORD);
 		break;
 	case ST_TEXTSTRING:
+	{
+		const char * const idStr = psVal->v.sval ? strresGetIDfromString(psStringRes, psVal->v.sval) : NULL;
+		uint16_t len = idStr ? strlen(idStr) + 1 : 0;
+
 		if (pBuffer)
 		{
-			if (psVal->v.sval == NULL)
-			{
-				*((UDWORD*)pBuffer) = UDWORD_MAX;
-			}
-			else
-			{
-				*((UDWORD*)pBuffer) = strresGetIDfromString(psStringRes, psVal->v.sval);
-			}
-			endian_udword((UDWORD*)pBuffer);
+			*((uint16_t*)pBuffer) = len;
+			endian_uword((uint16_t*)pBuffer);
+
+			memcpy(pBuffer + sizeof(len), idStr, len);
 		}
-		*pSize = sizeof(UDWORD);
+		*pSize = sizeof(len) + len;
 		break;
+	}
 	case ST_LEVEL:
 		if (psVal->v.sval != NULL)
 		{
@@ -1181,15 +1181,110 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 		}
 		break;
 	case ST_TEXTSTRING:
-		id = *((UDWORD *)pBuffer);
-		endian_udword(&id);
-		if (id == UDWORD_MAX)
+		if (version < 4)
 		{
-			psVal->v.sval = '\0';
+			if (size != sizeof(UDWORD))
+			{
+				debug(LOG_ERROR, "Data size is too small, %u is expected, but %u is provided", (unsigned int)(sizeof(UDWORD)), (unsigned int)size);
+				return false;
+			}
+
+			id = *((UDWORD*)pBuffer);
+			endian_udword(&id);
+
+			if (id == UDWORD_MAX)
+			{
+				psVal->v.sval = NULL;
+			}
+			else
+			{
+				/* This code is commented out, because it depends on assigning the
+				 * id-th loaded string from the string resources. And from version
+				 * 4 of this file format onward, we do not count strings anymore.
+				 *
+				 * Thus loading of these strings is practically impossible.
+				 */
+#if 0
+				const char * const str = strresGetString(psStringRes, id);
+				if (!str)
+				{
+					debug(LOG_ERROR, "Couldn't find string with id %u", id);
+					abort();
+					return false;
+				}
+
+				psVal->v.sval = strdup(str);
+				if (!psVal->v.sval)
+				{
+					debug(LOG_ERROR, "Out of memory");
+					abort();
+					return false;
+				}
+#else
+				debug(LOG_ERROR, "Incompatible savegame format version %u, should be at least version 4", (unsigned int)version);
+				return false;
+#endif
+			}
 		}
 		else
 		{
-			psVal->v.sval = strresGetString(psStringRes, id);
+			const char* str;
+			char* idStr;
+			uint16_t len;
+
+			if (size < sizeof(len))
+			{
+				debug(LOG_ERROR, "Data size is too small, %u is expected, but %u is provided", (unsigned int)(sizeof(len)), (unsigned int)size);
+				return false;
+			}
+
+			len = *((uint16_t*)pBuffer);
+			endian_uword(&len);
+
+			if (size < sizeof(len) + len)
+			{
+				debug(LOG_ERROR, "Data size is too small, %u is expected, but %u is provided", (unsigned int)(sizeof(len) + len), (unsigned int)size);
+				return false;
+			}
+
+			if (len == 0)
+			{
+				psVal->v.sval = NULL;
+				return true;
+			}
+
+			idStr = malloc(len);
+			if (!idStr)
+			{
+				debug(LOG_ERROR, "Out of memory (tried to allocate %u bytes)", (unsigned int)len);
+				// Don't abort() here, as this might be the result from a bad "len" field in the data
+				return false;
+			}
+
+			memcpy(idStr, pBuffer + sizeof(len), len);
+
+			if (idStr[len - 1] != '\0')
+			{
+				debug(LOG_WARNING, "Non-NUL terminated string encountered!");
+			}
+			idStr[len - 1] = '\0';
+
+			str = strresGetString(psStringRes, idStr);
+			if (!str)
+			{
+				debug(LOG_ERROR, "Couldn't find string with id \"%s\"", idStr);
+				free(idStr);
+				return false;
+			}
+			free(idStr);
+
+			psVal->v.sval = strdup(str);
+			if (!psVal->v.sval)
+			{
+				debug(LOG_ERROR, "Out of memory");
+				abort();
+				return false;
+			}
 		}
 		break;
 	case ST_LEVEL:
@@ -1241,32 +1336,29 @@ BOOL scrValDefLoad(SDWORD version, INTERP_VAL *psVal, char *pBuffer, UDWORD size
 
 		pPos = pBuffer;
 
-		switch (version)
+		if (version < 2)
 		{
-			case 1:
-				members = size / sizeof(UDWORD);
-				break;
-			case 2:
-				members = (size - sizeof(SDWORD)*4) / sizeof(UDWORD);
-				break;
-			case 3:
-				members = (size - sizeof(SDWORD)*6) / sizeof(UDWORD);
+			members = size / sizeof(UDWORD);
+		}
+		else if (version < 3)
+		{
+			members = (size - sizeof(SDWORD)*4) / sizeof(UDWORD);
+		}
+		else
+		{
+			members = (size - sizeof(SDWORD)*6) / sizeof(UDWORD);
 
-				// get saved group member count/nullpointer flag
-				endian_sdword((SDWORD*)pPos);
-				bObjectDefined = ( *((SDWORD *)pPos) != UNALLOCATED_OBJECT );
+			// get saved group member count/nullpointer flag
+			endian_sdword((SDWORD*)pPos);
+			bObjectDefined = ( *((SDWORD *)pPos) != UNALLOCATED_OBJECT );
 
-				if(bObjectDefined)
-				{
-					savedMembers = *((SDWORD *)pPos);	// get number of saved group members
+			if(bObjectDefined)
+			{
+				savedMembers = *((SDWORD *)pPos);	// get number of saved group members
 
-					ASSERT(savedMembers == members, "scrValDefLoad: calculated and saved group member count did not match." );
-				}
-				pPos += sizeof(SDWORD);
-				break;
-			default:
-				members = 0;
-				debug( LOG_ERROR, "scrValDefLoad: unsupported version %i", version);
+				ASSERT(savedMembers == members, "scrValDefLoad: calculated and saved group member count did not match." );
+			}
+			pPos += sizeof(SDWORD);
 		}
 
 		// make sure group was allocated when it was saved (relevant starting from version 3)

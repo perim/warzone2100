@@ -351,7 +351,7 @@ static void objectStatTagged(BASE_OBJECT *psObj, int body, int resistance)
 
 	tagWriteEnter(0x03, 1);
 	tagWrite(0x01, body);
-	tagWrite(0x02, NUM_WEAPON_CLASS);
+	tagWrite(0x02, WC_NUM_WEAPON_CLASSES);
 	tagWriteEnter(0x03, NUM_HIT_SIDES);
 	for (i = 0; i < NUM_HIT_SIDES; i++)
 	{
@@ -374,7 +374,6 @@ static void objectWeaponTagged(int num, UWORD *rotation, UWORD *pitch, WEAPON *a
 		tagWrite(0x01, asWeaps[i].nStat);
 		tagWrite(0x02, rotation[i]);
 		tagWrite(0x03, pitch[i]);
-		tagWrite(0x04, asWeaps[i].hitPoints);
 		tagWrite(0x05, asWeaps[i].ammo);
 		tagWrite(0x06, asWeaps[i].lastFired);
 		tagWrite(0x07, asWeaps[i].recoilValue);
@@ -1101,10 +1100,7 @@ BOOL mapSave(char **ppFileData, UDWORD *pFileSize)
 	psTile = psMapTiles;
 	for(i=0; i<mapWidth*mapHeight; i++)
 	{
-
-		// don't save the noblock flag as it gets set again when the objects are loaded
-		psTileData->texture = (UWORD)(psTile->texture & (UWORD)~TILE_NOTBLOCKING);
-
+		psTileData->texture = psTile->texture;
 		psTileData->height = psTile->height;
 
 		/* MAP_SAVETILEV2 */
@@ -1522,7 +1518,7 @@ static void astarTest(const char *name, int x1, int y1, int x2, int y2)
 	{
 		route.numPoints = 0;
 		astarResetCounters();
-		asret = fpathAStarRoute(&route, x, y, endx, endy, WHEELED);
+		asret = fpathAStarRoute(&route, x, y, endx, endy, PROPULSION_TYPE_WHEELED);
 		free(route.asPath);
 		route.asPath = NULL;
 	}

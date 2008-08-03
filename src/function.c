@@ -151,7 +151,7 @@ static BOOL storeName(FUNCTION* pFunction, const char* pNameToStore)
 static BOOL loadProduction(const char *pData)
 {
 	PRODUCTION_FUNCTION*	psFunction;
-	//UBYTE					propType;
+	//PROPULSION_TYPE propType;
 	char					functionName[MAX_STR_LENGTH], bodySize[MAX_STR_LENGTH];
 	UDWORD					productionOutput;
 	//char					propulsionType[MAX_STR_LENGTH];
@@ -206,13 +206,14 @@ static BOOL loadProduction(const char *pData)
 		return false;
 	}
 */
-	/*propType = getPropulsionType(propulsionType);
-	if (propType == INVALID_PROP_TYPE)
+#if 0
+	if (!getPropulsionType(propulsionType, &propType))
 	{
-		DBERROR(("Unknown Propulsion Type - %s", propulsionType));
+		ASSERT(!"Unknown propulsion type", "Unknown Propulsion Type: %s", propulsionType);
 		return false;
 	}
-	psFunction->propulsionType = propType;*/
+	psFunction->propulsionType = propType;
+#endif
 
 	if (!getBodySize(bodySize, (UBYTE*)&psFunction->capacity))
 	{
@@ -611,8 +612,7 @@ static BOOL loadWeaponUpgradeFunction(const char *pData)
 	//allocate storage for the name
 	storeName((FUNCTION *)psFunction, functionName);
 
-	psFunction->subClass = getWeaponSubClass(weaponSubClass);
-	if (psFunction->subClass == INVALID_SUBCLASS)
+	if (!getWeaponSubClass(weaponSubClass, &psFunction->subClass))
 	{
 		return false;
 	}
@@ -903,7 +903,8 @@ static BOOL loadWallFunction(const char *pData)
 
 	//store the structure name - cannot set the stat pointer here because structures
 	//haven't been loaded in yet!
-	if (!allocateName(&psFunction->pStructName, structureName))
+	psFunction->pStructName = allocateName(structureName);
+	if (!psFunction->pStructName)
 	{
 		debug( LOG_ERROR, "Structure Stats Invalid for function - %s", functionName );
 		abort();
@@ -1058,7 +1059,7 @@ void structureArmourUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding)
 		// TODO: support advanced armour system
 		for (i = 0; i < NUM_HIT_SIDES; i++)
 		{
-			for (j = 0; j < NUM_WEAPON_CLASS; j++)
+			for (j = 0; j < WC_NUM_WEAPON_CLASSES; j++)
 			{
 				psBuilding->armour[i][j] = (UWORD)((psBuilding->armour[i][j] * newBaseArmour) / prevBaseArmour);
 			}
@@ -1424,7 +1425,7 @@ void bodyUpgrade(FUNCTION *pFunction, UBYTE player)
 			asBodyUpgrade[player][DROID_BODY_UPGRADE].body =
 				pUpgrade->body;
 		}
-		for (inc=0; inc < NUM_WEAPON_CLASS; inc++)
+		for (inc=0; inc < WC_NUM_WEAPON_CLASSES; inc++)
 		{
 			if (asBodyUpgrade[player][DROID_BODY_UPGRADE].armourValue[inc] <
 				pUpgrade->armourValue[inc])
@@ -1448,7 +1449,7 @@ void bodyUpgrade(FUNCTION *pFunction, UBYTE player)
 			asBodyUpgrade[player][CYBORG_BODY_UPGRADE].body =
 				pUpgrade->body;
 		}
-		for (inc=0; inc < NUM_WEAPON_CLASS; inc++)
+		for (inc=0; inc < WC_NUM_WEAPON_CLASSES; inc++)
 		{
 			if (asBodyUpgrade[player][CYBORG_BODY_UPGRADE].armourValue[inc] <
 				pUpgrade->armourValue[inc])

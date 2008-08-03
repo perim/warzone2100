@@ -23,56 +23,29 @@
 #ifndef _strres_h
 #define _strres_h
 
-/* A string block */
-typedef struct _str_block
-{
-	char	**apStrings;
-	UDWORD	idStart, idEnd;
-
-#ifdef DEBUG
-	UDWORD	*aUsage;
-#endif
-
-	struct _str_block *psNext;
-} STR_BLOCK;
-
-/* An ID entry */
-typedef struct _str_id
-{
-	UDWORD	id;
-	char	*pIDStr;
-} STR_ID;
-
-
-/* A String Resource */
-typedef struct _str_res
-{
-	TREAP			*psIDTreap;		// The treap to store string identifiers
-	STR_BLOCK		*psStrings;		// The store for the strings themselves
-	UDWORD			init,ext;		// Sizes for the string blocks
-	UDWORD			nextID;			// The next free ID
-} STR_RES;
+// Forward declaration to allow pointers to this type
+struct STR_RES;
 
 /* Create a string resource object */
-extern BOOL strresCreate(STR_RES **ppsRes, UDWORD init, UDWORD ext);
+extern struct STR_RES* strresCreate(void);
 
 /* Release a string resource object */
-extern void strresDestroy(STR_RES *psRes);
+extern void strresDestroy(struct STR_RES *psRes);
 
-/* Return the ID number for an ID string */
-extern BOOL strresGetIDNum(STR_RES *psRes, const char *pIDStr, UDWORD *pIDNum);
-
-/* Return the stored ID string that matches the string passed in */
-extern BOOL strresGetIDString(STR_RES *psRes, const char *pIDStr, char **ppStoredID);
-
-/* Get the string from an ID number */
-extern char *strresGetString(STR_RES *psRes, UDWORD id);
+/**
+ * Retrieve a resource string from its identifier string.
+ *
+ * @param psRes the string resource to search
+ * @param ID the string ID to search the matching string for
+ * @return the string associated with the given @c ID string, or NULL if none
+ *         could be found.
+ */
+extern const char* strresGetString(const struct STR_RES* psRes, const char* ID);
 
 /* Load a string resource file */
-extern BOOL strresLoad(STR_RES* psRes, const char* fileName);
+extern BOOL strresLoad(struct STR_RES* psRes, const char* fileName);
 
-/* Get the ID number for a string*/
-extern UDWORD strresGetIDfromString(STR_RES *psRes, const char *pString);
+/* Get the ID string for a string */
+extern const char* strresGetIDfromString(struct STR_RES *psRes, const char *pString);
 
 #endif
-

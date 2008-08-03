@@ -32,7 +32,7 @@
 
 static const size_t bufferSize = 16 * 1024;
 static const unsigned int buffer_count = 32;
-static bool		music_initialized;
+static bool		music_initialized = false;
 static float		music_volume = 0.5;
 static bool		stopping = true;
 
@@ -127,17 +127,23 @@ BOOL cdAudio_PlayTrack(SONG_CONTEXT context)
 {
 	debug(LOG_SOUND, "called(%d)", (int)context);
 
-	if (context == SONG_FRONTEND)
+	switch (context)
 	{
-		return cdAudio_OpenTrack("music/menu.ogg");
-	}
-	else if (context == SONG_INGAME)
-	{
-		const char *filename = PlayList_CurrentSong();
+		case SONG_FRONTEND:
+			return cdAudio_OpenTrack("music/menu.ogg");
 
-		return cdAudio_OpenTrack(filename);
+		case SONG_INGAME:
+		{
+			const char *filename = PlayList_CurrentSong();
+
+			if (filename == NULL)
+				return false;
+
+			return cdAudio_OpenTrack(filename);
+		}
 	}
-	ASSERT(false, "Bad parameter value");
+
+	ASSERT(!"Invalid songcontext", "Invalid song context specified for playing: %u", (unsigned int)context);
 
 	return false;
 }
@@ -179,17 +185,8 @@ float sound_GetMusicVolume()
 
 void sound_SetMusicVolume(float volume)
 {
-	music_volume = volume;
-
 	// Keep volume in the range of 0.0 - 1.0
-	if (music_volume < 0.0)
-	{
-		music_volume = 0.0;
-	}
-	else if (music_volume > 1.0)
-	{
-		music_volume = 1.0;
-	}
+	music_volume = clipf(volume, 0.0f, 1.0f);
 
 	// Change the volume of the current stream as well (if any)
 	if (cdStream)

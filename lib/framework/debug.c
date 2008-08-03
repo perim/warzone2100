@@ -32,6 +32,8 @@
 #include "frameint.h"
 #include "strnlen1.h"
 
+#include "lib/gamelib/gtime.h"
+
 #define MAX_LEN_LOG_LINE 512
 
 char last_called_script_event[MAX_EVENT_NAME_LEN];
@@ -74,6 +76,7 @@ static const char *code_part_names[] = {
 
 static char inputBuffer[2][MAX_LEN_LOG_LINE];
 static BOOL useInputBuffer1 = false;
+static bool debug_flush_stderr = false;
 
 /**
  * Convert code_part names to enum. Case insensitive.
@@ -105,6 +108,12 @@ void debug_callback_stderr( WZ_DECL_UNUSED void ** data, const char * outputBuff
 		fprintf( stderr, "%s\n", outputBuffer );
 	} else {
 		fprintf( stderr, "%s", outputBuffer );
+	}
+
+	// Make sure that all output is flushed to stderr when requested by the user
+	if (debug_flush_stderr)
+	{
+		fflush(stderr);
 	}
 }
 
@@ -187,6 +196,10 @@ void debug_callback_file_exit( void ** data )
 	*data = NULL;
 }
 
+void debugFlushStderr()
+{
+	debug_flush_stderr = true;
+}
 
 void debug_init(void)
 {
@@ -274,92 +287,60 @@ BOOL debug_enable_switch(const char *str)
 	return (part != LOG_LAST);
 }
 
-/* Dump last two debug log calls into file descriptor. For exception handler. */
-#if defined(WZ_OS_WIN)
-static inline void dumpstr(HANDLE file, const char* str)
+/** Send the given string to all debug callbacks.
+ *
+ *  @param str The string to send to debug callbacks.
+ */
+static void printToDebugCallbacks(const char * const str)
 {
-	DWORD lNumberOfBytesWritten;
-	WriteFile(file, str, strnlen1(str, MAX_LEN_LOG_LINE) - 1, &lNumberOfBytesWritten, NULL);
-}
-static inline void dumpEOL(HANDLE file)
-{
-	DWORD lNumberOfBytesWritten;
-	WriteFile(file, "\r\n", strlen("\r\n"), &lNumberOfBytesWritten, NULL);
-}
-#else
-static inline void dumpstr(int file, const char* str)
-{
-	write(file, str, strnlen1(str, MAX_LEN_LOG_LINE) - 1);
-}
-static inline void dumpEOL(int file)
-{
-	write(file, "\n", strlen("\n"));
-}
-#endif
+	debug_callback * curCallback;
 
-#if defined(WZ_OS_WIN)
-void dumpLog(HANDLE file)
-#else
-void dumpLog(int file)
-#endif
-{
-	dumpstr(file, "Log message 1: ");
-	dumpstr(file, inputBuffer[0]);
-	dumpEOL(file);
-	dumpstr(file, "Log message 2: ");
-	dumpstr(file, inputBuffer[1]);
-	dumpEOL(file);
-	dumpEOL(file);
+	// Loop over all callbacks, invoking them with the given data string
+	for (curCallback = callbackRegistry; curCallback != NULL; curCallback = curCallback->next)
+	{
+		curCallback->callback(&curCallback->data, str);
+	}
 }
 
 void _realObjTrace(int id, const char *function, const char *str, ...)
 {
-	debug_callback * curCallback = callbackRegistry;
 	char vaBuffer[MAX_LEN_LOG_LINE];
 	char outputBuffer[MAX_LEN_LOG_LINE];
 	va_list ap;
 
 	va_start(ap, str);
-	vsnprintf(vaBuffer, MAX_LEN_LOG_LINE, str, ap);
+	vssprintf(vaBuffer, str, ap);
 	va_end(ap);
 
-	snprintf(outputBuffer, MAX_LEN_LOG_LINE, "[%6d]: [%s] %s", id, function, vaBuffer);
-	while (curCallback)
-	{
-		curCallback->callback(&curCallback->data, outputBuffer);
-		curCallback = curCallback->next;
-	}
+	ssprintf(outputBuffer, "[%6d]: [%s] %s", id, function, vaBuffer);
+	printToDebugCallbacks(outputBuffer);
 }
 
 void _debug( code_part part, const char *function, const char *str, ... )
 {
 	va_list ap;
 	static char outputBuffer[MAX_LEN_LOG_LINE];
-	debug_callback * curCallback = callbackRegistry;
 	static unsigned int repeated = 0; /* times current message repeated */
 	static unsigned int next = 2;     /* next total to print update */
 	static unsigned int prev = 0;     /* total on last update */
 
 	va_start(ap, str);
-	vsnprintf(outputBuffer, MAX_LEN_LOG_LINE, str, ap);
+	vssprintf(outputBuffer, str, ap);
 	va_end(ap);
 
-	snprintf(inputBuffer[useInputBuffer1 ? 1 : 0], MAX_LEN_LOG_LINE, "[%s] %s", function, outputBuffer);
+	ssprintf(inputBuffer[useInputBuffer1 ? 1 : 0], "[%s] %s", function, outputBuffer);
 
-	if ( strncmp( inputBuffer[0], inputBuffer[1], MAX_LEN_LOG_LINE - 1 ) == 0 ) {
+	if (sstrcmp(inputBuffer[0], inputBuffer[1]) == 0)
+	{
 		// Received again the same line
 		repeated++;
 		if (repeated == next) {
 			if (repeated > 2) {
-				snprintf( outputBuffer, sizeof(outputBuffer), "last message repeated %u times (total %u repeats)", repeated - prev, repeated );
+				ssprintf(outputBuffer, "last message repeated %u times (total %u repeats)", repeated - prev, repeated);
 			} else {
-				snprintf( outputBuffer, sizeof(outputBuffer), "last message repeated %u times", repeated - prev );
+				ssprintf(outputBuffer, "last message repeated %u times", repeated - prev);
 			}
-			while (curCallback) {
-				curCallback->callback( &curCallback->data, outputBuffer );
-				curCallback = curCallback->next;
-			}
-			curCallback = callbackRegistry;
+			printToDebugCallbacks(outputBuffer);
 			prev = repeated;
 			next *= 2;
 		}
@@ -368,16 +349,11 @@ void _debug( code_part part, const char *function, const char *str, ... )
 		if (repeated > 0 && repeated != prev && repeated != 1) {
 			/* just repeat the previous message when only one repeat occurred */
 			if (repeated > 2) {
-				snprintf( outputBuffer, sizeof(outputBuffer), "last message repeated %u times (total %u repeats)", repeated - prev, repeated );
+				ssprintf(outputBuffer, "last message repeated %u times (total %u repeats)", repeated - prev, repeated);
 			} else {
-				snprintf( outputBuffer, sizeof(outputBuffer), "last message repeated %u times", repeated - prev );
+				ssprintf(outputBuffer, "last message repeated %u times", repeated - prev);
 			}
-			while (curCallback)
-			{
-				curCallback->callback( &curCallback->data, outputBuffer );
-				curCallback = curCallback->next;
-			}
-			curCallback = callbackRegistry;
+			printToDebugCallbacks(outputBuffer);
 		}
 		repeated = 0;
 		next = 2;
@@ -387,12 +363,9 @@ void _debug( code_part part, const char *function, const char *str, ... )
 	if (!repeated)
 	{
 		// Assemble the outputBuffer:
-		snprintf( outputBuffer, MAX_LEN_LOG_LINE, "%-8s: %s", code_part_names[part], useInputBuffer1 ? inputBuffer[1] : inputBuffer[0] );
+		ssprintf(outputBuffer, "%-8s|%012u: %s", code_part_names[part], gameTime, useInputBuffer1 ? inputBuffer[1] : inputBuffer[0]);
 
-		while (curCallback) {
-			curCallback->callback( &curCallback->data, outputBuffer );
-			curCallback = curCallback->next;
-		}
+		printToDebugCallbacks(outputBuffer);
 	}
 	useInputBuffer1 = !useInputBuffer1; // Swap buffers
 }

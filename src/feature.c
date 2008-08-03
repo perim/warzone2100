@@ -79,7 +79,7 @@ struct featureTypeMap
 
 static const struct featureTypeMap map[] =
 {
-	{ "HOVER WRECK", FEAT_HOVER },
+	{ "PROPULSION_TYPE_HOVER WRECK", FEAT_HOVER },
 	{ "TANK WRECK", FEAT_TANK },
 	{ "GENERIC ARTEFACT", FEAT_GEN_ARTE },
 	{ "OIL RESOURCE", FEAT_OIL_RESOURCE },
@@ -158,7 +158,8 @@ BOOL loadFeatureStats(const char *pFeatureData, UDWORD bufferSize)
 		psFeature->baseWidth = (UWORD)Width;
 		psFeature->baseBreadth = (UWORD)Breadth;
 
-		if (!allocateName(&psFeature->pName, featureName))
+		psFeature->pName = allocateName(featureName);
+		if (!psFeature->pName)
 		{
 			return false;
 		}
@@ -334,7 +335,7 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,BOOL FromSave)
 	{
 		int j;
 
-		for (j = 0; j < NUM_WEAPON_CLASS; j++)
+		for (j = 0; j < WC_NUM_WEAPON_CLASSES; j++)
 		{
 			psFeature->armour[i][j] = psFeature->psStats->armourValue;
 		}

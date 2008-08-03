@@ -86,7 +86,4 @@ extern void fpathRemoveDroidData(int id);
 // Unit testing
 void fpathTest(int x, int y, int x2, int y2);
 
-/** Figure out how long until given target, assuming we go by ground. For AI. */
-FPATH_RETVAL fpathNullRoute(int x, int y, int x2, int y2, int *length);
-
 #endif // __INCLUDED_SRC_FPATH_H__

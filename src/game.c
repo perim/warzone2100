@@ -315,7 +315,7 @@ typedef struct _save_component
 typedef struct _save_weapon_v19
 {
 	char				name[MAX_SAVE_NAME_SIZE_V19];
-	UDWORD				hitPoints;  //- remove at some point
+	UDWORD				hitPoints;  // UNUSED: only here to keep struct size intact
 	UDWORD				ammo;
 	UDWORD				lastFired;
 } SAVE_WEAPON_V19;
@@ -323,7 +323,7 @@ typedef struct _save_weapon_v19
 typedef struct _save_weapon
 {
 	char				name[MAX_SAVE_NAME_SIZE];
-	UDWORD				hitPoints;  //- remove at some point
+	UDWORD				hitPoints;  // UNUSED: only here to keep struct size intact
 	UDWORD				ammo;
 	UDWORD				lastFired;
 } SAVE_WEAPON;
@@ -2147,7 +2147,7 @@ static bool writeMapFile(const char* fileName);
 static BOOL loadSaveDroidInitV2(char *pFileData, UDWORD filesize,UDWORD quantity);
 
 static BOOL loadSaveDroidInit(char *pFileData, UDWORD filesize);
-static DROID_TEMPLATE *FindDroidTemplate(char *name,UDWORD player);
+static DROID_TEMPLATE *FindDroidTemplate(const char * const name);
 
 static BOOL loadSaveDroid(char *pFileData, UDWORD filesize, DROID **ppsCurrentDroidLists);
 static BOOL loadSaveDroidV11(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD version, DROID **ppsCurrentDroidLists);
@@ -2380,7 +2380,7 @@ BOOL loadGame(const char *pGameToLoad, BOOL keepObjects, BOOL freeMem, BOOL User
 		memset(asReArmUpgrade, 0, MAX_PLAYERS * sizeof(REARM_UPGRADE));
 
 		//initialise the upgrade structures
-		memset(asWeaponUpgrade, 0, MAX_PLAYERS * NUM_WEAPON_SUBCLASS * sizeof(WEAPON_UPGRADE));
+		memset(asWeaponUpgrade, 0, MAX_PLAYERS * WSC_NUM_WEAPON_SUBCLASSES * sizeof(WEAPON_UPGRADE));
 		memset(asSensorUpgrade, 0, MAX_PLAYERS * sizeof(SENSOR_UPGRADE));
 		memset(asECMUpgrade, 0, MAX_PLAYERS * sizeof(ECM_UPGRADE));
 		memset(asRepairUpgrade, 0, MAX_PLAYERS * sizeof(REPAIR_UPGRADE));
@@ -5119,7 +5119,7 @@ BOOL loadSaveDroidInitV2(char *pFileData, UDWORD filesize,UDWORD quantity)
 		}
 
 
-		psTemplate = (DROID_TEMPLATE *)FindDroidTemplate(pDroidInit->name,pDroidInit->player);
+		psTemplate = (DROID_TEMPLATE *)FindDroidTemplate(pDroidInit->name);
 
 		if(psTemplate==NULL)
 		{
@@ -5161,29 +5161,27 @@ BOOL loadSaveDroidInitV2(char *pFileData, UDWORD filesize,UDWORD quantity)
 
 
 // -----------------------------------------------------------------------------------------
-DROID_TEMPLATE *FindDroidTemplate(char *name,UDWORD player)
+DROID_TEMPLATE *FindDroidTemplate(const char * const name)
 {
 	UDWORD			TempPlayer;
 	DROID_TEMPLATE *Template;
-	UDWORD			id;
 
-	//get the name from the resource associated with it
-	if (!strresGetIDNum(psStringRes, name, &id))
+	// get the name from the resource associated with it
+	const char * const nameStr = strresGetString(psStringRes, name);
+	if (!nameStr)
 	{
 		debug( LOG_ERROR, "Cannot find resource for template - %s", name );
 		abort();
 		return NULL;
 	}
-	//get the string from the id
-	name = strresGetString(psStringRes, id);
 
 	for(TempPlayer=0; TempPlayer<MAX_PLAYERS; TempPlayer++) {
 		Template = apsDroidTemplates[TempPlayer];
 
 		while(Template) {
 
-			//if(strcmp(name,Template->pName)==0) {
-			if(strcmp(name,Template->aName)==0) {
+			//if(strcmp(nameStr,Template->pName)==0) {
+			if(strcmp(nameStr,Template->aName)==0) {
 				return Template;
 			}
 			Template = Template->psNext;
@@ -5330,7 +5328,6 @@ static DROID* buildDroidFromSaveDroidV11(SAVE_DROID_V11* psSaveDroid)
 		if (psDroid->asWeaps[i].nStat > 0)
 		{
 			//only one weapon now
-			psDroid->asWeaps[i].hitPoints = psSaveDroid->asWeaps[i].hitPoints;
 			psDroid->asWeaps[i].ammo = psSaveDroid->asWeaps[i].ammo;
 			psDroid->asWeaps[i].lastFired = psSaveDroid->asWeaps[i].lastFired;
 		}
@@ -5466,7 +5463,6 @@ static DROID* buildDroidFromSaveDroidV19(SAVE_DROID_V18* psSaveDroid, UDWORD ver
 	{
 		if (psDroid->asWeaps[i].nStat > 0)
 		{
-			psDroid->asWeaps[i].hitPoints = psSaveDroid->asWeaps[i].hitPoints;
 			psDroid->asWeaps[i].ammo = psSaveDroid->asWeaps[i].ammo;
 			psDroid->asWeaps[i].lastFired = psSaveDroid->asWeaps[i].lastFired;
 		}
@@ -5881,7 +5877,6 @@ static DROID* buildDroidFromSaveDroid(SAVE_DROID* psSaveDroid, UDWORD version)
 	{
 		if (psDroid->asWeaps[i].nStat > 0)
 		{
-			psDroid->asWeaps[i].hitPoints = psSaveDroid->asWeaps[i].hitPoints;
 			psDroid->asWeaps[i].ammo = psSaveDroid->asWeaps[i].ammo;
 			psDroid->asWeaps[i].lastFired = psSaveDroid->asWeaps[i].lastFired;
 		}
@@ -6187,7 +6182,6 @@ BOOL loadSaveDroidV11(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
 		endian_udword(&psSaveDroid->burnDamage);
 		for(i = 0; i < TEMP_DROID_MAXPROGS; i++) {
 			/* SAVE_WEAPON_V19 */
-			endian_udword(&psSaveDroid->asWeaps[i].hitPoints);
 			endian_udword(&psSaveDroid->asWeaps[i].ammo);
 			endian_udword(&psSaveDroid->asWeaps[i].lastFired);
 		}
@@ -6340,7 +6334,6 @@ BOOL loadSaveDroidV19(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD
 		endian_udword(&psSaveDroid->burnDamage);
 		for(i = 0; i < TEMP_DROID_MAXPROGS; i++) {
 			/* SAVE_WEAPON_V19 */
-			endian_udword(&psSaveDroid->asWeaps[i].hitPoints);
 			endian_udword(&psSaveDroid->asWeaps[i].ammo);
 			endian_udword(&psSaveDroid->asWeaps[i].lastFired);
 		}
@@ -6532,7 +6525,6 @@ BOOL loadSaveDroidV(char *pFileData, UDWORD filesize, UDWORD numDroids, UDWORD v
 		}
 		for(i = 0; i < TEMP_DROID_MAXPROGS; i++) {
 			/* SAVE_WEAPON */
-			endian_udword(&psSaveDroid->asWeaps[i].hitPoints);
 			endian_udword(&psSaveDroid->asWeaps[i].ammo);
 			endian_udword(&psSaveDroid->asWeaps[i].lastFired);
 		}
@@ -6636,7 +6628,6 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 					if (getNameFromComp(COMP_WEAPON, psSaveDroid->asWeaps[i].name, psCurr->asWeaps[i].nStat))
 
 					{
-    					psSaveDroid->asWeaps[i].hitPoints = psCurr->asWeaps[i].hitPoints;
 	    				psSaveDroid->asWeaps[i].ammo = psCurr->asWeaps[i].ammo;
 		    			psSaveDroid->asWeaps[i].lastFired = psCurr->asWeaps[i].lastFired;
 					}
@@ -6762,7 +6753,6 @@ static BOOL buildSaveDroidFromDroid(SAVE_DROID* psSaveDroid, DROID* psCurr, DROI
 			endian_udword(&psSaveDroid->body);
 			endian_udword(&psSaveDroid->saveType);
 			for(i = 0; i < TEMP_DROID_MAXPROGS; i++) {
-				endian_udword(&psSaveDroid->asWeaps[i].hitPoints);
 				endian_udword(&psSaveDroid->asWeaps[i].ammo);
 				endian_udword(&psSaveDroid->asWeaps[i].lastFired);
 			}
@@ -8014,7 +8004,7 @@ BOOL loadSaveStructureV(char *pFileData, UDWORD filesize, UDWORD numStructures, 
 /*
 	// The group the droids to be repaired by this facility belong to
 	struct _droid_group		*psGroup;
-	struct _droid			*psGrpNext;
+	struct DROID			*psGrpNext;
 */
 				psRepair = ((REPAIR_FACILITY *)psStructure->pFunctionality);
 
@@ -9783,7 +9773,7 @@ static BOOL writeCompListFile(char *pFileName)
 	char *pFileData;
 	SAVE_COMPLIST			*psSaveCompList;
 	UDWORD					fileSize, totalComp, player, i;
-	COMP_BASE_STATS			*psStats;
+	COMPONENT_STATS			*psStats;
 
 	// Calculate the file size
 	totalComp = (numBodyStats + numWeaponStats + numConstructStats + numECMStats +
@@ -9814,7 +9804,7 @@ static BOOL writeCompListFile(char *pFileName)
 	{
 		for(i = 0; i < numBodyStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asBodyStats + i);
+			psStats = (COMPONENT_STATS *)(asBodyStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9825,7 +9815,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numWeaponStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asWeaponStats + i);
+			psStats = (COMPONENT_STATS *)(asWeaponStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9836,7 +9826,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numConstructStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asConstructStats + i);
+			psStats = (COMPONENT_STATS *)(asConstructStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9847,7 +9837,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numECMStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asECMStats + i);
+			psStats = (COMPONENT_STATS *)(asECMStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9858,7 +9848,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numPropulsionStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asPropulsionStats + i);
+			psStats = (COMPONENT_STATS *)(asPropulsionStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9869,7 +9859,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numSensorStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asSensorStats + i);
+			psStats = (COMPONENT_STATS *)(asSensorStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9880,7 +9870,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numRepairStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asRepairStats + i);
+			psStats = (COMPONENT_STATS *)(asRepairStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -9891,7 +9881,7 @@ static BOOL writeCompListFile(char *pFileName)
 		}
 		for(i = 0; i < numBrainStats; i++)
 		{
-			psStats = (COMP_BASE_STATS *)(asBrainStats + i);
+			psStats = (COMPONENT_STATS *)(asBrainStats + i);
 
 			strcpy(psSaveCompList->name, psStats->pName);
 
@@ -11681,10 +11671,12 @@ BOOL writeFiresupportDesignators(char *pFileName)
 // write the event state to a file on disk
 static BOOL	writeScriptState(char *pFileName)
 {
+	static const int32_t current_event_version = 4;
+
 	char	*pBuffer;
 	UDWORD	fileSize;
 
-	if (!eventSaveState(3, &pBuffer, &fileSize))
+	if (!eventSaveState(current_event_version, &pBuffer, &fileSize))
 	{
 		return false;
 	}
@@ -11824,10 +11816,21 @@ static BOOL getNameFromComp(UDWORD compType, char *pDest, UDWORD compIndex)
 }
 // -----------------------------------------------------------------------------------------
 // END
-
 //======================================================
-//draws stuff into our newer bitmap.
-BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWORD offY)
+//BOOL plotStructurePreview16(
+// char *backDropSprite,			// the premade map texture
+// UBYTE scale,						// scale of the map texture
+// UDWORD offX,						// X offset for map
+// UDWORD offY,						// Y offset for map
+// Vector2i playeridpos[])			// holds the position on map that player's HQ is located
+//
+// adds clancolors for the map preview texture.
+// What basically happens in this routine is we read the map, and then for
+// every structure on said map, we either color it via clan colors (which
+// are the same as the radar colors), and it plots its pixel on the bitmap.
+// Also added position number of starting location (which is determined by
+// the map maker(!)) This info is needed so we can blit players location. 
+BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWORD offY,Vector2i playeridpos[])
 {
 	SAVE_STRUCTURE				sSave;  // close eyes now.
 	SAVE_STRUCTURE				*psSaveStructure = &sSave; // assumes save_struct is larger than all previous ones...
@@ -11846,6 +11849,8 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 	char			*pFileData = NULL;
 	LEVEL_DATASET	*psLevel;
 	PIELIGHT color = WZCOL_BLACK ;
+	bool HQ = false;
+
 
 	psLevel = levFindDataSet(game.map);
 	strcpy(aFileName,psLevel->apDataFiles[0]);
@@ -11932,10 +11937,23 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 			endian_udword(&psSaveStructure2->player);
 			endian_udword(&psSaveStructure2->burnStart);
 			endian_udword(&psSaveStructure2->burnDamage);
-
-			xx = map_coord(psSaveStructure2->x);
-			yy = map_coord(psSaveStructure2->y);
+			// we are specifically looking for the HQ, and it seems this is the only way to
+			// find it via parsing map.
+			// We store the coordinates of the structure, into a array for as many players as are on the map.
+			// all map versions follow this pattern, and I will not comment the other routines.
 			playerid = psSaveStructure2->player;
+			if(strncmp(psSaveStructure2->name,"A0CommandCentre",15)  == 0 )
+			{
+				HQ = true;
+				xx = playeridpos[playerid].x = map_coord(psSaveStructure2->x);
+				yy = playeridpos[playerid].y = map_coord(psSaveStructure2->y);
+			}
+			else
+			{
+				HQ = false;
+				xx = map_coord(psSaveStructure2->x);
+				yy = map_coord(psSaveStructure2->y);
+			}
 		}
 		else if (psHeader->version < VERSION_14)
 		{
@@ -11967,10 +11985,20 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 			endian_udword(&psSaveStructure12->player);
 			endian_udword(&psSaveStructure12->burnStart);
 			endian_udword(&psSaveStructure12->burnDamage);
-
-			xx = map_coord(psSaveStructure12->x);
-			yy = map_coord(psSaveStructure12->y);
 			playerid = psSaveStructure12->player;
+
+			if(strncmp(psSaveStructure12->name,"A0CommandCentre",15)  == 0 )
+			{
+				HQ = true;
+				xx = playeridpos[playerid].x  = map_coord(psSaveStructure12->x);
+				yy = playeridpos[playerid].y  = map_coord(psSaveStructure12->y);
+			}
+			else
+			{
+				HQ = false;
+				xx = map_coord(psSaveStructure12->x);
+				yy = map_coord(psSaveStructure12->y);
+			}
 		}
 		else if (psHeader->version <= VERSION_14)
 		{
@@ -12003,10 +12031,20 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 			endian_udword(&psSaveStructure14->player);
 			endian_udword(&psSaveStructure14->burnStart);
 			endian_udword(&psSaveStructure14->burnDamage);
-
-			xx = map_coord(psSaveStructure14->x);
-			yy = map_coord(psSaveStructure14->y);
 			playerid = psSaveStructure14->player;
+
+			if(strncmp(psSaveStructure14->name,"A0CommandCentre",15)  == 0 )
+			{
+				HQ = true;
+				xx = playeridpos[playerid].x  = map_coord(psSaveStructure14->x);
+				yy = playeridpos[playerid].y  = map_coord(psSaveStructure14->y);
+			}
+			else
+			{
+				HQ = false;
+				xx = map_coord(psSaveStructure14->x);
+				yy = map_coord(psSaveStructure14->y);
+			}
 		}
 		else if (psHeader->version <= VERSION_16)
 		{
@@ -12040,10 +12078,20 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 			endian_udword(&psSaveStructure15->player);
 			endian_udword(&psSaveStructure15->burnStart);
 			endian_udword(&psSaveStructure15->burnDamage);
-
-			xx = map_coord(psSaveStructure15->x);
-			yy = map_coord(psSaveStructure15->y);
 			playerid = psSaveStructure15->player;
+
+			if(strncmp(psSaveStructure15->name,"A0CommandCentre",15)  == 0 )
+			{
+				HQ = true;
+				xx = playeridpos[playerid].x  = map_coord(psSaveStructure15->x);
+				yy = playeridpos[playerid].y  = map_coord(psSaveStructure15->y);
+			}
+			else
+			{
+				HQ = false;
+				xx = map_coord(psSaveStructure15->x);
+				yy = map_coord(psSaveStructure15->y);
+			}
 		}
 		else if (psHeader->version <= VERSION_19)
 		{
@@ -12079,10 +12127,20 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 			endian_udword(&psSaveStructure17->player);
 			endian_udword(&psSaveStructure17->burnStart);
 			endian_udword(&psSaveStructure17->burnDamage);
-
-			xx = map_coord(psSaveStructure17->x);
-			yy = map_coord(psSaveStructure17->y);
 			playerid = psSaveStructure17->player;
+
+			if(strncmp(psSaveStructure17->name,"A0CommandCentre",15)  == 0 )
+			{
+				HQ = true;
+				xx = playeridpos[playerid].x  = map_coord(psSaveStructure17->x);
+				yy = playeridpos[playerid].y  = map_coord(psSaveStructure17->y);
+			}
+			else
+			{
+				HQ = false;
+				xx = map_coord(psSaveStructure17->x);
+				yy = map_coord(psSaveStructure17->y);
+			}
 		}
 		else if (psHeader->version <= VERSION_20)
 		{
@@ -12115,10 +12173,20 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 			endian_udword(&psSaveStructure20->player);
 			endian_udword(&psSaveStructure20->burnStart);
 			endian_udword(&psSaveStructure20->burnDamage);
-
-			xx = map_coord(psSaveStructure20->x);
-			yy = map_coord(psSaveStructure20->y);
 			playerid = psSaveStructure20->player;
+
+			if(strncmp(psSaveStructure20->name,"A0CommandCentre",15)  == 0 )
+			{
+				HQ = true;
+				xx = playeridpos[playerid].x  = map_coord(psSaveStructure20->x);
+				yy = playeridpos[playerid].y  = map_coord(psSaveStructure20->y);
+			}
+			else
+			{
+				HQ = false;
+				xx = map_coord(psSaveStructure20->x);
+				yy = map_coord(psSaveStructure20->y);
+			}
 		}
 		else
 		{
@@ -12154,10 +12222,20 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 			endian_udword(&psSaveStructure->player);
 			endian_udword(&psSaveStructure->burnStart);
 			endian_udword(&psSaveStructure->burnDamage);
-
-			xx = map_coord(psSaveStructure->x);
-			yy = map_coord(psSaveStructure->y);
 			playerid = psSaveStructure->player;
+
+			if(strncmp(psSaveStructure->name,"A0CommandCentre",15)  == 0 )
+			{
+				HQ = true;
+				xx = playeridpos[playerid].x  = map_coord(psSaveStructure->x);
+				yy = playeridpos[playerid].y  = map_coord(psSaveStructure->y);
+			}
+			else
+			{
+				HQ = false;
+				xx = map_coord(psSaveStructure->x);
+				yy = map_coord(psSaveStructure->y);
+			}
 		}
 		// if human player, then use clan color.  If AI, then use something else.
 		if( isHumanPlayer(playerid) )
@@ -12167,7 +12245,6 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 			// kludge to fix black, so you can see it on some maps.
 			if ( playerid == 3 )	// in this case 3 = pallete entry for black.
 			{	
-	
 				color = WZCOL_GREY;
 			}
 		}
@@ -12175,7 +12252,16 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 		{	// Use a dark green color for the AI
 			color = WZCOL_MAP_PREVIEW_AIPLAYER ;
 		}
+		if(HQ)
+		{	// This shows where the HQ is on the map in a special color.
+			// We could do the same for anything else (oil/whatever) also.  
+			// Possible future enhancement?
+			color.byte.b=0xff;
+			color.byte.g=0;
+			color.byte.r=0xff;
+		}
 
+		// and now we blit the color to the texture
 		for(x = (xx*scale);x < (xx*scale)+scale ;x++)
 		{
 			for(y = (yy*scale);y< (yy*scale)+scale ;y++)
@@ -12184,8 +12270,10 @@ BOOL plotStructurePreview16(char *backDropSprite, UBYTE scale, UDWORD offX, UDWO
 				backDropSprite[3 * (((offY + y) * BACKDROP_HACK_WIDTH) + x + offX) + 1] = color.byte.g;
 				backDropSprite[3 * (((offY + y) * BACKDROP_HACK_WIDTH) + x + offX) + 2] = color.byte.b;
 			}
+			
 		}
+		
 	}
-	return true;
-
+	// NOTE: would do fallback if FBO is not available here.
+return true;
 }

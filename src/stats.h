@@ -42,10 +42,10 @@ extern CONSTRUCT_STATS		*asConstructStats;
 extern PROPULSION_TYPES		*asPropulsionTypes;
 
 //used to hold the modifiers cross refd by weapon effect and propulsion type
-extern WEAPON_MODIFIER		asWeaponModifier[WE_NUMEFFECTS][NUM_PROP_TYPES];
+extern WEAPON_MODIFIER		asWeaponModifier[WE_NUMEFFECTS][PROPULSION_TYPE_NUM];
 
 //used to hold the current upgrade level per player per weapon subclass
-extern WEAPON_UPGRADE		asWeaponUpgrade[MAX_PLAYERS][NUM_WEAPON_SUBCLASS];
+extern WEAPON_UPGRADE		asWeaponUpgrade[MAX_PLAYERS][WSC_NUM_WEAPON_SUBCLASSES];
 extern SENSOR_UPGRADE		asSensorUpgrade[MAX_PLAYERS];
 extern ECM_UPGRADE			asECMUpgrade[MAX_PLAYERS];
 extern REPAIR_UPGRADE		asRepairUpgrade[MAX_PLAYERS];
@@ -244,7 +244,7 @@ extern CONSTRUCT_STATS *statsGetConstruct(UDWORD ref);
 extern BOOL statsShutDown(void);
 
 /*Deallocate the stats passed in as parameter */
-extern void statsDealloc(COMP_BASE_STATS* pStats, UDWORD listSize,
+extern void statsDealloc(COMPONENT_STATS* pStats, UDWORD listSize,
 						 UDWORD structureSize);
 
 extern void deallocPropulsionTypes(void);
@@ -264,12 +264,10 @@ extern UDWORD componentType(const char* pType);
 extern SDWORD getCompFromName(UDWORD compType, const char *pName);
 //get the component Inc for a stat based on the Resource name held in Names.txt
 extern SDWORD getCompFromResName(UDWORD compType, const char *pName);
-/*sets the tech level for the stat passed in */
-extern BOOL setTechLevel(BASE_STATS *psStats, const char *pLevel);
 /*returns the weapon sub class based on the string name passed in */
-extern WEAPON_SUBCLASS getWeaponSubClass(const char *pSubClass);
+extern bool getWeaponSubClass(const char* subClass, WEAPON_SUBCLASS* wclass);
 /*either gets the name associated with the resource (if one) or allocates space and copies pName*/
-extern BOOL allocateName(char **ppStore, const char *pName);
+extern char* allocateName(const char* name);
 //converts the name read in from Access into the name which is used in the Stat lists (or ignores it)
 extern BOOL getResourceName(const char *pName);
 /*return the name to display for the interface - valid for OBJECTS and STATS*/
@@ -281,10 +279,37 @@ extern BOOL getBodySize(const char *pSize, UBYTE *pStore);
 // Pass in a stat and get its name
 extern const char* getStatName(const void * pStat);
 
-/*returns the propulsion type based on the string name passed in */
-extern PROPULSION_TYPE getPropulsionType(const char *pType);
-/*returns the weapon effect based on the string name passed in */
-extern WEAPON_EFFECT getWeaponEffect(const char *pWeaponEffect);
+/**
+ * Determines the propulsion type indicated by the @c typeName string passed
+ * in.
+ *
+ * @param typeName  name of the propulsion type to determine the enumerated
+ *                  constant for.
+ * @param[out] type Will contain an enumerated constant representing the given
+ *                  propulsion type, if successful (as indicated by the return
+ *                  value).
+ *
+ * @return true if successful, false otherwise. If successful, @c *type will
+ *         contain a valid propulsion type enumerator, otherwise its value will
+ *         be left unchanged.
+ */
+extern bool getPropulsionType(const char* typeName, PROPULSION_TYPE* type);
+
+/**
+ * Determines the weapon effect indicated by the @c weaponEffect string passed
+ * in.
+ *
+ * @param weaponEffect name of the weapon effect to determine the enumerated
+ *                     constant for.
+ * @param[out] effect  Will contain an enumerated constant representing the
+ *                     given weapon effect, if successful (as indicated by the
+ *                     return value).
+ *
+ * @return true if successful, false otherwise. If successful, @c *effect will
+ *         contain a valid weapon effect enumerator, otherwise its value will
+ *         be left unchanged.
+ */
+extern bool getWeaponEffect(const char* weaponEffect, WEAPON_EFFECT* effect);
 
 extern UWORD weaponROF(WEAPON_STATS *psStat, SBYTE player);
 /*Access functions for the upgradeable stats of a weapon*/

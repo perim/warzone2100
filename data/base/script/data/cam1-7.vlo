@@ -44,7 +44,6 @@ endMsg		INTMESSAGE	"END"
 LZ_MSG		INTMESSAGE	"C1-7_LZ"
 obj1		INTMESSAGE	"C1-7_OBJ1"
 LZSnd		SOUND		"pcv427.ogg"
-RetLZMsg	TEXTSTRING	"LZ_MSG2"
 LZComp		SOUND		"pcv445.ogg"
 LZClear		SOUND		"lz-clear.ogg"
 
@@ -56,7 +55,6 @@ exitY		int		62
 
 transporter	TEMPLATE	"Transporter"	//for enemy transports
 warnSnd		SOUND		"pcv632.ogg"	//enemy escaping	//"PCV395.ogg"	//incoming enemy transport
-badMsg		TEXTSTRING	"ADD_MSG20"		//Text "Enemy escaping"
 
 /* Proximity: Artifacts */
 crate		FEATURESTAT	"Crate"

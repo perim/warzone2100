@@ -1,0 +1,18 @@
+top_srcdir=..
+top_builddir=$(top_srcdir)
+
+include $(top_srcdir)/makerules/common.mk
+
+SUBDIRS=framework \
+	exceptionhandler \
+	gamelib \
+	ivis_common \
+	ivis_opengl \
+	netplay \
+	script \
+	sequence \
+	sound \
+	sqlite3 \
+	widget
+
+include $(top_srcdir)/makerules/submake.mk

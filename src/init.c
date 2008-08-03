@@ -246,12 +246,12 @@ BOOL rebuildSearchPath( searchPathMode mode, BOOL force )
 		switch ( mode )
 		{
 			case mod_clean:
-				debug( LOG_WZ, "rebuildSearchPath: Cleaning up" );
+				debug(LOG_WZ, "Cleaning up");
 
 				while( curSearchPath )
 				{
 #ifdef DEBUG
-					debug( LOG_WZ, "rebuildSearchPath: Removing [%s] from search path", curSearchPath->path );
+					debug(LOG_WZ, "Removing [%s] from search path", curSearchPath->path);
 #endif // DEBUG
 					// Remove maps and mods
 					removeSubdirs( curSearchPath->path, "maps", NULL );
@@ -282,12 +282,12 @@ BOOL rebuildSearchPath( searchPathMode mode, BOOL force )
 				}
 				break;
 			case mod_campaign:
-				debug( LOG_WZ, "rebuildSearchPath: Switching to campaign mods" );
+				debug(LOG_WZ, "Switching to campaign mods");
 
 				while( curSearchPath )
 				{
 #ifdef DEBUG
-					debug( LOG_WZ, "rebuildSearchPath: Adding [%s] to search path", curSearchPath->path );
+					debug(LOG_WZ, "Adding [%s] to search path", curSearchPath->path);
 #endif // DEBUG
 					// Add global and campaign mods
 					PHYSFS_addToSearchPath( curSearchPath->path, PHYSFS_APPEND );
@@ -296,7 +296,10 @@ BOOL rebuildSearchPath( searchPathMode mode, BOOL force )
 					addSubdirs( curSearchPath->path, "mods/global/autoload", PHYSFS_APPEND, NULL );
 					addSubdirs( curSearchPath->path, "mods/campaign", PHYSFS_APPEND, campaign_mods );
 					addSubdirs( curSearchPath->path, "mods/campaign/autoload", PHYSFS_APPEND, NULL );
-					PHYSFS_removeFromSearchPath( curSearchPath->path );
+					if (!PHYSFS_removeFromSearchPath( curSearchPath->path ))
+					{
+						debug(LOG_ERROR, "Failed to remove path %s again", curSearchPath->path);
+					}
 
 					// Add base files
 					sstrcpy(tmpstr, curSearchPath->path);
@@ -310,12 +313,12 @@ BOOL rebuildSearchPath( searchPathMode mode, BOOL force )
 				}
 				break;
 			case mod_multiplay:
-				debug( LOG_WZ, "rebuildSearchPath: Switching to multiplay mods" );
+				debug(LOG_WZ, "Switching to multiplay mods");
 
 				while( curSearchPath )
 				{
 #ifdef DEBUG
-					debug( LOG_WZ, "rebuildSearchPath: Adding [%s] to search path", curSearchPath->path );
+					debug(LOG_WZ, "Adding [%s] to search path", curSearchPath->path);
 #endif // DEBUG
 					// Add maps and global and multiplay mods
 					PHYSFS_addToSearchPath( curSearchPath->path, PHYSFS_APPEND );
@@ -346,12 +349,12 @@ BOOL rebuildSearchPath( searchPathMode mode, BOOL force )
 				}
 				break;
 			default:
-				debug( LOG_ERROR, "rebuildSearchPath: Can't switch to unknown mods %i", mode );
+				debug(LOG_ERROR, "Can't switch to unknown mods %i", mode);
 				return false;
 		}
 
 		// User's home dir must be first so we allways see what we write
-		PHYSFS_removeFromSearchPath( PHYSFS_getWriteDir() );
+		PHYSFS_removeFromSearchPath(PHYSFS_getWriteDir());
 		PHYSFS_addToSearchPath( PHYSFS_getWriteDir(), PHYSFS_PREPEND );
 
 #ifdef DEBUG
@@ -408,15 +411,19 @@ BOOL systemInitialise(void)
 
 	if ( war_getSoundEnabled() )
 	{
-		if( !audio_Init(droidAudioTrackStopped) )
-			debug( LOG_SOUND, "Couldn't initialise audio system: continuing without audio\n" );
+		if (!audio_Init(droidAudioTrackStopped))
+		{
+			debug(LOG_SOUND, "Could not initialise audio system: Continuing without audio");
+		}
+		if (war_GetMusicEnabled())
+		{
+			cdAudio_Open(UserMusicPath);
+		}
 	}
 	else
 	{
-		debug( LOG_SOUND, "Sound disabled!" );
+		debug(LOG_SOUND, "Sound disabled");
 	}
-
-	cdAudio_Open(UserMusicPath);
 
 	if (!dataInitLoadFuncs()) // Pass all the data loading functions to the framework library
 	{
@@ -427,10 +434,6 @@ BOOL systemInitialise(void)
 	{
 		return false;
 	}
-
-#ifdef ARROWS
-	arrowInit();
-#endif
 
 	// Initialize the iVis text rendering module
 	iV_TextInit();
@@ -448,9 +451,6 @@ BOOL systemInitialise(void)
 void systemShutdown(void)
 {
 //	unsigned int i;
-#ifdef ARROWS
-	arrowShutDown();
-#endif
 
 	keyClearMappings();
 

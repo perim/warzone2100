@@ -135,6 +135,13 @@ void debug_init( void );
 void debug_exit( void );
 
 /**
+ * Have the stderr output callback flush its output before returning.
+ *
+ * NOTE: This may cause significant slowdowns on some systems.
+ */
+extern void debugFlushStderr(void);
+
+/**
  * Register a callback to be called on every call to debug()
  *
  * \param	callback	Function which does the output
@@ -188,13 +195,6 @@ static inline void objTraceDisable(void) { traceID = (UDWORD)-1; }
 
 #if defined(__cplusplus)
 }
-#endif
-
-/** Dump last two debug log calls into given file descriptor. For exception handler. */
-#if defined(WZ_OS_WIN)
-extern void dumpLog(HANDLE file);
-#else
-extern void dumpLog(int file);
 #endif
 
 /** Checks if a particular debub flag was enabled */

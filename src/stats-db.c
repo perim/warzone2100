@@ -128,12 +128,9 @@ static bool loadBaseStats(BASE_STATS* stats, SQL_BASE_STATS* cols, sqlite3_stmt*
 typedef struct
 {
 	SQL_BASE_STATS parent;
-	int techlevel;
 	int buildPower;
 	int buildPoints;
 	int weight;
-	int hitpoints;
-	int systempoints;
 	int body;
 	int GfxFile;
 	int designable;
@@ -144,50 +141,32 @@ static bool compBaseStatColumnNames(SQL_COMP_BASE_STATS* cols, sqlite3_stmt* stm
 	if (!baseStatColumnNames(&cols->parent, stmt))
 		return false;
 
-	cols->techlevel    = getColNumByNameA(stmt, "techlevel");
 	cols->buildPower   = getColNumByNameA(stmt, "buildPower");
 	cols->buildPoints  = getColNumByNameA(stmt, "buildPoints");
 	cols->weight       = getColNumByNameA(stmt, "weight");
-	cols->hitpoints    = getColNumByNameA(stmt, "hitpoints");
-	cols->systempoints = getColNumByNameA(stmt, "systempoints");
 	cols->body         = getColNumByNameA(stmt, "body");
 	cols->GfxFile      = getColNumByNameA(stmt, "GfxFile");
 	cols->designable   = getColNumByNameA(stmt, "designable");
 
-	ASSERT(cols->techlevel    != -1, "No tech level in this database query available");
 	ASSERT(cols->buildPower   != -1, "No build power in this database query available");
 	ASSERT(cols->buildPoints  != -1, "No build points in this database query available");
 	ASSERT(cols->weight       != -1, "No weight in this database query available");
-	ASSERT(cols->systempoints != -1, "No system points in this database query available");
 
-	return cols->techlevel    != -1
-	    && cols->buildPower   != -1
+	return cols->buildPower   != -1
 	    && cols->buildPoints  != -1
-	    && cols->weight       != -1
-	    && cols->systempoints != -1;
+	    && cols->weight       != -1;
 }
 
-static bool loadComponentBaseStats(COMP_BASE_STATS* stats, SQL_COMP_BASE_STATS* cols, sqlite3_stmt* stmt, unsigned int id)
+static bool loadComponentBaseStats(COMPONENT_STATS* stats, SQL_COMP_BASE_STATS* cols, sqlite3_stmt* stmt, unsigned int id)
 {
-	const int techlevel    = getColNumByNameA(stmt, "techlevel");
 	const int buildPower   = getColNumByNameA(stmt, "buildPower");
 	const int buildPoints  = getColNumByNameA(stmt, "buildPoints");
 	const int weight       = getColNumByNameA(stmt, "weight");
-	const int hitpoints    = getColNumByNameA(stmt, "hitpoints");
-	const int systempoints = getColNumByNameA(stmt, "systempoints");
 	const int body         = getColNumByNameA(stmt, "body");
 	const int GfxFile      = getColNumByNameA(stmt, "GfxFile");
 	const int designable   = getColNumByNameA(stmt, "designable");
 
 	if (!loadBaseStats((BASE_STATS *)stats, &cols->parent, stmt, id))
-	{
-		return false;
-	}
-
-	// techlevel             TEXT    NOT NULL, -- Technology level of this component
-	ASSERT(techlevel != -1, "No tech level in this database query available");
-	if (techlevel == -1
-	 || !setTechLevel((BASE_STATS *)stats, (const char*)sqlite3_column_text(stmt, techlevel)))
 	{
 		return false;
 	}
@@ -201,14 +180,6 @@ static bool loadComponentBaseStats(COMP_BASE_STATS* stats, SQL_COMP_BASE_STATS* 
 	// weight                NUMERIC NOT NULL, -- Component's weight (mass?)
 	ASSERT(weight != -1, "No weight in this database query available");
 	stats->weight = sqlite3_column_double(stmt, weight);
-
-	// hitpoints             NUMERIC NOT NULL, -- Component's hitpoints - SEEMS TO BE UNUSED
-	if (hitpoints != -1)
-		stats->hitPoints = sqlite3_column_double(stmt, hitpoints);
-
-	// systempoints          NUMERIC NOT NULL, -- Space the component takes in the droid - SEEMS TO BE UNUSED
-	ASSERT(systempoints != -1, "No system points in this database query available");
-	stats->systemPoints = sqlite3_column_double(stmt, systempoints);
 
 	// body                  NUMERIC NOT NULL, -- Component's body points
 	if (body != -1)
@@ -235,9 +206,9 @@ static bool loadComponentBaseStats(COMP_BASE_STATS* stats, SQL_COMP_BASE_STATS* 
 	// designable            NUMERIC NOT NULL  -- flag to indicate whether this component can be used in the design screen
 	if (designable != -1
 	 && sqlite3_column_int(stmt, designable))
-		stats->design = true;
+		stats->designable = true;
 	else
-		stats->design = false;
+		stats->designable = false;
 
 	return true;
 }
@@ -389,7 +360,7 @@ static bool _loadWeaponStats(WEAPON_STATS* stats, SQL_WEAPON_STATS* cols, sqlite
 	const char* str;
 	unsigned int longRange;
 
-	if (!loadComponentBaseStats((COMP_BASE_STATS *)stats, &cols->parent, stmt, REF_WEAPON_START + weapon_id - 1))
+	if (!loadComponentBaseStats((COMPONENT_STATS *)stats, &cols->parent, stmt, REF_WEAPON_START + weapon_id - 1))
 	{
 		return false;
 	}
@@ -580,22 +551,19 @@ static bool _loadWeaponStats(WEAPON_STATS* stats, SQL_WEAPON_STATS* cols, sqlite
 	}
 
 	// weaponSubClass        TEXT    NOT NULL, -- the subclass to which the weapon belongs
-	stats->weaponSubClass = getWeaponSubClass((const char*)sqlite3_column_text(stmt, cols->weaponSubClass));
-	if (stats->weaponSubClass == INVALID_SUBCLASS)
+	if (!getWeaponSubClass((const char*)sqlite3_column_text(stmt, cols->weaponSubClass), &stats->weaponSubClass))
 	{
 		return false;
 	}
 
 	// movement              TEXT    NOT NULL, -- which projectile model to use for the bullet
-	stats->movementModel = getMovementModel((const char*)sqlite3_column_text(stmt, cols->movement));
-	if (stats->movementModel == INVALID_MOVEMENT)
+	if (!getMovementModel((const char*)sqlite3_column_text(stmt, cols->movement), &stats->movementModel))
 	{
 		return false;
 	}
 
 	// weaponEffect          TEXT    NOT NULL, -- which type of warhead is associated with the weapon
-	stats->weaponEffect = getWeaponEffect((const char*)sqlite3_column_text(stmt, cols->weaponEffect));
-	if (stats->weaponEffect == INVALID_WEAPON_EFFECT)
+	if (!getWeaponEffect((const char*)sqlite3_column_text(stmt, cols->weaponEffect), &stats->weaponEffect))
 	{
 		debug(LOG_ERROR, "loadWepaonStats: Invalid weapon effect for weapon %s", getStatName(stats));
 		abort();
@@ -700,7 +668,7 @@ static bool _loadWeaponStats(WEAPON_STATS* stats, SQL_WEAPON_STATS* cols, sqlite
 	}
 
 	// Set the max stat values for the design screen
-	if (stats->design)
+	if (stats->designable)
 	{
 		setMaxWeaponRange(stats->longRange);
 		setMaxWeaponDamage(stats->damage);
@@ -826,7 +794,7 @@ bool loadBodyStatsFromDB(sqlite3* db, const char* tableName)
 
 		memset(stats, 0, sizeof(*stats));
 
-		if (!loadComponentBaseStats((COMP_BASE_STATS *)stats, &cols, stmt, REF_BODY_START + body_id - 1))
+		if (!loadComponentBaseStats((COMPONENT_STATS *)stats, &cols, stmt, REF_BODY_START + body_id - 1))
 		{
 			goto in_statement_err;
 		}
@@ -887,7 +855,7 @@ bool loadBodyStatsFromDB(sqlite3* db, const char* tableName)
 		}
 
 		//set the max stat values for the design screen
-		if (stats->design)
+		if (stats->designable)
 		{
 			//use front armour value to prevent bodyStats corrupt problems
 			setMaxBodyArmour(stats->armourValue[HIT_SIDE_FRONT][WC_KINETIC]);
@@ -955,7 +923,7 @@ bool loadBrainStatsFromDB(sqlite3* db, const char* tableName)
 
 		memset(stats, 0, sizeof(*stats));
 
-		if (!loadComponentBaseStats((COMP_BASE_STATS *)stats, &cols, stmt, REF_BRAIN_START + brain_id - 1))
+		if (!loadComponentBaseStats((COMPONENT_STATS *)stats, &cols, stmt, REF_BRAIN_START + brain_id - 1))
 		{
 			goto in_statement_err;
 		}
@@ -1042,14 +1010,13 @@ bool loadPropulsionStatsFromDB(sqlite3* db, const char* tableName)
 
 		memset(stats, 0, sizeof(*stats));
 
-		if (!loadComponentBaseStats((COMP_BASE_STATS *)stats, &cols, stmt, REF_PROPULSION_START + propulsion_id - 1))
+		if (!loadComponentBaseStats((COMPONENT_STATS *)stats, &cols, stmt, REF_PROPULSION_START + propulsion_id - 1))
 		{
 			goto in_statement_err;
 		}
 
 		// type                  TEXT    NOT NULL, -- Type of propulsion
-		stats->propulsionType = getPropulsionType((const char*)sqlite3_column_text(stmt, getColNumByName(stmt, "type")));
-		if (stats->propulsionType == INVALID_PROP_TYPE)
+		if (!getPropulsionType((const char*)sqlite3_column_text(stmt, getColNumByName(stmt, "type")), &stats->propulsionType))
 		{
 			debug(LOG_ERROR, "loadPropulsionStatsFromDB: Invalid Propulsion type for %s", getStatName(stats));
 			abort();
@@ -1060,7 +1027,7 @@ bool loadPropulsionStatsFromDB(sqlite3* db, const char* tableName)
 		stats->maxSpeed = sqlite3_column_double(stmt, getColNumByName(stmt, "maxSpeed"));
 
 		// set the max stats values for the design screen
-		if (stats->design)
+		if (stats->designable)
 		{
 			setMaxPropulsionSpeed(stats->maxSpeed);
 			//setMaxComponentWeight(stats->weight);
@@ -1125,7 +1092,7 @@ bool loadSensorStatsFromDB(sqlite3* db, const char* tableName)
 
 		memset(stats, 0, sizeof(*stats));
 
-		if (!loadComponentBaseStats((COMP_BASE_STATS *)stats, &cols, stmt, REF_SENSOR_START + sensor_id - 1))
+		if (!loadComponentBaseStats((COMPONENT_STATS *)stats, &cols, stmt, REF_SENSOR_START + sensor_id - 1))
 		{
 			goto in_statement_err;
 		}
@@ -1203,7 +1170,7 @@ bool loadSensorStatsFromDB(sqlite3* db, const char* tableName)
 		stats->power = sqlite3_column_double(stmt, getColNumByName(stmt, "power"));
 
 		// set the max stats values for the design screen
-		if (stats->design)
+		if (stats->designable)
 		{
 			setMaxSensorRange(stats->range);
 			setMaxSensorPower(stats->power);
@@ -1270,7 +1237,7 @@ bool loadECMStatsFromDB(sqlite3* db, const char* tableName)
 
 		memset(stats, 0, sizeof(*stats));
 
-		if (!loadComponentBaseStats((COMP_BASE_STATS *)stats, &cols, stmt, REF_ECM_START + ecm_id - 1))
+		if (!loadComponentBaseStats((COMPONENT_STATS *)stats, &cols, stmt, REF_ECM_START + ecm_id - 1))
 		{
 			goto in_statement_err;
 		}
@@ -1317,7 +1284,7 @@ bool loadECMStatsFromDB(sqlite3* db, const char* tableName)
 		stats->range = TILE_UNITS * 8;
 
 		// set the max stats values for the design screen
-		if (stats->design)
+		if (stats->designable)
 		{
 			setMaxECMPower(stats->power);
 			setMaxECMRange(stats->range);

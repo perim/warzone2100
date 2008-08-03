@@ -59,6 +59,7 @@ void PlayList_Quit()
 
 bool PlayList_Read(const char* path)
 {
+	WZ_TRACK** last = &songList;
 	PHYSFS_file* fileHandle;
 	char listName[PATH_MAX];
 
@@ -73,51 +74,53 @@ bool PlayList_Read(const char* path)
 		return false;
 	}
 
+	// Find the end of the songList
+	for (; *last; last = &(*last)->next);
+
 	while (!PHYSFS_eof(fileHandle))
 	{
-		char line_buf[BUFFER_SIZE];
+		WZ_TRACK* song;
+		char filename[BUFFER_SIZE];
 		size_t buf_pos = 0;
-		char* filename;
 
-		while (buf_pos < sizeof(line_buf) - 1
-		    && PHYSFS_read(fileHandle, &line_buf[buf_pos], 1, 1)
-		    && line_buf[buf_pos] != '\n'
-		    && line_buf[buf_pos] != '\r')
+		// Read a single line
+		while (buf_pos < sizeof(filename) - 1
+		    && PHYSFS_read(fileHandle, &filename[buf_pos], 1, 1)
+		    && filename[buf_pos] != '\n'
+		    && filename[buf_pos] != '\r')
 		{
 			++buf_pos;
 		}
 
-		// Nul-terminate string
-		line_buf[buf_pos] = '\0';
-		buf_pos = 0;
+		// Nul-terminate string, and trim line endings ('\n' and '\r')
+		filename[buf_pos] = '\0';
 
-		if (line_buf[0] != '\0'
-		    && (filename = strtok(line_buf, "\n")) != NULL
-		    && strlen(filename) != 0)
+		// Don't add empty filenames to the playlist
+		if (filename[0] == '\0' /* strlen(filename) == 0 */)
 		{
-			WZ_TRACK *song = malloc(sizeof(*songList));
-			WZ_TRACK *last = songList;
-
-			sstrcpy(song->path, path);
-			sstrcat(song->path, "/");
-			sstrcat(song->path, filename);
-			song->next = NULL;
-
-			// find last
-			for (; last && last->next; last = last->next);
-
-			if (last)
-			{
-				last->next = song;	// add last in list
-			}
-			else
-			{
-				songList = song;	// create list
-			}
-
-			numSongs++;
-			debug(LOG_SOUND, "Added song %s to playlist", filename);
+			continue;
 		}
+
+		song = malloc(sizeof(*songList));
+		if (song == NULL)
+		{
+			debug(LOG_ERROR, "Out of memory!");
+			PHYSFS_close(fileHandle);
+			abort();
+			return false;
+		}
+
+		sstrcpy(song->path, path);
+		sstrcat(song->path, "/");
+		sstrcat(song->path, filename);
+		song->next = NULL;
+
+		// Append this song to the list
+		*last = song;
+		last = &song->next;
+
+		numSongs++;
+		debug(LOG_SOUND, "Added song %s to playlist", filename);
 	}
 	PHYSFS_close(fileHandle);
 	currentSong = songList;
@@ -139,14 +142,18 @@ const char* PlayList_CurrentSong()
 
 const char* PlayList_NextSong()
 {
-	if (currentSong)
+	// If there's a next song in the playlist select it
+	if (currentSong
+	 && currentSong->next)
 	{
 		currentSong = currentSong->next;
 	}
-	if (!currentSong)
+	// Otherwise jump to the start of the playlist
+	else
 	{
 		currentSong = songList;
 	}
+
 	return PlayList_CurrentSong();
 }
 
@@ -154,8 +161,10 @@ void playListTest()
 {
 	int i;
 
-	for (i = 0; i < 10; i++)
+	for (i = 0; i < 100; i++)
 	{
+		const char *cur, *next;
+
 		PlayList_Quit();
 		PlayList_Init();
 		PlayList_Read("music");
@@ -163,7 +172,13 @@ void playListTest()
 		{
 			debug(LOG_ERROR, "Use the default playlist for selftest!");
 		}
+		cur = PlayList_CurrentSong();
+		next = PlayList_NextSong();
+		assert(cur != NULL && next != NULL && cur != next);
+		next = PlayList_NextSong();
+		assert(cur == next);	// loop around
 		assert(songList);
 		assert(numSongs == 2);
 	}
+	fprintf(stdout, "\tPlaylist self-test: PASSED\n");
 }

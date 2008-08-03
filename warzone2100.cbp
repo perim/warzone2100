@@ -510,12 +510,6 @@
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/framework/treapint.h">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
 		<Unit filename="lib/framework/trig.c">
 			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
@@ -2176,6 +2170,33 @@
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
+		<Unit filename="src/message_lexer.l">
+			<Option compilerVar="CC" />
+			<Option compile="1" />
+			<Option link="1" />
+			<Option compiler="gcc" use="1" buildCommand="flex -o$file.c $file\n$compiler $options $includes -c $file.c -o $object" />
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="src/message_parser.y">
+			<Option compilerVar="CC" />
+			<Option compile="1" />
+			<Option link="1" />
+			<Option weight="10" />
+			<Option compiler="gcc" use="1" buildCommand="bison -y -d -osrc/message_parser.tab.c $file\n$compiler $options $includes -c src/message_parser.tab.c -o $object" />
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="src/messagely.h">
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
 		<Unit filename="src/miscimd.c">
 			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
@@ -2430,6 +2451,12 @@
 			<Option target="NDBGWindows" />
 		</Unit>
 		<Unit filename="src/parsetest.h">
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="src/positiondef.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />

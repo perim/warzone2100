@@ -33,85 +33,44 @@
 #include "types.h"
 #include "debug.h"
 #include "treap.h"
-#include "treapint.h"
 
-/* Position of the last call */
-static SDWORD	cLine;
-static char *pCFile;
-static char	pCFileNone[] = "None";
-
-void treapSetCallPos(const char *pFileName, SDWORD lineNumber)
+typedef struct TREAP_NODE
 {
-	cLine = lineNumber;
-
-	pCFile = strdup(pFileName);
-	if (pCFile == NULL)
-	{
-		debug(LOG_ERROR, "treapSetCallPos: Out of memory!");
-		abort();
-		pCFile = pCFileNone;
-		return;
-	}
-}
-
-/* nothing actually uses the default comparison function.... */
-static SDWORD defaultCmp(const void *key1, const void *key2)
-{
-	if (key1 < key2)
-	{
-		return -1;
-	}
-	else if (key1 > key2)
-	{
-		return 1;
-	}
-
-	return 0;
-}
+	const char*                     key;                    //< The key to sort the node on
+	unsigned int                    priority;               //< Treap priority
+	const char*                     string;                 //< The string stored in the treap
+	struct TREAP_NODE               *psLeft, *psRight;      //< The sub trees
+} TREAP_NODE;
 
 /* A useful comparison function - keys are char pointers */
-SDWORD treapStringCmp(const void *key1, const void *key2)
+static int treapStringCmp(const char *key1, const char *key2)
 {
-	SDWORD result;
-	const char *pStr1 = (const char *)key1;
-	const char *pStr2 = (const char *)key2;
+	int result;
 
-	result = strcmp(pStr1,pStr2);
-	if (result<0) return -1;
-	if (result>0) return 1;
-	return 0;
+	result = strcmp(key1, key2);
+	if      (result < 0)
+		return -1;
+	else if (result > 0)
+		return 1;
+	else
+		return 0;
 }
 
 
-BOOL treapCreate(TREAP **ppsTreap, TREAP_CMP cmp)
+TREAP_NODE** treapCreate()
 {
-	*ppsTreap = (TREAP*)malloc(sizeof(TREAP));
-	if (!(*ppsTreap))
+	TREAP_NODE** const psTreap = (TREAP_NODE**)malloc(sizeof(*psTreap));
+	if (!psTreap)
 	{
-		debug( LOG_ERROR, "treapCreate: Out of memory" );
+		debug(LOG_ERROR, "Out of memory");
 		abort();
-		return false;
-	}
-
-	// Store the comparison function if there is one, use the default otherwise
-	if (cmp)
-	{
-		(*ppsTreap)->cmp = cmp;
-	}
-	else
-	{
-		(*ppsTreap)->cmp = defaultCmp;
+		return NULL;
 	}
 
 	// Initialise the tree to nothing
-	(*ppsTreap)->psRoot = NULL;
+	*psTreap = NULL;
 
-#if DEBUG_TREAP
-	// Store the call location
-	(*ppsTreap)->pFile = pCFile;
-	(*ppsTreap)->line = cLine;
-#endif
-	return true;
+	return psTreap;
 }
 
 /* Rotate a tree to the right
@@ -141,17 +100,17 @@ static void treapRotLeft(TREAP_NODE **ppsRoot)
 }
 
 /* Recursive function to add an object to a tree */
-void treapAddNode(TREAP_NODE **ppsRoot, TREAP_NODE *psNew, TREAP_CMP cmp)
+static void treapAddNode(TREAP_NODE **ppsRoot, TREAP_NODE *psNew)
 {
 	if (*ppsRoot == NULL)
 	{
 		// Make the node the root of the tree
 		*ppsRoot = psNew;
 	}
-	else if (cmp(psNew->key, (*ppsRoot)->key) < 0)
+	else if (treapStringCmp(psNew->key, (*ppsRoot)->key) < 0)
 	{
 		// Node less than root, insert to the left of the tree
-		treapAddNode(&(*ppsRoot)->psLeft, psNew, cmp);
+		treapAddNode(&(*ppsRoot)->psLeft, psNew);
 
 		// Sort the priority
 		if ((*ppsRoot)->priority > (*ppsRoot)->psLeft->priority)
@@ -163,7 +122,7 @@ void treapAddNode(TREAP_NODE **ppsRoot, TREAP_NODE *psNew, TREAP_CMP cmp)
 	else
 	{
 		// Node greater than root, insert to the right of the tree
-		treapAddNode(&(*ppsRoot)->psRight, psNew, cmp);
+		treapAddNode(&(*ppsRoot)->psRight, psNew);
 
 		// Sort the priority
 		if ((*ppsRoot)->priority > (*ppsRoot)->psRight->priority)
@@ -177,142 +136,54 @@ void treapAddNode(TREAP_NODE **ppsRoot, TREAP_NODE *psNew, TREAP_CMP cmp)
 
 /* Add an object to a treap
  */
-BOOL treapAdd(TREAP *psTreap, void *key, void *pObj)
+BOOL treapAdd(TREAP_NODE** psTreap, const char* key, const char* string)
 {
-	TREAP_NODE* psNew = malloc(sizeof(TREAP_NODE));
+	/* Over-allocate so that we can put the key and the string in the same
+	 * chunck of memory as the TREAP_NODE struct. Which means a single
+	 * free() call on the entire STR structure will suffice.
+	 */
+	const size_t key_size    = strlen(key)    + 1;
+	const size_t string_size = strlen(string) + 1;
+	TREAP_NODE * const psNew = malloc(sizeof(*psNew) + key_size + string_size);
 
 	if (psNew == NULL)
 	{
 		debug(LOG_ERROR, "treapAdd: Out of memory");
 		return false;
 	}
-	psNew->priority = (UDWORD)rand();
-	psNew->key = key;
-	psNew->pObj = pObj;
+
+	psNew->key    = strcpy((char*)(psNew + 1),            key);
+	psNew->string = strcpy((char*)(psNew + 1) + key_size, string);
+
+	psNew->priority = rand();
 	psNew->psLeft = NULL;
 	psNew->psRight = NULL;
-#if DEBUG_TREAP
-	// Store the call location
-	psNew->pFile = pCFile;
-	psNew->line = cLine;
-#endif
 
-	treapAddNode(&psTreap->psRoot, psNew, psTreap->cmp);
-
-	return true;
-}
-
-
-/* Recursively find and remove a node from the tree */
-TREAP_NODE *treapDelRec(TREAP_NODE **ppsRoot, void *key, TREAP_CMP cmp)
-{
-	TREAP_NODE	*psFound;
-
-	if (*ppsRoot == NULL)
-	{
-		// not found
-		return NULL;
-	}
-
-	switch (cmp(key, (*ppsRoot)->key))
-	{
-	case -1:
-		// less than
-		return treapDelRec(&(*ppsRoot)->psLeft, key, cmp);
-		break;
-	case 1:
-		// greater than
-		return treapDelRec(&(*ppsRoot)->psRight, key, cmp);
-		break;
-	case 0:
-		// equal - either remove or push down the tree to balance it
-		if ((*ppsRoot)->psLeft == NULL && (*ppsRoot)->psRight == NULL)
-		{
-			// no sub trees, remove
-			psFound = *ppsRoot;
-			*ppsRoot = NULL;
-			return psFound;
-		}
-		else if ((*ppsRoot)->psLeft == NULL)
-		{
-			// one sub tree, replace
-			psFound = *ppsRoot;
-			*ppsRoot = psFound->psRight;
-			return psFound;
-		}
-		else if ((*ppsRoot)->psRight == NULL)
-		{
-			// one sub tree, replace
-			psFound = *ppsRoot;
-			*ppsRoot = psFound->psLeft;
-			return psFound;
-		}
-		else
-		{
-			// two sub trees, push the node down and recurse
-			if ((*ppsRoot)->psLeft->priority > (*ppsRoot)->psRight->priority)
-			{
-				// rotate right and recurse
-				treapRotLeft(ppsRoot);
-				return treapDelRec(&(*ppsRoot)->psLeft, key, cmp);
-			}
-			else
-			{
-				// rotate left and recurse
-				treapRotRight(ppsRoot);
-				return treapDelRec(&(*ppsRoot)->psRight, key, cmp);
-			}
-		}
-		break;
-	default:
-		ASSERT( false, "treapDelRec: invalid return from comparison" );
-		break;
-	}
-	return NULL;
-}
-
-
-/* Remove an object from the treap */
-BOOL treapDel(TREAP *psTreap, void *key)
-{
-	TREAP_NODE	*psDel;
-
-	// Find the node to remove
-	psDel = treapDelRec(&psTreap->psRoot, key, psTreap->cmp);
-	if (!psDel)
-	{
-		return false;
-	}
-
-	// Release the node
-#ifdef DEBUG_TREAP
-	free(psDel->pFile);
-#endif
-	free(psDel);
+	treapAddNode(psTreap, psNew);
 
 	return true;
 }
 
 
 /* Recursively find an object in a treap */
-static void *treapFindRec(TREAP_NODE *psRoot, const void *key, TREAP_CMP cmp)
+static const char* treapFindRec(TREAP_NODE *psRoot, const char *key)
 {
 	if (psRoot == NULL)
 	{
 		return NULL;
 	}
 
-	switch (cmp(key, psRoot->key))
+	switch (treapStringCmp(key, psRoot->key))
 	{
 	case 0:
 		// equal
-		return psRoot->pObj;
+		return psRoot->string;
 		break;
 	case -1:
-		return treapFindRec(psRoot->psLeft, key, cmp);
+		return treapFindRec(psRoot->psLeft, key);
 		break;
 	case 1:
-		return treapFindRec(psRoot->psRight, key, cmp);
+		return treapFindRec(psRoot->psRight, key);
 		break;
 	default:
 		ASSERT( false, "treapFindRec: invalid return from comparison" );
@@ -323,25 +194,42 @@ static void *treapFindRec(TREAP_NODE *psRoot, const void *key, TREAP_CMP cmp)
 
 
 /* Find an object in a treap */
-void *treapFind(TREAP *psTreap, const void *key)
+const char* treapFind(TREAP_NODE** psTreap, const char *key)
 {
-	return treapFindRec(psTreap->psRoot, key, psTreap->cmp);
+	ASSERT(psTreap != NULL, "Invalid treap pointer!");
+
+	return treapFindRec(*psTreap, key);
 }
 
-
-#if DEBUG_TREAP
-/* Recursively print out where the nodes were allocated */
-static void treapReportRec(TREAP_NODE *psRoot)
+static const char* treapFindKeyRec(TREAP_NODE const * const psNode, const char * const string)
 {
-	if (psRoot)
+	const char* key;
+
+	if (psNode == NULL)
 	{
-		debug( LOG_NEVER, (("   %s, line %d\n", psRoot->pFile, psRoot->line )));
-		treapReportRec(psRoot->psLeft);
-		treapReportRec(psRoot->psRight);
+		return NULL;
 	}
-}
-#endif
 
+	if (strcmp(psNode->string, string) == 0)
+	{
+		return psNode->key;
+	}
+
+	key = treapFindKeyRec(psNode->psLeft, string);
+	if (key)
+	{
+		return key;
+	}
+
+	return treapFindKeyRec(psNode->psLeft, string);
+}
+
+const char* treapFindKey(TREAP_NODE** psTreap, const char* string)
+{
+	ASSERT(psTreap != NULL, "Invalid treap pointer!");
+
+	return treapFindKeyRec(*psTreap, string);
+}
 
 /* Recursively free a treap */
 static void treapDestroyRec(TREAP_NODE *psRoot)
@@ -360,100 +248,11 @@ static void treapDestroyRec(TREAP_NODE *psRoot)
 }
 
 
-/* Release all the nodes in the treap */
-void treapReset(TREAP *psTreap)
-{
-	treapDestroyRec(psTreap->psRoot);
-	psTreap->psRoot = NULL;
-}
-
-
 /* Destroy a treap and release all the memory associated with it */
-void treapDestroy(TREAP *psTreap)
+void treapDestroy(TREAP_NODE** psTreap)
 {
-#if DEBUG_TREAP
-	if (psTreap->psRoot)
-	{
-		debug( LOG_NEVER, "treapDestroy: %s, line %d : nodes still in the tree\n", psTreap->pFile, psTreap->line );
-		treapReportRec(psTreap->psRoot);
-	}
-	free(psTreap->pFile);
-#endif
+	ASSERT(psTreap != NULL, "Invalid treap pointer!");
 
-	treapDestroyRec(psTreap->psRoot);
+	treapDestroyRec(*psTreap);
 	free(psTreap);
 }
-
-/* Recursively display the treap structure */
-void treapDisplayRec(TREAP_NODE *psRoot, UDWORD indent);
-void treapDisplayRec(TREAP_NODE *psRoot, UDWORD indent)
-{
-	UDWORD	i;
-
-	// Display the root
-#if DEBUG_TREAP
-	debug( LOG_NEVER, "%s, line %d : %p,%d\n", psRoot->pFile, psRoot->line, psRoot->key, psRoot->priority );
-#else
-	debug( LOG_NEVER, "%p,%d\n", psRoot->key, psRoot->priority );
-#endif
-
-	// Display the left of the tree
-	if (psRoot->psLeft)
-	{
-		for(i=0; i<indent; i++)
-		{
-			debug( LOG_NEVER, "." );
-		}
-		debug( LOG_NEVER, "L" );
-		treapDisplayRec(psRoot->psLeft, indent+1);
-	}
-
-	// Display the right of the tree
-	if (psRoot->psRight)
-	{
-		for(i=0; i<indent; i++)
-		{
-			debug( LOG_NEVER, "." );
-		}
-		debug( LOG_NEVER, "R" );
-		treapDisplayRec(psRoot->psRight, indent+1);
-	}
-}
-
-
-/* Display the treap structure using DBPRINTF */
-void treapDisplay(TREAP *psTreap)
-{
-	if (psTreap->psRoot)
-	{
-		treapDisplayRec(psTreap->psRoot, 0);
-	}
-}
-
-static void *treapGetSmallestRec(TREAP_NODE *psRoot)
-{
-	if (psRoot->psLeft == NULL)
-	{
-		return psRoot->pObj;
-	}
-
-	return treapGetSmallestRec(psRoot->psLeft);
-}
-
-
-/* Return the object with the smallest key in the treap
- * This is useful if the objects in the treap need to be
- * deallocated.  i.e. getSmallest, delete from treap, free memory
- */
-void *treapGetSmallest(TREAP *psTreap)
-{
-	if (psTreap->psRoot == NULL)
-	{
-		return NULL;
-	}
-
-	return treapGetSmallestRec(psTreap->psRoot);
-}
-
-
-

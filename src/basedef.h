@@ -75,7 +75,7 @@ typedef enum _object_type
 	SDWORD              sensorPower;		/**< Active sensor power */ \
 	SDWORD              sensorRange;		/**< Range of sensor */ \
 	SDWORD              ECMMod;			/**< Ability to conceal oneself from sensors */ \
-	UDWORD              armour[NUM_HIT_SIDES][NUM_WEAPON_CLASS]
+	UDWORD              armour[NUM_HIT_SIDES][WC_NUM_WEAPON_CLASSES]
 
 #define NEXTOBJ(pointerType) \
 	pointerType     *psNext                         /**< Pointer to the next object in the list */
@@ -88,9 +88,9 @@ typedef enum _object_type
 	SIMPLE_ELEMENTS(pointerType); \
 	BASE_ELEMENTS2(pointerType)
 
-typedef struct _base_object
+typedef struct BASE_OBJECT
 {
-	BASE_ELEMENTS( struct _base_object );
+	BASE_ELEMENTS( struct BASE_OBJECT );
 } WZ_DECL_MAY_ALIAS BASE_OBJECT;
 
 typedef struct SIMPLE_OBJECT
@@ -98,7 +98,7 @@ typedef struct SIMPLE_OBJECT
 	SIMPLE_ELEMENTS( struct SIMPLE_OBJECT );
 } SIMPLE_OBJECT;
 
-static inline bool isDead(BASE_OBJECT *psObj)
+static inline bool isDead(const BASE_OBJECT* psObj)
 {
 	// See objmem.c for comments on the NOT_CURRENT_LIST hack
 	return (psObj->died > NOT_CURRENT_LIST);
@@ -110,21 +110,21 @@ do \
 { \
 	assert(object != NULL); \
 \
-	assert(object->type == OBJ_DROID \
+	ASSERT(object->type == OBJ_DROID \
 	    || object->type == OBJ_STRUCTURE \
 	    || object->type == OBJ_FEATURE \
 	    || object->type == OBJ_PROJECTILE \
-	    || object->type == OBJ_TARGET \
-	    || !"invalid object type"); \
+	    || object->type == OBJ_TARGET, \
+	       "CHECK_OBJECT: Invalid object type (type num %u)", (unsigned int)(object)->type); \
 \
-	assert(object->type == OBJ_FEATURE \
+	ASSERT(object->type == OBJ_FEATURE \
 	    || object->type == OBJ_TARGET \
-	    || object->player < MAX_PLAYERS \
-	    || !"invalid owning player"); \
+	    || object->player < MAX_PLAYERS, \
+	       "CHECK_OBJECT: Out of bound owning player number (%u)", (unsigned int)(object)->player); \
 \
-	assert(object->direction <= 360.0f \
-	    && object->direction >= 0.0f \
-	    && "out of range direction"); \
+	ASSERT(object->direction <= 360.0f \
+	    && object->direction >= 0.0f, \
+	       "CHECK_OBJECT: out of range direction (%f)", (float)(object)->direction); \
 } while (0)
 
 #endif // __INCLUDED_BASEDEF_H__

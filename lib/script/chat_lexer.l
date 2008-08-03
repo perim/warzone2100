@@ -25,12 +25,11 @@
 
 #include "lib/framework/frame.h"
 
-#include "src/basedef.h"
-#include "src/droiddef.h"
-#include "src/structuredef.h"
-#include "lib/script/script.h"
+// FIXME: #include from src/
 #include "src/scriptfuncs.h"
-#include "lib/script/chat_processing.h"
+
+#include "script.h"
+#include "chat_processing.h"
 
 /* Get the Yacc definitions */
 #include "chat_parser.tab.h"
@@ -38,6 +37,20 @@
 /* Maximum length for any TEXT value */
 #ifndef YYLMAX
 #define YYLMAX	255
+#endif
+
+#if defined(YY_FLEX_SUBMINOR_VERSION) && YY_FLEX_SUBMINOR_VERSION == 33
+extern int chat_get_lineno(void);
+extern FILE *chat_get_in(void);
+extern FILE *chat_get_out(void);
+extern int chat_get_leng(void);
+extern char *chat_get_text(void);
+extern void chat_set_lineno(int line_number);
+extern void chat_set_in(FILE* in_str);
+extern void chat_set_out(FILE* out_str);
+extern int chat_get_debug(void);
+extern void chat_set_debug(int bdebug);
+extern int chat_lex_destroy(void);
 #endif
 
 /* Pointer to the input buffer */

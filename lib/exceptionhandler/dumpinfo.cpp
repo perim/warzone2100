@@ -22,7 +22,9 @@
 #include <ctime>
 #include <string>
 #include <vector>
+#include <deque>
 #include <sstream>
+#include <physfs.h>
 #include "dumpinfo.h"
 
 extern "C"
@@ -39,24 +41,89 @@ extern "C"
 # define PACKAGE_DISTRIBUTOR "UNKNOWN"
 #endif
 
-static char* dbgHeader = NULL;
+static const char endl[] =
+#if defined(WZ_OS_WIN)
+    "\r\n";
+#else
+    "\n";
+#endif
 
-static void dumpstr(const DumpFileHandle file, const char * const str)
+static const std::size_t max_debug_messages = 20;
+
+static char* dbgHeader = NULL;
+static std::deque<std::vector<char> > dbgMessages;
+
+static void dumpstr(const DumpFileHandle file, const char * const str, std::size_t const size)
 {
 #if defined(WZ_OS_WIN)
 	DWORD lNumberOfBytesWritten;
-	WriteFile(file, str, strlen(str), &lNumberOfBytesWritten, NULL);
+	WriteFile(file, str, size, &lNumberOfBytesWritten, NULL);
 #else
-	write(file, str, strlen(str));
+	write(file, str, size);
 #endif
+}
+
+static void dumpstr(const DumpFileHandle file, const char * const str)
+{
+	dumpstr(file, str, strlen(str));
+}
+
+static void dumpEOL(const DumpFileHandle file)
+{
+	dumpstr(file, endl);
+}
+
+static void debug_exceptionhandler_data(void **, const char * const str)
+{
+	ASSERT(str != NULL, "Empty string sent to debug callback");
+
+	// Push this message on the message list
+	const char * last = &str[strlen(str)];
+
+	// Strip finishing newlines
+	while (last != str
+	    && *(last - 1) == '\n')
+	{
+		--last;
+	}
+
+	dbgMessages.push_back(std::vector<char>(str, last));
+
+	// Ensure the message list's maximum size is maintained
+	while (dbgMessages.size() > max_debug_messages)
+	{
+		dbgMessages.pop_front();
+	}
 }
 
 void dbgDumpHeader(DumpFileHandle file)
 {
 	if (dbgHeader)
+	{
 		dumpstr(file, dbgHeader);
+	}
 	else
-		dumpstr(file, "No debug header available (yet)!\n" );
+	{
+		dumpstr(file, "No debug header available (yet)!");
+		dumpEOL(file);
+	}
+}
+
+void dbgDumpLog(DumpFileHandle file)
+{
+	// Write all messages to the given file
+	for (std::deque<std::vector<char> >::const_iterator
+	     msg  = dbgMessages.begin();
+	     msg != dbgMessages.end();
+	     ++msg)
+	{
+		dumpstr(file, "Log message: ");
+		dumpstr(file, &(*msg)[0], msg->size());
+		dumpEOL(file);
+	}
+
+	// Terminate with a separating newline
+	dumpEOL(file);
 }
 
 static std::string getProgramPath(const char* programCommand)
@@ -92,7 +159,7 @@ static std::string getProgramPath(const char* programCommand)
 	}
 	else
 	{
-		debug(LOG_WARNING, "Could not retrieve full path to %s, will not create extended backtrace\n", programCommand);
+		debug(LOG_WARNING, "Could not retrieve full path to %s, will not create extended backtrace", programCommand);
 	}
 
 	return programPath;
@@ -107,41 +174,96 @@ static std::string getSysinfo()
 	std::ostringstream os;
 
 	if (uname(&sysInfo) != 0)
-		os << "System information may be invalid!" << std::endl
-		   << std::endl;
+		os << "System information may be invalid!" << endl
+		   << endl;
 
-	os << "Operating system: " << sysInfo.sysname  << std::endl
-	   << "Node name: "        << sysInfo.nodename << std::endl
-	   << "Release: "          << sysInfo.release  << std::endl
-	   << "Version: "          << sysInfo.version  << std::endl
-	   << "Machine: "          << sysInfo.machine  << std::endl;
+	os << "Operating system: " << sysInfo.sysname  << endl
+	   << "Node name: "        << sysInfo.nodename << endl
+	   << "Release: "          << sysInfo.release  << endl
+	   << "Version: "          << sysInfo.version  << endl
+	   << "Machine: "          << sysInfo.machine  << endl;
 
 	return os.str();
 #endif
 }
 
-static void createHeader(const char* programCommand)
+static std::string getCurTime()
 {
-	time_t currentTime = time(NULL);
+	using std::string;
+
+	// Get the current time
+	const time_t currentTime = time(NULL);
+
+	// Convert it to a string
+	string time(ctime(&currentTime));
+
+	// Mark finishing newlines as NUL characters
+	for (string::reverse_iterator
+	     newline  = time.rbegin();
+	     newline != time.rend()
+	  && *newline == '\n';
+	     ++newline)
+	{
+		*newline = '\0';
+	}
+
+	// Remove everything after, and including, the first NUL character
+	string::size_type newline = time.find_first_of('\0');
+	if (newline != string::npos)
+		time.erase(newline);
+
+	return time;
+}
+
+static std::ostream& writePhysFSVersion(std::ostream& os, PHYSFS_Version const& ver)
+{
+	return os << static_cast<unsigned int>(ver.major)
+	   << "." << static_cast<unsigned int>(ver.minor)
+	   << "." << static_cast<unsigned int>(ver.patch);
+}
+
+static void createHeader(int const argc, char* argv[])
+{
 	std::ostringstream os;
 
-	os << "Program: "     << getProgramPath(programCommand) << "(" PACKAGE ")" << std::endl
-	   << "Version: "     << version_getFormattedVersionString() << std::endl
-	   << "Distributor: " PACKAGE_DISTRIBUTOR << std::endl
-	   << "Compiled on: " __DATE__ " " __TIME__ << std::endl
+	os << "Program: "     << getProgramPath(argv[0]) << "(" PACKAGE ")" << endl
+	   << "Command line: ";
+
+	/* Dump all command line arguments surrounded by double quotes and
+	 * separated by spaces.
+	 */
+	for (int i = 0; i < argc; ++i)
+		os << "\"" << argv[i] << "\" ";
+
+	os << endl;
+
+	os << "Version: "     << version_getFormattedVersionString() << endl
+	   << "Distributor: " PACKAGE_DISTRIBUTOR << endl
+	   << "Compiled on: " __DATE__ " " __TIME__ << endl
 	   << "Compiled by: "
 #if defined(WZ_CC_GNU) && !defined(WZ_CC_INTEL)
-	       << "GCC " __VERSION__ << std::endl
+	       << "GCC " __VERSION__ << endl
 #elif defined(WZ_CC_INTEL)
 	// Intel includes the compiler name within the version string
-	       << __VERSION__ << std::endl
+	       << __VERSION__ << endl
 #else
-	       << "UNKNOWN" << std::endl
+	       << "UNKNOWN" << endl
 #endif
-	   << "Executed on: " << ctime(&currentTime) << std::endl
-	   << getSysinfo() << std::endl
-	   << "Pointers: " << (sizeof(void*) * CHAR_BIT) << "bit" << std::endl
-	   << std::endl;
+	   << "Executed on: " << getCurTime() << endl
+	   << getSysinfo() << endl
+	   << "Pointers: " << (sizeof(void*) * CHAR_BIT) << "bit" << endl
+	   << endl;
+
+	PHYSFS_Version physfs_version;
+
+	// Determine PhysicsFS compile time version
+	PHYSFS_VERSION(&physfs_version)
+	writePhysFSVersion(os << "Compiled against PhysicsFS version: ", physfs_version) << endl;
+
+	// Determine PhysicsFS runtime version
+	PHYSFS_getLinkedVersion(&physfs_version);
+	writePhysFSVersion(os << "Running with PhysicsFS version: ", physfs_version) << endl
+	   << endl;
 
 	dbgHeader = strdup(os.str().c_str());
 	if (dbgHeader == NULL)
@@ -152,7 +274,8 @@ static void createHeader(const char* programCommand)
 	}
 }
 
-void dbgDumpInit(const char* programCommand)
+void dbgDumpInit(int argc, char* argv[])
 {
-	createHeader(programCommand);
+	debug_register_callback(&debug_exceptionhandler_data, NULL, NULL, NULL );
+	createHeader(argc, argv);
 }

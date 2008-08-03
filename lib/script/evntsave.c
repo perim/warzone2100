@@ -217,7 +217,7 @@ static BOOL eventSaveContext(char *pBuffer, UDWORD *pSize)
 }
 
 // load the context information for the script system
-static BOOL eventLoadContext(SDWORD version, char *pBuffer, UDWORD *pSize, BOOL bHashed)
+static BOOL eventLoadContext(const SDWORD version, char *pBuffer, UDWORD *pSize, BOOL bHashed)
 {
 	UDWORD				size, valSize,stringLen;
 	SDWORD				numVars, i, numContext, context;
@@ -260,8 +260,8 @@ static BOOL eventLoadContext(SDWORD version, char *pBuffer, UDWORD *pSize, BOOL 
         
 		if (numVars != *((SWORD*)pPos))
 		{
-			debug( LOG_ERROR, "eventLoadContext: number of context variables does not match the script code" );
-			abort();
+			ASSERT(false, "Context %d of %d: Number of context variables (%d) does not match the script code (%d)", 
+			       context, numContext, numVars, *((SWORD*)pPos));
 			return false;
 		}
 		pPos += sizeof(SWORD);
@@ -506,14 +506,12 @@ static BOOL eventSaveTriggerList(ACTIVE_TRIGGER *psList, char *pBuffer, UDWORD *
 
 
 // load a list of triggers
-static BOOL eventLoadTriggerList(SDWORD version, char *pBuffer, UDWORD *pSize)
+static BOOL eventLoadTriggerList(const SDWORD version, char *pBuffer, UDWORD *pSize)
 {
 	UDWORD				size, event, offset, time;
 	char				*pPos;
 	SDWORD				numTriggers, context, type, trigger, i;
 	SCRIPT_CONTEXT		*psContext;
-
-	version = version;
 
 	size = 0;
 	pPos = pBuffer;

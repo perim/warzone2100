@@ -27,14 +27,12 @@
 #include <string.h>
 
 #include "lib/framework/frame.h"
-#include "lib/framework/strres.h"
 #include "lib/script/script.h"
 #include "objects.h"
 #include "basedef.h"
 #include "scripttabs.h"
 #include "scriptvals.h"
 #include "lib/gamelib/gtime.h"
-#include "text.h"
 #include "group.h"
 
 // Keep all the loaded script contexts
@@ -234,24 +232,4 @@ BOOL scrvGetContext(char *pID, SCRIPT_CONTEXT **ppsContext)
 	debug( LOG_ERROR, "scrvGetContext: couldn't find context for id: %s", pID );
 	abort();
 	return false;
-}
-
-
-// Find a string from it's (string)id
-BOOL scrvGetString(const char *pStringID, char **ppString)
-{
-	UDWORD id;
-
-	//get the ID for the string
-	if (!strresGetIDNum(psStringRes, pStringID, &id))
-	{
-		debug( LOG_ERROR, "Cannot find the string id %s ", pStringID );
-		abort();
-		return false;
-	}
-
-	//get the string from the id
-	*ppString = strresGetString(psStringRes, id);
-
-	return true;
 }

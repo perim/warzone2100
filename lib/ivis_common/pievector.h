@@ -391,6 +391,41 @@ static inline WZ_DECL_CONST Vector3f Vector3f_Normalise(const Vector3f v)
 	}
 }
 
+/*!
+ * Compute the forward vector, a body's local Z axis, for a set of Euler angles
+ * (pitch, yaw and roll).
+ * \param v Vector containing the pitch, yaw and roll in its x, y and z members
+ *          respectively. These rotations need to be expressed in radians.
+ * \return Forward vector.
+ */
+static inline WZ_DECL_CONST Vector3f Vector3f_EulerToForwardVector(const Vector3f v)
+{
+	Vector3f dest = {
+		cosf(v.x) * sinf(v.y),
+		-sinf(v.x),
+		cosf(v.x) * cosf(v.y)
+	};
+
+	return dest;
+}
+
+/*!
+ * Compute the up vector, a body's local Y axis, for a set of Euler angles
+ * (pitch, yaw and roll).
+ * \param v Vector containing the pitch, yaw and roll in its x, y and z members
+ *          respectively. These rotations need to be expressed in radians.
+ * \return Up vector.
+ */
+static inline WZ_DECL_CONST Vector3f Vector3f_EulerToUpVector(const Vector3f v)
+{
+	Vector3f dest = {
+		sinf(v.x) * sinf(v.y) * cosf(v.z) - sinf(v.z) * cosf(v.z),
+		cosf(v.x) * cosf(v.z),
+		sinf(v.x) * cosf(v.y) * cosf(v.z) + sinf(v.y) * sinf(v.z)
+	};
+
+	return dest;
+}
 
 /*!
  * Set the vector field by field, same as v = (Vector3i){x, y, z};
@@ -413,6 +448,42 @@ static inline WZ_DECL_CONST Vector3i Vector3i_New(const int x, const int y, cons
 static inline WZ_DECL_CONST Vector3f Vector3i_To3f(const Vector3i v)
 {
 	Vector3f dest = { (float)v.x, (float)v.y, (float)v.z };
+	return dest;
+}
+
+
+/*!
+ * Convert a vector of degree angles into radians.
+ * \param v Vector to convert
+ * \return Radian vector
+ */
+static inline WZ_DECL_CONST Vector3f Vector3f_ToRadians(const Vector3f v)
+{
+	Vector3f dest = {
+		v.x * M_PI / 180.f,
+		v.y * M_PI / 180.f,
+		v.z * M_PI / 180.f
+	};
+	return dest;
+}
+
+
+/*!
+ * Convert a vector of fixed-point, wannabe-floats (used on the PSX, and
+ * unfortunately on the PC as well), to real floats expressed in real degrees.
+ * \param v Rotation vector in "wannabe-float" degrees
+ * \return Float vector in real degrees
+ */
+static inline WZ_DECL_CONST Vector3f Vector3iPSX_To3fDegree(const Vector3i v)
+{
+	// Required to multiply by this to undo the PSX fixed point fract stuff
+	static const float make_float = 22.5 / 4096.f;
+
+	Vector3f dest = {
+		(float)v.x * make_float,
+		(float)v.y * make_float,
+		(float)v.z * make_float
+	};
 	return dest;
 }
 

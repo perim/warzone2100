@@ -2039,7 +2039,7 @@ void	kf_SetDroidMoveHold( void )
 // --------------------------------------------------------------------------
 void	kf_SetDroidMovePursue( void )
 {
-	kfsf_SetSelectedDroidsState(DSO_HALTTYPE,DSS_HALT_PERSUE);	// ASK?
+	kfsf_SetSelectedDroidsState(DSO_HALTTYPE,DSS_HALT_PURSUE);	// ASK?
 }
 
 // --------------------------------------------------------------------------
@@ -2527,7 +2527,7 @@ BOOL	processConsoleCommands( char *pName )
 //Add a beacon (blip)
 void	kf_AddHelpBlip( void )
 {
-	UDWORD 	worldX,worldY;
+	int 	worldX, worldY;
 	UDWORD	i;
 	char	tempStr[255];
 	SDWORD	x,y;

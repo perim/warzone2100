@@ -543,7 +543,7 @@ BOOL actionTargetTurret(BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, UWORD *p
 	tRotation %= 360;
 
 	if ((psAttacker->type == OBJ_DROID) &&
-		vtolDroid((DROID *)psAttacker))
+		isVtolDroid((DROID *)psAttacker))
 	{
 		// limit the rotation for vtols
 		if ((tRotation <= 180) && (tRotation > VTOL_TURRET_LLIMIT))
@@ -662,7 +662,7 @@ BOOL actionVisibleTarget(DROID *psDroid, BASE_OBJECT *psTarget, int weapon_slot)
 		}
 	}
 
-	if (vtolDroid(psDroid))
+	if (isVtolDroid(psDroid))
 	{
 		if ( visibleObject((BASE_OBJECT*)psDroid, psTarget, false) )
 		{
@@ -1025,7 +1025,7 @@ void actionUpdateDroid(DROID *psDroid)
 	/* check whether turret inverted for actionTargetTurret */
 	//if ( psDroid->droidType != DROID_CYBORG &&
 	if ( !cyborgDroid(psDroid) &&
-		psPropStats->propulsionType == LIFT   )
+		psPropStats->propulsionType == PROPULSION_TYPE_LIFT   )
 	{
 		bInvert = true;
 	}
@@ -1052,7 +1052,7 @@ void actionUpdateDroid(DROID *psDroid)
 					{
 						psDroid->action = DACTION_NONE;
 						//if Vtol - return to rearm pad
-						if (vtolDroid(psDroid))
+						if (isVtolDroid(psDroid))
 						{
 							moveToRearm(psDroid);
 						}
@@ -1073,7 +1073,7 @@ void actionUpdateDroid(DROID *psDroid)
 			{
 				psDroid->action = DACTION_NONE;
 				//if Vtol - return to rearm pad
-				if (vtolDroid(psDroid))
+				if (isVtolDroid(psDroid))
 				{
 					moveToRearm(psDroid);
 				}
@@ -1220,7 +1220,7 @@ void actionUpdateDroid(DROID *psDroid)
 
 					//Watermelon:I moved psWeapStats flag update there
 					psWeapStats = asWeaponStats + psDroid->asWeaps[i].nStat;
-					if (!vtolDroid(psDroid) &&
+					if (!isVtolDroid(psDroid) &&
 						psDroid->asWeaps[i].nStat > 0 &&
 						psWeapStats->rotate &&
 						psWeapStats->fireOnMove != FOM_NO &&
@@ -1312,7 +1312,7 @@ void actionUpdateDroid(DROID *psDroid)
 						continue;
 					}
 					//if Vtol - return to rearm pad
-					/*if (vtolDroid(psDroid))
+					/*if (isVtolDroid(psDroid))
 					{
 						moveToRearm(psDroid);
 					}*/
@@ -1390,7 +1390,7 @@ void actionUpdateDroid(DROID *psDroid)
 
 		//check its a VTOL unit since adding Transporter's into multiPlayer
 		/* check vtol attack runs */
-		if (vtolDroid(psDroid))
+		if (isVtolDroid(psDroid))
 		{
 			actionUpdateVtolAttack( psDroid );
 		}
@@ -1488,7 +1488,7 @@ void actionUpdateDroid(DROID *psDroid)
 			   || psDroid->order == DORDER_FIRESUPPORT)
 			  && secondaryGetState(psDroid, DSO_HALTTYPE, &state)
 			  && (state == DSS_HALT_HOLD))
-			 || (!vtolDroid(psDroid)
+			 || (!isVtolDroid(psDroid)
 			  && (psTarget = orderStateObj(psDroid, DORDER_FIRESUPPORT))
 			  && psTarget->type == OBJ_STRUCTURE))
 			{
@@ -1613,7 +1613,7 @@ void actionUpdateDroid(DROID *psDroid)
 		}
 
 		// send vtols back to rearm
-		if (vtolDroid(psDroid) &&
+		if (isVtolDroid(psDroid) &&
 			vtolEmpty(psDroid))
 		{
 			moveToRearm(psDroid);
@@ -1652,7 +1652,7 @@ void actionUpdateDroid(DROID *psDroid)
 						}
 
 						bChaseBloke = false;
-						if (!vtolDroid(psDroid) &&
+						if (!isVtolDroid(psDroid) &&
 							psDroid->psActionTarget[0]->type == OBJ_DROID &&
 							((DROID *)psDroid->psActionTarget[0])->droidType == DROID_PERSON &&
 							psWeapStats->fireOnMove != FOM_NO)
@@ -1669,7 +1669,7 @@ void actionUpdateDroid(DROID *psDroid)
 		//						"moveUpdateUnit: Unit at (0,0)" );
 
 							/* init vtol attack runs count if necessary */
-							if ( psPropStats->propulsionType == LIFT )
+							if ( psPropStats->propulsionType == PROPULSION_TYPE_LIFT )
 							{
 								psDroid->action = DACTION_VTOLATTACK;
 								//actionAddVtolAttackRun( psDroid );
@@ -2123,6 +2123,7 @@ void actionUpdateDroid(DROID *psDroid)
 		if (actionReachedBuildPos(psDroid, psDroid->psActionTarget[0]->pos.x,psDroid->psActionTarget[0]->pos.y,
 							(BASE_STATS *)((STRUCTURE *)psDroid->psActionTarget[0])->pStructureType))
 		{
+			objTrace(psDroid->id, "Arrived at repair point - waiting for our turn");
 			moveStopDroid(psDroid);
 			psDroid->action = DACTION_WAITDURINGREPAIR;
 		}
@@ -2242,7 +2243,7 @@ void actionUpdateDroid(DROID *psDroid)
 			"DACTION_FIRESUPPORT: incorrect target type" );
 			//don't move VTOL's
 			// also don't move closer to sensor towers
-			if (!vtolDroid(psDroid) &&
+			if (!isVtolDroid(psDroid) &&
 				(psDroid->psTarget->type != OBJ_STRUCTURE))
 			{
 				//move droids to within short range of the sensor now!!!!
@@ -2416,12 +2417,12 @@ void actionUpdateDroid(DROID *psDroid)
 		if (visibleObject((BASE_OBJECT *)psDroid, psDroid->psActionTarget[0], false))
 		{
 			// got close to the rearm pad - now find a clear one
-			debug( LOG_NEVER, "Unit %d: seen rearm pad\n", psDroid->id );
+			objTrace(psDroid->id, "Seen rearm pad - searching for available one");
 			psStruct = findNearestReArmPad(psDroid, (STRUCTURE *)psDroid->psActionTarget[0], true);
 			if (psStruct != NULL)
 			{
 				// found a clear landing pad - go for it
-				debug( LOG_NEVER, "Found clear rearm pad\n" );
+				objTrace(psDroid->id, "Found clear rearm pad");
 				setDroidActionTarget(psDroid, (BASE_OBJECT *)psStruct, 0);
 			}
 
@@ -2436,7 +2437,7 @@ void actionUpdateDroid(DROID *psDroid)
 			if (!actionVTOLLandingPos(psDroid, &droidX, &droidY))
 			{
 				// totally bunged up - give up
-				debug( LOG_NEVER, "DACTION_MOVETOREARM: couldn't find a clear tile near rearm pad - RTB\n" );
+				objTrace(psDroid->id, "Couldn't find a clear tile near rearm pad - returning to base");
 				orderDroid(psDroid, DORDER_RTB);
 				break;
 			}
@@ -2569,7 +2570,7 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 		   || psDroid->order == DORDER_FIRESUPPORT)
 		  && secondaryGetState(psDroid, DSO_HALTTYPE, &state)
 		  && (state == DSS_HALT_HOLD))
-		   || (!vtolDroid(psDroid)
+		   || (!isVtolDroid(psDroid)
 		    && (psTarget = orderStateObj(psDroid, DORDER_FIRESUPPORT))
 		    && psTarget->type == OBJ_STRUCTURE))
 		{
@@ -2719,7 +2720,7 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 		break;
 	case DACTION_FIRESUPPORT:
 		psDroid->action = DACTION_FIRESUPPORT;
-		if(!vtolDroid(psDroid) &&
+		if(!isVtolDroid(psDroid) &&
 			!(secondaryGetState(psDroid, DSO_HALTTYPE, &state) && (state == DSS_HALT_HOLD)) &&	// check hold
 			(psDroid->psTarget->type != OBJ_STRUCTURE))
 		{
@@ -2870,7 +2871,7 @@ void moveToRearm(DROID *psDroid)
 
 	CHECK_DROID(psDroid);
 
-	if (!vtolDroid(psDroid))
+	if (!isVtolDroid(psDroid))
 	{
 		return;
 	}

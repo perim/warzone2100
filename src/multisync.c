@@ -245,6 +245,11 @@ static BOOL sendDroidCheck(void)
 			{
 				ppD[count++] = pD;
 			}
+			// All droids are synced! (We're done.)
+			else
+			{
+				break;
+			}
 		}
 
 		// Send the number of droids to expect
@@ -424,7 +429,7 @@ BOOL recvDroidCheck()
 			}
 
 			// Update the droid
-			if (onscreen || vtolDroid(pD))
+			if (onscreen || isVtolDroid(pD))
 			{
 				onscreenUpdate(pD, body, x, y, fx, fy, direction, order);
 			}
@@ -445,7 +450,7 @@ BOOL recvDroidCheck()
 			}
 
 			// Update the higher level stuff
-			if (!vtolDroid(pD))
+			if (!isVtolDroid(pD))
 			{
 				highLevelDroidUpdate(pD, x, y, secondaryOrder, order, psTarget, experience);
 			}
@@ -611,7 +616,7 @@ static void offscreenUpdate(DROID *psDroid,
 	// snap droid(if on ground)  to terrain level at x,y.
 	psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
 	ASSERT( psPropStats != NULL, "offscreenUpdate: invalid propulsion stats pointer" );
-	if(	psPropStats->propulsionType != LIFT )		// if not airborne.
+	if(	psPropStats->propulsionType != PROPULSION_TYPE_LIFT )		// if not airborne.
 	{
 		psDroid->pos.z = map_Height(psDroid->pos.x, psDroid->pos.y);
 	}

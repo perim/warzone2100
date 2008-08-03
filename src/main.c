@@ -268,7 +268,7 @@ static void getPlatformUserDir(char * const tmpstr, size_t const size)
 {
 #if defined(WZ_OS_WIN)
 	ASSERT(size >= MAX_PATH, "size (%u) is smaller than the required minimum of MAX_PATH (%u)", size, (size_t)MAX_PATH);
-	if ( SUCCEEDED( SHGetFolderPathA( NULL, CSIDL_LOCAL_APPDATA|CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, tmpstr ) ) )
+	if ( SUCCEEDED( SHGetFolderPathA( NULL, CSIDL_PERSONAL|CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, tmpstr ) ) )
 		strlcat(tmpstr, PHYSFS_getDirSeparator(), size);
 	else
 #elif defined(WZ_OS_MAC)
@@ -836,7 +836,7 @@ static void mainLoop(void)
 
 int main(int argc, char *argv[])
 {
-	setupExceptionHandler(argv[0]);
+	setupExceptionHandler(argc, argv);
 
 	debug_init();
 	atexit( debug_exit );
@@ -904,6 +904,17 @@ int main(int argc, char *argv[])
 	// Find out where to find the data
 	scanDataDirs();
 
+	// Must be run before OpenGL driver is properly initialized due to 
+	// strange conflicts - Per
+	if (selfTest)
+	{
+		memset(enabled_debug, 0, sizeof(*enabled_debug) * LOG_LAST);
+		fprintf(stdout, "Carrying out self-test:\n");
+		playListTest();
+		audioTest();
+		soundTest();
+	}
+
 	// Register the PhysicsFS implementation of the SQLite VFS class with
 	// SQLite's VFS system as the default (non-zero=default, zero=default).
 	sqlite3_register_physfs_vfs(1);
@@ -936,9 +947,6 @@ int main(int argc, char *argv[])
 	/* Runtime unit testing */
 	if (selfTest)
 	{
-		memset(enabled_debug, 0, sizeof(*enabled_debug) * LOG_LAST);
-		fprintf(stdout, "Carrying out self-test:\n");
-		playListTest();
 		NETtest();
 		tagTest();
 		parseTest();

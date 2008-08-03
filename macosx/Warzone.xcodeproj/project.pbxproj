@@ -659,6 +659,10 @@
 		02F5CC900D1496580000A2D0 /* poptparse.c in Sources */ = {isa = PBXBuildFile; fileRef = 02F5CC870D1496580000A2D0 /* poptparse.c */; };
 		02F5CC910D1496580000A2D0 /* system.h in Headers */ = {isa = PBXBuildFile; fileRef = 02F5CC880D1496580000A2D0 /* system.h */; };
 		02F5CCC00D1498A30000A2D0 /* Popt.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02F5CC6D0D1494AA0000A2D0 /* Popt.framework */; };
+		2234C2A00E2BE18200E7704C /* positiondef.h in Copy frameworks */ = {isa = PBXBuildFile; fileRef = 2234C29F0E2BE18200E7704C /* positiondef.h */; };
+		2244463C0E3EB7CB004D0F1F /* message_lexer.l in Sources */ = {isa = PBXBuildFile; fileRef = 224446390E3EB7CB004D0F1F /* message_lexer.l */; };
+		2244463D0E3EB7CB004D0F1F /* message_parser.y in Sources */ = {isa = PBXBuildFile; fileRef = 2244463A0E3EB7CB004D0F1F /* message_parser.y */; };
+		2244463E0E3EB7CB004D0F1F /* messagely.h in Copy frameworks */ = {isa = PBXBuildFile; fileRef = 2244463B0E3EB7CB004D0F1F /* messagely.h */; };
 		9742E5730DF9975E000A5D41 /* lexer_input.c in Sources */ = {isa = PBXBuildFile; fileRef = 9742E5710DF9975E000A5D41 /* lexer_input.c */; };
 		9742E5740DF9975E000A5D41 /* lexer_input.h in Copy frameworks */ = {isa = PBXBuildFile; fileRef = 9742E5720DF9975E000A5D41 /* lexer_input.h */; };
 		9742E5770DF9979C000A5D41 /* parsetest.c in Sources */ = {isa = PBXBuildFile; fileRef = 9742E5750DF9979C000A5D41 /* parsetest.c */; };
@@ -850,6 +854,8 @@
 				02DE76070DC3B84900D48F58 /* GLee.h in Copy frameworks */,
 				9742E5740DF9975E000A5D41 /* lexer_input.h in Copy frameworks */,
 				9742E5780DF9979C000A5D41 /* parsetest.h in Copy frameworks */,
+				2234C2A00E2BE18200E7704C /* positiondef.h in Copy frameworks */,
+				2244463E0E3EB7CB004D0F1F /* messagely.h in Copy frameworks */,
 			);
 			name = "Copy frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1048,7 +1054,6 @@
 		0246A0B90BD3CBD5004D1C70 /* strresly.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = strresly.h; path = ../lib/framework/strresly.h; sourceTree = SOURCE_ROOT; };
 		0246A0BA0BD3CBD5004D1C70 /* treap.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = treap.c; path = ../lib/framework/treap.c; sourceTree = SOURCE_ROOT; };
 		0246A0BB0BD3CBD5004D1C70 /* treap.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = treap.h; path = ../lib/framework/treap.h; sourceTree = SOURCE_ROOT; };
-		0246A0BC0BD3CBD5004D1C70 /* treapint.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = treapint.h; path = ../lib/framework/treapint.h; sourceTree = SOURCE_ROOT; };
 		0246A0BD0BD3CBD5004D1C70 /* trig.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = trig.c; path = ../lib/framework/trig.c; sourceTree = SOURCE_ROOT; };
 		0246A0BE0BD3CBD5004D1C70 /* trig.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = trig.h; path = ../lib/framework/trig.h; sourceTree = SOURCE_ROOT; };
 		0246A0BF0BD3CBD5004D1C70 /* types.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = types.h; path = ../lib/framework/types.h; sourceTree = SOURCE_ROOT; };
@@ -1688,6 +1693,10 @@
 		02F5CC860D1496580000A2D0 /* poptint.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = poptint.h; path = external/popt/poptint.h; sourceTree = SOURCE_ROOT; };
 		02F5CC870D1496580000A2D0 /* poptparse.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = poptparse.c; path = external/popt/poptparse.c; sourceTree = SOURCE_ROOT; };
 		02F5CC880D1496580000A2D0 /* system.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = system.h; path = external/popt/system.h; sourceTree = SOURCE_ROOT; };
+		2234C29F0E2BE18200E7704C /* positiondef.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = positiondef.h; path = ../src/positiondef.h; sourceTree = SOURCE_ROOT; };
+		224446390E3EB7CB004D0F1F /* message_lexer.l */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.lex; name = message_lexer.l; path = ../src/message_lexer.l; sourceTree = SOURCE_ROOT; };
+		2244463A0E3EB7CB004D0F1F /* message_parser.y */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.yacc; name = message_parser.y; path = ../src/message_parser.y; sourceTree = SOURCE_ROOT; };
+		2244463B0E3EB7CB004D0F1F /* messagely.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = messagely.h; path = ../src/messagely.h; sourceTree = SOURCE_ROOT; };
 		9742E5710DF9975E000A5D41 /* lexer_input.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = lexer_input.c; path = ../lib/framework/lexer_input.c; sourceTree = SOURCE_ROOT; };
 		9742E5720DF9975E000A5D41 /* lexer_input.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = lexer_input.h; path = ../lib/framework/lexer_input.h; sourceTree = SOURCE_ROOT; };
 		9742E5750DF9979C000A5D41 /* parsetest.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = parsetest.c; path = ../src/parsetest.c; sourceTree = SOURCE_ROOT; };
@@ -2067,7 +2076,6 @@
 				0246A0B90BD3CBD5004D1C70 /* strresly.h */,
 				0246A0BA0BD3CBD5004D1C70 /* treap.c */,
 				0246A0BB0BD3CBD5004D1C70 /* treap.h */,
-				0246A0BC0BD3CBD5004D1C70 /* treapint.h */,
 				0246A0BD0BD3CBD5004D1C70 /* trig.c */,
 				0246A0BE0BD3CBD5004D1C70 /* trig.h */,
 				0246A0BF0BD3CBD5004D1C70 /* types.h */,
@@ -2257,6 +2265,7 @@
 				0223BBAD0CFE3C380056EF85 /* version.c */,
 				0223BBAE0CFE3C380056EF85 /* version.h */,
 				0246A1980BD3CCDB004D1C70 /* action.c */,
+				2234C29F0E2BE18200E7704C /* positiondef.h */,
 				0246A1990BD3CCDB004D1C70 /* action.h */,
 				0246A19A0BD3CCDB004D1C70 /* advvis.c */,
 				0246A19B0BD3CCDB004D1C70 /* advvis.h */,
@@ -2379,6 +2388,9 @@
 				0246A2210BD3CCDB004D1C70 /* mapdisplay.h */,
 				0246A2220BD3CCDB004D1C70 /* mapgrid.c */,
 				0246A2230BD3CCDB004D1C70 /* mapgrid.h */,
+				224446390E3EB7CB004D0F1F /* message_lexer.l */,
+				2244463A0E3EB7CB004D0F1F /* message_parser.y */,
+				2244463B0E3EB7CB004D0F1F /* messagely.h */,
 				0246A2240BD3CCDB004D1C70 /* mechanics.c */,
 				0246A2250BD3CCDB004D1C70 /* mechanics.h */,
 				0246A2260BD3CCDB004D1C70 /* message.c */,
@@ -3639,7 +3651,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "DIRECTORY=\"popt-1.10.4\"\nOUTDIR=\"popt\"\nFILENAME=\"popt-1.10.4.tar.gz\"\nSOURCE=\"http://rpm.net.in/mirror/rpm-4.4.x/popt-1.10.4.tar.gz\"\nMD5=\"dd22a6873b43d00f75e1c1b7dcfd1ff7\"\n\ncd external\n\nif [ -d \"$OUTDIR\" ]; then\n  echo \"$OUTDIR exists, skipping\"\n  exit 0\nfi\n\nif [ -d \"$DIRECTORY\" ]; then\n  echo \"$DIRECTORY exists, probably from an earlier failed run\" >&2\n  exit 1\nfi\n\nif [ ! -r \"$FILENAME\" ]; then\n  echo \"Fetching $SOURCE\"\n  if ! curl -L -o \"$FILENAME\" \"$SOURCE\"; then\n    echo \"Unable to fetch $SOURCE\" >&2\n    exit 1\n  fi\nfi\n\nHAVEMD5=`md5 \"$FILENAME\" | sed -n -e 's/^MD5 (\\(.*\\)) = \\(.*\\)$/\\2/p'`\n\nif [ -z \"$HAVEMD5\" ]; then\n  echo \"Unable to compute md5 for $FILENAME\" >&2\n  exit 1\nfi\n\nif [ \"$HAVEMD5\" != \"$MD5\" ]; then\n  echo \"Md5 does not match for $FILENAME\" >&2\n  exit 1\nfi\n\nEXTENSION=`echo $FILENAME | sed -e 's/^.*\\.\\([^.]*\\)/\\1/'`\n\nif [ \"$EXTENSION\" = \"gz\" ]; then\n  if ! tar -zxf \"$FILENAME\"; then\n    echo \"Unpacking $FILENAME failed\" >&2\n    exit 1\n  fi\nelif [ \"$EXTENSION\" = \"bz2\" ]; then\n  if ! tar -jxf \"$FILENAME\"; then\n    echo \"Unpacking $FILENAME failed\" >&2\n    exit 1\n  fi\nelse\n  echo \"Unable to unpack $FILENAME\" >&2\n  exit 1\nfi\n\nif [ ! -d \"$DIRECTORY\" ]; then\n  echo \"Can't find $DIRECTORY to rename\" >&2\n  exit 1\nfi\n\nmv \"$DIRECTORY\" \"$OUTDIR\"\n";
+			shellScript = "DIRECTORY=\"popt-1.10.4\"\nOUTDIR=\"popt\"\nFILENAME=\"popt-1.10.4.tar.gz\"\nSOURCE=\"http://rpm5.org/files/popt/popt-1.10.4.tar.gz\"\nMD5=\"dd22a6873b43d00f75e1c1b7dcfd1ff7\"\n\ncd external\n\nif [ -d \"$OUTDIR\" ]; then\n  echo \"$OUTDIR exists, skipping\"\n  exit 0\nfi\n\nif [ -d \"$DIRECTORY\" ]; then\n  echo \"$DIRECTORY exists, probably from an earlier failed run\" >&2\n  exit 1\nfi\n\nif [ ! -r \"$FILENAME\" ]; then\n  echo \"Fetching $SOURCE\"\n  if ! curl -L -o \"$FILENAME\" \"$SOURCE\"; then\n    echo \"Unable to fetch $SOURCE\" >&2\n    exit 1\n  fi\nfi\n\nHAVEMD5=`md5 \"$FILENAME\" | sed -n -e 's/^MD5 (\\(.*\\)) = \\(.*\\)$/\\2/p'`\n\nif [ -z \"$HAVEMD5\" ]; then\n  echo \"Unable to compute md5 for $FILENAME\" >&2\n  exit 1\nfi\n\nif [ \"$HAVEMD5\" != \"$MD5\" ]; then\n  echo \"Md5 does not match for $FILENAME\" >&2\n  exit 1\nfi\n\nEXTENSION=`echo $FILENAME | sed -e 's/^.*\\.\\([^.]*\\)/\\1/'`\n\nif [ \"$EXTENSION\" = \"gz\" ]; then\n  if ! tar -zxf \"$FILENAME\"; then\n    echo \"Unpacking $FILENAME failed\" >&2\n    exit 1\n  fi\nelif [ \"$EXTENSION\" = \"bz2\" ]; then\n  if ! tar -jxf \"$FILENAME\"; then\n    echo \"Unpacking $FILENAME failed\" >&2\n    exit 1\n  fi\nelse\n  echo \"Unable to unpack $FILENAME\" >&2\n  exit 1\nfi\n\nif [ ! -d \"$DIRECTORY\" ]; then\n  echo \"Can't find $DIRECTORY to rename\" >&2\n  exit 1\nfi\n\nmv \"$DIRECTORY\" \"$OUTDIR\"\n";
 		};
 		02FD38210BD3FE9A00776FD3 /* Fetch source */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -4001,6 +4013,8 @@
 				02DE76060DC3B84900D48F58 /* GLee.c in Sources */,
 				9742E5730DF9975E000A5D41 /* lexer_input.c in Sources */,
 				9742E5770DF9979C000A5D41 /* parsetest.c in Sources */,
+				2244463C0E3EB7CB004D0F1F /* message_lexer.l in Sources */,
+				2244463D0E3EB7CB004D0F1F /* message_parser.y in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
