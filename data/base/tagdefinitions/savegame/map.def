@@ -100,7 +100,7 @@
     FF EN 00 -
   03 GR 00 -		# OBJECT STAT GROUP
     01 US 01 -		# Original body points
-    02 US 01 2		# Number of weapon classes
+    02 US 01 -		# Number of weapon classes
     03 GR 00 -		# ARMOUR GROUP (for each defined side)
       01 US 01 0	# Armour vs kinetic weapons
       02 US 02 0	# Armour vs heat weapons

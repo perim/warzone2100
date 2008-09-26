@@ -682,6 +682,7 @@ static void featureSaveTagged(FEATURE *psFeat)
 	/* common groups */
 
 	objectSaveTagged((BASE_OBJECT *)psFeat); /* 0x01 */
+	objectSensorTagged(psFeat->sensorRange, psFeat->sensorPower, 0, psFeat->ECMMod); /* 0x02 */
 	objectStatTagged((BASE_OBJECT *)psFeat, psFeat->psStats->body, 0); /* 0x03 */
 
 	/* FEATURE GROUP */
@@ -1104,7 +1105,7 @@ BOOL mapLoadTagged(char *pFileName)
 	count = tagReadEnter(0x0f);
 	for (i = 0; i < count; i++)
 	{
-		uint16_t pos[3], visible[MAX_PLAYERS], j;
+		uint16_t pos[3], visible[MAX_PLAYERS], j, armourTypes, resistance;
 		BASE_OBJECT obj;
 
 		// Read basic object information
@@ -1140,6 +1141,20 @@ BOOL mapLoadTagged(char *pFileName)
 		obj.sensorPower = tagRead(0x02);
 		obj.ECMMod = tagRead(0x04);
 		tagReadLeave(0x02);
+
+		// Armour group
+		tagReadEnter(0x03);
+		armourTypes = tagRead(0x02);
+		tagReadEnter(0x03);
+		for (j = 0; j < NUM_HIT_SIDES; j++)
+		{
+			obj.armour[j][0] = tagRead(0x01);
+			obj.armour[j][1] = tagRead(0x02);
+			tagReadNext();
+		}
+		tagReadLeave(0x03);
+		resistance = tagRead(0x04);
+		tagReadLeave(0x03);
 
 		tagReadNext();
 	}
