@@ -62,7 +62,8 @@
 #define SUBTITLE_BOX_MAX 480
 
 
-typedef struct {
+typedef struct
+{
 	char pText[MAX_STR_LENGTH];
 	UDWORD x;
 	UDWORD y;
@@ -71,7 +72,8 @@ typedef struct {
 	BOOL	bSubtitle;
 } SEQTEXT;
 
-typedef struct {
+typedef struct
+{
 	const char	*pSeq;						//name of the sequence to play
 	const char	*pAudio;					//name of the wav to play
 	BOOL		bSeqLoop;					//loop this sequence
@@ -115,7 +117,7 @@ static BOOL seq_StartFullScreenVideo(const char* videoName, const char* audioNam
 /***************************************************************************/
 
  /* Renders a video sequence specified by filename to a buffer*/
-BOOL	seq_RenderVideoToBuffer( iSurface *pSurface, char *sequenceName, int time, int seqCommand)
+BOOL	seq_RenderVideoToBuffer(iSurface* pSurface, const char* sequenceName, int time, int seqCommand)
 {
 	if (seqCommand == SEQUENCE_KILL)
 	{
@@ -134,7 +136,7 @@ static void seq_SetVideoPath(void)
 	// now set up the hard disc path /
 	if (!bHardPath)
 	{
-		strcpy(aHardPath, "sequences/");
+		sstrcpy(aHardPath, "sequences/");
 		bHardPath=true;			//yes, always true, as it should be on windows ALSO.
 	}
 }
@@ -143,16 +145,17 @@ static void seq_SetVideoPath(void)
 static BOOL seq_StartFullScreenVideo(const char* videoName, const char* audioName)
 {
 	const char* aAudioName;
-	bHoldSeqForAudio = false;
+	int chars_printed;
 
+	bHoldSeqForAudio = false;
 	//set a valid video path if there is one
 	if(!bCDPath && !bHardPath)
 	{
 		seq_SetVideoPath();
 	}
 
-	ASSERT( (strlen(videoName) + strlen(aHardPath))<MAX_STR_LENGTH,"sequence path+name greater than max string" );
-	snprintf(aVideoName, sizeof(aVideoName), "%s%s", aHardPath, videoName);
+	chars_printed = ssprintf(aVideoName, "%s%s", aHardPath, videoName);
+	ASSERT(chars_printed < sizeof(aVideoName), "sequence path + name greater than max string");
 
 	//set audio path
 	if (audioName != NULL)
@@ -212,7 +215,7 @@ BOOL seq_UpdateFullScreenVideo(int *pbClear)
 	realFrame = (SDL_GetTicks()-time_started)/40; // standard frame is 40 msec
 	for(i=0;i<MAX_TEXT_OVERLAYS;i++)
 	{
-		if (aSeqList[currentPlaySeq].aText[i].pText[0] != 0)
+		if (aSeqList[currentPlaySeq].aText[i].pText[0] != '\0')
 		{
 			if (aSeqList[currentPlaySeq].aText[i].bSubtitle == true)
 			{
@@ -278,7 +281,7 @@ BOOL seq_UpdateFullScreenVideo(int *pbClear)
 	//print any text over the video
 	for(i=0;i<MAX_TEXT_OVERLAYS;i++)
 	{
-		if (aSeqList[currentPlaySeq].aText[i].pText[0] != 0)
+		if (aSeqList[currentPlaySeq].aText[i].pText[0] != '\0')
 		{
 			if ((realFrame >= aSeqList[currentPlaySeq].aText[i].startFrame) && (realFrame <= aSeqList[currentPlaySeq].aText[i].endFrame))
 			{
@@ -356,7 +359,7 @@ BOOL seq_StopFullScreenVideo(void)
 #define MIN_JUSTIFICATION 40
 
 // add a string at x,y or add string below last line if x and y are 0
-BOOL seq_AddTextForVideo(char* pText, SDWORD xOffset, SDWORD yOffset, SDWORD startFrame, SDWORD endFrame, SDWORD bJustify)
+BOOL seq_AddTextForVideo(const char* pText, SDWORD xOffset, SDWORD yOffset, SDWORD startFrame, SDWORD endFrame, SDWORD bJustify)
 {
 	SDWORD sourceLength, currentLength;
 	char* currentText;
@@ -482,7 +485,7 @@ static BOOL seq_AddTextFromFile(const char *pTextName, BOOL bJustify)
 	SDWORD xOffset, yOffset, startFrame, endFrame;
 	const char *seps = "\n";
 
-	snprintf(aTextName, sizeof(aTextName), "sequenceaudio/%s", pTextName);
+	ssprintf(aTextName, "sequenceaudio/%s", pTextName);
 
 	if (loadFileToBufferNoError(aTextName, fileLoadBuffer, FILE_LOAD_BUFFER_SIZE, &fileSize) == false)  //Did I mention this is lame? -Q
 	{
@@ -561,9 +564,9 @@ void seq_AddSeqToList(const char *pSeqName, const char *pAudioName, const char *
 		//check for a subtitle file
 		strLen = strlen(pSeqName);
 		ASSERT( strLen < MAX_STR_LENGTH,"seq_AddSeqToList: sequence name error" );
-		strlcpy(aSubtitleName, pSeqName, sizeof(aSubtitleName));
+		sstrcpy(aSubtitleName, pSeqName);
 		aSubtitleName[strLen - 4] = 0;
-		strlcat(aSubtitleName, ".txt", sizeof(aSubtitleName));
+		sstrcat(aSubtitleName, ".txt");
 		seq_AddTextFromFile(aSubtitleName, true);//SEQ_TEXT_JUSTIFY);//subtitles centre justified
 	}
 }

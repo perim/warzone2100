@@ -31,8 +31,8 @@
 
 #include <physfs.h>
 
-#ifdef __APPLE__
-#include <opengl/glu.h>
+#if defined(WZ_OS_MAC)
+#include <OpenGL/glu.h>
 #else
 #include <GL/glu.h>
 #endif
@@ -96,7 +96,7 @@ static int newPage(const char *name, int level, int width, int height, int count
 	ASSERT(_TEX_INDEX > texPage, "newPage: Index too low (%d > %d)", _TEX_INDEX, texPage);
 	ASSERT(_TEX_INDEX < iV_TEX_MAX, "Too many texture pages used");
 
-	strlcpy(_TEX_PAGE[texPage].name, name, sizeof(_TEX_PAGE[texPage].name));
+	sstrcpy(_TEX_PAGE[texPage].name, name);
 
 	pie_SetTexturePage(texPage);
 

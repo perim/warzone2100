@@ -48,12 +48,9 @@
 // accuracy for the height gradient
 #define GRAD_MUL	10000
 
-// which object is being considered by the callback
-static SDWORD			currObj;
-
 // rate to change visibility level
-const static float VIS_LEVEL_INC = 255 * 2;
-const static float VIS_LEVEL_DEC = 50;
+static const float VIS_LEVEL_INC = 255 * 2;
+static const float VIS_LEVEL_DEC = 50;
 
 // fractional accumulator of how much to change visibility this frame
 static float			visLevelIncAcc, visLevelDecAcc;
@@ -64,17 +61,28 @@ static SDWORD			visLevelInc, visLevelDec;
 // alexl's sensor range.
 BOOL bDisplaySensorRange;
 
-/* Variables for the visibility callback */
+
+typedef struct {
+	bool rayStart; // Whether this is the first point on the ray
+	const bool wallsBlock; // Whether walls block line of sight
+	const int targetDistSq; // The distance to the ray target, squared
+	const int startHeight; // The height at the view point
+	const Vector2i final; // The final tile of the ray cast
+	int lastHeight, lastDist; // The last height and distance
+	int currGrad; // The current obscuring gradient
+	int numWalls; // Whether the LOS has hit a wall
+	Vector2i wall; // The position of a wall if it is on the LOS
+} VisibleObjectHelp_t;
+
+
+int *gNumWalls = NULL;
+Vector2i * gWall = NULL;
+
+
+/* Variables for the visibility callback / visTilesUpdate */
 static SDWORD		rayPlayer;				// The player the ray is being cast for
 static SDWORD		startH;					// The height at the view point
 static SDWORD		currG;					// The current obscuring gradient
-static SDWORD		lastH, lastD;			// The last height and distance
-static BOOL			rayStart;				// Whether this is the first point on the ray
-static SDWORD		tarDist;				// The distance to the ray target
-static BOOL			blockingWall;			// Whether walls block line of sight
-static SDWORD		finalX,finalY;			// The final tile of the ray cast
-static SDWORD		numWalls;				// Whether the LOS has hit a wall
-static SDWORD		wallX,wallY;			// the position of a wall if it is on the LOS
 
 // holds information about map tiles visible by droids
 static bool	scrTileVisible[MAX_PLAYERS][UBYTE_MAX][UBYTE_MAX] = {{{false}}};
@@ -104,44 +112,34 @@ void visUpdateLevel(void)
 	visLevelDecAcc -= visLevelDec;
 }
 
-static SDWORD visObjHeight(const BASE_OBJECT * const psObject)
+static int visObjHeight(const BASE_OBJECT * psObject)
 {
-	SDWORD	height;
-
 	switch (psObject->type)
 	{
-	case OBJ_DROID:
-		height = 80;
-//		height = psObject->sDisplay.imd->pos.max.y;
-		break;
-	case OBJ_STRUCTURE:
-		height = psObject->sDisplay.imd->max.y;
-		break;
-	case OBJ_FEATURE:
-		height = psObject->sDisplay.imd->max.y;
-		break;
-	default:
-		ASSERT( false,"visObjHeight: unknown object type" );
-		height = 0;
-		break;
+		case OBJ_DROID:
+	//		return psObject->sDisplay.imd->pos.max.y;
+			return 80;
+		case OBJ_STRUCTURE:
+		case OBJ_FEATURE:
+			return psObject->sDisplay.imd->max.y;
+		default:
+			ASSERT( false,"visObjHeight: unknown object type" );
+			return 0;
 	}
-
-	return height;
 }
 
 /* The terrain revealing ray callback */
-BOOL rayTerrainCallback(SDWORD x, SDWORD y, SDWORD dist, PROPULSION_TYPE propulsion)
+bool rayTerrainCallback(Vector3i pos, int distSq, void * data)
 {
-	SDWORD		newH, newG;		// The new gradient
-	MAPTILE		*psTile;
+	int dist = sqrtf(distSq);
+	int newH, newG; // The new gradient
+	MAPTILE *psTile;
 
-	ASSERT(x >= 0
-	    && x < world_coord(mapWidth)
-	    && y >= 0
-	    && y < world_coord(mapHeight),
+	ASSERT(pos.x >= 0 && pos.x < world_coord(mapWidth)
+		&& pos.y >= 0 && pos.y < world_coord(mapHeight),
 			"rayTerrainCallback: coords off map" );
 
-	psTile = mapTile(map_coord(x), map_coord(y));
+	psTile = mapTile(map_coord(pos.x), map_coord(pos.y));
 
 	/* Not true visibility - done on sensor range */
 
@@ -152,7 +150,7 @@ BOOL rayTerrainCallback(SDWORD x, SDWORD y, SDWORD dist, PROPULSION_TYPE propuls
 	}
 
 	newH = psTile->height * ELEVATION_SCALE;
-	newG = (newH - startH) * GRAD_MUL / (SDWORD)dist;
+	newG = (newH - startH) * GRAD_MUL / dist;
 	if (newG >= currG)
 	{
 		currG = newG;
@@ -173,7 +171,7 @@ BOOL rayTerrainCallback(SDWORD x, SDWORD y, SDWORD dist, PROPULSION_TYPE propuls
 			// can see opponent moving
 			if(getRevealStatus())
 			{
-				avInformOfChange(map_coord(x), map_coord(y));		//reveal map
+				avInformOfChange(map_coord(pos.x), map_coord(pos.y));		//reveal map
 			}
 			psTile->activeSensor = true;
 		}
@@ -183,69 +181,53 @@ BOOL rayTerrainCallback(SDWORD x, SDWORD y, SDWORD dist, PROPULSION_TYPE propuls
 }
 
 /* The los ray callback */
-static BOOL rayLOSCallback(SDWORD x, SDWORD y, SDWORD dist, PROPULSION_TYPE propulsion)
+static bool rayLOSCallback(Vector3i pos, int distSq, void *data)
 {
-	SDWORD		newG;		// The new gradient
-	SDWORD		distSq;
-	SDWORD		tileX,tileY;
-	MAPTILE		*psTile;
+	VisibleObjectHelp_t * help = data;
+	int dist = sqrtf(distSq);
 
-	ASSERT(x >= 0
-	    && x < world_coord(mapWidth)
-	    && y >= 0
-	    && y < world_coord(mapHeight),
+	ASSERT(pos.x >= 0 && pos.x < world_coord(mapWidth)
+		&& pos.y >= 0 && pos.y < world_coord(mapHeight),
 			"rayLOSCallback: coords off map" );
 
-	distSq = dist*dist;
-
-	if (rayStart)
+	if (help->rayStart)
 	{
-		rayStart = false;
+		help->rayStart = false;
 	}
 	else
 	{
 		// Calculate the current LOS gradient
-		newG = (lastH - startH) * GRAD_MUL / lastD;
-		if (newG >= currG)
+		int newGrad = (help->lastHeight - help->startHeight) * GRAD_MUL / help->lastDist;
+		if (newGrad >= help->currGrad)
 		{
-			currG = newG;
+			help->currGrad = newGrad;
 		}
 	}
+
+	help->lastDist = dist;
+	help->lastHeight = map_Height(pos.x, pos.y);
 
 	// See if the ray has reached the target
-	if (distSq >= tarDist)
+	if (distSq >= help->targetDistSq)
 	{
-		lastD = dist;
 		return false;
 	}
-	else
+
+	if (help->wallsBlock)
 	{
 		// Store the height at this tile for next time round
-		tileX = map_coord(x);
-		tileY = map_coord(y);
+		Vector2i tile = { map_coord(pos.x), map_coord(pos.y) };
 
-		if (blockingWall && !((tileX == finalX) && (tileY == finalY)))
+		if (!Vector2i_Compare(tile, help->final))
 		{
-			psTile = mapTile(tileX, tileY);
+			MAPTILE *psTile = mapTile(tile.x, tile.y);
 			if (TileHasWall(psTile) && !TileHasSmallStructure(psTile))
 			{
-				lastH = 2*UBYTE_MAX * ELEVATION_SCALE;
-	//			currG = UBYTE_MAX * ELEVATION_SCALE * GRAD_MUL / lastD;
-				numWalls += 1;
-				wallX = x;
-				wallY = y;
-	//			return false;
-			}
-			else
-			{
-				lastH = map_Height((UDWORD)x, (UDWORD)y);
+				help->lastHeight = 2*UBYTE_MAX * ELEVATION_SCALE;
+				help->wall = Vector2i_New(pos.x, pos.y);
+				help->numWalls++;
 			}
 		}
-		else
-		{
-			lastH = map_Height((UDWORD)x, (UDWORD)y);
-		}
-		lastD = dist;
 	}
 
 	return true;
@@ -264,22 +246,25 @@ BOOL visTilesPending(BASE_OBJECT *psObj)
 /* Check which tiles can be seen by an object */
 void visTilesUpdate(BASE_OBJECT *psObj, RAY_CALLBACK callback)
 {
-	SDWORD	range = objSensorRange(psObj);
-	SDWORD	ray;
+	Vector3i pos = { psObj->pos.x, psObj->pos.y, 0 };
+	int range = objSensorRange(psObj);
+	int ray;
 
 	ASSERT(psObj->type != OBJ_FEATURE, "visTilesUpdate: visibility updates are not for features!");
 
 	rayPlayer = psObj->player;
 
-	// Do the whole circle.
-	for(ray = 0; ray < NUM_RAYS; ray += NUM_RAYS / 80)
+	// Do the whole circle in 80 steps
+	for (ray = 0; ray < NUM_RAYS; ray += NUM_RAYS / 80)
 	{
+		Vector3i dir = rayAngleToVector3i(ray);
+
 		// initialise the callback variables
 		startH = psObj->pos.z + visObjHeight(psObj);
 		currG = -UBYTE_MAX * GRAD_MUL;
 
 		// Cast the rays from the viewer
-		rayCast(psObj->pos.x, psObj->pos.y,ray, range, INVALID_PROP_TYPE, callback);
+		rayCast(pos, dir, range, callback, NULL);
 	}
 }
 
@@ -289,74 +274,79 @@ void visTilesUpdate(BASE_OBJECT *psObj, RAY_CALLBACK callback)
  * psTarget can be any type of BASE_OBJECT (e.g. a tree).
  * struckBlock controls whether structures block LOS
  */
-BOOL visibleObject(const BASE_OBJECT* psViewer, const BASE_OBJECT* psTarget)
+bool visibleObject(const BASE_OBJECT* psViewer, const BASE_OBJECT* psTarget, bool wallsBlock)
 {
-	SDWORD		x,y, ray;
-	SDWORD		xdiff,ydiff, rangeSquared;
-	SDWORD		range = objSensorRange(psViewer);
-	SDWORD		tarG, top;
+	Vector3i pos, dest, diff;
+	int range, distSq;
 
 	ASSERT(psViewer != NULL, "Invalid viewer pointer!");
 	ASSERT(psTarget != NULL, "Invalid viewed pointer!");
+
 	if (!psViewer || !psTarget)
 	{
 		return false;
 	}
 
+	// FIXME HACK Needed since we got those ugly Vector3uw floating around in BASE_OBJECT...
+	pos = Vector3uw_To3i(psViewer->pos);
+	dest = Vector3uw_To3i(psTarget->pos);
+	diff = Vector3i_Sub(dest, pos);
+	range = objSensorRange(psViewer);
+
 	/* Get the sensor Range and power */
 	switch (psViewer->type)
 	{
-	case OBJ_DROID:
-	{
-		const DROID * const psDroid = (const DROID *)psViewer;
-
-		if (psDroid->droidType == DROID_COMMAND)
+		case OBJ_DROID:
 		{
-			range = 3 * range / 2;
+			const DROID * psDroid = (DROID *)psViewer;
+
+			if (psDroid->droidType == DROID_COMMAND)
+			{
+				range = 3 * range / 2;
+			}
+			break;
 		}
-		break;
-	}
-	case OBJ_STRUCTURE:
-	{
-		const STRUCTURE * const psStruct = (const STRUCTURE *)psViewer;
-
-		// a structure that is being built cannot see anything
-		if (psStruct->status != SS_BUILT)
+		case OBJ_STRUCTURE:
 		{
+			const STRUCTURE * psStruct = (STRUCTURE *)psViewer;
+
+			// a structure that is being built cannot see anything
+			if (psStruct->status != SS_BUILT)
+			{
+				return false;
+			}
+
+			if (psStruct->pStructureType->type == REF_WALL
+				|| psStruct->pStructureType->type == REF_WALLCORNER)
+			{
+				return false;
+			}
+
+			if ((structCBSensor(psStruct)
+				|| structVTOLCBSensor(psStruct))
+				&& psStruct->psTarget[0] == psTarget)
+			{
+				// if a unit is targetted by a counter battery sensor
+				// it is automatically seen
+				return true;
+			}
+
+			// increase the sensor range for AA sites
+			// AA sites are defensive structures that can only shoot in the air
+			if (psStruct->pStructureType->type == REF_DEFENSE
+				&& asWeaponStats[psStruct->asWeaps[0].nStat].surfaceToAir == SHOOT_IN_AIR)
+			{
+				range = 3 * range / 2;
+			}
+
+			break;
+		}
+		default:
+			ASSERT( false,
+				"visibleObject: visibility checking is only implemented for"
+				"units and structures" );
 			return false;
-		}
-
-		if (psStruct->pStructureType->type == REF_WALL
-		 || psStruct->pStructureType->type == REF_WALLCORNER)
-		{
-			return false;
-		}
-
-		if ((structCBSensor(psStruct)
-		  || structVTOLCBSensor(psStruct))
-		 && psStruct->psTarget[0] == psTarget)
-		{
-			// if a unit is targetted by a counter battery sensor
-			// it is automatically seen
-			return true;
-		}
-
-		// increase the sensor range for AA sites
-		// AA sites are defensive structures that can only shoot in the air
-		if (psStruct->pStructureType->type == REF_DEFENSE
-		 && asWeaponStats[psStruct->asWeaps[0].nStat].surfaceToAir == SHOOT_IN_AIR)
-		{
-			range = 3 * range / 2;
-		}
-
-		break;
-	}
-	default:
-		ASSERT( false,
-			"visibleObject: visibility checking is only implemented for"
-			"units and structures" );
-		return false;
-		break;
+			break;
 	}
 
 	// Structures can be seen from further away
@@ -366,99 +356,71 @@ BOOL visibleObject(const BASE_OBJECT* psViewer, const BASE_OBJECT* psTarget)
 	}
 
 	/* First see if the target is in sensor range */
-	x = psViewer->pos.x;
-	xdiff = x - (SDWORD)psTarget->pos.x;
-	if (xdiff < 0)
-	{
-		xdiff = -xdiff;
-	}
-	if (xdiff > range)
-	{
-		// too far away, reject
-		return false;
-	}
-
-	y = psViewer->pos.y;
-	ydiff = y - (SDWORD)psTarget->pos.y;
-	if (ydiff < 0)
-	{
-		ydiff = -ydiff;
-	}
-	if (ydiff > range)
-	{
-		// too far away, reject
-		return false;
-	}
-
-	rangeSquared = xdiff*xdiff + ydiff*ydiff;
-	if (rangeSquared > (range*range))
-	{
-		/* Out of sensor range */
-		return false;
-	}
-
-	if (rangeSquared == 0)
+	distSq = Vector3i_ScalarP(diff, diff);
+	if (distSq == 0)
 	{
 		// Should never be on top of each other, but ...
 		return true;
 	}
 
-	// initialise the callback variables
-	startH = psViewer->pos.z;
-	startH += visObjHeight(psViewer);
-	currG = -UBYTE_MAX * GRAD_MUL * ELEVATION_SCALE;
-	tarDist = rangeSquared;
-	rayStart = true;
-	currObj = 0;
-	ray = NUM_RAYS-1 - calcDirection(psViewer->pos.x,psViewer->pos.y, psTarget->pos.x,psTarget->pos.y);
-	finalX = map_coord(psTarget->pos.x);
-	finalY = map_coord(psTarget->pos.y);
+	if (distSq > (range*range))
+	{
+		/* Out of sensor range */
+		return false;
+	}
 
-	// Cast a ray from the viewer to the target
-	rayCast(x,y, ray, range, INVALID_PROP_TYPE, rayLOSCallback);
+	{
+		// initialise the callback variables
+		VisibleObjectHelp_t help = { true, wallsBlock, distSq, pos.z + visObjHeight(psViewer), { map_coord(dest.x), map_coord(dest.y) }, 0, 0, -UBYTE_MAX * GRAD_MUL * ELEVATION_SCALE, 0, { 0, 0 } };
+		int targetGrad, top;
 
-	// See if the target can be seen
-	top = ((SDWORD)psTarget->pos.z + visObjHeight(psTarget) - startH);
-	tarG = top * GRAD_MUL / lastD;
+		// Cast a ray from the viewer to the target
+		rayCast(pos, diff, range, rayLOSCallback, &help);
 
-	return tarG >= currG;
+		if (gWall != NULL && gNumWalls != NULL) // Out globals are set
+		{
+			*gWall = help.wall;
+			*gNumWalls = help.numWalls;
+		}
+
+		// See if the target can be seen
+		top = dest.z + visObjHeight(psTarget) - help.startHeight;
+		targetGrad = top * GRAD_MUL / help.lastDist;
+
+		return targetGrad >= help.currGrad;
+	}
 }
 
-// Do visibility check, but with walls completely blocking LOS.
-BOOL visibleObjWallBlock(BASE_OBJECT *psViewer, BASE_OBJECT *psTarget)
-{
-	BOOL	result;
-
-	blockingWall = true;
-	result = visibleObject(psViewer,psTarget);
-	blockingWall = false;
-
-	return result;
-}
 
 // Find the wall that is blocking LOS to a target (if any)
 STRUCTURE* visGetBlockingWall(const BASE_OBJECT* psViewer, const BASE_OBJECT* psTarget)
 {
-	blockingWall = true;
-	numWalls = 0;
-	visibleObject(psViewer, psTarget);
-	blockingWall = false;
+	int numWalls;
+	Vector2i wall;
+
+	// HACK Using globals to not clutter visibleObject() interface too much
+	gNumWalls = &numWalls;
+	gWall = &wall;
+
+	visibleObject(psViewer, psTarget, true);
+
+	gNumWalls = NULL;
+	gWall = NULL;
 
 	// see if there was a wall in the way
-	if (numWalls == 1)
+	if (numWalls > 0)
 	{
-		const int tileX = map_coord(wallX);
-		const int tileY = map_coord(wallY);
+		Vector2i tile = { map_coord(wall.x), map_coord(wall.y) };
 		unsigned int player;
 
-		for (player = 0; player < MAX_PLAYERS; ++player)
+		for (player = 0; player < MAX_PLAYERS; player++)
 		{
 			STRUCTURE* psWall;
 
 			for (psWall = apsStructLists[player]; psWall; psWall = psWall->psNext)
 			{
-				if (map_coord(psWall->pos.x) == tileX
-				 && map_coord(psWall->pos.y) == tileY)
+				if (map_coord(psWall->pos.x) == tile.x
+				 && map_coord(psWall->pos.y) == tile.y)
 				{
 					return psWall;
 				}
@@ -472,18 +434,19 @@ STRUCTURE* visGetBlockingWall(const BASE_OBJECT* psViewer, const BASE_OBJECT* ps
 /* Find out what can see this object */
 void processVisibility(BASE_OBJECT *psObj)
 {
-	UDWORD		i;
 	BOOL		prevVis[MAX_PLAYERS], currVis[MAX_PLAYERS];
 	SDWORD		visLevel;
 	BASE_OBJECT	*psViewer;
 	MESSAGE		*psMessage;
-	UDWORD		player, ally;
+	unsigned int player;
 
 	// initialise the visibility array
-	for (i=0; i<MAX_PLAYERS; i++)
+	for (player = 0; player < MAX_PLAYERS; player++)
 	{
-		prevVis[i] = psObj->visible[i] != 0;
+		prevVis[player] = (psObj->visible[player] != 0);
 	}
+
+	// Droids can vanish from view, other objects will stay
 	if (psObj->type == OBJ_DROID)
 	{
 		memset (currVis, 0, sizeof(BOOL) * MAX_PLAYERS);
@@ -497,25 +460,23 @@ void processVisibility(BASE_OBJECT *psObj)
 	}
 
 	// get all the objects from the grid the droid is in
-	gridStartIterate((SDWORD)psObj->pos.x, (SDWORD)psObj->pos.y);
+	gridStartIterate(psObj->pos.x, psObj->pos.y);
 
 	// Make sure allies can see us
 	if (bMultiPlayer && game.alliance == ALLIANCES_TEAMS)
 	{
-		for(player=0; player<MAX_PLAYERS; player++)
+		unsigned int player;
+		for (player = 0; player < MAX_PLAYERS; player++)
 		{
-			if(player!=psObj->player)
+			if (player != psObj->player && aiCheckAlliances(player, psObj->player))
 			{
-				if(aiCheckAlliances(player,psObj->player))
-				{
-					currVis[player] = true;
-				}
+				currVis[player] = true;
 			}
 		}
 	}
 
 	// if a player has a SAT_UPLINK structure, they can see everything!
-	for (player=0; player<MAX_PLAYERS; player++)
+	for (player = 0; player < MAX_PLAYERS; player++)
 	{
 		if (getSatUplinkExists(player))
 		{
@@ -527,19 +488,17 @@ void processVisibility(BASE_OBJECT *psObj)
 		}
 	}
 
-	psViewer = gridIterate();
-	while (psViewer != NULL)
+	while (psViewer = gridIterate(), psViewer != NULL)
 	{
 		// If we've got ranged line of sight...
- 		if ( (psViewer->type != OBJ_FEATURE) &&
+		if ( (psViewer->type != OBJ_FEATURE) &&
 			 !currVis[psViewer->player] &&
-			 visibleObject(psViewer, psObj) )
+			 visibleObject(psViewer, psObj, false) )
  		{
 			// Tell system that this side can see this object
- 			currVis[psViewer->player]=true;
+			currVis[psViewer->player] = true;
 			if (!prevVis[psViewer->player])
 			{
-
 				if (psObj->visible[psViewer->player] == 0)
 				{
 					psObj->visible[psViewer->player] = 1;
@@ -550,18 +509,17 @@ void processVisibility(BASE_OBJECT *psObj)
 					clustObjectSeen(psObj, psViewer);
 				}
 			}
-
  		}
-
-		psViewer = gridIterate();
 	}
 
 	//forward out vision to our allies
 	if (bMultiPlayer && game.alliance == ALLIANCES_TEAMS)
 	{
-		for(player = 0; player < MAX_PLAYERS; player++)
+		unsigned int player;
+		for (player = 0; player < MAX_PLAYERS; player++)
 		{
-			for(ally = 0; ally < MAX_PLAYERS; ally++)
+			unsigned int ally;
+			for (ally = 0; ally < MAX_PLAYERS; ally++)
 			{
 				if (currVis[player] && aiCheckAlliances(player, ally))
 				{
@@ -572,53 +530,50 @@ void processVisibility(BASE_OBJECT *psObj)
 	}
 
 	// update the visibility levels
-	for(i=0; i<MAX_PLAYERS; i++)
+	for (player = 0; player < MAX_PLAYERS; player++)
 	{
-		if (i == psObj->player)
+		if (player == psObj->player)
 		{
 			// owner can always see it fully
-			psObj->visible[i] = UBYTE_MAX;
+			psObj->visible[player] = UBYTE_MAX;
 			continue;
 		}
 
-		visLevel = 0;
-		if (currVis[i])
-		{
-			visLevel = UBYTE_MAX;
-		}
+		visLevel = (currVis[player] ? UBYTE_MAX : 0);
 
-		if ( (visLevel < psObj->visible[i]) &&
+		// Droids can vanish from view, other objects will stay
+		if ( (visLevel < psObj->visible[player]) &&
 			 (psObj->type == OBJ_DROID) )
 		{
-			if (psObj->visible[i] <= visLevelDec)
+			if (psObj->visible[player] <= visLevelDec)
 			{
-				psObj->visible[i] = 0;
+				psObj->visible[player] = 0;
 			}
 			else
 			{
-				psObj->visible[i] = (UBYTE)(psObj->visible[i] - visLevelDec);
+				psObj->visible[player] -= visLevelDec;
 			}
 		}
-		else if (visLevel > psObj->visible[i])
+		else if (visLevel > psObj->visible[player])
 		{
-			if (psObj->visible[i] + visLevelInc >= UBYTE_MAX)
+			if (psObj->visible[player] + visLevelInc >= UBYTE_MAX)
 			{
-				psObj->visible[i] = UBYTE_MAX;
+				psObj->visible[player] = UBYTE_MAX;
 			}
 			else
 			{
-				psObj->visible[i] = (UBYTE)(psObj->visible[i] + visLevelInc);
+				psObj->visible[player] += visLevelInc;
 			}
 		}
 	}
 
 	/* Make sure all tiles under a feature/structure become visible when you see it */
-	for(i=0; i<MAX_PLAYERS; i++)
+	for (player = 0; player < MAX_PLAYERS; player++)
 	{
-		if( (psObj->type == OBJ_STRUCTURE || psObj->type == OBJ_FEATURE) &&
-			(!prevVis[i] && psObj->visible[i]) )
+		if ( (psObj->type == OBJ_STRUCTURE || psObj->type == OBJ_FEATURE) &&
+			!prevVis[player] && psObj->visible[player] )
 		{
-			setUnderTilesVis(psObj,i);
+			setUnderTilesVis(psObj, player);
 		}
 	}
 
@@ -629,7 +584,7 @@ void processVisibility(BASE_OBJECT *psObj)
 		the selected Player - if there isn't an Resource Extractor on it*/
 		if (((FEATURE *)psObj)->psStats->subType == FEAT_OIL_RESOURCE)
 		{
-			if(!TileHasStructure(mapTile(map_coord(psObj->pos.x),
+			if (!TileHasStructure(mapTile(map_coord(psObj->pos.x),
 			                               map_coord(psObj->pos.y))))
 			{
 				psMessage = addMessage(MSG_PROXIMITY, true, selectedPlayer);
@@ -637,7 +592,7 @@ void processVisibility(BASE_OBJECT *psObj)
 				{
 					psMessage->pViewData = (MSG_VIEWDATA *)psObj;
 				}
-				if(!bInTutorial)
+				if (!bInTutorial)
 				{
 					//play message to indicate been seen
 					audio_QueueTrackPos( ID_SOUND_RESOURCE_HERE,
@@ -646,22 +601,21 @@ void processVisibility(BASE_OBJECT *psObj)
 				debug(LOG_MSG, "Added message for oil well, pViewData=%p", psMessage->pViewData);
 			}
 		}
-
-			if (((FEATURE *)psObj)->psStats->subType == FEAT_GEN_ARTE)
+		else if (((FEATURE *)psObj)->psStats->subType == FEAT_GEN_ARTE)
+		{
+			psMessage = addMessage(MSG_PROXIMITY, true, selectedPlayer);
+			if (psMessage)
 			{
-				psMessage = addMessage(MSG_PROXIMITY, true, selectedPlayer);
-				if (psMessage)
-				{
-					psMessage->pViewData = (MSG_VIEWDATA *)psObj;
-				}
-				if(!bInTutorial)
-				{
-					//play message to indicate been seen
-					audio_QueueTrackPos( ID_SOUND_ARTEFACT_DISC,
-									psObj->pos.x, psObj->pos.y, psObj->pos.z );
-				}
-				debug(LOG_MSG, "Added message for artefact, pViewData=%p", psMessage->pViewData);
+				psMessage->pViewData = (MSG_VIEWDATA *)psObj;
 			}
+			if (!bInTutorial)
+			{
+				//play message to indicate been seen
+				audio_QueueTrackPos( ID_SOUND_ARTEFACT_DISC,
+								psObj->pos.x, psObj->pos.y, psObj->pos.z );
+			}
+			debug(LOG_MSG, "Added message for artefact, pViewData=%p", psMessage->pViewData);
+		}
 	}
 }
 
@@ -746,20 +700,19 @@ void updateSensorDisplay()
 	}
 }
 
-BOOL scrRayTerrainCallback(SDWORD x, SDWORD y, SDWORD dist, PROPULSION_TYPE propulsion)
+bool scrRayTerrainCallback(Vector3i pos, int distSq, void *data)
 {
-	SDWORD		newH, newG;		// The new gradient
-	MAPTILE		*psTile;
+	int dist = sqrtf(distSq);
+	int newH, newG; // The new gradient
+	MAPTILE *psTile;
 
-	ASSERT(x >= 0
-	    && x < world_coord(mapWidth)
-	    && y >= 0
-	    && y < world_coord(mapHeight),
+	ASSERT(pos.x >= 0 && pos.x < world_coord(mapWidth)
+		&& pos.y >= 0 && pos.y < world_coord(mapHeight),
 			"rayTerrainCallback: coords off map" );
 
 	ASSERT(rayPlayer >= 0 && rayPlayer < MAX_PLAYERS, "rayScrTerrainCallback: wrong player index");
 
-	psTile = mapTile(map_coord(x), map_coord(y));
+	psTile = mapTile(map_coord(pos.x), map_coord(pos.y));
 
 	/* Not true visibility - done on sensor range */
 
@@ -770,12 +723,12 @@ BOOL scrRayTerrainCallback(SDWORD x, SDWORD y, SDWORD dist, PROPULSION_TYPE prop
 	}
 
 	newH = psTile->height * ELEVATION_SCALE;
-	newG = (newH - startH) * GRAD_MUL / (SDWORD)dist;
+	newG = (newH - startH) * GRAD_MUL / dist;
 	if (newG >= currG)
 	{
 		currG = newG;
 
-		scrTileVisible[rayPlayer][map_coord(x)][map_coord(y)] = true;
+		scrTileVisible[rayPlayer][map_coord(pos.x)][map_coord(pos.y)] = true;
 	}
 
 	return true;

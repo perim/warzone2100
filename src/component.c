@@ -32,6 +32,7 @@
 #include "lib/ivis_common/ivisdef.h" //ivis matrix code
 #include "lib/ivis_opengl/piematrix.h"
 #include "lib/ivis_common/piedef.h" //ivis matrix code
+#include "lib/ivis_common/piefixedpoint.h"
 #include "lib/ivis_common/piestate.h" //ivis render code
 #include "lib/ivis_common/piepalette.h"
 #include "lighting.h"
@@ -374,7 +375,7 @@ void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i
 				{
 					iV_MatrixBegin();
 					iV_TRANSLATE(strImd->connectors[i].x,strImd->connectors[i].z,strImd->connectors[i].y);
-					pie_MatRotY(DEG(-((SDWORD)psStructure->turretRotation[i])));
+					pie_MatRotY(DEG(-((SDWORD)psStructure->asWeaps[i].rotation)));
 					if (mountImd[i] != NULL)
 					{
 						pie_Draw3DShape(mountImd[i], 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
@@ -383,7 +384,7 @@ void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i
 							iV_TRANSLATE(mountImd[i]->connectors->x,mountImd[i]->connectors->z,mountImd[i]->connectors->y);
 						}
 					}
-					iV_MatrixRotateX(DEG(psStructure->turretPitch[i]));
+					iV_MatrixRotateX(DEG(psStructure->asWeaps[i].pitch));
 					pie_Draw3DShape(weaponImd[i], 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 					//we have a droid weapon so do we draw a muzzle flash
 					iV_MatrixEnd();
@@ -393,7 +394,7 @@ void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i
 			{
 				iV_MatrixBegin();
 				iV_TRANSLATE(strImd->connectors->x,strImd->connectors->z,strImd->connectors->y);
-				pie_MatRotY(DEG(-((SDWORD)psStructure->turretRotation[0])));
+				pie_MatRotY(DEG(-((SDWORD)psStructure->asWeaps[0].rotation)));
 				if (mountImd[0] != NULL)
 				{
 					pie_Draw3DShape(mountImd[0], 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
@@ -402,7 +403,7 @@ void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i
 						iV_TRANSLATE(mountImd[0]->connectors->x,mountImd[0]->connectors->z,mountImd[0]->connectors->y);
 					}
 				}
-				iV_MatrixRotateX(DEG(psStructure->turretPitch[0]));
+				iV_MatrixRotateX(DEG(psStructure->asWeaps[0].pitch));
 				pie_Draw3DShape(weaponImd[0], 0, getPlayerColour(selectedPlayer), WZCOL_WHITE, WZCOL_BLACK, pie_BUTTON, 0);
 				//we have a droid weapon so do we draw a muzzle flash
 				iV_MatrixEnd();
@@ -937,7 +938,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 			"moveUpdateUnit: invalid propulsion stats pointer" );
 
 	/* render vtol jet if flying - horrible hack - GJ */
-	if (((psPropStats->propulsionType == LIFT) &&
+	if (((psPropStats->propulsionType == PROPULSION_TYPE_LIFT) &&
 	    //(psDroid->droidType != DROID_CYBORG)) && (!bButton))
 	    (!cyborgDroid(psDroid))) && (!bButton))
 	{
@@ -989,7 +990,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 			 * all others to connector 1 */
 			/* Watermelon:VTOL's now skip the first 5 connectors(0 to 4),
 			VTOL's use 5,6,7,8 etc now */
-			if ( (psPropStats->propulsionType == LIFT) &&
+			if ( (psPropStats->propulsionType == PROPULSION_TYPE_LIFT) &&
 				  psDroid->droidType == DROID_WEAPON )
 			{
 				iConnector = VTOL_CONNECTOR_START;
@@ -1037,9 +1038,9 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 											   psShapeTemp->connectors[iConnector + i].y  );
 							}
 
-							if ( psDroid->turretRotation[i] )
+							if ( psDroid->asWeaps[i].rotation )
 							{
-								pie_MatRotY(DEG( (-(SDWORD)psDroid->turretRotation[i])) );
+								pie_MatRotY(DEG( (-(SDWORD)psDroid->asWeaps[i].rotation)) );
 							}
 
 
@@ -1080,12 +1081,12 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 							if ( iConnector >= VTOL_CONNECTOR_START )
 							{
 								//pitch the barrel down
-								pie_MatRotX(DEG( (-(psDroid->turretPitch[i])) ));
+								pie_MatRotX(DEG( (-(psDroid->asWeaps[i].pitch)) ));
 							}
 							else
 							{
 								//pitch the barrel up
-								pie_MatRotX(DEG(psDroid->turretPitch[i]));
+								pie_MatRotX(DEG(psDroid->asWeaps[i].pitch));
 							}
 
 							/* Get the weapon (gun?) graphic */
@@ -1154,9 +1155,9 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 							   psShapeTemp->connectors[0].z,
 							   psShapeTemp->connectors[0].y  );
 
-				if(psDroid->turretRotation[0])
+				if(psDroid->asWeaps[0].rotation)
 				{
-					pie_MatRotY(DEG( (-(SDWORD)(psDroid->turretRotation[0])) ));
+					pie_MatRotY(DEG( (-(SDWORD)(psDroid->asWeaps[0].rotation)) ));
 				}
 				psShape = SENSOR_MOUNT_IMD(psDroid,psDroid->player);
 				/* Draw it */
@@ -1194,9 +1195,9 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 							   psShapeTemp->connectors[0].z,
 							   psShapeTemp->connectors[0].y  );
 
-				if(psDroid->turretRotation[0])
+				if(psDroid->asWeaps[0].rotation)
 				{
-					pie_MatRotY(DEG( (-(SDWORD)(psDroid->turretRotation[0])) ));
+					pie_MatRotY(DEG( (-(SDWORD)(psDroid->asWeaps[0].rotation)) ));
 				}
 				psShape = CONSTRUCT_MOUNT_IMD(psDroid,psDroid->player);
 				/* Draw it */
@@ -1241,9 +1242,9 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 							   psShapeTemp->connectors[0].z,
 							   psShapeTemp->connectors[0].y  );
 
-				if(psDroid->turretRotation[0])
+				if(psDroid->asWeaps[0].rotation)
 				{
-					pie_MatRotY(DEG( (-(SDWORD)(psDroid->turretRotation[0])) ));
+					pie_MatRotY(DEG( (-(SDWORD)(psDroid->asWeaps[0].rotation)) ));
 				}
 				psShape = ECM_MOUNT_IMD(psDroid,psDroid->player);
 				/* Draw it */
@@ -1280,9 +1281,9 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 							   psShapeTemp->connectors[0].z,
 							   psShapeTemp->connectors[0].y  );
 
-				if(psDroid->turretRotation[0])
+				if(psDroid->asWeaps[0].rotation)
 				{
-					pie_MatRotY(DEG( (-(SDWORD)(psDroid->turretRotation[0])) ));
+					pie_MatRotY(DEG( (-(SDWORD)(psDroid->asWeaps[0].rotation)) ));
 				}
 				psShape = REPAIR_MOUNT_IMD(psDroid,psDroid->player);
 				/* Draw it */
@@ -1320,7 +1321,7 @@ void displayCompObj(BASE_OBJECT *psObj, BOOL bButton)
 						pie_MatRotX( DEG( -psDroid->pitch ) );
 						pie_MatRotZ( DEG( -psDroid->roll ) );
 						//Watermelon:rotate Y
-					   	pie_MatRotY(DEG( -( (-(SDWORD)(psDroid->turretRotation[0])) ) ));
+					   	pie_MatRotY(DEG( -( (-(SDWORD)(psDroid->asWeaps[0].rotation)) ) ));
 
 						iV_MatrixRotateY(-player.r.y);
 						iV_MatrixRotateX(-player.r.x);

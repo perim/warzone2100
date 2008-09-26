@@ -334,12 +334,12 @@ a defined range*/
 extern BASE_OBJECT * checkForRepairRange(DROID *psDroid,DROID *psTarget);
 
 //access function
-extern BOOL vtolDroid(DROID *psDroid);
+extern BOOL isVtolDroid(const DROID* psDroid);
 /*returns true if a VTOL Weapon Droid which has completed all runs*/
 extern BOOL vtolEmpty(DROID *psDroid);
 /*Checks a vtol for being fully armed and fully repaired to see if ready to
 leave reArm pad */
-extern BOOL  vtolHappy(DROID *psDroid);
+extern BOOL  vtolHappy(const DROID* psDroid);
 /*this mends the VTOL when it has been returned to home base whilst on an
 offworld mission*/
 extern void mendVtol(DROID *psDroid);
@@ -470,6 +470,11 @@ static inline CONSTRUCT_STATS *getConstructStats(DROID *psDroid)
 	return asConstructStats + psDroid->asBits[COMP_CONSTRUCT].nStat;
 }
 
+static inline WEAPON_STATS *getWeaponStats(DROID *psDroid, int weapon_slot)
+{
+	return asWeaponStats + psDroid->asWeaps[weapon_slot].nStat;
+}
+
 /** helper functions for future refcount patch **/
 
 #define setDroidTarget(_psDroid, _psNewTarget) _setDroidTarget(_psDroid, _psNewTarget, __LINE__, __FUNCTION__)
@@ -481,7 +486,7 @@ static inline void _setDroidTarget(DROID *psDroid, BASE_OBJECT *psNewTarget, int
 	       "setDroidTarget: Set dead target");
 #ifdef DEBUG
 	psDroid->targetLine = line;
-	strlcpy(psDroid->targetFunc, func, MAX_EVENT_NAME_LEN);
+	sstrcpy(psDroid->targetFunc, func);
 #endif
 }
 
@@ -493,7 +498,7 @@ static inline void _setDroidActionTarget(DROID *psDroid, BASE_OBJECT *psNewTarge
 	       "setDroidActionTarget: Set dead target");
 #ifdef DEBUG
 	psDroid->actionTargetLine[idx] = line;
-	strlcpy(psDroid->actionTargetFunc[idx], func, MAX_EVENT_NAME_LEN);
+	sstrcpy(psDroid->actionTargetFunc[idx], func);
 #endif
 }
 
@@ -504,7 +509,7 @@ static inline void _setDroidBase(DROID *psDroid, STRUCTURE *psNewBase, int line,
 	ASSERT(psNewBase == NULL || !psNewBase->died, "setDroidBase: Set dead target");
 #ifdef DEBUG
 	psDroid->baseLine = line;
-	strlcpy(psDroid->baseFunc, func, MAX_EVENT_NAME_LEN);
+	sstrcpy(psDroid->baseFunc, func);
 #endif
 }
 
@@ -513,7 +518,7 @@ static inline void setSaveDroidTarget(DROID *psSaveDroid, BASE_OBJECT *psNewTarg
 	psSaveDroid->psTarget = psNewTarget;
 #ifdef DEBUG
 	psSaveDroid->targetLine = 0;
-	strlcpy(psSaveDroid->targetFunc, "savegame", MAX_EVENT_NAME_LEN);
+	sstrcpy(psSaveDroid->targetFunc, "savegame");
 #endif
 }
 
@@ -522,7 +527,7 @@ static inline void setSaveDroidActionTarget(DROID *psSaveDroid, BASE_OBJECT *psN
 	psSaveDroid->psActionTarget[idx] = psNewTarget;
 #ifdef DEBUG
 	psSaveDroid->actionTargetLine[idx] = 0;
-	strlcpy(psSaveDroid->actionTargetFunc[idx], "savegame", MAX_EVENT_NAME_LEN);
+	sstrcpy(psSaveDroid->actionTargetFunc[idx], "savegame");
 #endif
 }
 
@@ -531,36 +536,14 @@ static inline void setSaveDroidBase(DROID *psSaveDroid, STRUCTURE *psNewBase)
 	psSaveDroid->psBaseStruct = psNewBase;
 #ifdef DEBUG
 	psSaveDroid->baseLine = 0;
-	strlcpy(psSaveDroid->baseFunc, "savegame", MAX_EVENT_NAME_LEN);
+	sstrcpy(psSaveDroid->baseFunc, "savegame");
 #endif
 }
 
+void checkDroid(const DROID *droid, const char * const location_description, const char * function, const int recurse);
+
 /* assert if droid is bad */
-#define CHECK_DROID(droid) \
-do { \
-	unsigned int i; \
-\
-	assert(droid != NULL); \
-\
-	/* Make sure to know we actually have a droid in our hands */ \
-	assert(droid->type == OBJ_DROID); \
-\
-	assert(droid->direction <= 360.0f && droid->direction >= 0.0f); \
-	assert(droid->numWeaps <= DROID_MAXWEAPS); \
-	assert(droid->listSize <= ORDER_LIST_MAX); \
-	assert(droid->player < MAX_PLAYERS); \
-	assert(droidOnMap(droid)); \
-\
-	for (i = 0; i < DROID_MAXWEAPS; ++i) \
-		assert(droid->turretRotation[i] <= 360); \
-\
-	for (i = 0; i < DROID_MAXWEAPS; ++i) \
-		assert(droid->asWeaps[i].lastFired <= gameTime); \
-\
-	for (i = 0; i < DROID_MAXWEAPS; ++i) \
-		if (droid->psActionTarget[i]) \
-			assert(droid->psActionTarget[i]->direction >= 0.0f); \
-} while (0)
+#define CHECK_DROID(droid) checkDroid(droid, AT_MACRO, __FUNCTION__, max_check_object_recursion)
 
 // Minimum damage a weapon will deal to its target
 #define	MIN_WEAPON_DAMAGE	1

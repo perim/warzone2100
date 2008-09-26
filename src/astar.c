@@ -37,8 +37,6 @@ static SDWORD	astarOuter, astarRemove;
 /** Keeps track of the amount of iterations done in the inner loop of our A*
  *  implementation.
  *
- *  @see FPATH_LOOP_LIMIT
- *
  *  @ingroup pathfinding
  */
 int astarInner = 0;
@@ -152,7 +150,7 @@ static FP_NODE* fpathGetNode(int x, int y)
 }
 
 /** Reset the node table
- *  
+ *
  *  @NOTE The actual implementation does a lazy reset, because resetting the
  *        entire node table is expensive.
  */
@@ -324,21 +322,22 @@ static BOOL		obstruction;
 
 /** The visibility ray callback
  */
-static BOOL fpathVisCallback(SDWORD x, SDWORD y, SDWORD dist, PROPULSION_TYPE propulsion)
+static bool fpathVisCallback(Vector3i pos, int dist, void* data)
 {
-	SDWORD	vx,vy;
-
-	dist = dist;
+	/* Has to be -1 to make sure that it doesn't match any enumerated
+	 * constant from PROPULSION_TYPE.
+	 */
+	static const PROPULSION_TYPE prop = (PROPULSION_TYPE)-1;
 
 	// See if this point is past the final point (dot product)
-	vx = x - finalX;
-	vy = y - finalY;
-	if (vx*vectorX + vy*vectorY <=0)
+	int vx = pos.x - finalX, vy = pos.y - finalY;
+
+	if (vx*vectorX + vy*vectorY <= 0)
 	{
 		return false;
 	}
 
-	if (fpathBlockingTile(map_coord(x), map_coord(y), propulsion))
+	if (fpathBlockingTile(map_coord(pos.x), map_coord(pos.y), prop))
 	{
 		// found an obstruction
 		obstruction = true;
@@ -351,27 +350,26 @@ static BOOL fpathVisCallback(SDWORD x, SDWORD y, SDWORD dist, PROPULSION_TYPE pr
 BOOL fpathTileLOS(SDWORD x1,SDWORD y1, SDWORD x2,SDWORD y2)
 {
 	// convert to world coords
-	x1 = world_coord(x1) + TILE_UNITS / 2;
-	y1 = world_coord(y1) + TILE_UNITS / 2;
-	x2 = world_coord(x2) + TILE_UNITS / 2;
-	y2 = world_coord(y2) + TILE_UNITS / 2;
+	Vector3i p1 = { world_coord(x1) + TILE_UNITS / 2, world_coord(y1) + TILE_UNITS / 2, 0 };
+	Vector3i p2 = { world_coord(x2) + TILE_UNITS / 2, world_coord(y2) + TILE_UNITS / 2, 0 };
+	Vector3i dir = Vector3i_Sub(p2, p1);
 
 	// Initialise the callback variables
-	finalX = x2;
-	finalY = y2;
-	vectorX = x1 - x2;
-	vectorY = y1 - y2;
+	finalX = p2.x;
+	finalY = p2.y;
+	vectorX = -dir.x;
+	vectorY = -dir.y;
 	obstruction = false;
 
-	rayCast(x1, y1, rayPointsToAngle(x1, y1, x2, y2), RAY_MAXLEN, INVALID_PROP_TYPE, fpathVisCallback);
+	rayCast(p1, dir, RAY_MAXLEN, fpathVisCallback, NULL);
 
 	return !obstruction;
 }
 
-SDWORD fpathAStarRoute(SDWORD routeMode, MOVE_CONTROL *psMove, SDWORD sx, SDWORD sy, SDWORD fx, SDWORD fy, PROPULSION_TYPE propulsion)
+SDWORD fpathAStarRoute(MOVE_CONTROL *psMove, SDWORD sx, SDWORD sy, SDWORD fx, SDWORD fy, PROPULSION_TYPE propulsion)
 {
- 	FP_NODE		*psFound, *psCurr, *psNew, *psParent, *psNext;
-static 	FP_NODE		*psNearest, *psRoute;
+	FP_NODE		*psFound, *psCurr, *psNew, *psParent, *psNext;
+	FP_NODE		*psNearest, *psRoute;
 	SDWORD		dir, x,y, currDist;
 	SDWORD		retval = ASR_OK;
 	const int       tileSX = map_coord(sx);
@@ -379,8 +377,6 @@ static 	FP_NODE		*psNearest, *psRoute;
 	const int       tileFX = map_coord(fx);
 	const int       tileFY = map_coord(fy);
 
-	if (routeMode == ASR_NEWROUTE)
-	{
 		fpathTableReset();
 
 		// Add the start point to the open list
@@ -397,16 +393,10 @@ static 	FP_NODE		*psNearest, *psRoute;
 		fpathAddNode(psCurr);
 		psRoute = NULL;
 		psNearest = NULL;
-	}
 
 	// search for a route
 	while (psOpen != NULL)
 	{
-		if (astarInner > FPATH_LOOP_LIMIT)
-		{
-			return ASR_PARTIAL;
-		}
-
 		psCurr = fpathOpenGet();
 
 		if (psCurr->x == tileFX && psCurr->y == tileFY)
@@ -568,8 +558,8 @@ static 	FP_NODE		*psNearest, *psRoute;
 			psCurr = psCurr->psRoute;
 		}
 		psMove->numPoints = index;
-		psMove->DestinationX = psMove->asPath[index - 1].x;
-		psMove->DestinationY = psMove->asPath[index - 1].y;
+		psMove->DestinationX = world_coord(psMove->asPath[index - 1].x);
+		psMove->DestinationY = world_coord(psMove->asPath[index - 1].y);
 	}
 	else
 	{

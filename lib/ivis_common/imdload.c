@@ -36,6 +36,7 @@
 #include "lib/framework/frame.h"
 #include "lib/framework/frameresource.h"
 #include "lib/ivis_opengl/piematrix.h"
+#include "lib/ivis_common/piefixedpoint.h"
 
 #include "ivisdef.h" // for imd structures
 #include "imd.h" // for imd structures
@@ -740,7 +741,7 @@ iIMDShape *iV_ProcessIMD( const char **ppFileData, const char *FileDataEnd )
 			debug(LOG_ERROR, "iV_ProcessIMD %s: only png textures supported", pFileName);
 			return NULL;
 		}
-		strlcat(texfile, ".png", sizeof(texfile));
+		sstrcat(texfile, ".png");
 
 		pie_MakeTexPageName(texfile);
 

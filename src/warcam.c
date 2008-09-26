@@ -34,7 +34,7 @@
 #include "lib/framework/input.h"
 
 #include "lib/ivis_opengl/piematrix.h"
-#include "lib/ivis_common/piedef.h" //ivis matrix code
+#include "lib/ivis_common/piefixedpoint.h" //ivis matrix code
 
 #include "lib/gamelib/gtime.h"
 
@@ -57,7 +57,6 @@
 #include "action.h"
 #include "intdisplay.h"
 #include "e3demo.h"
-#include "raycast.h"
 #include "display3d.h"
 #include "selection.h"
 
@@ -741,7 +740,7 @@ static void updateCameraAcceleration(UBYTE update)
 		const DROID *psDroid = (DROID*)trackingCamera.target;
 		const PROPULSION_STATS *psPropStats = &asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat];
 
-		if (psPropStats->propulsionType == LIFT)
+		if (psPropStats->propulsionType == PROPULSION_TYPE_LIFT)
 		{
 			bFlying = true;
 		}
@@ -857,7 +856,7 @@ PROPULSION_STATS	*psPropStats;
 	{
 		psDroid = (DROID*)trackingCamera.target;
 		psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
-		if(psPropStats->propulsionType == LIFT)
+		if(psPropStats->propulsionType == PROPULSION_TYPE_LIFT)
 		{
 			bFlying = true;
 		}
@@ -900,7 +899,7 @@ static void updateCameraRotationAcceleration( UBYTE update )
 	{
 		DROID *psDroid = (DROID*)trackingCamera.target;
 		psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
-		if(psPropStats->propulsionType == LIFT)
+		if(psPropStats->propulsionType == PROPULSION_TYPE_LIFT)
 		{
 			UDWORD	droidHeight, difHeight, droidMapHeight;
 
@@ -1148,7 +1147,7 @@ BOOL	bFlying;
 	{
 		psDroid = (DROID*)trackingCamera.target;
 		psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
-		if (psPropStats->propulsionType == LIFT)
+		if (psPropStats->propulsionType == PROPULSION_TYPE_LIFT)
 		{
 				bFlying = true;
 		}

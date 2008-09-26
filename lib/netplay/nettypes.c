@@ -439,7 +439,7 @@ static void NETcoder(PACKETDIR dir)
 	int8_t i8 = -8;
 	test_enum te = test_b;
 
-	strlcpy(str, original, sizeof(str));
+	sstrcpy(str, original);
 
 	if (dir == PACKET_ENCODE)
 		NETbeginEncode(0, 0);
@@ -454,7 +454,6 @@ static void NETcoder(PACKETDIR dir)
 	NETint8_t(&i8);     assert(i8 == -8);
 	NETstring(str, sizeof(str)); assert(strncmp(str, original, sizeof(str) - 1) == 0);
 	NETenum(&te);       assert(te == test_b);
-	NETend();
 }
 
 void NETtest()

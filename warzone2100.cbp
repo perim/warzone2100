@@ -32,6 +32,7 @@
 					<Add option='-DLOCALEDIR=\\&quot;\\&quot;' />
 					<Add option='-DPACKAGE=\\&quot;warzone2100\\&quot;' />
 					<Add option="-D_GNU_SOURCE=1" />
+					<Add directory="lib/sqlite3" />
 				</Compiler>
 				<Linker>
 					<Add option="`pkg-config --libs sdl openal libpng vorbisfile`" />
@@ -60,6 +61,7 @@
 					<Add option='-DLOCALEDIR=\\&quot;\\&quot;' />
 					<Add option='-DPACKAGE=\\&quot;warzone2100\\&quot;' />
 					<Add option="-D_GNU_SOURCE=1" />
+					<Add directory="lib/sqlite3" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -89,6 +91,7 @@
 					<Add option='-DPACKAGE=\&quot;warzone2100\&quot;' />
 					<Add option="-DWIN32" />
 					<Add option="-DYY_STATIC" />
+					<Add directory="lib/sqlite3" />
 					<Add directory="$(#warzone_devpkg.include)" />
 					<Add directory="$(#warzone_devpkg.include)/SDL" />
 				</Compiler>
@@ -133,6 +136,7 @@
 					<Add option='-DPACKAGE=\&quot;warzone2100\&quot;' />
 					<Add option="-DWIN32" />
 					<Add option="-DYY_STATIC" />
+					<Add directory="lib/sqlite3" />
 					<Add directory="$(#warzone_devpkg.include)" />
 					<Add directory="$(#warzone_devpkg.include)/SDL" />
 				</Compiler>
@@ -385,6 +389,19 @@
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
+		<Unit filename="lib/framework/physfs_vfs.c">
+			<Option compilerVar="CC" />
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="lib/framework/physfs_vfs.h">
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
 		<Unit filename="lib/framework/printf_ext.c">
 			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
@@ -510,12 +527,6 @@
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/framework/treapint.h">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
 		<Unit filename="lib/framework/trig.c">
 			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
@@ -530,6 +541,19 @@
 			<Option target="NDBGWindows" />
 		</Unit>
 		<Unit filename="lib/framework/types.h">
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="lib/framework/utf.c">
+			<Option compilerVar="CC" />
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="lib/framework/utf.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
@@ -691,6 +715,12 @@
 			<Option target="NDBGWindows" />
 		</Unit>
 		<Unit filename="lib/ivis_common/piedef.h">
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="lib/ivis_common/piefixedpoint.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
@@ -1186,19 +1216,6 @@
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="lib/sqlite3/physfs_vfs.c">
-			<Option compilerVar="CC" />
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
-		<Unit filename="lib/sqlite3/physfs_vfs.h">
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
 		<Unit filename="lib/sqlite3/sqlite3.c">
 			<Option compilerVar="CC" />
 			<Option target="DBGUnix" />
@@ -1439,6 +1456,19 @@
 			<Option target="NDBGWindows" />
 		</Unit>
 		<Unit filename="src/basedef.h">
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="src/baseobject.c">
+			<Option compilerVar="CC" />
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="src/baseobject.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
@@ -2034,17 +2064,6 @@
 			<Option target="DBGWindows" />
 			<Option target="NDBGWindows" />
 		</Unit>
-		<Unit filename="src/level_parser.y">
-			<Option compilerVar="CC" />
-			<Option compile="1" />
-			<Option link="1" />
-			<Option weight="10" />
-			<Option compiler="gcc" use="1" buildCommand="bison -y -d -osrc/level_parser.tab.c $file\n$compiler $options $includes -c src/level_parser.tab.c -o $object" />
-			<Option target="DBGUnix" />
-			<Option target="NDBGUnix" />
-			<Option target="DBGWindows" />
-			<Option target="NDBGWindows" />
-		</Unit>
 		<Unit filename="src/levelint.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
@@ -2182,6 +2201,33 @@
 			<Option target="NDBGWindows" />
 		</Unit>
 		<Unit filename="src/messagedef.h">
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="src/message_lexer.l">
+			<Option compilerVar="CC" />
+			<Option compile="1" />
+			<Option link="1" />
+			<Option compiler="gcc" use="1" buildCommand="flex -o$file.c $file\n$compiler $options $includes -c $file.c -o $object" />
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="src/message_parser.y">
+			<Option compilerVar="CC" />
+			<Option compile="1" />
+			<Option link="1" />
+			<Option weight="10" />
+			<Option compiler="gcc" use="1" buildCommand="bison -y -d -osrc/message_parser.tab.c $file\n$compiler $options $includes -c src/message_parser.tab.c -o $object" />
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="src/messagely.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />
@@ -2441,6 +2487,12 @@
 			<Option target="NDBGWindows" />
 		</Unit>
 		<Unit filename="src/parsetest.h">
+			<Option target="DBGUnix" />
+			<Option target="NDBGUnix" />
+			<Option target="DBGWindows" />
+			<Option target="NDBGWindows" />
+		</Unit>
+		<Unit filename="src/positiondef.h">
 			<Option target="DBGUnix" />
 			<Option target="NDBGUnix" />
 			<Option target="DBGWindows" />

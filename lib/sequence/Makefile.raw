@@ -1,8 +1,0 @@
-MAKERULES=../../makerules
-include $(MAKERULES)/configure.mk
-
-SRC=sequence.c
-
-LIB=sequence
-
-include $(MAKERULES)/lib.mk

@@ -39,9 +39,9 @@
 # include <GL/glc.h>
 #endif
 
-static const char font_family[] = "DejaVu Sans Mono";
-static const char font_face_regular[] = "Book";
-static const char font_face_bold[] = "Bold";
+static char font_family[128];
+static char font_face_regular[128];
+static char font_face_bold[128];
 
 static float font_size = 12.f;
 // Contains the font color in the following order: red, green, blue, alpha
@@ -56,6 +56,27 @@ static GLint _glcFont_Bold = 0;
  *	Source
  */
 /***************************************************************************/
+
+void iV_font(const char *fontName, const char *fontFace, const char *fontFaceBold)
+{
+	if (_glcContext)
+	{
+		debug(LOG_ERROR, "Cannot change font in running game, yet.");
+		return;
+	}
+	if (fontName)
+	{
+		sstrcpy(font_family, fontName);
+	}
+	if (fontFace)
+	{
+		sstrcpy(font_face_regular, fontFace);
+	}
+	if (fontFaceBold)
+	{
+		sstrcpy(font_face_bold, fontFaceBold);
+	}
+}
 
 static inline void iV_printFontList(void)
 {
@@ -82,7 +103,7 @@ static inline void iV_printFontList(void)
 		char prBuffer[1024];
 		snprintf(prBuffer, sizeof(prBuffer), "Font #%d : %s ", font, (const char*)glcGetFontc(font, GLC_FAMILY));
 		prBuffer[sizeof(prBuffer) - 1] = 0;
-		strlcat(prBuffer, glcGetFontFace(font), sizeof(prBuffer));
+		sstrcat(prBuffer, glcGetFontFace(font));
 		debug(LOG_NEVER, "%s", prBuffer);
 	}
 }
@@ -514,7 +535,7 @@ int iV_DrawFormattedText(const char* String, UDWORD x, UDWORD y, UDWORD Width, U
 			FWord[i] = 0;
 
 			// And add it to the output string.
-			strlcat(FString, FWord, sizeof(FString));
+			sstrcat(FString, FWord);
 		}
 
 
@@ -628,14 +649,23 @@ void iV_DrawTextRotated(const char* string, float XPos, float YPos, float rotati
 
 void iV_DrawTextRotatedFv(float x, float y, float rotation, const char* format, va_list ap)
 {
-	// Determine the size of the string we'll be going to draw on screen
-	size_t size = vsnprintf(NULL, 0, format, ap);
+	va_list aq;
+	size_t size;
+	char* str;
+
+	/* Required because we're using the va_list ap twice otherwise, which
+	 * results in undefined behaviour. See stdarg(3) for details.
+	 */
+	va_copy(aq, ap);
 
 	// Allocate a buffer large enough to hold our string on the stack
-	char* str = alloca(size + 1);
+	size = vsnprintf(NULL, 0, format, ap);
+	str = alloca(size + 1);
 
 	// Print into our newly created string buffer
-	vsprintf(str, format, ap);
+	vsprintf(str, format, aq);
+
+	va_end(aq);
 
 	// Draw the produced string to the screen at the given position and rotation
 	iV_DrawTextRotated(str, x, y, rotation);

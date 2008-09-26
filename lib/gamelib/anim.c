@@ -33,6 +33,7 @@
 #include "lib/framework/frame.h"
 #include "lib/framework/frameresource.h"
 #include "lib/ivis_opengl/piematrix.h"
+#include "lib/ivis_common/piefixedpoint.h"
 
 #include "anim.h"
 #include "parser.h"
@@ -47,13 +48,13 @@
 /***************************************************************************/
 /* global variables */
 
-struct
+static struct
 {
         BASEANIM                *psAnimList;
         UWORD                   uwCurObj;
 	UWORD			uwCurState;
 }
-static g_animGlobals;
+g_animGlobals;
 
 /***************************************************************************/
 /*
@@ -305,7 +306,7 @@ void anim_SetVals(char szFileName[], UWORD uwAnimID)
 
 	/* set anim vals */
 	psAnim->uwID = uwAnimID;
-	strlcpy(psAnim->szFileName, szFileName, sizeof(psAnim->szFileName));
+	sstrcpy(psAnim->szFileName, szFileName);
 }
 
 /***************************************************************************/

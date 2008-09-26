@@ -35,6 +35,7 @@
 #include "lib/ivis_common/piepalette.h"
 #include "lib/ivis_opengl/piematrix.h"
 #include "lib/ivis_common/piemode.h"
+#include "lib/ivis_common/piefixedpoint.h"
 #include "lib/ivis_common/piefunc.h"
 #include "lib/ivis_common/rendmode.h"
 
@@ -47,7 +48,6 @@
 #include "e3demo.h"
 #include "loop.h"
 #include "atmos.h"
-#include "raycast.h"
 #include "levels.h"
 #include "map.h"
 #include "move.h"
@@ -93,8 +93,6 @@
 #include "anim_id.h"
 #include "cmddroid.h"
 
-
-#define WATER_ALPHA_LEVEL 255 //was 164	// Amount to alpha blend water.
 #define WATER_ZOFFSET 32		// Sorting offset for main water tile.
 #define WATER_EDGE_ZOFFSET 64	// Sorting offset for water edge tiles.
 #define WATER_DEPTH	127			// Amount to push terrain below water.
@@ -879,10 +877,6 @@ static void drawTiles(iView *player)
 	pie_RemainingPasses();
 	pie_EndLighting();
 
-#ifdef ARROWS
-	arrowDrawAll();
-#endif
-
 	targetCloseList();
 
 	if(driveModeActive()) {
@@ -1552,7 +1546,7 @@ void displayDynamicObjects( void )
 							renderDroid(psDroid);
 						}
 						else
-						{	
+						{
 							bucketAddTypeToList(RENDER_DROID, psDroid);
 						}
 						/* draw anim if visible */
@@ -1642,88 +1636,96 @@ void	renderFeature(FEATURE *psFeature)
 	BOOL bForceDraw = ( !getRevealStatus() && psFeature->psStats->visibleAtStart);
 	int shadowFlags = 0;
 
-	if (psFeature->visible[selectedPlayer] || godMode || demoGetStatus() || bForceDraw)
+	if (!psFeature->visible[selectedPlayer] && !godMode && !demoGetStatus() && !bForceDraw)
 	{
-		psFeature->sDisplay.frameNumber = currentGameFrame;
-		/* Get it's x and y coordinates so we don't have to deref. struct later */
-		featX = psFeature->pos.x;
-		featY = psFeature->pos.y;
-		/* Daft hack to get around the oild derrick issue */
-		if (!TileHasFeature(mapTile(map_coord(featX), map_coord(featY))))
-		{
-			return;
-		}
-		dv.x = (featX - player.p.x) - terrainMidX*TILE_UNITS;
-		dv.z = terrainMidY*TILE_UNITS - (featY - player.p.z);
-
-		/* features sits at the height of the tile it's centre is on */
-		dv.y = psFeature->pos.z;
-
-		/* Push the indentity matrix */
-		iV_MatrixBegin();
-
-		/* Translate the feature  - N.B. We can also do rotations here should we require
-		buildings to face different ways - Don't know if this is necessary - should be IMO */
-		iV_TRANSLATE(dv.x,dv.y,dv.z);
-		/* Get the x,z translation components */
-		rx = player.p.x & (TILE_UNITS-1);
-		rz = player.p.z & (TILE_UNITS-1);
-
-		/* Translate */
-		iV_TRANSLATE(rx,0,-rz);
-		rotation = DEG( (int)psFeature->direction );
-
-		iV_MatrixRotateY(-rotation);
-
-		brightness = pal_SetBrightness(200); //? HUH?
-
-		if(psFeature->psStats->subType == FEAT_SKYSCRAPER)
-		{
-			objectShimmy((BASE_OBJECT*)psFeature);
-		}
-
-		if(godMode || demoGetStatus() || bForceDraw)
-		{
-			brightness = pal_SetBrightness(200);
-		}
-		else if(getRevealStatus())
-		{
-			brightness = pal_SetBrightness(avGetObjLightLevel((BASE_OBJECT*)psFeature, brightness.byte.r));
-		}
-
-		if (psFeature->psStats->subType == FEAT_BUILDING || psFeature->psStats->subType == FEAT_SKYSCRAPER
-		    || psFeature->psStats->subType == FEAT_OIL_DRUM)
-		{
-			// these cast a shadow
-			shadowFlags = pie_STATIC_SHADOW;
-		}
-
-		if(psFeature->psStats->subType == FEAT_OIL_RESOURCE)
-		{
-			vecTemp = psFeature->sDisplay.imd->points;
-			flattenImd(psFeature->sDisplay.imd, psFeature->pos.x, psFeature->pos.y, 0);
-			/* currentGameFrame/2 set anim running - GJ hack */
-			pie_Draw3DShape(psFeature->sDisplay.imd, currentGameFrame/2, 0, brightness, WZCOL_BLACK, 0, 0);
-			psFeature->sDisplay.imd->points = vecTemp;
-		}
-		else
-		{
-			pie_Draw3DShape(psFeature->sDisplay.imd, 0, 0, brightness, WZCOL_BLACK, shadowFlags,0);
-		}
-
-		{
-			Vector3i zero = {0, 0, 0};
-			Vector2i s = {0, 0};
-
-			pie_RotateProject( &zero, &s );
-			psFeature->sDisplay.screenX = s.x;
-			psFeature->sDisplay.screenY = s.y;
-
-			targetAdd((BASE_OBJECT*)psFeature);
-		}
-
-		iV_MatrixEnd();
+		return;
 	}
+
+	/* Mark it as having been drawn */
+	psFeature->sDisplay.frameNumber = currentGameFrame;
+
+	/* Get it's x and y coordinates so we don't have to deref. struct later */
+	featX = psFeature->pos.x;
+	featY = psFeature->pos.y;
+
+	/* Daft hack to get around the oild derrick issue */
+	if (!TileHasFeature(mapTile(map_coord(featX), map_coord(featY))))
+	{
+		return;
+	}
+
+	dv = Vector3i_New(
+		(featX - player.p.x) - terrainMidX*TILE_UNITS,
+		dv.y = psFeature->pos.z, // features sits at the height of the tile it's centre is on
+		terrainMidY*TILE_UNITS - (featY - player.p.z)
+	);
+
+	/* Push the indentity matrix */
+	iV_MatrixBegin();
+
+	/* Translate the feature  - N.B. We can also do rotations here should we require
+	buildings to face different ways - Don't know if this is necessary - should be IMO */
+	iV_TRANSLATE(dv.x,dv.y,dv.z);
+
+	/* Get the x,z translation components */
+	rx = player.p.x & (TILE_UNITS-1);
+	rz = player.p.z & (TILE_UNITS-1);
+
+	/* Translate */
+	iV_TRANSLATE(rx,0,-rz);
+	rotation = DEG( (int)psFeature->direction );
+
+	iV_MatrixRotateY(-rotation);
+
+	brightness = pal_SetBrightness(200); //? HUH?
+
+	if (psFeature->psStats->subType == FEAT_SKYSCRAPER)
+	{
+		objectShimmy((BASE_OBJECT*)psFeature);
+	}
+
+	if (godMode || demoGetStatus() || bForceDraw)
+	{
+		brightness = pal_SetBrightness(200);
+	}
+	else if (getRevealStatus())
+	{
+		brightness = pal_SetBrightness(avGetObjLightLevel((BASE_OBJECT*)psFeature, brightness.byte.r));
+	}
+
+	if (psFeature->psStats->subType == FEAT_BUILDING
+		|| psFeature->psStats->subType == FEAT_SKYSCRAPER
+		|| psFeature->psStats->subType == FEAT_OIL_DRUM)
+	{
+		/* these cast a shadow */
+		shadowFlags = pie_STATIC_SHADOW;
+	}
+
+	if (psFeature->psStats->subType == FEAT_OIL_RESOURCE)
+	{
+		vecTemp = psFeature->sDisplay.imd->points;
+		flattenImd(psFeature->sDisplay.imd, psFeature->pos.x, psFeature->pos.y, 0);
+		/* currentGameFrame/2 set anim running - GJ hack */
+		pie_Draw3DShape(psFeature->sDisplay.imd, currentGameFrame/2, 0, brightness, WZCOL_BLACK, 0, 0);
+		psFeature->sDisplay.imd->points = vecTemp;
+	}
+	else
+	{
+		pie_Draw3DShape(psFeature->sDisplay.imd, 0, 0, brightness, WZCOL_BLACK, shadowFlags,0);
+	}
+
+	{
+		Vector3i zero = {0, 0, 0};
+		Vector2i s = {0, 0};
+
+		pie_RotateProject( &zero, &s );
+		psFeature->sDisplay.screenX = s.x;
+		psFeature->sDisplay.screenY = s.y;
+
+		targetAdd((BASE_OBJECT*)psFeature);
+	}
+
+	iV_MatrixEnd();
 }
 
 void renderProximityMsg(PROXIMITY_DISPLAY *psProxDisp)
@@ -2114,7 +2116,7 @@ void	renderStructure(STRUCTURE *psStructure)
 				{
 					iV_MatrixBegin();
 					iV_TRANSLATE(strImd->connectors[i].x, strImd->connectors[i].z, strImd->connectors[i].y);
-					pie_MatRotY(DEG(-((SDWORD)psStructure->turretRotation[i])));
+					pie_MatRotY(DEG(-((SDWORD)psStructure->asWeaps[i].rotation)));
 					if (mountImd[i] != NULL)
 					{
 						pie_TRANSLATE(0, 0, psStructure->asWeaps[i].recoilValue / 3);
@@ -2125,7 +2127,7 @@ void	renderStructure(STRUCTURE *psStructure)
 							iV_TRANSLATE(mountImd[i]->connectors->x, mountImd[i]->connectors->z, mountImd[i]->connectors->y);
 						}
 					}
-					iV_MatrixRotateX(DEG(psStructure->turretPitch[i]));
+					iV_MatrixRotateX(DEG(psStructure->asWeaps[i].pitch));
 					pie_TRANSLATE(0, 0, psStructure->asWeaps[i].recoilValue);
 
 					pie_Draw3DShape(weaponImd[i], playerFrame, 0, buildingBrightness, WZCOL_BLACK, pie_SHADOW,0);
@@ -2142,7 +2144,7 @@ void	renderStructure(STRUCTURE *psStructure)
 							iV_TRANSLATE(weaponImd[i]->connectors->x,weaponImd[i]->connectors->z-12,weaponImd[i]->connectors->y);
 							pRepImd = getImdFromIndex(MI_FLAME);
 
-							pie_MatRotY(DEG((SDWORD)psStructure->turretRotation[i]));
+							pie_MatRotY(DEG((SDWORD)psStructure->asWeaps[i].rotation));
 
 							iV_MatrixRotateY(-player.r.y);
 							iV_MatrixRotateX(-player.r.x);
@@ -2150,7 +2152,7 @@ void	renderStructure(STRUCTURE *psStructure)
 
 							iV_MatrixRotateX(player.r.x);
 							iV_MatrixRotateY(player.r.y);
-							pie_MatRotY(DEG((SDWORD)psStructure->turretRotation[i]));
+							pie_MatRotY(DEG((SDWORD)psStructure->asWeaps[i].rotation));
 						}
 					}
 					// we have a droid weapon so do we draw a muzzle flash
@@ -2199,16 +2201,16 @@ void	renderStructure(STRUCTURE *psStructure)
 						if (strImd->max.y > 80) // babatower
 						{
 							iV_TRANSLATE(0, 80, 0);
-							pie_MatRotY(DEG(-((SDWORD)psStructure->turretRotation[i])));
+							pie_MatRotY(DEG(-((SDWORD)psStructure->asWeaps[i].rotation)));
 							iV_TRANSLATE(0, 0, -20);
 						}
 						else//baba bunker
 						{
 							iV_TRANSLATE(0, 10, 0);
-							pie_MatRotY(DEG(-((SDWORD)psStructure->turretRotation[i])));
+							pie_MatRotY(DEG(-((SDWORD)psStructure->asWeaps[i].rotation)));
 							iV_TRANSLATE(0, 0, -40);
 						}
-						iV_MatrixRotateX(DEG(psStructure->turretPitch[i]));
+						iV_MatrixRotateX(DEG(psStructure->asWeaps[i].pitch));
 						// and draw the muzzle flash
 						// animate for the duration of the flash only
 						// assume no clan colours formuzzle effects
@@ -2617,9 +2619,9 @@ static void drawWeaponReloadBar(BASE_OBJECT *psObj, WEAPON *psWeap, int weapon_s
 	}
 	if( (bSalvo && (psStats->reloadTime > GAME_TICKS_PER_SEC)) ||
 		(psStats->firePause > GAME_TICKS_PER_SEC) ||
-		((psObj->type == OBJ_DROID) && vtolDroid((DROID *)psObj)) )
+		((psObj->type == OBJ_DROID) && isVtolDroid((DROID *)psObj)) )
 	{
-		if (psObj->type == OBJ_DROID && vtolDroid((DROID *)psObj))
+		if (psObj->type == OBJ_DROID && isVtolDroid((DROID *)psObj))
 		{
 			//deal with VTOLs
 			firingStage = getNumAttackRuns((DROID *)psObj, weapon_slot) - ((DROID *)psObj)->sMove.iAttackRuns[weapon_slot];
@@ -3933,22 +3935,18 @@ static void drawTerrainWaterTile(UDWORD i, UDWORD j)
 
 		vertices[0] = tileScreenInfo[i + 0][j + 0];
 		vertices[0].light = colour[0][0];
-		vertices[0].light.byte.a = WATER_ALPHA_LEVEL;
 
 		vertices[1] = tileScreenInfo[i + 0][j + 1];
 		vertices[1].light = colour[0][1];
-		vertices[1].light.byte.a = WATER_ALPHA_LEVEL;
 
 		vertices[2] = tileScreenInfo[i + 1][j + 1];
 		vertices[2].light = colour[1][1];
-		vertices[2].light.byte.a = WATER_ALPHA_LEVEL;
 
 		pie_DrawWaterTriangle(vertices);
 
 		vertices[1] = vertices[2];
 		vertices[2] = tileScreenInfo[i + 1][j + 0];
 		vertices[2].light = colour[1][0];
-		vertices[2].light.byte.a = WATER_ALPHA_LEVEL;
 
 		pie_DrawWaterTriangle(vertices);
 	}

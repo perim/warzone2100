@@ -238,8 +238,8 @@ BOOL startTitleMenu(void)
 	addTopForm();
 	addBottomForm();
 
-	addTextButton(FRONTEND_SINGLEPLAYER, FRONTEND_POS2X, FRONTEND_POS2Y, _("Single Player Campaign"), false, false);
-	addTextButton(FRONTEND_MULTIPLAYER, FRONTEND_POS3X, FRONTEND_POS3Y, _("Multi Player Game"), false, false);
+	addTextButton(FRONTEND_SINGLEPLAYER, FRONTEND_POS2X, FRONTEND_POS2Y, _("Single Player"), false, false);
+	addTextButton(FRONTEND_MULTIPLAYER, FRONTEND_POS3X, FRONTEND_POS3Y, _("Multi Player"), false, false);
 	addTextButton(FRONTEND_TUTORIAL, FRONTEND_POS4X, FRONTEND_POS4Y, _("Tutorial") ,false,false);
 	addTextButton(FRONTEND_OPTIONS, FRONTEND_POS5X, FRONTEND_POS5Y, _("Options") ,false,false);
 
@@ -311,13 +311,13 @@ BOOL runTutorialMenu(void)
 	switch(id)
 	{
 		case FRONTEND_TUTORIAL:
-			strlcpy(aLevelName, TUTORIAL_LEVEL, sizeof(aLevelName));
+			sstrcpy(aLevelName, TUTORIAL_LEVEL);
 			changeTitleMode(STARTGAME);
 
 			break;
 
 		case FRONTEND_FASTPLAY:
-			strlcpy(aLevelName, "FASTPLAY", sizeof(aLevelName));
+			sstrcpy(aLevelName, "FASTPLAY");
 			changeTitleMode(STARTGAME);
 
 			break;
@@ -350,8 +350,9 @@ void startSinglePlayerMenu(void)
 	addTopForm();
 	addBottomForm();
 
-	addTextButton(FRONTEND_LOADGAME, FRONTEND_POS4X,FRONTEND_POS4Y, _("Load Campaign"),false,false);
-	addTextButton(FRONTEND_NEWGAME,  FRONTEND_POS3X,FRONTEND_POS3Y,_("New Campaign") ,false,false);
+	addTextButton(FRONTEND_NEWGAME,  FRONTEND_POS2X,FRONTEND_POS2Y,_("New Campaign") ,false,false);
+	addTextButton(FRONTEND_SKIRMISH, FRONTEND_POS3X,FRONTEND_POS3Y, _("Start Skirmish Game"),false,false);
+	addTextButton(FRONTEND_LOADGAME, FRONTEND_POS4X,FRONTEND_POS4Y, _("Load Game"),false,false);
 
 	addSideText	 (FRONTEND_SIDETEXT ,FRONTEND_SIDEX,FRONTEND_SIDEY,_("SINGLE PLAYER"));
 	addMultiBut(psWScreen, FRONTEND_BOTFORM, FRONTEND_QUIT, 10, 10, 30, 29, P_("menu", "Return"), IMAGE_RETURN, IMAGE_RETURN_HI, IMAGE_RETURN_HI);
@@ -361,7 +362,7 @@ static void frontEndNewGame( void )
 {
 	switch(StartWithGame) {
 		case 1:
-			strlcpy(aLevelName, DEFAULT_LEVEL, sizeof(aLevelName));
+			sstrcpy(aLevelName, DEFAULT_LEVEL);
 			seq_ClearSeqList();
 
 			seq_AddSeqToList("cam1/c001.rpl",NULL,"cam1/c001.txa",false);
@@ -370,11 +371,11 @@ static void frontEndNewGame( void )
             break;
 
 		case 2:
-			strlcpy(aLevelName, "CAM_2A", sizeof(aLevelName));
+			sstrcpy(aLevelName, "CAM_2A");
 			break;
 
 		case 3:
-			strlcpy(aLevelName, "CAM_3A", sizeof(aLevelName));
+			sstrcpy(aLevelName, "CAM_3A");
 			break;
 	}
 
@@ -385,7 +386,7 @@ void loadOK( void )
 {
 	if(strlen(sRequestResult))
 	{
-		strlcpy(saveGameName, sRequestResult, sizeof(saveGameName));
+		sstrcpy(saveGameName, sRequestResult);
 		changeTitleMode(LOADSAVEGAME);
 	}
 }
@@ -414,7 +415,7 @@ BOOL runSinglePlayerMenu(void)
 				break;
 
 			case FRONTEND_LOADCAM2:
-				strlcpy(aLevelName, "CAM_2A", sizeof(aLevelName));
+				sstrcpy(aLevelName, "CAM_2A");
 				changeTitleMode(STARTGAME);
  #ifdef LOADINGBACKDROPS
 				AddLoadingBackdrop(true);
@@ -424,7 +425,7 @@ BOOL runSinglePlayerMenu(void)
 				break;
 
 			case FRONTEND_LOADCAM3:
-				strlcpy(aLevelName, "CAM_3A", sizeof(aLevelName));
+				sstrcpy(aLevelName, "CAM_3A");
 				changeTitleMode(STARTGAME);
  #ifdef LOADINGBACKDROPS
 				AddLoadingBackdrop(true);
@@ -434,6 +435,12 @@ BOOL runSinglePlayerMenu(void)
 				break;
 			case FRONTEND_LOADGAME:
 				addLoadSave(LOAD_FRONTEND,SaveGamePath,"gam",_("Load Saved Game"));	// change mode when loadsave returns
+				break;
+
+			case FRONTEND_SKIRMISH:
+				NetPlay.bComms = false; // use network = false
+				ingame.bHostSetup = true;
+				changeTitleMode(MULTIOPTION);
 				break;
 
 			case FRONTEND_QUIT:
@@ -478,8 +485,6 @@ BOOL startMultiPlayerMenu(void)
 	addTextButton(FRONTEND_HOST,     FRONTEND_POS2X,FRONTEND_POS2Y, _("Host Game"),false,false);
 	addTextButton(FRONTEND_JOIN,     FRONTEND_POS3X,FRONTEND_POS3Y, _("Join Game"),false,false);
 
-	addTextButton(FRONTEND_SKIRMISH, FRONTEND_POS4X,FRONTEND_POS4Y, _("One Player Skirmish"),false,false);
-
 	addMultiBut(psWScreen, FRONTEND_BOTFORM, FRONTEND_QUIT, 10, 10, 30, 29, P_("menu", "Return"), IMAGE_RETURN, IMAGE_RETURN_HI, IMAGE_RETURN_HI);
 
 	return true;
@@ -493,8 +498,6 @@ BOOL runMultiPlayerMenu(void)
 	id = widgRunScreen(psWScreen);						// Run the current set of widgets
 	switch(id)
 	{
-	case FRONTEND_SKIRMISH:
-		NetPlay.bComms = false; // use network = false
 	case FRONTEND_HOST:
 		ingame.bHostSetup = true;
 		changeTitleMode(MULTIOPTION);
@@ -530,7 +533,7 @@ BOOL startOptionsMenu(void)
 	addSideText	 (FRONTEND_SIDETEXT ,	FRONTEND_SIDEX,FRONTEND_SIDEY, _("GAME OPTIONS"));
 	addTextButton(FRONTEND_GAMEOPTIONS,	FRONTEND_POS2X,FRONTEND_POS2Y, _("Game Options"),false,false);
 	addTextButton(FRONTEND_GAMEOPTIONS2,FRONTEND_POS3X,FRONTEND_POS3Y, _("Graphics Options"),false,false);
-	addTextButton(FRONTEND_GAMEOPTIONS4, FRONTEND_POS4X,FRONTEND_POS4Y, "Video Options", false, false);
+	addTextButton(FRONTEND_GAMEOPTIONS4, FRONTEND_POS4X,FRONTEND_POS4Y, _("Video Options"), false, false);
 	addTextButton(FRONTEND_GAMEOPTIONS3,	FRONTEND_POS5X,FRONTEND_POS5Y, _("Audio Options"),false,false);
 	addTextButton(FRONTEND_KEYMAP,		FRONTEND_POS6X,FRONTEND_POS6Y, _("Key Mappings"),false,false);
 	addMultiBut(psWScreen, FRONTEND_BOTFORM, FRONTEND_QUIT, 10, 10, 30, 29, P_("menu", "Return"), IMAGE_RETURN, IMAGE_RETURN_HI, IMAGE_RETURN_HI);
@@ -939,8 +942,20 @@ BOOL startGameOptions4Menu(void)
 	addTextButton(FRONTEND_TEXTURESZ, FRONTEND_POS5X-35, FRONTEND_POS5Y, _("Texture size"), true, false);
 	addTextButton(FRONTEND_TEXTURESZ_R, FRONTEND_POS5M-55, FRONTEND_POS5Y, textureSize, true, false);
 
+	// Vsync
+	addTextButton(FRONTEND_VSYNC, FRONTEND_POS6X-35, FRONTEND_POS6Y, _("Vertical sync*"), true, false);
+
+	if (war_GetVsync())
+	{
+		addTextButton(FRONTEND_VSYNC_R, FRONTEND_POS6M-55, FRONTEND_POS6Y, _("On"), true, false);
+	}
+	else
+	{
+		addTextButton(FRONTEND_VSYNC_R, FRONTEND_POS6M-55, FRONTEND_POS6Y, _("Off"), true, false);
+	}
+
 	// Add a note about changes taking effect on restart for certain options
-	addTextButton(FRONTEND_TAKESEFFECT, FRONTEND_POS6X-35, FRONTEND_POS6Y, _("* Takes effect on game restart"), true, true);
+	addTextButton(FRONTEND_TAKESEFFECT, FRONTEND_POS7X-35, FRONTEND_POS7Y, _("* Takes effect on game restart"), true, true);
 
 	// Quit/return
 	addMultiBut(psWScreen, FRONTEND_BOTFORM, FRONTEND_QUIT, 10, 10, 30, 29, P_("menu", "Return"), IMAGE_RETURN, IMAGE_RETURN_HI, IMAGE_RETURN_HI);
@@ -1036,6 +1051,22 @@ BOOL runGameOptions4Menu(void)
 			// Update the widget
 			widgSetString(psWScreen, FRONTEND_TEXTURESZ_R, textureSize);
 
+			break;
+		}
+
+		case FRONTEND_VSYNC:
+		case FRONTEND_VSYNC_R:
+		{
+			if (war_GetVsync())
+			{
+				war_SetVsync(false);
+				widgSetString(psWScreen, FRONTEND_VSYNC_R, _("Off"));
+			}
+			else
+			{
+				war_SetVsync(true);
+				widgSetString(psWScreen, FRONTEND_VSYNC_R, _("On"));
+			}
 			break;
 		}
 

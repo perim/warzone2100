@@ -269,6 +269,11 @@ void intUpdateProgressBar(WIDGET *psWidget, W_CONTEXT *psContext)
 				{
 					BuildPoints = Range;
 				}
+				// prevent a division by 0 error
+				if (Range == 0)
+				{
+					Range = 1;
+				}
 				BarGraph->majorSize = (UWORD)PERNUM(WBAR_SCALE,BuildPoints,Range);
 				BarGraph->style &= ~WIDG_HIDDEN;
 			}
@@ -321,6 +326,11 @@ void intUpdateProgressBar(WIDGET *psWidget, W_CONTEXT *psContext)
 				{
 					BuildPoints = Range;
 				}
+				// prevent a division by 0 error
+				if (Range == 0)
+				{
+					Range = 1;
+				}
 				BarGraph->majorSize = (UWORD)PERNUM(WBAR_SCALE,BuildPoints,Range);
 				BarGraph->style &= ~WIDG_HIDDEN;
 			} else {
@@ -355,7 +365,7 @@ void intUpdateQuantity(WIDGET *psWidget, W_CONTEXT *psContext)
 		/*Quantity = StructureGetFactory(Structure)->quantity;
 		if (Quantity == NON_STOP_PRODUCTION)
 		{
-			strlcpy(Label->aText, "*", sizeof(Label->aText));
+			sstrcpy(Label->aText, "*");
 		}
 		else
 		{
@@ -474,7 +484,7 @@ void intAddLoopQuantity(WIDGET *psWidget, W_CONTEXT *psContext)
 
 		if (psFactory->quantity == INFINITE_PRODUCTION)
 		{
-			strlcpy(Label->aText, "∞", sizeof(Label->aText));
+			sstrcpy(Label->aText, "∞");
 		}
 		else
 		{
@@ -2823,9 +2833,9 @@ BOOL StatGetComponentIMD(BASE_STATS *Stat, SDWORD compID,iIMDShape **CompIMD,iIM
 	switch (compID)
 	{
 	case COMP_BODY:
-		*CompIMD = ((COMP_BASE_STATS *)Stat)->pIMD;
+		*CompIMD = ((COMPONENT_STATS *)Stat)->pIMD;
 		return true;
-//		return ((COMP_BASE_STATS *)Stat)->pIMD;
+//		return ((COMPONENT_STATS *)Stat)->pIMD;
 
 	case COMP_BRAIN:
 //		ASSERT( ((UBYTE*)Stat >= (UBYTE*)asCommandDroids) &&
@@ -2840,31 +2850,31 @@ BOOL StatGetComponentIMD(BASE_STATS *Stat, SDWORD compID,iIMDShape **CompIMD,iIM
 
 	case COMP_WEAPON:
 		*MountIMD = ((WEAPON_STATS*)Stat)->pMountGraphic;
-		*CompIMD = ((COMP_BASE_STATS *)Stat)->pIMD;
+		*CompIMD = ((COMPONENT_STATS *)Stat)->pIMD;
 		return true;
 
 	case COMP_SENSOR:
 		*MountIMD = ((SENSOR_STATS*)Stat)->pMountGraphic;
-		*CompIMD = ((COMP_BASE_STATS *)Stat)->pIMD;
+		*CompIMD = ((COMPONENT_STATS *)Stat)->pIMD;
 		return true;
 
 	case COMP_ECM:
 		*MountIMD = ((ECM_STATS*)Stat)->pMountGraphic;
-		*CompIMD = ((COMP_BASE_STATS *)Stat)->pIMD;
+		*CompIMD = ((COMPONENT_STATS *)Stat)->pIMD;
 		return true;
 
 	case COMP_CONSTRUCT:
 		*MountIMD = ((CONSTRUCT_STATS*)Stat)->pMountGraphic;
-		*CompIMD = ((COMP_BASE_STATS *)Stat)->pIMD;
+		*CompIMD = ((COMPONENT_STATS *)Stat)->pIMD;
 		return true;
 
 	case COMP_PROPULSION:
-		*CompIMD = ((COMP_BASE_STATS *)Stat)->pIMD;
+		*CompIMD = ((COMPONENT_STATS *)Stat)->pIMD;
 		return true;
 
 	case COMP_REPAIRUNIT:
 		*MountIMD = ((REPAIR_STATS*)Stat)->pMountGraphic;
-		*CompIMD = ((COMP_BASE_STATS *)Stat)->pIMD;
+		*CompIMD = ((COMPONENT_STATS *)Stat)->pIMD;
 		return true;
 
 	default:
@@ -3110,9 +3120,8 @@ void intDisplayTransportButton(WIDGET *psWidget, UDWORD xOffset,
     }
 }
 
-
 /* Draws blips on radar to represent Proximity Display and damaged structures */
-void drawRadarBlips(float pixSizeH, float pixSizeV, int RadarOffsetX, int RadarOffsetY)
+void drawRadarBlips(int radarX, int radarY, float pixSizeH, float pixSizeV)
 {
 	PROXIMITY_DISPLAY	*psProxDisp;
 	UWORD			imageID;
@@ -3150,6 +3159,7 @@ void drawRadarBlips(float pixSizeH, float pixSizeV, int RadarOffsetX, int RadarO
 	for (psProxDisp = apsProxDisp[selectedPlayer]; psProxDisp != NULL; psProxDisp = psProxDisp->psNext)
 	{
 		PROX_TYPE	proxType;
+		int		x = 0, y = 0;
 
 		if (psProxDisp->type == POS_PROXDATA)
 		{
@@ -3159,7 +3169,7 @@ void drawRadarBlips(float pixSizeH, float pixSizeV, int RadarOffsetX, int RadarO
 		{
 			FEATURE *psFeature = (FEATURE *)psProxDisp->psMessage->pViewData;
 
-			ASSERT(psFeature && psFeature->psStats, "Bad feature message")
+			ASSERT(psFeature && psFeature->psStats, "Bad feature message");
 			if (psFeature && psFeature->psStats && psFeature->psStats->subType == FEAT_OIL_RESOURCE)
 			{
 				proxType = PROX_RESOURCE;
@@ -3189,8 +3199,27 @@ void drawRadarBlips(float pixSizeH, float pixSizeV, int RadarOffsetX, int RadarO
 			}
 			imageID = (UWORD)(IMAGE_RAD_ENM1 + psProxDisp->strobe + (proxType * (NUM_PULSES + 1)));
 		}
+
+		if (psProxDisp->type == POS_PROXDATA)
+		{
+			VIEW_PROXIMITY *psViewProx = (VIEW_PROXIMITY *)((VIEWDATA *)psProxDisp->psMessage->pViewData)->pData;
+
+			x = (psViewProx->x / TILE_UNITS) * pixSizeH;
+			y = (psViewProx->y / TILE_UNITS) * pixSizeV;
+		}
+		else if (psProxDisp->type == POS_PROXOBJ)
+		{
+			x = (((BASE_OBJECT *)psProxDisp->psMessage->pViewData)->pos.x / TILE_UNITS) * pixSizeH;
+			y = (((BASE_OBJECT *)psProxDisp->psMessage->pViewData)->pos.y / TILE_UNITS) * pixSizeV;
+		}
+		else
+		{
+			ASSERT(false, "Bad message type");
+			continue;
+		}
+
 		// Draw the 'blip'
-		iV_DrawImage(IntImages, imageID, psProxDisp->radarX + RADTLX, psProxDisp->radarY + RADTLY);
+		iV_DrawImage(IntImages, imageID, x + radarX, y + radarY);
 	}
 }
 

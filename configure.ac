@@ -1,7 +1,6 @@
-# Process this file with autoconf to produce a configure script.
-
 AC_PREREQ([2.56])
 AC_INIT([Warzone 2100],[TRUNK],[http://wz2100.net/],[warzone2100])
+
 AM_INIT_AUTOMAKE([1.10])
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -13,6 +12,9 @@ AC_CONFIG_SRCDIR([lib/framework/frame.c])
 # (Bash considers set but empty variables different from null for the ${VAR:+alt} operator)
 CFLAGS="${CFLAGS}"
 
+
+# Make cross compilation options available in --help
+AC_CANONICAL_HOST
 
 # Checks for programs.
 AC_PROG_CC_STDC
@@ -59,6 +61,8 @@ case ${host_os} in
 		;;
 	*)
 		AC_DEFINE([_XOPEN_SOURCE], 600, [Enable POSIX extensions if present])
+		# Make sure that backtrace_symbols_fd (GNU raw back trace extension) has some symbols to work  with
+		LDFLAGS="-rdynamic ${LDFLAGS}"
 		;;
 esac
 AM_CONDITIONAL([MINGW32], test "x$host_os_mingw32" = "xyes")
@@ -132,6 +136,13 @@ if test "x$enable_static" = "xyes" ; then
 	PKG_CONFIG="${PKG_CONFIG} --static"
 fi
 
+AC_ARG_ENABLE([sound],
+	AS_HELP_STRING([--disable-sound], [Disable sound [no]]),
+	[ enable_sound="${enableval}" ], [ enable_sound="yes" ])
+if test "x$enable_sound" != "xyes" ; then
+	AC_DEFINE([WZ_NOSOUND], [], [Causes sound to be disabled])
+fi
+
 # -O0 turns off all optimizations; this is necessary for accurate debugging
 # -Wno-unused-label is necessary because flex produces unused labels that we cannot fix
 # Add later for stricter checking: -Wextra -Wmissing-declarations -Wstrict-prototypes
@@ -154,10 +165,10 @@ elif test "x$enable_debug" = "xrelaxed" ; then
 	WZ_CFLAGS="${WZ_CFLAGS} -g -O0 -Wall -Wextra -Wwrite-strings"
 	WZ_CPPFLAGS="${WZ_CPPFLAGS} -DDEBUG"
 elif test "x$enable_debug" = "xdebugprofile" ; then
-	WZ_CFLAGS="${WZ_CFLAGS} -g -O0 -pg -Wall -Wextra -Wwrite-strings"
+	WZ_CFLAGS="${WZ_CFLAGS} -g -O0 -pg -Wall -Wwrite-strings"
 	WZ_CPPFLAGS="${WZ_CPPFLAGS} -DDEBUG"
 elif test "x$enable_debug" = "xprofile" ; then
-	WZ_CFLAGS="${WZ_CFLAGS} -g -Os -pg -Wall -Wextra -Wwrite-strings"
+	WZ_CFLAGS="${WZ_CFLAGS} -g -Os -pg -Wall -Wwrite-strings"
 	WZ_CPPFLAGS="${WZ_CPPFLAGS} -DNDEBUG"
 else
 	WZ_CFLAGS="${WZ_CFLAGS} -g -Wall -Wwrite-strings"
@@ -169,7 +180,7 @@ fi
 
 AC_ARG_WITH([distributor],
 	AS_HELP_STRING([--with-distributor], [Name of distributor compiling this package]),
-	[ with_distributor=${withval} ], [ with_applicationdir="UNKNOWN" ])
+	[ with_distributor=${withval} ], [ with_distributor="UNKNOWN" ])
 AC_DEFINE_UNQUOTED([PACKAGE_DISTRIBUTOR], ["${with_distributor}"], [Name of distributor compiling this package])
 
 AC_ARG_WITH([makensis],
@@ -222,6 +233,16 @@ PKG_CHECK_MODULES([SDL], [sdl >= 1.2])
 PKG_CHECK_MODULES([OPENAL], [openal >= 0.0.8])
 PKG_CHECK_MODULES([PNG], [libpng >= 1.2])
 PKG_CHECK_MODULES([OGGVORBIS], [vorbisfile >= 1.1])
+
+# Only accept SQLite versions 3.5.x, with a minimum of 3.5.4.
+PKG_CHECK_MODULES([SQLITE], [sqlite3 >= 3.6],
+	[ use_system_sqlite="yes" ], [
+	use_system_sqlite="no"
+	SQLITE_CFLAGS="-I\$(top_srcdir)/lib/sqlite3"
+	SQLITE_LIBS="\$(top_builddir)/lib/sqlite3/libsqlite3.a"
+	AC_SUBST([SQLITE_CFLAGS])
+	AC_SUBST([SQLITE_LIBS])])
+AM_CONDITIONAL([USE_SYSTEM_SQLITE], [ test "x$use_system_sqlite" = "xyes" ])
 
 if test "x$enable_static" = "xyes" ; then
 	# If linking statically, make sure to include the direct dependencies of
@@ -306,7 +327,8 @@ AC_CONFIG_FILES([Makefile
 		data/Makefile
 		data/mods/Makefile
 		data/mods/global/Makefile
-		data/mods/global/aivolution/multiplay/skirmish/Makefile
+		data/mods/multiplay/Makefile
+		data/music/Makefile
 		pkg/Makefile
 		pkg/nsis/Makefile
 		win32/Makefile
@@ -322,8 +344,7 @@ AC_CONFIG_FILES([Makefile
 		lib/sound/Makefile
 		lib/sqlite3/Makefile
 		lib/widget/Makefile
-		src/Makefile
-		tests/Makefile])
+		src/Makefile])
 AC_OUTPUT
 
 if test "x$enable_debug" = "xyes" ; then
@@ -335,4 +356,11 @@ if test "x$with_distributor" = "x" ; then
 	AC_MSG_NOTICE()
 	AC_MSG_WARN([Distributor unknown!])
 	AC_MSG_NOTICE([Use --with-distributor when compiling package for distribution])
+fi
+
+if test "x$use_system_sqlite" = "xno" ; then
+	AC_MSG_NOTICE()
+	AC_MSG_WARN([Not using a system provided SQLite library.])
+	AC_MSG_WARN([${SQLITE_PKG_ERRORS}])
+	AC_MSG_WARN([We currently only accept SQLite versions >= 3.6.])
 fi

@@ -6,7 +6,6 @@
 	ProjectGUID="{BDDCCB7B-F4F7-4768-A1C3-AE20E9F5FDFC}"
 	RootNamespace="Warzone2100"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -58,7 +57,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)\..&quot;;&quot;$(SolutionDir)\..\devpkg\include&quot;;&quot;$(SolutionDir)\..\devpkg\include\SDL&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)\..&quot;;&quot;$(SolutionDir)\..\lib\sqlite3&quot;;&quot;$(SolutionDir)\..\devpkg\include&quot;;&quot;$(SolutionDir)\..\devpkg\include\SDL&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;YY_NO_UNISTD_H;VERSION=\&quot;TRUNK\&quot;;PACKAGE=\&quot;warzone2100\&quot;;LOCALEDIR=\&quot;\&quot;;YY_STATIC"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -157,7 +156,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)\..&quot;;&quot;$(SolutionDir)\devpkg\include&quot;;&quot;$(SolutionDir)\devpkg\include\SDL&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)\..\lib\sqlite3&quot;;&quot;$(SolutionDir)\..&quot;;&quot;$(SolutionDir)\devpkg\include&quot;;&quot;$(SolutionDir)\devpkg\include\SDL&quot;"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;YY_NO_UNISTD_H;VERSION=\&quot;TRUNK\&quot;;PACKAGE=\&quot;warzone2100\&quot;;LOCALEDIR=\&quot;\&quot;;YY_STATIC"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
@@ -255,6 +254,10 @@
 				</File>
 				<File
 					RelativePath="..\src\aud.c"
+					>
+				</File>
+				<File
+					RelativePath="..\src\baseobject.c"
 					>
 				</File>
 				<File
@@ -422,10 +425,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\src\level_parser.tab.c"
-					>
-				</File>
-				<File
 					RelativePath="..\src\levels.c"
 					>
 				</File>
@@ -463,6 +462,14 @@
 				</File>
 				<File
 					RelativePath="..\src\message.c"
+					>
+				</File>
+				<File
+					RelativePath="..\src\message_lexer.lex.c"
+					>
+				</File>
+				<File
+					RelativePath="..\src\message_parser.tab.c"
 					>
 				</File>
 				<File
@@ -705,6 +712,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\baseobject.h"
+				>
+			</File>
+			<File
 				RelativePath="..\src\bridge.h"
 				>
 			</File>
@@ -913,14 +924,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\level_parser.tab.h"
-				>
-			</File>
-			<File
-				RelativePath=".\level_parser.tab.h"
-				>
-			</File>
-			<File
 				RelativePath="..\src\levelint.h"
 				>
 			</File>
@@ -962,6 +965,14 @@
 			</File>
 			<File
 				RelativePath="..\src\message.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\messagely.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\message_parser.tab.h"
 				>
 			</File>
 			<File
@@ -1058,6 +1069,10 @@
 			</File>
 			<File
 				RelativePath="..\src\parsetest.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\positiondef.h"
 				>
 			</File>
 			<File
@@ -1235,7 +1250,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\level_parser.y"
+				RelativePath="..\src\message_lexer.l"
+				>
+			</File>
+			<File
+				RelativePath="..\src\message_parser.y"
 				>
 			</File>
 			<File

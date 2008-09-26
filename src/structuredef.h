@@ -25,6 +25,7 @@
 #define __INCLUDED_STRUCTUREDEF_H__
 
 #include "lib/gamelib/animobj.h"
+#include "positiondef.h"
 #include "statsdef.h"
 #include "weapondef.h"
 
@@ -61,29 +62,6 @@ REF_MISSILE_SILO,
 REF_SAT_UPLINK,         //added for updates - AB 8/6/99
 NUM_DIFF_BUILDINGS,		//need to keep a count of how many types for IMD loading
 } STRUCTURE_TYPE;
-
-typedef enum _position_type
-{
-	POS_DELIVERY,		//Delivery Points NOT wayPoints
-	POS_PROXDATA,	//proximity messages that are data generated
-	POS_PROXOBJ,	//proximity messages that are in game generated
-	POS_TEMPDELIVERY //SAVE ONLY delivery point for factory currently assigned to commander
-} POSITION_TYPE;
-
-#define POSITION_OBJ \
-	POSITION_TYPE	type;				/*the type of position obj - FlagPos or ProxDisp*/ \
-	UDWORD			frameNumber;		/*when the Position was last drawn*/ \
-	UDWORD			screenX;			/*screen coords and radius of Position imd */ \
-	UDWORD			screenY; \
-	UDWORD			screenR; \
-	UDWORD			player;				/*which player the Position belongs to*/ \
-	BOOL			selected			/*flag to indicate whether the Position
-										is to be highlighted*/
-
-typedef struct _object_position
-{
-	POSITION_OBJ;
-} OBJECT_POSITION;
 
 typedef struct _flag_position
 {
@@ -124,7 +102,6 @@ typedef struct _structure_stats
 {
 	STATS_BASE;						/* basic stats */
 	STRUCTURE_TYPE	type;				/* the type of structure */
-	TECH_LEVEL	techLevel;			/* technology level of the structure */
 	STRUCT_STRENGTH	strength;		/* strength against the weapon effects */
 	UDWORD		terrainType;		/*The type of terrain the structure has to be
 									  built next to - may be none*/
@@ -149,15 +126,15 @@ typedef struct _structure_stats
 	UDWORD		sizeModifier;		/*The larger the target, the easier to hit*/
 	iIMDShape	*pIMD;		/*The IMD to draw for this structure */
 	iIMDShape	*pBaseIMD;	/*The base IMD to draw for this structure */
-	struct _ecm_stats	*pECM;		/*Which ECM is standard for the structure -
+	struct ECM_STATS	*pECM;		/*Which ECM is standard for the structure -
 									  if any*/
-	struct _sensor_stats *pSensor;	/*Which Sensor is standard for the structure -
+	struct SENSOR_STATS *pSensor;	/*Which Sensor is standard for the structure -
 									  if any*/
 	UDWORD		weaponSlots;		/*Number of weapons that can be attached to the
 									  building*/
 	UDWORD		numWeaps;			/*Number of weapons for default */
 
-	struct _weapon_stats    *psWeapStat[STRUCT_MAXWEAPS];
+	struct WEAPON_STATS    *psWeapStat[STRUCT_MAXWEAPS];
 
 	UDWORD		numFuncs;			/*Number of functions for default*/
 	SDWORD		defaultFunc;		/*The default function*/
@@ -174,12 +151,12 @@ typedef enum _struct_states
 
 typedef struct _research_facility
 {
-	struct _base_stats	*psSubject;		/* the subject the structure is working on*/
+	struct BASE_STATS	*psSubject;		/* the subject the structure is working on*/
 	UDWORD		capacity;				/* Number of upgrade modules added*/
 	UDWORD		timeStarted;			/* The time the building started on the subject*/
 	UDWORD		researchPoints;			/* Research Points produced per research cycle*/
 	UDWORD		timeToResearch;			/* Time taken to research the topic*/
-	struct _base_stats	*psBestTopic;	/* The topic with the most research points
+	struct BASE_STATS	*psBestTopic;	/* The topic with the most research points
 										   that was last performed*/
 	UDWORD		powerAccrued;			/* used to keep track of power before
 										   researching a topic*/
@@ -206,14 +183,14 @@ typedef struct _factory
 	UDWORD				timeToBuild;		/* Time taken to build one droid */
 	UDWORD				timeStartHold;		/* The time the factory was put on hold*/
 	FLAG_POSITION		*psAssemblyPoint;	/* Place for the new droids to assemble at */
-	struct _droid		*psCommander;	    // command droid to produce droids for (if any)
+	struct DROID		*psCommander;	    // command droid to produce droids for (if any)
     UDWORD              secondaryOrder;     // secondary order state for all units coming out of the factory
                                             // added AB 22/04/99
 
     //these are no longer required - yipee!
 	// The group the droids produced by this factory belong to - used for Missions
 	//struct _droid_group		*psGroup;
-	//struct _droid			*psGrpNext;
+	//struct DROID			*psGrpNext;
 
 } FACTORY;
 
@@ -250,7 +227,7 @@ typedef struct REPAIR_FACILITY
 
 	// The group the droids to be repaired by this facility belong to
 	struct _droid_group		*psGroup;
-	struct _droid			*psGrpNext;
+	struct DROID			*psGrpNext;
 	int				droidQueue;		///< Last count of droid queue for this facility
 } REPAIR_FACILITY;
 
@@ -293,9 +270,6 @@ typedef struct _structure
 	/* The other structure data.  These are all derived from the functions
 	 * but stored here for easy access - will need to add more for variable stuff!
 	 */
-	//the sensor stats need to be stored since the actual sensor stat can change with research
-	UWORD		turretRotation[STRUCT_MAXWEAPS];				// weapon, ECM and sensor direction and pitch
-	UWORD		turretPitch[STRUCT_MAXWEAPS];				// weapon, ECM and sensor direction and pitch
 
 	FUNCTIONALITY	*pFunctionality;		/* pointer to structure that contains fields
 											   necessary for functionality */

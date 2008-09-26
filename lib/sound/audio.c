@@ -24,6 +24,7 @@
 
 #include "tracklib.h"
 #include "aud.h"
+#include "audio.h"
 #include "audio_id.h"
 
 // defines
@@ -512,15 +513,10 @@ static void audio_UpdateQueue( void )
 	}
 }
 
-//*
-// =======================================================================================================================
-// =======================================================================================================================
-//
-void audio_Update( void )
+void audio_Update()
 {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	Vector3i		vecPlayer;
-	SDWORD			iA;
+	Vector3f playerPos, playerForward, playerUp;
 	AUDIO_SAMPLE	*psSample, *psSampleTemp;
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -533,11 +529,10 @@ void audio_Update( void )
 	audio_UpdateQueue();
 
 	// get player position
-	audio_Get3DPlayerPos(&vecPlayer.x, &vecPlayer.y, &vecPlayer.z);
-
-	sound_SetPlayerPos( vecPlayer.x, vecPlayer.y, vecPlayer.z );
-	audio_Get3DPlayerRotAboutVerticalAxis( &iA );
-	sound_SetPlayerOrientation( 0, 0, iA );
+	playerPos = audio_GetPlayerPos();
+	audio_GetPlayerOrientation(&playerForward, &playerUp);
+	sound_SetPlayerPos(playerPos);
+	sound_SetPlayerOrientation(playerForward, playerUp);
 
 	// loop through 3D sounds and remove if finished or update position
 	psSample = g_psSampleList;
@@ -821,6 +816,7 @@ AUDIO_STREAM* audio_PlayStream(const char* fileName, float volume, void (*onFini
 
 	// Open up the file
 	fileHandle = PHYSFS_openRead(fileName);
+	debug(LOG_WZ, "Reading...[directory: %s] %s", PHYSFS_getRealDir(fileName), fileName);
 	if (fileHandle == NULL)
 	{
 		debug(LOG_ERROR, "sound_LoadTrackFromFile: PHYSFS_openRead(\"%s\") failed with error: %s\n", fileName, PHYSFS_getLastError());
@@ -1119,4 +1115,23 @@ void audio_RemoveObj(const void* psObj)
 
 	if (count)
 		debug(LOG_MEMORY, "audio_RemoveObj: ***Warning! psOBJ %p was found %u times in the list of playing audio samples", psObj, count);
+}
+
+static BOOL dummyCB(void *nada)
+{
+	return true;
+}
+
+void audioTest()
+{
+	int i;
+
+	for (i = 0; i < 50; i++)
+	{
+		assert(audio_Shutdown());
+		assert(audio_Init(dummyCB));
+		assert(!audio_Disabled());
+		audio_Update();
+	}
+	fprintf(stdout, "\tAudio self-test: PASSED\n");
 }

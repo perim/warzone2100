@@ -21,8 +21,8 @@
 #include "lib/ivis_opengl/GLee.h"
 #include "lib/framework/frame.h"
 
-#ifdef __APPLE__
-#include <opengl/glu.h>
+#if defined(WZ_OS_MAC)
+#include <OpenGL/glu.h>
 #else
 #include <GL/glu.h>
 #endif
@@ -87,7 +87,7 @@ int pie_AddTexPage(iV_Image *s, const char* filename, int slot)
 	assert(s != NULL);
 
 	/* Stick the name into the tex page structures */
-	strlcpy(_TEX_PAGE[i].name, filename, sizeof(_TEX_PAGE[i].name));
+	sstrcpy(_TEX_PAGE[i].name, filename);
 
 	glGenTextures(1, (GLuint *) &_TEX_PAGE[i].id);
 	// FIXME: This function is used instead of glBindTexture, but we're juggling with difficult to trace global state here. Look into pie_SetTexturePage's definition for details.
@@ -165,7 +165,7 @@ static void pie_PrintLoadedTextures(void)
 
 /** Retrieve the texture number for a given texture resource.
  *
- *  @NOTE We keep textures in a separate data structure _TEX_PAGE apart from the
+ *  @note We keep textures in a separate data structure _TEX_PAGE apart from the
  *        normal resource system.
  *
  *  @param filename The filename of the texture page to search for.

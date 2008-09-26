@@ -29,6 +29,7 @@
 	Alex McLean, Pumpkin Studios, EIDOS Interactive, 1998.
 */
 #include "lib/ivis_common/piedef.h"
+#include "lib/ivis_common/piefixedpoint.h"
 #include "lib/ivis_common/pietypes.h"
 
 /* All the effect groups */
@@ -167,7 +168,6 @@ extern	UDWORD	getNumEvenEffects(void);
 
 extern	bool fireOnLocation(unsigned int x, unsigned int y);
 
-extern UDWORD EffectGetNumFrames(EFFECT *psEffect);
 extern UDWORD IMDGetNumFrames(iIMDShape *Shape);
 extern UDWORD IMDGetAnimInterval(iIMDShape *Shape);
 extern void	initPerimeterSmoke			( iIMDShape *pImd, UDWORD x, UDWORD y, UDWORD z);

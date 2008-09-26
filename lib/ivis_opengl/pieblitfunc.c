@@ -38,6 +38,7 @@
 #include "lib/ivis_common/pieclip.h"
 #include "lib/ivis_common/piefunc.h"
 #include "lib/ivis_common/piepalette.h"
+#include "lib/ivis_common/tex.h"
 #include "piematrix.h"
 #include "screen.h"
 
@@ -53,6 +54,8 @@
 #define pie_FILLTRANS	128
 
 static GLuint radarTexture;
+static GLuint radarSizeX, radarSizeY;
+static GLfloat radarTexX, radarTexY;
 
 /***************************************************************************/
 /*
@@ -288,41 +291,55 @@ void pie_UploadDisplayBuffer()
 
 BOOL pie_InitRadar(void)
 {
-	glGenTextures(1, &radarTexture);
+	radarTexture = _TEX_INDEX;
+	glGenTextures(1, (GLuint *) &_TEX_PAGE[_TEX_INDEX].id);
+	_TEX_INDEX++;
 	return true;
 }
 
 BOOL pie_ShutdownRadar(void)
 {
-	glDeleteTextures(1, &radarTexture);
+	glDeleteTextures(1, &_TEX_PAGE[radarTexture].id);
 	return true;
 }
 
+/** Store radar texture with given width and height. */
 void pie_DownLoadRadar(UDWORD *buffer, int width, int height)
 {
+	int w = 1, h = 1;
+
+	/* Find power of two size */
+	while (width > (w *= 2));
+	while (height > (h *= 2));
+
 	pie_SetTexturePage(radarTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, wz_texture_compression, width, height, 0,
-		     GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	radarSizeX = width;
+	radarSizeY = height;
+	radarTexX = ((GLfloat)width / (GLfloat)w) * 256.0;
+	radarTexY = ((GLfloat)height / (GLfloat)h) * 256.0;
 }
 
+/** Display radar texture using the given height and width, depending on zoom level. */
 void pie_RenderRadar(int x, int y, int width, int height)
 {
-	// special case function because texture is held outside of texture list
-	PIEIMAGE pieImage = { radarTexture, 0, 0, 256, 256 };
-	PIERECT dest = { x, y, width, height };
-
+	pie_SetTexturePage(radarTexture);
 	pie_SetRendMode(REND_GOURAUD_TEX);
-
-	// enable alpha
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	pie_DrawImage(&pieImage, &dest);
+	glColor4ubv(WZCOL_WHITE.vector);
+	glBegin(GL_TRIANGLE_STRIP);
+		glTexCoord2f(0, 0);			glVertex2f(x, y);
+		glTexCoord2f(radarTexX, 0);		glVertex2f(x + width, y);
+		glTexCoord2f(0, radarTexY);		glVertex2f(x, y + height);
+		glTexCoord2f(radarTexX, radarTexY);	glVertex2f(x + width, y + height);
+	glEnd();
 }
 
 void pie_LoadBackDrop(SCREENTYPE screenType)
@@ -338,12 +355,12 @@ void pie_LoadBackDrop(SCREENTYPE screenType)
 			snprintf(backd, sizeof(backd), "texpages/bdrops/backdrop%i.png", rand() % 7); // Range: 0-6
 			break;
 		case SCREEN_MISSIONEND:
-			strlcpy(backd, "texpages/bdrops/missionend.png", sizeof(backd));
+			sstrcpy(backd, "texpages/bdrops/missionend.png");
 			break;
 
 		case SCREEN_CREDITS:
 		default:
-			strlcpy(backd, "texpages/bdrops/credits.png", sizeof(backd));
+			sstrcpy(backd, "texpages/bdrops/credits.png");
 			break;
 	}
 

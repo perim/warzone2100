@@ -21,6 +21,7 @@
 #define __INCLUDED_LIB_IVIS_PIEVECTOR_H__
 
 #include "lib/framework/wzglobal.h"
+#include "piefixedpoint.h"
 
 #include <math.h>
 
@@ -32,7 +33,20 @@ typedef struct { uint16_t x, y, z; } Vector3uw; //Only used for basedef.h BASE_E
 
 
 /*!
- * Convert a integer vector to float
+ * Create a Vector from x and y
+ * Needed for MSVC which doesn't support C99 struct assignments.
+ * \param x,y Coordinates
+ * \return New Vector
+ */
+static inline WZ_DECL_CONST Vector2i Vector2i_New(const int x, const int y)
+{
+	Vector2i dest = { x, y };
+	return dest;
+}
+
+
+/*!
+ * Convert an integer vector to float
  * \param v Vector to convert
  * \return Float vector
  */
@@ -40,6 +54,15 @@ static inline WZ_DECL_CONST Vector2f Vector2i_To2f(const Vector2i v)
 {
 	Vector2f dest = { (float)v.x, (float)v.y };
 	return dest;
+}
+
+
+/*!
+ * \return true if both vectors are equal
+ */
+static inline WZ_DECL_CONST bool Vector2i_Compare(const Vector2i a, const Vector2i b)
+{
+	return a.x == b.x && a.y == b.y;
 }
 
 
@@ -120,7 +143,7 @@ static inline WZ_DECL_CONST int Vector2i_Length(const Vector2i v)
  * \param r The radius of the circle
  * \return If v falls within the circle
  */
-static inline WZ_DECL_CONST BOOL Vector2i_InCircle(const Vector2i v, const Vector2i c, const unsigned int r)
+static inline WZ_DECL_CONST bool Vector2i_InCircle(const Vector2i v, const Vector2i c, const unsigned int r)
 {
 	Vector2i delta = Vector2i_Sub(v, c);
 	// Explictily cast to "unsigned int" because this number never can be
@@ -133,12 +156,25 @@ static inline WZ_DECL_CONST BOOL Vector2i_InCircle(const Vector2i v, const Vecto
 
 /*!
  * Create a Vector from x and y
+ * Needed for MSVC which doesn't support C99 struct assignments.
  * \param x,y Coordinates
  * \return New Vector
  */
 static inline WZ_DECL_CONST Vector2f Vector2f_New(const float x, const float y)
 {
 	Vector2f dest = { x, y };
+	return dest;
+}
+
+
+/*!
+ * Convert a float vector to integer
+ * \param v Vector to convert
+ * \return Float vector
+ */
+static inline WZ_DECL_CONST Vector2i Vector2f_To2i(const Vector2f v)
+{
+	Vector2i dest = { (int)v.x, (int)v.y };
 	return dest;
 }
 
@@ -231,25 +267,74 @@ static inline WZ_DECL_CONST Vector2f Vector2f_Normalise(const Vector2f v)
 
 
 /*!
- * \return true if both vectors are equal
+ * Finds a point that lies in between two other points, a starting and ending
+ * point.
+ *
+ * \param from Vector representing the starting point.
+ * \param to Vector representing the ending point.
+ * \param s The distance travelled along the line between vectors \c from and
+ *          \c to expressed as a number ranging from 0.f to 1.f.
+ *
+ * \return a Vector that's \c s along the line between \c from and \to
  */
-static inline WZ_DECL_CONST BOOL Vector3f_Compare(const Vector3f a, const Vector3f b)
+static inline WZ_DECL_CONST Vector2i Vector2i_LinearInterpolate(const Vector2i from, const Vector2i to, const float s)
 {
-	return a.x == b.x && a.y == b.y && a.z == b.z;
+	assert(s >= 0.f && s <= 1.f);
+
+	return Vector2i_Add(from, Vector2f_To2i(Vector2f_Mult(Vector2i_To2f(Vector2i_Sub(to, from)), s)));
+}
+
+
+/*!
+ * Finds a point that lies in between two other points, a starting and ending
+ * point.
+ *
+ * \param from Vector representing the starting point.
+ * \param to Vector representing the ending point.
+ * \param s The distance travelled along the line between vectors \c from and
+ *          \c to expressed as a number ranging from 0.f to 1.f.
+ *
+ * \return a Vector that's \c s along the line between \c from and \to
+ */
+static inline WZ_DECL_CONST Vector2f Vector2f_LinearInterpolate(const Vector2f from, const Vector2f to, const float s)
+{
+	assert(s >= 0.f && s <= 1.f);
+
+	return Vector2f_Add(from, Vector2f_Mult(Vector2f_Sub(to, from), s));
 }
 
 
 /*!
  * Set the vector field by field, same as v = (Vector3f){x, y, z};
  * Needed for MSVC which doesn't support C99 struct assignments.
- * \param[out] v Vector to set
- * \param[in] x,y,z Values to set to
+ * \param x,y,z Values to set to
+ * \return New vector
  */
-static inline void Vector3f_Set(Vector3f* v, const float x, const float y, const float z)
+static inline WZ_DECL_CONST Vector3f Vector3f_New(const float x, const float y, const float z)
 {
-	v->x = x;
-	v->y = y;
-	v->z = z;
+	Vector3f dest = { x, y, z };
+	return dest;
+}
+
+
+/*!
+ * Convert a float vector to integer
+ * \param v Vector to convert
+ * \return Float vector
+ */
+static inline WZ_DECL_CONST Vector3i Vector3f_To3i(const Vector3f v)
+{
+	Vector3i dest = { (int)v.x, (int)v.y, (int)v.z };
+	return dest;
+}
+
+
+/*!
+ * \return true if both vectors are equal
+ */
+static inline WZ_DECL_CONST bool Vector3f_Compare(const Vector3f a, const Vector3f b)
+{
+	return a.x == b.x && a.y == b.y && a.z == b.z;
 }
 
 
@@ -357,11 +442,120 @@ static inline WZ_DECL_CONST Vector3f Vector3f_Normalise(const Vector3f v)
 	}
 }
 
+/*!
+ * Compute the forward vector, a body's local Z axis, for a set of Euler angles
+ * (pitch, yaw and roll).
+ * \param v Vector containing the pitch, yaw and roll in its x, y and z members
+ *          respectively. These rotations need to be expressed in radians.
+ * \return Forward vector.
+ */
+static inline WZ_DECL_CONST Vector3f Vector3f_EulerToForwardVector(const Vector3f v)
+{
+	Vector3f dest = {
+		cosf(v.x) * sinf(v.y),
+		-sinf(v.x),
+		cosf(v.x) * cosf(v.y)
+	};
+
+	return dest;
+}
+
+/*!
+ * Compute the up vector, a body's local Y axis, for a set of Euler angles
+ * (pitch, yaw and roll).
+ * \param v Vector containing the pitch, yaw and roll in its x, y and z members
+ *          respectively. These rotations need to be expressed in radians.
+ * \return Up vector.
+ */
+static inline WZ_DECL_CONST Vector3f Vector3f_EulerToUpVector(const Vector3f v)
+{
+	Vector3f dest = {
+		sinf(v.x) * sinf(v.y) * cosf(v.z) - sinf(v.z) * cosf(v.z),
+		cosf(v.x) * cosf(v.z),
+		sinf(v.x) * cosf(v.y) * cosf(v.z) + sinf(v.y) * sinf(v.z)
+	};
+
+	return dest;
+}
+
+
+/*!
+ * Finds a point that lies in between two other points, a starting and ending
+ * point.
+ *
+ * \param from Vector representing the starting point.
+ * \param to Vector representing the ending point.
+ * \param s The distance travelled along the line between vectors \c from and
+ *          \c to expressed as a number ranging from 0.f to 1.f.
+ *
+ * \return a Vector that's \c s along the line between \c from and \to
+ */
+static inline WZ_DECL_CONST Vector3f Vector3f_LinearInterpolate(const Vector3f from, const Vector3f to, const float s)
+{
+	assert(s >= 0.f && s <= 1.f);
+
+	return Vector3f_Add(from, Vector3f_Mult(Vector3f_Sub(to, from), s));
+}
+
+/*!
+ * Set the vector field by field, same as v = (Vector3i){x, y, z};
+ * Needed for MSVC which doesn't support C99 struct assignments.
+ * \param x,y,z Coordinates
+ * \return New Vector
+ */
+static inline WZ_DECL_CONST Vector3i Vector3i_New(const int x, const int y, const int z)
+{
+	Vector3i dest = { x, y, z };
+	return dest;
+}
+
+
+/*!
+ * Convert an integer vector to float
+ * \param v Vector to convert
+ * \return Float vector
+ */
+static inline WZ_DECL_CONST Vector3f Vector3i_To3f(const Vector3i v)
+{
+	Vector3f dest = { (float)v.x, (float)v.y, (float)v.z };
+	return dest;
+}
+
+
+/*!
+ * Convert a vector of degree angles into radians.
+ * \param v Vector to convert
+ * \return Radian vector
+ */
+static inline WZ_DECL_CONST Vector3f Vector3f_ToRadians(const Vector3f v)
+{
+	Vector3f dest = {
+		deg2radf(v.x),
+		deg2radf(v.y),
+		deg2radf(v.z)
+	};
+	return dest;
+}
+
+
+/*!
+ * Convert a vector of fixed-point, wannabe-floats (used on the PSX, and
+ * unfortunately on the PC as well), to real floats expressed in real degrees.
+ * \param v Rotation vector in "wannabe-float" degrees
+ * \return Float vector in real degrees
+ */
+static inline WZ_DECL_CONST Vector3f Vector3iPSX_To3fDegree(const Vector3i v)
+{
+	return Vector3f_Mult(Vector3i_To3f(v),
+	// Required to multiply by this to undo the PSX fixed point fract stuff
+	                     360.f / (float)DEG_360);
+}
+
 
 /*!
  * \return true if both vectors are equal
  */
-static inline WZ_DECL_CONST BOOL Vector3i_Compare(const Vector3i a, const Vector3i b)
+static inline WZ_DECL_CONST bool Vector3i_Compare(const Vector3i a, const Vector3i b)
 {
 	return a.x == b.x && a.y == b.y && a.z == b.z;
 }
@@ -408,6 +602,19 @@ static inline WZ_DECL_CONST Vector3i Vector3i_Sub(const Vector3i op1, const Vect
 static inline WZ_DECL_CONST Vector3i Vector3i_Mult(const Vector3i v, const int s)
 {
 	Vector3i dest = { v.x * s, v.y * s, v.z * s };
+	return dest;
+}
+
+
+/*!
+ * Divide a vector with a scalar.
+ * \param v Vector
+ * \param s Scalar
+ * \return Product
+ */
+static inline WZ_DECL_CONST Vector3i Vector3i_Div(const Vector3i v, const int s)
+{
+	Vector3i dest = { v.x / s, v.y / s, v.z / s };
 	return dest;
 }
 
@@ -467,7 +674,7 @@ static inline WZ_DECL_CONST Vector3i Vector3i_Normalise(const Vector3i v)
  * \param r The radius of the sphere
  * \return If v falls within the sphere
  */
-static inline WZ_DECL_CONST BOOL Vector3i_InSphere (const Vector3i v, const Vector3i c, const unsigned int r)
+static inline WZ_DECL_CONST bool Vector3i_InSphere (const Vector3i v, const Vector3i c, const unsigned int r)
 {
 	Vector3i delta = Vector3i_Sub(v, c);
 	// Explictily cast to "unsigned int" because this number never can be
@@ -479,30 +686,47 @@ static inline WZ_DECL_CONST BOOL Vector3i_InSphere (const Vector3i v, const Vect
 
 
 /*!
- * Set the vector field by field, same as v = (Vector3i){x, y, z};
- * Needed for MSVC which doesn't support C99 struct assignments.
- * \param[out] v Vector to set
- * \param[in] x,y,z Values to set to
+ * Finds a point that lies in between two other points, a starting and ending
+ * point.
+ *
+ * \param from Vector representing the starting point.
+ * \param to Vector representing the ending point.
+ * \param s The distance travelled along the line between vectors \c from and
+ *          \c to expressed as a number ranging from 0.f to 1.f.
+ *
+ * \return a Vector that's \c s along the line between \c from and \to
  */
-static inline void Vector3i_Set(Vector3i* v, const int x, const int y, const int z)
+static inline WZ_DECL_CONST Vector3i Vector3i_LinearInterpolate(const Vector3i from, const Vector3i to, const float s)
 {
-	v->x = x;
-	v->y = y;
-	v->z = z;
+	assert(s >= 0.f && s <= 1.f);
+
+	return Vector3i_Add(from, Vector3f_To3i(Vector3f_Mult(Vector3i_To3f(Vector3i_Sub(to, from)), s)));
 }
 
 
 /*!
  * Set the vector field by field, same as v = (Vector3uw){x, y, z};
  * Needed for MSVC which doesn't support C99 struct assignments.
- * \param[out] v Vector to set
- * \param[in] x,y,z Values to set to
+ * \param x,y,z Coordinates
+ * \return New Vector
  */
-static inline void Vector3uw_Set(Vector3uw* v, const unsigned int x, const unsigned int y, const unsigned int z)
+static inline WZ_DECL_CONST Vector3uw Vector3uw_New(const unsigned int x, const unsigned int y, const unsigned int z)
 {
-	v->x = x;
-	v->y = y;
-	v->z = z;
+	Vector3uw dest = { x, y, z };
+	return dest;
 }
+
+
+/*!
+ * Convert an short vector to int
+ * \param v Vector to convert
+ * \return Short vector
+ */
+static inline WZ_DECL_CONST Vector3i Vector3uw_To3i(const Vector3uw v)
+{
+	Vector3i dest = { (int)v.x, (int)v.y, (int)v.z };
+	return dest;
+}
+
 
 #endif // __INCLUDED_LIB_IVIS_PIEVECTOR_H__

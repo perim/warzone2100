@@ -29,6 +29,7 @@
 #include "lib/framework/input.h"
 #include "lib/framework/strres.h"
 #include "lib/ivis_common/piestate.h"
+#include "lib/ivis_common/piefixedpoint.h"
 
 #include "display.h"
 #include "map.h"
@@ -207,7 +208,6 @@ static DROID	*psSelectedVtol;
 static DROID	*psDominantSelected;
 static BOOL bRadarDragging = false;
 
-float	RadarZoomLevel = 0;
 int gammaValue = 20;
 BOOL	rotActive = false;
 BOOL	gameStats = false;
@@ -340,15 +340,13 @@ static void shakeUpdate(void)
 /* Initialise the display system */
 BOOL dispInitialise(void)
 {
-	RadarZoomLevel = 0.0f;
-
 	return true;
 }
 
 
 void ProcessRadarInput(void)
 {
-	SDWORD PosX,PosY;
+	int PosX, PosY;
 	int x = mouseX();
 	int y = mouseY();
 	UDWORD	temp1,temp2;
@@ -372,7 +370,7 @@ void ProcessRadarInput(void)
 //					{
 //						camToggleStatus();
 //					}
-					CalcRadarPosition(x,y,(UDWORD *)&PosX,(UDWORD *)&PosY);
+					CalcRadarPosition(x, y, &PosX, &PosY);
 					if(mouseOverRadar)
 					{
 					//	requestRadarTrack(PosX*TILE_UNITS,PosY*TILE_UNITS);
@@ -392,7 +390,7 @@ void ProcessRadarInput(void)
 
 			if(mouseDrag(MOUSE_RMB,&temp1,&temp2) && !rotActive)
 			{
-				CalcRadarPosition(x,y,(UDWORD*)&PosX,(UDWORD*)&PosY);
+				CalcRadarPosition(x, y, &PosX, &PosY);
 				setViewPos(PosX,PosY,true);
 				bRadarDragging = true;
 				if(keyDown(KEY_LCTRL) || keyDown(KEY_RCTRL))
@@ -402,12 +400,7 @@ void ProcessRadarInput(void)
 			}
 			else if (mousePressed(MOUSE_RMB))
 			{
-#ifdef RADAR_POSITION_AT_ZOOM
-				CalcRadarPosition(x,y,&PosX,&PosY);
-				setViewPos(PosX,PosY,true);
-				CheckScrollLimits();
-#endif
-				CalcRadarPosition(x,y,(UDWORD*)&PosX,(UDWORD*)&PosY);
+				CalcRadarPosition(x, y, &PosX, &PosY);
 
 				if(bInstantRadarJump)
 				{
@@ -1793,10 +1786,11 @@ static inline void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 		if (getDebugMappingStatus()) // cheating on, so output debug info
 		{
 			CONPRINTF(ConsoleString, (ConsoleString,
-			          "%s - Damage %d%% - ID %d - experience %f, %s - order %s - action %s - sensor range %hu power %hu - ECM %u",
-			          droidGetName(psDroid), 100 - PERCENT(psDroid->body, psDroid->originalBody), psDroid->id,
-			          psDroid->experience, getDroidLevelName(psDroid), getDroidOrderName(psDroid->order), getDroidActionName(psDroid->action),
-			          droidSensorRange(psDroid), droidSensorPower(psDroid), droidConcealment(psDroid)));
+						"%s - Damage %d%% - ID %d - experience %f, %s - order %s - action %s - sensor range %hu power %hu - ECM %u",
+						droidGetName(psDroid),
+						100 - clip(PERCENT(psDroid->body, psDroid->originalBody), 0, 100), psDroid->id,
+						psDroid->experience, getDroidLevelName(psDroid), getDroidOrderName(psDroid->order), getDroidActionName(psDroid->action),
+						droidSensorRange(psDroid), droidSensorPower(psDroid), droidConcealment(psDroid)));
 			FeedbackClickedOn();
 		}
 		else
@@ -1804,10 +1798,12 @@ static inline void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 		if(godMode)
 		{
 			CONPRINTF(ConsoleString, (ConsoleString,
-			          "%s - Damage %d%% - Serial ID %d - Experience %f order %d action %d, %s",
-			droidGetName(psDroid), 100 - PERCENT(psDroid->body,
-			psDroid->originalBody),psDroid->id, psDroid->experience,
-			psDroid->order, psDroid->action, getDroidLevelName(psDroid)));
+					"%s - Damage %d%% - Serial ID %d - Experience %f order %d action %d, %s",
+					droidGetName(psDroid),
+					100 - clip(PERCENT(psDroid->body, psDroid->originalBody), 0, 100),
+					psDroid->id, psDroid->experience, psDroid->order,
+					psDroid->action, getDroidLevelName(psDroid)));
+
 			FeedbackClickedOn();
 		}
 		else
@@ -1816,9 +1812,10 @@ static inline void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 			{
 				CONPRINTF(ConsoleString, (ConsoleString,
 					_("%s - Damage %d%% - Experience %d, %s"),
-				droidGetName(psDroid), 100 - PERCENT(psDroid->body,
-				psDroid->originalBody), (SDWORD) psDroid->experience,
-				getDroidLevelName(psDroid)));
+					droidGetName(psDroid),
+					100 - clip(PERCENT(psDroid->body,psDroid->originalBody), 0, 100),
+					(SDWORD) psDroid->experience, getDroidLevelName(psDroid)));
+
 				FeedbackClickedOn();
 			}
 		}
@@ -1836,7 +1833,7 @@ static inline void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 					(psCurr->selected)&&
 					(psCurr->asWeaps[0].nStat > 0) &&
 					((!proj_Direct(asWeaponStats + psCurr->asWeaps[0].nStat)) ||
-					vtolDroid(psCurr)) &&
+					isVtolDroid(psCurr)) &&
 					droidSensorDroidWeapon((BASE_OBJECT *)psDroid, psCurr))
 				{
 					bSensorAssigned = true;
@@ -3061,7 +3058,7 @@ BOOL	vtolDroidSelected(UDWORD player)
 
 	for (psCurr = apsDroidLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
 	{
-		if (psCurr->selected && vtolDroid(psCurr))
+		if (psCurr->selected && isVtolDroid(psCurr))
 		{
 			// horrible hack to note one of the selected vtols
 			psSelectedVtol = psCurr;

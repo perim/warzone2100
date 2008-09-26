@@ -41,6 +41,7 @@
 #include "lib/framework/tagfile.h"
 #include "lib/exceptionhandler/exceptionhandler.h"
 
+#include "lib/sound/playlist.h"
 #include "lib/gamelib/gtime.h"
 #include "lib/ivis_common/piestate.h"
 #include "lib/ivis_common/rendmode.h"
@@ -50,7 +51,7 @@
 #include "lib/script/script.h"
 #include "lib/sound/audio.h"
 #include "lib/sound/cdaudio.h"
-#include "lib/sqlite3/physfs_vfs.h"
+#include "lib/framework/physfs_vfs.h"
 
 #include "clparse.h"
 #include "configuration.h"
@@ -267,7 +268,7 @@ static void getPlatformUserDir(char * const tmpstr, size_t const size)
 {
 #if defined(WZ_OS_WIN)
 	ASSERT(size >= MAX_PATH, "size (%u) is smaller than the required minimum of MAX_PATH (%u)", size, (size_t)MAX_PATH);
-	if ( SUCCEEDED( SHGetFolderPathA( NULL, CSIDL_LOCAL_APPDATA|CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, tmpstr ) ) )
+	if ( SUCCEEDED( SHGetFolderPathA( NULL, CSIDL_PERSONAL|CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, tmpstr ) ) )
 		strlcat(tmpstr, PHYSFS_getDirSeparator(), size);
 	else
 #elif defined(WZ_OS_MAC)
@@ -319,8 +320,8 @@ static void initialize_ConfigDir(void)
 		}
 
 		// Append the Warzone subdir
-		strlcat(tmpstr, WZ_WRITEDIR, sizeof(tmpstr));
-		strlcat(tmpstr, PHYSFS_getDirSeparator(), sizeof(tmpstr));
+		sstrcat(tmpstr, WZ_WRITEDIR);
+		sstrcat(tmpstr, PHYSFS_getDirSeparator());
 
 		if (!PHYSFS_setWriteDir(tmpstr))
 		{
@@ -331,11 +332,11 @@ static void initialize_ConfigDir(void)
 	}
 	else
 	{
-		strlcpy(tmpstr, configdir, sizeof(tmpstr));
+		sstrcpy(tmpstr, configdir);
 
 		// Make sure that we have a directory separator at the end of the string
 		if (tmpstr[strlen(tmpstr) - 1] != PHYSFS_getDirSeparator()[0])
-			strlcat(tmpstr, PHYSFS_getDirSeparator(), sizeof(tmpstr));
+			sstrcat(tmpstr, PHYSFS_getDirSeparator());
 
 		debug(LOG_WZ, "Using custom configuration directory: %s", tmpstr);
 
@@ -396,7 +397,7 @@ static void scanDataDirs( void )
 	char* separator;
 
 	// Find out which PREFIX we are in...
-	strlcpy(prefix, PHYSFS_getBaseDir(), sizeof(prefix));
+	sstrcpy(prefix, PHYSFS_getBaseDir());
 
 	separator = strrchr(prefix, *PHYSFS_getDirSeparator());
 	if (separator)
@@ -423,16 +424,16 @@ static void scanDataDirs( void )
 	if( !PHYSFS_exists("gamedesc.lev") )
 	{
 		// Data in SVN dir
-		strlcpy(tmpstr, prefix, sizeof(tmpstr));
-		strlcat(tmpstr, "/data/", sizeof(tmpstr));
+		sstrcpy(tmpstr, prefix);
+		sstrcat(tmpstr, "/data/");
 		registerSearchPath( tmpstr, 3 );
 		rebuildSearchPath( mod_multiplay, true );
 
 		if( !PHYSFS_exists("gamedesc.lev") )
 		{
 			// Relocation for AutoPackage
-			strlcpy(tmpstr, prefix, sizeof(tmpstr));
-			strlcat(tmpstr, "/share/warzone2100/", sizeof(tmpstr));
+			sstrcpy(tmpstr, prefix);
+			sstrcat(tmpstr, "/share/warzone2100/");
 			registerSearchPath( tmpstr, 4 );
 			rebuildSearchPath( mod_multiplay, true );
 
@@ -835,7 +836,7 @@ static void mainLoop(void)
 
 int main(int argc, char *argv[])
 {
-	setupExceptionHandler(argv[0]);
+	setupExceptionHandler(argc, argv);
 
 	debug_init();
 	atexit( debug_exit );
@@ -879,7 +880,7 @@ int main(int argc, char *argv[])
 
 	/* Put these files in the writedir root */
 	setRegistryFilePath("config");
-	strlcpy(KeyMapPath, "keymap.map", sizeof(KeyMapPath));
+	sstrcpy(KeyMapPath, "keymap.map");
 
 	// initialise all the command line states
 	war_SetDefaultStates();
@@ -903,11 +904,22 @@ int main(int argc, char *argv[])
 	// Find out where to find the data
 	scanDataDirs();
 
+	// Must be run before OpenGL driver is properly initialized due to
+	// strange conflicts - Per
+	if (selfTest)
+	{
+		memset(enabled_debug, 0, sizeof(*enabled_debug) * LOG_LAST);
+		fprintf(stdout, "Carrying out self-test:\n");
+		playListTest();
+		audioTest();
+		soundTest();
+	}
+
 	// Register the PhysicsFS implementation of the SQLite VFS class with
 	// SQLite's VFS system as the default (non-zero=default, zero=default).
 	sqlite3_register_physfs_vfs(1);
 
-	if (!frameInitialise( "Warzone 2100", pie_GetVideoBufferWidth(), pie_GetVideoBufferHeight(), pie_GetVideoBufferDepth(), war_getFullscreen() ))
+	if (!frameInitialise( "Warzone 2100", pie_GetVideoBufferWidth(), pie_GetVideoBufferHeight(), pie_GetVideoBufferDepth(), war_getFullscreen(), war_GetVsync()))
 	{
 		return -1;
 	}
@@ -935,8 +947,6 @@ int main(int argc, char *argv[])
 	/* Runtime unit testing */
 	if (selfTest)
 	{
-		memset(enabled_debug, 0, sizeof(*enabled_debug) * LOG_LAST);
-		fprintf(stdout, "Carrying out self-test:\n");
 		NETtest();
 		tagTest();
 		parseTest();

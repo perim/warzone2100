@@ -81,12 +81,12 @@ static BOOL stackNewChunk(UDWORD size)
 	else
 	{
 		/* Allocate a new chunk */
-		psCurrChunk->psNext = (STACK_CHUNK *)malloc(sizeof(STACK_CHUNK));
+		psCurrChunk->psNext = calloc(1, sizeof(*psCurrChunk->psNext));
 		if (!psCurrChunk->psNext)
 		{
 			return false;
 		}
-		psCurrChunk->psNext->aVals = (INTERP_VAL*)malloc(sizeof(INTERP_VAL) * size);
+		psCurrChunk->psNext->aVals = calloc(size, sizeof(*psCurrChunk->psNext->aVals));
 		if (!psCurrChunk->psNext->aVals)
 		{
 			free(psCurrChunk->psNext);
@@ -99,10 +99,6 @@ static BOOL stackNewChunk(UDWORD size)
 		psCurrChunk->psNext->psNext = NULL;
 		psCurrChunk = psCurrChunk->psNext;
 		currEntry = 0;
-
-		/* initialize pointers
-		   note: 0 means type == VAL_BOOL */
-		memset(psCurrChunk->psNext->aVals, 0, sizeof(INTERP_VAL) * size);
 	}
 
 	return true;
@@ -296,8 +292,6 @@ BOOL stackPopParams(unsigned int numParams, ...)
 	unsigned int i, index;
 	STACK_CHUNK *psCurr;
 
-	va_start(args, numParams);
-
 	// Find the position of the first parameter, and set
 	// the stack top to it
 	if (numParams <= currEntry)
@@ -331,9 +325,10 @@ BOOL stackPopParams(unsigned int numParams, ...)
 	{
 		debug( LOG_ERROR, "stackPopParams: not enough parameters on stack" );
 		ASSERT( false, "stackPopParams: not enough parameters on stack" );
-		va_end(args);
 		return false;
 	}
+
+	va_start(args, numParams);
 
 	// Get the values, checking their types
 	index = currEntry;
@@ -620,7 +615,8 @@ BOOL stackBinaryOp(OPCODE opcode)
 			}
 			else
 			{
-				ASSERT(false, "stackBinaryOp: division by zero (float)");
+				debug(LOG_ERROR, "stackBinaryOp: division by zero (float)");
+				return false;
 			}
 		}
 		else
@@ -631,7 +627,8 @@ BOOL stackBinaryOp(OPCODE opcode)
 			}
 			else
 			{
-				ASSERT(false, "stackBinaryOp: division by zero (integer)");
+				debug(LOG_ERROR, "stackBinaryOp: division by zero (integer)");
+				return false;
 			}
 		}
 		break;
@@ -721,7 +718,7 @@ BOOL stackBinaryOp(OPCODE opcode)
 				break;
 
 			case VAL_STRING:
-				strlcpy(tempstr1, psV1->v.sval, sizeof(tempstr1));
+				sstrcpy(tempstr1, psV1->v.sval);
 				break;
 
 			default:
@@ -746,7 +743,7 @@ BOOL stackBinaryOp(OPCODE opcode)
 				break;
 
 			case VAL_STRING:
-				strlcpy(tempstr2, psV2->v.sval, sizeof(tempstr2));
+				sstrcpy(tempstr2, psV2->v.sval);
 				break;
 
 			default:
@@ -755,7 +752,7 @@ BOOL stackBinaryOp(OPCODE opcode)
 				break;
 			}
 
-			strlcat(tempstr1, tempstr2, sizeof(tempstr1));
+			sstrcat(tempstr1, tempstr2);
 
 			strcpy(psV1->v.sval,tempstr1);		//Assign
 		}
@@ -951,14 +948,14 @@ BOOL stackCastTop(INTERP_TYPE neededType)
 /* Initialise the stack */
 BOOL stackInitialise(void)
 {
-	psStackBase = (STACK_CHUNK *)malloc(sizeof(STACK_CHUNK));
+	psStackBase = calloc(1, sizeof(*psStackBase));
 	if (psStackBase == NULL)
 	{
 		debug( LOG_ERROR, "Out of memory" );
 		abort();
 		return false;
 	}
-	psStackBase->aVals = (INTERP_VAL*)malloc(sizeof(INTERP_VAL) * INIT_SIZE);
+	psStackBase->aVals = calloc(INIT_SIZE, sizeof(*psStackBase->aVals));
 	if (!psStackBase->aVals)
 	{
 		debug( LOG_ERROR, "Out of memory" );
@@ -970,10 +967,6 @@ BOOL stackInitialise(void)
 	psStackBase->psPrev = NULL;
 	psStackBase->psNext = NULL;
 	psCurrChunk = psStackBase;
-
-	/* initialize pointers
-	   note: this means type == VAL_BOOL */
-	memset(psStackBase->aVals, 0, sizeof(INTERP_VAL) * INIT_SIZE);
 
 	//string support
 	CURSTACKSTR = 0;		//initialize string 'stack'

@@ -36,7 +36,14 @@ typedef int DumpFileHandle;
 
 extern void dbgDumpHeader(DumpFileHandle file);
 
-extern void dbgDumpInit(const char* programCommand);
+/** Dump last several debug log calls into given file descriptor.
+ *  For exception handler.
+ *
+ *  @param file file descriptor to write to.
+ */
+extern void dbgDumpLog(DumpFileHandle file);
+
+extern void dbgDumpInit(int argc, char* argv[]);
 
 #if defined(__cplusplus)
 }

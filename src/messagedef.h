@@ -25,6 +25,11 @@
 #define __INCLUDED_MESSAGEDEF_H__
 
 #include "lib/ivis_common/pietypes.h"
+#include "lib/ivis_common/ivisdef.h"
+#include "positiondef.h"
+
+/// max number of text strings or sequences for VIEWDATA
+static const unsigned int MAX_DATA = 4;
 
 typedef enum _message_type
 {
@@ -44,8 +49,6 @@ typedef enum _view_type
 	VIEW_RPLX,			// full screen view sequence - flic.	extended format
 
 	VIEW_BEACON,			// Beacon message
-
-	VIEW_TYPES,
 } VIEW_TYPE;
 
 typedef enum _prox_type
@@ -64,9 +67,6 @@ typedef struct _view_research
 	iIMDShape	*pIMD2;				//allows base plates and turrets to be drawn as well
 	char	sequenceName[MAX_STR_LENGTH];	//which windowed flic to display
 	char	*pAudio;						/*name of audio track to play (for this seq)*/
-	UWORD	numFrames;						/* On PSX if type is VIEW_RPL then
-											this is used as a number_of_frames_in_the_stream
-											count - NOT used on PC*/
 } VIEW_RESEARCH;
 
 typedef struct _seq_display
@@ -76,11 +76,8 @@ typedef struct _seq_display
 	UBYTE		flag;			//flag data to control video playback 1 = loop till audio finish
 	UBYTE		numText;		//the number of textmessages associated with
 								//this sequence
-	char		**ppTextMsg;	//Pointer to text messages - if any
+	const char**    ppTextMsg;	//Pointer to text messages - if any
 	char		*pAudio;		/*name of audio track to play (for this seq)*/
-	UWORD		numFrames;		/* On PSX if type is VIEW_RPL then
-								this is used as a number_of_frames_in_the_stream
-								count - NOT used on PC*/
 } SEQ_DISPLAY;
 
 //info required to view a flic in Intelligence Screen
@@ -110,7 +107,7 @@ typedef struct _viewdata
 	char		*pName;		//name ID of the message - used for loading in and identifying
 	VIEW_TYPE	type;		//the type of view
 	UBYTE		numText;	//the number of textmessages associated with this data
-	char		**ppTextMsg;	//Pointer to text messages - if any
+	const char**    ppTextMsg;	//Pointer to text messages - if any
 	void*		pData;		/*the data required to view - either a
 							  VIEW_RESEARCH, VIEW_PROXIMITY or VIEW_REPLAY*/
 } VIEWDATA;
@@ -142,8 +139,6 @@ typedef struct _proximity_display
 {
 	POSITION_OBJ;
 	MESSAGE			*psMessage;				//message associated with this 'button'
-	UDWORD			radarX;					//Used to store the radar coords - if to be drawn
-	UDWORD			radarY;
 	UDWORD			timeLastDrawn;			//stores the time the 'button' was last drawn for animation
 	UDWORD			strobe;					//id of image last used
 	UDWORD			buttonID;				//id of the button for the interface

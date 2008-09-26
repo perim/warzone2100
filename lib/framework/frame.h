@@ -40,7 +40,6 @@
 #include "debug.h"
 
 #include "i18n.h"
-#include "treap.h"
 #include "trig.h"
 #include "cursors.h"
 
@@ -53,11 +52,12 @@ extern UDWORD selectedPlayer;
  *  @param height the display height
  *  @param bitDepth the display bit depth
  *  @param fullScreen whether to start full screen or windowed
+ *  @param vsync if to sync to the vertical blanking interval or not
  *
  *  @return true when the framework library is successfully initialised, false
  *          when a part of the initialisation failed.
  */
-extern BOOL frameInitialise(const char* pWindowName, UDWORD width, UDWORD height, UDWORD bitDepth, BOOL fullScreen);
+extern BOOL frameInitialise(const char* pWindowName, UDWORD width, UDWORD height, UDWORD bitDepth, BOOL fullScreen, BOOL vsync);
 
 extern bool selfTest;
 
@@ -103,6 +103,16 @@ extern UDWORD frameGetAverageRate(void);
 extern UDWORD HashString( const char *String );
 extern UDWORD HashStringIgnoreCase( const char *String );
 
+#if defined(WZ_OS_WIN)
+struct timeval
+{
+	long tv_sec;
+	long tv_usec;
+};
+
+struct timezone;
+extern int gettimeofday(struct timeval* tv, struct timezone* tz);
+#endif
 
 static inline WZ_DECL_CONST const char * bool2string(bool var)
 {

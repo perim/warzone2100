@@ -114,7 +114,7 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 
 	/* Watermelon:dont shoot if the weapon_slot of a vtol is empty */
 	if (psAttacker->type == OBJ_DROID &&
-		vtolDroid(((DROID *)psAttacker)))
+		isVtolDroid(((DROID *)psAttacker)))
 	{
 		if (((DROID *)psAttacker)->sMove.iAttackRuns[weapon_slot] >= getNumAttackRuns(((DROID *)psAttacker), weapon_slot))
 		{
@@ -183,12 +183,10 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	}
 
 	/* Check we can see the target */
-	if ( (psAttacker->type == OBJ_DROID) &&
-		 !vtolDroid((DROID *)psAttacker) &&
-		 (proj_Direct(psStats) ||
-		 actionInsideMinRange(psDroid, psTarget, weapon_slot)) )
+	if (psAttacker->type == OBJ_DROID && !isVtolDroid((DROID *)psAttacker)
+	    && (proj_Direct(psStats) || actionInsideMinRange(psDroid, psTarget, psStats)))
 	{
-		if(!visibleObjWallBlock(psAttacker, psTarget))
+		if(!visibleObject(psAttacker, psTarget, true))
 		{
 			// Can't see the target - can't hit it with direct fire
 			debug(LOG_SENSOR, "combFire(%u[%s]->%u): Droid has no direct line of sight to target",
@@ -201,7 +199,7 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 			 proj_Direct(psStats))
 	{
 		// a bunker can't shoot through walls
-		if (!visibleObjWallBlock(psAttacker, psTarget))
+		if (!visibleObject(psAttacker, psTarget, true))
 		{
 			// Can't see the target - can't hit it with direct fire
 			debug(LOG_SENSOR, "combFire(%u[%s]->%u): Structure has no direct line of sight to target",
@@ -212,7 +210,7 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	else if ( proj_Direct(psStats) )
 	{
 		// VTOL or tall building
-		if (!visibleObject(psAttacker, psTarget))
+		if (!visibleObject(psAttacker, psTarget, false))
 		{
 			// Can't see the target - can't hit it with direct fire
 			debug(LOG_SENSOR, "combFire(%u[%s]->%u): Tall object has no direct line of sight to target",
@@ -264,7 +262,7 @@ void combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 			 ( (distSquared >= psStats->minRange * psStats->minRange) ||
 			   ((psAttacker->type == OBJ_DROID) &&
 			   !proj_Direct(psStats) &&
-			   actionInsideMinRange(psDroid, psTarget, weapon_slot)) ))
+			   actionInsideMinRange(psDroid, psTarget, psStats))))
 	{
 		// get weapon chance to hit in the long range
 		baseHitChance = weaponLongHit(psStats,psAttacker->player);

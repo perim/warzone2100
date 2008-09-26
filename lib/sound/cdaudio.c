@@ -25,15 +25,16 @@
 
 #include "audio.h"
 #include "track.h"
+#include "tracklib.h"
 #include "cdaudio.h"
 #include "mixer.h"
 #include "playlist.h"
 
 static const size_t bufferSize = 16 * 1024;
 static const unsigned int buffer_count = 32;
-static bool		music_initialized;
-static unsigned int	music_track = 0;
+static bool		music_initialized = false;
 static float		music_volume = 0.5;
+static bool		stopping = true;
 
 static AUDIO_STREAM* cdStream = NULL;
 
@@ -47,26 +48,20 @@ BOOL cdAudio_Open(const char* user_musicdir)
 		return false;
 	}
 
+	debug(LOG_SOUND, "called(%s)", user_musicdir);
 	music_initialized = true;
+	stopping = true;
 
 	return true;
 }
 
-static void cdAudio_CloseTrack(void)
-{
-	cdAudio_Stop();
-
-	if (music_track != 0)
-	{
-		music_track = 0;
-	}
-}
-
 void cdAudio_Close(void)
 {
-	cdAudio_CloseTrack();
+	debug(LOG_SOUND, "called");
+	cdAudio_Stop();
 	PlayList_Quit();
 	music_initialized = false;
+	stopping = true;
 }
 
 static void cdAudio_TrackFinished(void*);
@@ -78,16 +73,18 @@ static bool cdAudio_OpenTrack(const char* filename)
 		return false;
 	}
 
-	cdAudio_CloseTrack();
+	debug(LOG_SOUND, "called(%s)", filename);
+	cdAudio_Stop();
 
 #ifndef WZ_NOSOUND
 	if (strncasecmp(filename+strlen(filename)-4, ".ogg", 4) == 0)
 	{
 		PHYSFS_file* music_file = PHYSFS_openRead(filename);
 
+		debug(LOG_WZ, "Reading...[directory: %s] %s", PHYSFS_getRealDir(filename), filename);
 		if (music_file == NULL)
 		{
-			debug(LOG_ERROR, "cdAudio_OpenTrack: Failed opening file %s, with error %s", filename, PHYSFS_getLastError());
+			debug(LOG_ERROR, "Failed opening file [directory: %s] %s, with error %s", PHYSFS_getRealDir(filename), filename, PHYSFS_getLastError());
 			return false;
 		}
 
@@ -99,6 +96,8 @@ static bool cdAudio_OpenTrack(const char* filename)
 			return false;
 		}
 
+		debug(LOG_SOUND, "successful(%s)", filename);
+		stopping = false;
 		return true;
 	}
 #endif
@@ -108,75 +107,63 @@ static bool cdAudio_OpenTrack(const char* filename)
 
 static void cdAudio_TrackFinished(void* user_data)
 {
-	const char* filename;
+	const char *filename = PlayList_NextSong();
 
-	// HACK: bail out when a song switch has taken place
-	if (user_data != PlayList_CurrentSong())
-	{
-		return;
-	}
-
-	filename = PlayList_NextSong();
-	
 	// This pointer is now officially invalidated; so set it to NULL
 	cdStream = NULL;
 
-	if (filename == 0)
+	if (filename == NULL)
 	{
-		music_track = 0;
+		debug(LOG_ERROR, "Out of playlist?! was playing %s", (char *)user_data);
 		return;
 	}
 
-	if (cdAudio_OpenTrack(filename))
+	if (!stopping && cdAudio_OpenTrack(filename))
 	{
-		debug(LOG_SOUND, "Now playing %s", filename);
+		debug(LOG_SOUND, "Now playing %s (was playing %s)", filename, (char *)user_data);
 	}
 }
 
-BOOL cdAudio_PlayTrack(SDWORD iTrack)
+BOOL cdAudio_PlayTrack(SONG_CONTEXT context)
 {
-	cdAudio_CloseTrack();
+	debug(LOG_SOUND, "called(%d)", (int)context);
 
-	PlayList_SetTrack(iTrack);
-
+	switch (context)
 	{
-		const char* filename = PlayList_CurrentSong();
+		case SONG_FRONTEND:
+			return cdAudio_OpenTrack("music/menu.ogg");
 
-		for (;;)
+		case SONG_INGAME:
 		{
-			if (filename == NULL)
-			{
-				music_track = 0;
-				return false;
-			}
-			if (cdAudio_OpenTrack(filename))
-			{
-				music_track = iTrack;
-				break;
-			}
-			else
-			{
-				return false; // break out to avoid infinite loops
-			}
+			const char *filename = PlayList_CurrentSong();
 
-			filename = PlayList_NextSong();
+			if (filename == NULL)
+				return false;
+
+			return cdAudio_OpenTrack(filename);
 		}
 	}
 
-	return true;
+	ASSERT(!"Invalid songcontext", "Invalid song context specified for playing: %u", (unsigned int)context);
+
+	return false;
 }
 
 void cdAudio_Stop()
 {
+	stopping = true;
+	debug(LOG_SOUND, "called, cdStream=%p", cdStream);
 	if (cdStream)
 	{
 		sound_StopStream(cdStream);
 		cdStream = NULL;
+		sound_Update();
 	}
 }
 
 void cdAudio_Pause()
 {
+	debug(LOG_SOUND, "called");
 	if (cdStream)
 	{
 		sound_PauseStream(cdStream);
@@ -185,6 +172,7 @@ void cdAudio_Pause()
 
 void cdAudio_Resume()
 {
+	debug(LOG_SOUND, "called");
 	if (cdStream)
 	{
 		sound_ResumeStream(cdStream);
@@ -198,17 +186,8 @@ float sound_GetMusicVolume()
 
 void sound_SetMusicVolume(float volume)
 {
-	music_volume = volume;
-
 	// Keep volume in the range of 0.0 - 1.0
-	if (music_volume < 0.0)
-	{
-		music_volume = 0.0;
-	}
-	else if (music_volume > 1.0)
-	{
-		music_volume = 1.0;
-	}
+	music_volume = clipf(volume, 0.0f, 1.0f);
 
 	// Change the volume of the current stream as well (if any)
 	if (cdStream)

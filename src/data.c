@@ -91,7 +91,6 @@ void dataClearSaveFlag(void)
 	saveFlag = false;
 }
 
-
 /* Load the body stats */
 static BOOL bufferSBODYLoad(const char *pBuffer, UDWORD size, void **ppData)
 {
@@ -106,9 +105,9 @@ static BOOL bufferSBODYLoad(const char *pBuffer, UDWORD size, void **ppData)
 	return true;
 }
 
-static BOOL dataDBBODYLoad(const char* filename, void **ppData)
+static BOOL dataDBBODYLoad(struct sqlite3* db, const char* tableName, void **ppData)
 {
-	if (!loadBodyStatsFromDB(filename)
+	if (!loadBodyStatsFromDB(db, tableName)
 	 || !allocComponentList(COMP_BODY, numBodyStats))
 	{
 		return false;
@@ -140,9 +139,9 @@ static BOOL bufferSWEAPONLoad(const char *pBuffer, UDWORD size, void **ppData)
 	return true;
 }
 
-static BOOL dataDBWEAPONLoad(const char* filename, void **ppData)
+static BOOL dataDBWEAPONLoad(struct sqlite3* db, const char* tableName, void **ppData)
 {
-	if (!loadWeaponStatsFromDB(filename)
+	if (!loadWeaponStatsFromDB(db, tableName)
 	 || !allocComponentList(COMP_WEAPON, numWeaponStats))
 	{
 		return false;
@@ -181,6 +180,19 @@ static BOOL bufferSECMLoad(const char *pBuffer, UDWORD size, void **ppData)
 	return true;
 }
 
+static BOOL dataDBECMLoad(struct sqlite3* db, const char* tableName, void **ppData)
+{
+	if (!loadECMStatsFromDB(db, tableName)
+	 || !allocComponentList(COMP_ECM, numECMStats))
+	{
+		return false;
+	}
+
+	//not interested in this value
+	*ppData = NULL;
+	return true;
+}
+
 /* Load the Propulsion stats */
 static BOOL bufferSPROPLoad(const char *pBuffer, UDWORD size, void **ppData)
 {
@@ -195,9 +207,9 @@ static BOOL bufferSPROPLoad(const char *pBuffer, UDWORD size, void **ppData)
 	return true;
 }
 
-static BOOL dataDBPROPLoad(const char* filename, void **ppData)
+static BOOL dataDBPROPLoad(struct sqlite3* db, const char* tableName, void **ppData)
 {
-	if (!loadPropulsionStatsFromDB(filename)
+	if (!loadPropulsionStatsFromDB(db, tableName)
 	 || !allocComponentList(COMP_PROPULSION, numPropulsionStats))
 	{
 		return false;
@@ -212,6 +224,19 @@ static BOOL dataDBPROPLoad(const char* filename, void **ppData)
 static BOOL bufferSSENSORLoad(const char *pBuffer, UDWORD size, void **ppData)
 {
 	if (!loadSensorStats(pBuffer, size)
+	 || !allocComponentList(COMP_SENSOR, numSensorStats))
+	{
+		return false;
+	}
+
+	//not interested in this value
+	*ppData = NULL;
+	return true;
+}
+
+static BOOL dataDBSENSORLoad(struct sqlite3* db, const char* tableName, void **ppData)
+{
+	if (!loadSensorStatsFromDB(db, tableName)
 	 || !allocComponentList(COMP_SENSOR, numSensorStats))
 	{
 		return false;
@@ -250,9 +275,9 @@ static BOOL bufferSBRAINLoad(const char *pBuffer, UDWORD size, void **ppData)
 	return true;
 }
 
-static BOOL dataDBBRAINLoad(const char* filename, void** ppData)
+static BOOL dataDBBRAINLoad(struct sqlite3* db, const char* tableName, void** ppData)
 {
-	if (!loadBrainStatsFromDB(filename)
+	if (!loadBrainStatsFromDB(db, tableName)
 	 || !allocComponentList(COMP_BRAIN, numBrainStats))
 	{
 		return false;
@@ -628,6 +653,19 @@ static BOOL bufferSMSGLoad(const char *pBuffer, UDWORD size, void **ppData)
 	return true;
 }
 
+/* Load research message viewdata */
+static BOOL dataResearchMsgLoad(const char* fileName, void** ppData)
+{
+	VIEWDATA* pViewData = loadResearchViewData(fileName);
+	if (!pViewData)
+	{
+		return false;
+	}
+
+	// set the pointer so the release function gets called with it
+	*ppData = pViewData;
+	return true;
+}
 
 // release the message viewdata
 static void dataSMSGRelease(void *pData)
@@ -682,16 +720,13 @@ static BOOL dataTERTILESLoad(const char *fileName, void **ppData)
 	texLoad(fileName);
 	debug(LOG_TEXTURE, "HW Tiles loaded");
 
-	// set a dummy value so the release function gets called
-	*ppData = (void *)1;
+	*ppData = NULL;	// don't bother calling cleanup
 
 	return true;
 }
 
 static void dataTERTILESRelease(WZ_DECL_UNUSED void *pData)
 {
-	debug(LOG_TEXTURE, "=== dataTERTILESRelease ===");
-	pie_TexShutDown();
 }
 
 
@@ -786,7 +821,7 @@ static BOOL dataAudioCfgLoad(const char* fileName, void **ppData)
 	{
 		return true;
 	}
-
+	debug(LOG_WZ, "Reading...[directory: %s] %s", PHYSFS_getRealDir(fileName), fileName);
 	fileHandle = PHYSFS_openRead(fileName);
 
 	if (fileHandle == NULL)
@@ -805,6 +840,7 @@ static BOOL dataAudioCfgLoad(const char* fileName, void **ppData)
 static BOOL dataAnimLoad(const char *fileName, void **ppData)
 {
 	PHYSFS_file* fileHandle = PHYSFS_openRead(fileName);
+	debug(LOG_WZ, "Reading...[directory: %s] %s", PHYSFS_getRealDir(fileName), fileName);
 	if (fileHandle == NULL)
 	{
 		*ppData = NULL;
@@ -825,6 +861,7 @@ static BOOL dataAnimCfgLoad(const char *fileName, void **ppData)
 	PHYSFS_file* fileHandle = PHYSFS_openRead(fileName);
 	*ppData = NULL;
 
+	debug(LOG_WZ, "Reading...[directory: %s] %s", PHYSFS_getRealDir(fileName), fileName);
 	if (fileHandle == NULL)
 	{
 		return false;
@@ -886,7 +923,7 @@ static BOOL dataScriptLoad(const char* fileName, void **ppData)
 	scr_lineno = 1;
 
 	fileHandle = PHYSFS_openRead(fileName);
-
+	debug(LOG_WZ, "Reading...[directory: %s] %s", PHYSFS_getRealDir(fileName), fileName);
 	if (fileHandle == NULL)
 	{
 		return false;
@@ -910,6 +947,14 @@ static BOOL dataScriptLoad(const char* fileName, void **ppData)
 	return true;
 }
 
+
+static void dataScriptRelease(void *pData)
+{
+	SCRIPT_CODE *psCode = pData;
+	scriptFreeCode(psCode);
+}
+
+
 // Load a script variable values file
 static BOOL dataScriptLoadVals(const char* fileName, void **ppData)
 {
@@ -927,7 +972,7 @@ static BOOL dataScriptLoadVals(const char* fileName, void **ppData)
 	debug(LOG_WZ, "Loading script data %s", GetLastResourceFilename());
 
 	fileHandle = PHYSFS_openRead(fileName);
-
+	debug(LOG_WZ, "Reading...[directory: %s] %s", PHYSFS_getRealDir(fileName), fileName);
 	if (fileHandle == NULL)
 	{
 		return false;
@@ -949,9 +994,9 @@ static BOOL dataScriptLoadVals(const char* fileName, void **ppData)
 // This basically matches the argument list of resAddBufferLoad in frameresource.c
 typedef struct
 {
-	const char *aType;                      // points to the string defining the type (e.g. SCRIPT) - NULL indicates end of list
-	RES_BUFFERLOAD buffLoad;                // routine to process the data for this type
-	RES_FREE release;                       // routine to release the data (NULL indicates none)
+	const char *aType;                      ///< points to the string defining the type (e.g. SCRIPT) - NULL indicates end of list
+	RES_BUFFERLOAD buffLoad;                ///< routine to process the data for this type
+	RES_FREE release;                       ///< routine to release the data (NULL indicates none)
 } RES_TYPE_MIN_BUF;
 
 static const RES_TYPE_MIN_BUF BufferResourceTypes[] =
@@ -993,17 +1038,13 @@ static const RES_TYPE_MIN_BUF BufferResourceTypes[] =
 
 typedef struct
 {
-	const char *aType;                      // points to the string defining the type (e.g. SCRIPT) - NULL indicates end of list
-	RES_FILELOAD fileLoad;                  // routine to process the data for this type
-	RES_FREE release;                       // routine to release the data (NULL indicates none)
+	const char *aType;                      ///< points to the string defining the type (e.g. SCRIPT) - NULL indicates end of list
+	RES_FILELOAD fileLoad;                  ///< routine to process the data for this type
+	RES_FREE release;                       ///< routine to release the data (NULL indicates none)
 } RES_TYPE_MIN_FILE;
 
 static const RES_TYPE_MIN_FILE FileResourceTypes[] =
 {
-	{"DBWEAPON", dataDBWEAPONLoad, NULL},
-	{"DBBODY", dataDBBODYLoad, dataReleaseStats},
-	{"DBBRAIN", dataDBBRAINLoad, NULL},
-	{"DBPROP", dataDBPROPLoad, NULL},
 	{"WAV", dataAudioLoad, (RES_FREE)sound_ReleaseTrack},
 	{"AUDIOCFG", dataAudioCfgLoad, NULL},
 	{"ANI", dataAnimLoad, dataAnimRelease},
@@ -1012,9 +1053,27 @@ static const RES_TYPE_MIN_FILE FileResourceTypes[] =
 	{"TERTILES", dataTERTILESLoad, dataTERTILESRelease},
 	{"IMG", dataIMGLoad, dataIMGRelease},
 	{"TEXPAGE", dataTexPageLoad, dataImageRelease},
-	{"SCRIPT", dataScriptLoad, (RES_FREE)scriptFreeCode},
+	{"SCRIPT", dataScriptLoad, dataScriptRelease},
 	{"SCRIPTVAL", dataScriptLoadVals, NULL},
 	{"STR_RES", dataStrResLoad, dataStrResRelease},
+	{ "RESEARCHMSG", dataResearchMsgLoad, dataSMSGRelease },
+};
+
+typedef struct
+{
+	const char *aType;                      ///< points to the string defining the type (e.g. SCRIPT) - NULL indicates end of list
+	RES_TABLELOAD tableLoad;                ///< routine to process the data for this type
+	RES_FREE release;                       ///< routine to release the data (NULL indicates none)
+} RES_TYPE_MIN_TABLE;
+
+static const RES_TYPE_MIN_TABLE TableResourceTypes[] =
+{
+	{"DBWEAPON", dataDBWEAPONLoad, NULL},
+	{"DBBODY", dataDBBODYLoad, dataReleaseStats},
+	{"DBBRAIN", dataDBBRAINLoad, NULL},
+	{"DBPROP", dataDBPROPLoad, NULL},
+	{"DBSENSOR", dataDBSENSORLoad, NULL},
+	{"DBECM", dataDBECMLoad, NULL},
 };
 
 /* Pass all the data loading functions to the framework library */
@@ -1048,7 +1107,22 @@ BOOL dataInitLoadFuncs(void)
 		{
 			if(!resAddFileLoad(CurrentType->aType, CurrentType->fileLoad, CurrentType->release))
 			{
-				return false; // error whilst adding a buffer load
+				return false; // error whilst adding a file load
+			}
+		}
+	}
+
+	// iterate through table load functions
+	{
+		const RES_TYPE_MIN_TABLE *CurrentType;
+		// Points just past the last item in the list
+		const RES_TYPE_MIN_TABLE * const EndType = &TableResourceTypes[ARRAY_SIZE(TableResourceTypes)];
+
+		for (CurrentType = TableResourceTypes; CurrentType != EndType; ++CurrentType)
+		{
+			if (!resAddTableLoad(CurrentType->aType, CurrentType->tableLoad, CurrentType->release))
+			{
+				return false; // error whilst adding a table load
 			}
 		}
 	}

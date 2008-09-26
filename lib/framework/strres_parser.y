@@ -36,6 +36,11 @@ void yyerror(const char* msg)
 	debug(LOG_ERROR, "STRRES file parse error:\n%s at line %d\nText: '%s'", msg, strres_get_lineno(), strres_get_text());
 }
 
+// Forward declaration to allow pointers to this type
+struct STR_RES;
+
+#define YYPARSE_PARAM psStrRes
+
 %}
 
 %name-prefix="strres_"
@@ -52,11 +57,13 @@ void yyerror(const char* msg)
 %type <sval> string
 
 %destructor {
+#ifndef WZ_OS_WIN
 	// Force type checking by the compiler
 	char * const s = $$;
 
 	if (s)
 		free(s);
+#endif
 } TEXT_T QTEXT_T string
 
 %%
@@ -68,7 +75,7 @@ file:			line
 line:			TEXT_T string
 				{
 					/* Pass the text string to the string manager */
-					const bool success = strresStoreString(psCurrRes, $1, $2);
+					const bool success = strresStoreString((struct STR_RES*)psStrRes, $1, $2);
 
 					// Clean up our tokens
 					free($1);

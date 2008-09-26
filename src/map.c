@@ -149,13 +149,18 @@ BOOL mapNew(UDWORD width, UDWORD height)
 
 	if (width*height > MAP_MAXAREA)
 	{
-		debug( LOG_ERROR, "mapNew: map too large : %d %d\n", width, height );
+		debug(LOG_ERROR, "map too large : %u %u", width, height);
 		abort();
 		return false;
 	}
 
 	psMapTiles = calloc(width * height, sizeof(MAPTILE));
-	ASSERT(psMapTiles != NULL, "mapNew: Out of memory")
+	if (psMapTiles == NULL)
+	{
+		debug(LOG_ERROR, "Out of memory");
+		abort();
+		return false;
+	}
 
 	psTile = psMapTiles;
 	for (i = 0; i < width * height; i++)
@@ -231,8 +236,6 @@ static BOOL mapLoadV3(char *pFileData, UDWORD fileSize)
 		}
 		psGate++;
 	}
-
-	LOADBARCALLBACK();	//	loadingScreenCallback();
 
 	return true;
 }
@@ -366,7 +369,7 @@ static void objectStatTagged(BASE_OBJECT *psObj, int body, int resistance)
 
 	tagWriteEnter(0x03, 1);
 	tagWrite(0x01, body);
-	tagWrite(0x02, NUM_WEAPON_CLASS);
+	tagWrite(0x02, WC_NUM_WEAPON_CLASSES);
 	tagWriteEnter(0x03, NUM_HIT_SIDES);
 	for (i = 0; i < NUM_HIT_SIDES; i++)
 	{
@@ -379,7 +382,7 @@ static void objectStatTagged(BASE_OBJECT *psObj, int body, int resistance)
 	tagWriteLeave(0x03);
 }
 
-static void objectWeaponTagged(int num, UWORD *rotation, UWORD *pitch, WEAPON *asWeaps, BASE_OBJECT **psTargets)
+static void objectWeaponTagged(int num, WEAPON *asWeaps, BASE_OBJECT **psTargets)
 {
 	int i;
 
@@ -387,9 +390,8 @@ static void objectWeaponTagged(int num, UWORD *rotation, UWORD *pitch, WEAPON *a
 	for (i = 0; i < num; i++)
 	{
 		tagWrite(0x01, asWeaps[i].nStat);
-		tagWrite(0x02, rotation[i]);
-		tagWrite(0x03, pitch[i]);
-		tagWrite(0x04, asWeaps[i].hitPoints);
+		tagWrite(0x02, asWeaps[i].rotation);
+		tagWrite(0x03, asWeaps[i].pitch);
 		tagWrite(0x05, asWeaps[i].ammo);
 		tagWrite(0x06, asWeaps[i].lastFired);
 		tagWrite(0x07, asWeaps[i].recoilValue);
@@ -414,7 +416,7 @@ static void droidSaveTagged(DROID *psDroid)
 	objectSaveTagged((BASE_OBJECT *)psDroid); /* 0x01 */
 	objectSensorTagged(psDroid->sensorRange, psDroid->sensorPower, 0, psDroid->ECMMod); /* 0x02 */
 	objectStatTagged((BASE_OBJECT *)psDroid, psDroid->originalBody, psDroid->resistance); /* 0x03 */
-	objectWeaponTagged(psDroid->numWeaps, psDroid->turretRotation, psDroid->turretPitch, psDroid->asWeaps, psDroid->psActionTarget);
+	objectWeaponTagged(psDroid->numWeaps, psDroid->asWeaps, psDroid->psActionTarget);
 
 	/* DROID GROUP */
 
@@ -536,7 +538,7 @@ static void structureSaveTagged(STRUCTURE *psStruct)
 	objectSaveTagged((BASE_OBJECT *)psStruct); /* 0x01 */
 	objectSensorTagged(psStruct->sensorRange, psStruct->sensorPower, 0, psStruct->ECMMod); /* 0x02 */
 	objectStatTagged((BASE_OBJECT *)psStruct, psStruct->pStructureType->bodyPoints, psStruct->resistance); /* 0x03 */
-	objectWeaponTagged(psStruct->numWeaps, psStruct->turretRotation, psStruct->turretPitch, psStruct->asWeaps, psStruct->psTarget);
+	objectWeaponTagged(psStruct->numWeaps, psStruct->asWeaps, psStruct->psTarget);
 
 	/* STRUCTURE GROUP */
 
@@ -1009,7 +1011,6 @@ BOOL mapLoadTagged(char *pFileName)
 		return false;
 	}
 
-	LOADBARCALLBACK();	//	loadingScreenCallback();
 	free(psMapTiles);
 	psMapTiles = NULL;
 
@@ -1027,7 +1028,6 @@ BOOL mapLoadTagged(char *pFileName)
 	tagReadfv(0x02, 3, cam); debug(LOG_MAP, " * Camera rotation: %f, %f, %f", cam[0], cam[1], cam[2]);
 	tagReadLeave(0x04);
 
-	LOADBARCALLBACK();	//	loadingScreenCallback();
 	count = tagReadEnter(0x05); // texture group
 	for (i = 0; i < count; i++)
 	{
@@ -1043,7 +1043,6 @@ BOOL mapLoadTagged(char *pFileName)
 	psMapTiles = calloc(mapWidth * mapHeight, sizeof(MAPTILE));
 	ASSERT(psMapTiles != NULL, "mapLoadTagged: Out of memory" );
 
-	LOADBARCALLBACK();	//	loadingScreenCallback();
 	i = tagReadEnter(0x0a); // tile group
 	ASSERT(i == mapWidth * mapHeight, "Map size (%d, %d) is not equal to number of tiles (%d) in mapLoadTagged()!",
 	       (int)mapWidth, (int)mapHeight, i);
@@ -1086,7 +1085,6 @@ BOOL mapLoadTagged(char *pFileName)
 	}
 	tagReadLeave(0x0a);
 
-	LOADBARCALLBACK();	//	loadingScreenCallback();
 	count = tagReadEnter(0x0b); // gateway group
 	for (i = 0; i < count; i++)
 	{
@@ -1103,9 +1101,6 @@ BOOL mapLoadTagged(char *pFileName)
 	tagReadLeave(0x0b);
 
 	tagClose();
-
-	LOADBARCALLBACK();	//	loadingScreenCallback();
-
 	environReset();
 
 	return true;
@@ -1168,10 +1163,7 @@ BOOL mapSave(char **ppFileData, UDWORD *pFileSize)
 	psTile = psMapTiles;
 	for(i=0; i<mapWidth*mapHeight; i++)
 	{
-
-		// don't save the noblock flag as it gets set again when the objects are loaded
-		psTileData->texture = (UWORD)(psTile->texture & (UWORD)~TILE_NOTBLOCKING);
-
+		psTileData->texture = psTile->texture;
 		psTileData->height = psTile->height;
 
 		/* MAP_SAVETILEV2 */
@@ -1209,7 +1201,7 @@ BOOL mapSave(char **ppFileData, UDWORD *pFileSize)
 
 	// Put the zone header.
 	psZoneHeader = (ZONEMAP_SAVEHEADER*)psGate;
-	psZoneHeader->version = 2;
+	psZoneHeader->version = 3;
 	psZoneHeader->numZones = 0;
 	psZoneHeader->numEquivZones = 0;
 
@@ -1245,8 +1237,8 @@ extern SWORD map_Height(int x, int y)
 	ASSERT(x >= 0, "map_Height: Negative x value");
 	ASSERT(y >= 0, "map_Height: Negative y value");
 
-	x = x >= world_coord(mapWidth) ? world_coord(mapWidth - 1) : x;
-	y = y >= world_coord(mapHeight) ? world_coord(mapHeight - 1) : y;
+	x = (x >= world_coord(mapWidth) ? world_coord(mapWidth - 1) : x);
+	y = (y >= world_coord(mapHeight) ? world_coord(mapHeight - 1) : y);
 
 	/* Turn into tile coordinates */
 	tileX = map_coord(x);
@@ -1580,33 +1572,27 @@ static void astarTest(const char *name, int x1, int y1, int x2, int y2)
 	int		endy = world_coord(y2);
 	clock_t		stop;
 	clock_t		start = clock();
-	int		iterations;
 	bool		retval;
 
 	retval = levLoadData(name, NULL, 0);
 	ASSERT(retval, "Could not load %s", name);
-	fpathInitialise();
 	route.asPath = NULL;
 	for (i = 0; i < 100; i++)
 	{
-		iterations = 1;
 		route.numPoints = 0;
 		astarResetCounters();
-		ASSERT(astarInner == 0, "astarInner not reset");
-		asret = fpathAStarRoute(ASR_NEWROUTE, &route, x, y, endx, endy, WHEELED);
-		while (asret == ASR_PARTIAL)
-		{
-			astarResetCounters();
-			ASSERT(astarInner == 0, "astarInner not reset");
-			asret = fpathAStarRoute(ASR_CONTINUE, &route, x, y, endx, endy, WHEELED);
-			iterations++;
-		}
+		asret = fpathAStarRoute(&route, x, y, endx, endy, PROPULSION_TYPE_WHEELED);
 		free(route.asPath);
 		route.asPath = NULL;
 	}
 	stop = clock();
-	fprintf(stdout, "\t\tPath-finding timing %s: %.02f (%d nodes, %d iterations)\n", name,
-	        (double)(stop - start) / (double)CLOCKS_PER_SEC, route.numPoints, iterations);
+	fprintf(stdout, "\t\tA* timing %s: %.02f (%d nodes)\n", name,
+	        (double)(stop - start) / (double)CLOCKS_PER_SEC, route.numPoints);
+	start = clock();
+	fpathTest(x, y, endx, endy);
+	stop = clock();
+	fprintf(stdout, "\t\tfPath timing %s: %.02f (%d nodes)\n", name,
+	        (double)(stop - start) / (double)CLOCKS_PER_SEC, route.numPoints);
 	retval = levReleaseAll();
 	assert(retval);
 }

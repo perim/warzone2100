@@ -21,7 +21,7 @@
 */
 
 #include "lib/framework/frame.h"
-#include "lib/framework/debug.h"
+#include "dumpinfo.h"
 #include "exchndl.h"
 // FIXME: #include from src/
 #include "src/version.h"
@@ -563,13 +563,13 @@ static
 BOOL WINAPI IntelStackWalk(
 	DWORD MachineType,
 	HANDLE hProcess,
-	HANDLE hThread,
+	WZ_DECL_UNUSED HANDLE hThread,
 	LPSTACKFRAME StackFrame,
 	PCONTEXT ContextRecord,
 	PREAD_PROCESS_MEMORY_ROUTINE ReadMemoryRoutine,
-	PFUNCTION_TABLE_ACCESS_ROUTINE FunctionTableAccessRoutine,
-	PGET_MODULE_BASE_ROUTINE GetModuleBaseRoutine,
-	PTRANSLATE_ADDRESS_ROUTINE TranslateAddress
+	WZ_DECL_UNUSED PFUNCTION_TABLE_ACCESS_ROUTINE FunctionTableAccessRoutine,
+	WZ_DECL_UNUSED PGET_MODULE_BASE_ROUTINE GetModuleBaseRoutine,
+	WZ_DECL_UNUSED PTRANSLATE_ADDRESS_ROUTINE TranslateAddress
 )
 {
 	assert(MachineType == IMAGE_FILE_MACHINE_I386);
@@ -863,20 +863,8 @@ void GenerateExceptionReport(PEXCEPTION_POINTERS pExceptionInfo)
 		);
 	}
 
-	rprintf(_T("Program: %s (%s)\r\n"), GetModuleFileName(NULL, szModule, MAX_PATH) ? szModule : "", PACKAGE);
-	rprintf(_T("Version: %s\r\n"), formattedVersionString ? formattedVersionString : PACKAGE_VERSION);
-	rprintf(_T("Compiled by: %s\r\n"),
-#if defined(WZ_CC_GNU) && !defined(WZ_CC_INTEL)
-	           "GCC " __VERSION__
-#elif defined(WZ_CC_INTEL)
-	// Intel includes the compiler name within the version string
-	           __VERSION__
-#else
-	          "UNKNOWN"
-#endif
-	);
-
-	rprintf(_T("Pointers: %s\r\n\r\n"), sizeof(void*) == (32 / CHAR_BIT) ? "32bit" : (sizeof(void*) == (64 / CHAR_BIT) ? "64bit" : "Unknown"));
+	// Dump a generic info header
+	dbgDumpHeader(hReportFile);
 
 	// First print information about the type of fault
 	rprintf(_T("%s caused "),  GetModuleFileName(NULL, szModule, MAX_PATH) ? szModule : "Application");
@@ -1021,7 +1009,7 @@ void GenerateExceptionReport(PEXCEPTION_POINTERS pExceptionInfo)
 
 	rprintf(".\r\n\r\n");
 
-	dumpLog(hReportFile);
+	dbgDumpLog(hReportFile);
 
 	pContext = pExceptionInfo->ContextRecord;
 

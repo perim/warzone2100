@@ -48,7 +48,7 @@ VIAddVersionKey "CompanyName"		"Warzone Resurrection Project"
 VIAddVersionKey "FileDescription"	"${PACKAGE_NAME} Installer"
 VIAddVersionKey "FileVersion"		"${PACKAGE_VERSION}"
 VIAddVersionKey "InternalName"		"${PACKAGE_NAME}"
-VIAddVersionKey "LegalCopyright"	"Copyright Â© 2006 Warzone Resurrection Project"
+VIAddVersionKey "LegalCopyright"	"Copyright © 2006 Warzone Resurrection Project"
 VIAddVersionKey "OriginalFilename"	"${PACKAGE}-${PACKAGE_VERSION}.exe"
 VIAddVersionKey "ProductName"		"${PACKAGE_NAME}"
 VIAddVersionKey "ProductVersion"	"${PACKAGE_VERSION}"
@@ -148,7 +148,7 @@ Section $(TEXT_SecBase) SecBase
 
   ; Data files
   File "..\..\data\mp.wz"
-  File "..\..\data\warzone.wz"
+  File "..\..\data\base.wz"
 
   ; Information/documentation files
   File "/oname=ChangeLog.txt" "..\..\ChangeLog"
@@ -159,6 +159,13 @@ Section $(TEXT_SecBase) SecBase
   File "/oname=Readme.en.html" "..\..\doc\Readme.en.xhtml"
   File "/oname=Readme.de.html" "..\..\doc\Readme.de.xhtml"
 
+  ; Music files
+  SetOutPath "$INSTDIR\music"
+  File "..\..\data\music\menu.ogg"
+  File "..\..\data\music\track1.ogg"
+  File "..\..\data\music\track2.ogg"
+  File "..\..\data\music\music.wpl"
+
   SetOutPath "$INSTDIR\styles"
 
   File "/oname=readme.print.css" "..\..\doc\styles\readme.print.css"
@@ -168,6 +175,7 @@ Section $(TEXT_SecBase) SecBase
 
   File "${EXTDIR}\etc\fonts\fonts.conf"
   File "${EXTDIR}\etc\fonts\DejaVuSansMono.ttf"
+  File "${EXTDIR}\etc\fonts\DejaVuSansMono-Bold.ttf"
 
   ;Store installation folder
   WriteRegStr HKLM "Software\${PACKAGE_NAME}" "" $INSTDIR
@@ -254,9 +262,26 @@ Section $(TEXT_SecMusicMod) SecMusicMod
 
 SectionEnd
 
+Section $(TEXT_SecNTWMod) SecNTWMod
+
+  SetOutPath "$INSTDIR\mods\multiplay"
+
+  File "..\..\data\mods\multiplay\ntw.wz"
+
+  SetOutPath "$INSTDIR"
+
+  !insertmacro MUI_STARTMENU_WRITE_BEGIN "Application"
+    CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\${PACKAGE_NAME} - NTW.lnk" "$INSTDIR\${PACKAGE}.exe" "--mod_mp ntw.wz"
+  !insertmacro MUI_STARTMENU_WRITE_END
+
+SectionEnd
+
 SectionGroupEnd
 
 Section $(TEXT_SecNLS) SecNLS
+
+  SetOutPath "$INSTDIR\locale\cs\LC_MESSAGES"
+  File "/oname=${PACKAGE}.mo" "..\..\po\cs.gmo"
 
   SetOutPath "$INSTDIR\locale\da\LC_MESSAGES"
   File "/oname=${PACKAGE}.mo" "..\..\po\da.gmo"
@@ -264,8 +289,23 @@ Section $(TEXT_SecNLS) SecNLS
   SetOutPath "$INSTDIR\locale\de\LC_MESSAGES"
   File "/oname=${PACKAGE}.mo" "..\..\po\de.gmo"
 
+  SetOutPath "$INSTDIR\locale\en_GB\LC_MESSAGES"
+  File "/oname=${PACKAGE}.mo" "..\..\po\en_GB.gmo"
+
+  SetOutPath "$INSTDIR\locale\es\LC_MESSAGES"
+  File "/oname=${PACKAGE}.mo" "..\..\po\es.gmo"
+
+  SetOutPath "$INSTDIR\locale\fi\LC_MESSAGES"
+  File "/oname=${PACKAGE}.mo" "..\..\po\fi.gmo"
+
   SetOutPath "$INSTDIR\locale\fr\LC_MESSAGES"
   File "/oname=${PACKAGE}.mo" "..\..\po\fr.gmo"
+
+  SetOutPath "$INSTDIR\locale\fy\LC_MESSAGES"
+  File "/oname=${PACKAGE}.mo" "..\..\po\fy.gmo"
+
+  SetOutPath "$INSTDIR\locale\ga\LC_MESSAGES"
+  File "/oname=${PACKAGE}.mo" "..\..\po\ga.gmo"
 
   SetOutPath "$INSTDIR\locale\it\LC_MESSAGES"
   File "/oname=${PACKAGE}.mo" "..\..\po\it.gmo"
@@ -273,17 +313,32 @@ Section $(TEXT_SecNLS) SecNLS
   SetOutPath "$INSTDIR\locale\la\LC_MESSAGES"
   File "/oname=${PACKAGE}.mo" "..\..\po\la.gmo"
 
+  SetOutPath "$INSTDIR\locale\lt\LC_MESSAGES"
+  File "/oname=${PACKAGE}.mo" "..\..\po\lt.gmo"
+
   SetOutPath "$INSTDIR\locale\nb\LC_MESSAGES"
   File "/oname=${PACKAGE}.mo" "..\..\po\nb.gmo"
 
   SetOutPath "$INSTDIR\locale\nl\LC_MESSAGES"
   File "/oname=${PACKAGE}.mo" "..\..\po\nl.gmo"
 
+  SetOutPath "$INSTDIR\locale\pl\LC_MESSAGES"
+  File "/oname=${PACKAGE}.mo" "..\..\po\pl.gmo"
+
+  SetOutPath "$INSTDIR\locale\pt_BR\LC_MESSAGES"
+  File "/oname=${PACKAGE}.mo" "..\..\po\pt_BR.gmo"
+
   SetOutPath "$INSTDIR\locale\pt\LC_MESSAGES"
   File "/oname=${PACKAGE}.mo" "..\..\po\pt.gmo"
 
+  SetOutPath "$INSTDIR\locale\ro\LC_MESSAGES"
+  File "/oname=${PACKAGE}.mo" "..\..\po\ro.gmo"
+
   SetOutPath "$INSTDIR\locale\ru\LC_MESSAGES"
   File "/oname=${PACKAGE}.mo" "..\..\po\ru.gmo"
+
+  SetOutPath "$INSTDIR\locale\zh_CN\LC_MESSAGES"
+  File "/oname=${PACKAGE}.mo" "..\..\po\zh_CN.gmo"
 
 SectionEnd
 
@@ -327,6 +382,9 @@ FunctionEnd
   LangString TEXT_SecNLS ${LANG_ENGLISH} "NLS"
   LangString DESC_SecNLS ${LANG_ENGLISH} "Support for languages other than English."
 
+  LangString TEXT_SecNTWMod ${LANG_ENGLISH} "NTW: New Team War mod"
+  LangString DESC_SecNTWMod ${LANG_ENGLISH} "NTW: New Team War mod. Modifies most of the weapons and research."
+
 
 
   LangString TEXT_SecBase ${LANG_DUTCH} "Standaard installatie"
@@ -339,7 +397,7 @@ FunctionEnd
   LangString DESC_SecMods ${LANG_DUTCH} "Verschillende mods."
 
   LangString TEXT_SecGrimMod ${LANG_DUTCH} "Grim's grafische-update"
-  LangString DESC_SecGrimMod ${LANG_DUTCH} "Grim's grafische-update. Bevat meer gedetaÃ¯leerde textures voor campaign 1 en extra texture- en model-updates. Copyright (C) 2005-2007 Grim Moroe, gebruik is alleen toegestaan voor ${PACKAGE_NAME}."
+  LangString DESC_SecGrimMod ${LANG_DUTCH} "Grim's grafische-update. Bevat meer gedetaïleerde textures voor campaign 1 en extra texture- en model-updates. Copyright (C) 2005-2007 Grim Moroe, gebruik is alleen toegestaan voor ${PACKAGE_NAME}."
 
   LangString TEXT_SecAivolutionMod ${LANG_DUTCH} "Aivolution"
   LangString DESC_SecAivolutionMod ${LANG_DUTCH} "Verbeterde kunstmatige intelligentie die leert."
@@ -350,28 +408,34 @@ FunctionEnd
   LangString TEXT_SecNLS ${LANG_DUTCH} "NLS"
   LangString DESC_SecNLS ${LANG_DUTCH} "Ondersteuning voor andere talen dan Engels (Nederlands inbegrepen)."
 
+  LangString TEXT_SecNTWMod ${LANG_DUTCH} "NTW: New Team War mod"
+  LangString DESC_SecNTWMod ${LANG_DUTCH} "NTW: New Team War mod. Wijzigd de meeste wapens en onderzoeken."
+
 
 
   LangString TEXT_SecBase ${LANG_GERMAN} "Standardinstallation"
   LangString DESC_SecBase ${LANG_GERMAN} "Standardinstallation."
 
   LangString TEXT_SecOpenAL ${LANG_GERMAN} "OpenAL Bibliotheken"
-  LangString DESC_SecOpenAL ${LANG_GERMAN} "Bibliotheken fÃ¼r OpenAL, ein freies Audio Interface. Implementation von Creative Labs."
+  LangString DESC_SecOpenAL ${LANG_GERMAN} "Bibliotheken für OpenAL, ein freies Audio Interface. Implementation von Creative Labs."
 
   LangString TEXT_SecMods ${LANG_GERMAN} "Mods"
   LangString DESC_SecMods ${LANG_GERMAN} "Verschiedene Mods."
 
   LangString TEXT_SecGrimMod ${LANG_GERMAN} "Grims Grafik-Update"
-  LangString DESC_SecGrimMod ${LANG_GERMAN} "Grims Grafik-Update. EnthÃ¤lt detailliertere Texturen fÃ¼r Kampagne 1 sowie einige andere Textur- und Model-Updates. Copyright (C) 2005-2007 Grim Moroe, Verwendung nur fÃ¼r ${PACKAGE_NAME} gestattet."
+  LangString DESC_SecGrimMod ${LANG_GERMAN} "Grims Grafik-Update. Enthält detailliertere Texturen für Kampagne 1 sowie einige andere Textur- und Model-Updates. Copyright (C) 2005-2007 Grim Moroe, Verwendung nur für ${PACKAGE_NAME} gestattet."
 
   LangString TEXT_SecAivolutionMod ${LANG_GERMAN} "Aivolution"
-  LangString DESC_SecAivolutionMod ${LANG_GERMAN} "Verbesserte kÃ¼nstliche Intelligenz die erlernt."
+  LangString DESC_SecAivolutionMod ${LANG_GERMAN} "Verbesserte künstliche Intelligenz, die dazulernt."
 
   LangString TEXT_SecMusicMod ${LANG_GERMAN} "Musik"
   LangString DESC_SecMusicMod ${LANG_GERMAN} "Musik herunterladen und installieren."
 
   LangString TEXT_SecNLS ${LANG_GERMAN} "NLS"
-  LangString DESC_SecNLS ${LANG_GERMAN} "UnterstÃ¼tzung fÃ¼r Sprachen anders als Englisch (Deutsch inbegriffen)."
+  LangString DESC_SecNLS ${LANG_GERMAN} "Unterstützung für Sprachen außer Englisch (Deutsch inbegriffen)."
+
+  LangString TEXT_SecNTWMod ${LANG_GERMAN} "NTW: New Team War mod"
+  LangString DESC_SecNTWMod ${LANG_GERMAN} "NTW: New Team War mod. Verändert die meisten Forschungen und Waffen."
 
 
 
@@ -395,6 +459,7 @@ FunctionEnd
     !insertmacro MUI_DESCRIPTION_TEXT ${SecGrimMod} $(DESC_SecGrimMod)
     !insertmacro MUI_DESCRIPTION_TEXT ${SecAivolutionMod} $(DESC_SecAivolutionMod)
     !insertmacro MUI_DESCRIPTION_TEXT ${SecMusicMod} $(DESC_SecMusicMod)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecNTWMod} $(DESC_SecNTWMod)
 
     !insertmacro MUI_DESCRIPTION_TEXT ${SecNLS} $(DESC_SecNLS)
   !insertmacro MUI_FUNCTION_DESCRIPTION_END
@@ -415,7 +480,7 @@ Section "Uninstall"
   Delete "$INSTDIR\dbghelp.dll.license.txt"
   Delete "$INSTDIR\dbghelp.dll"
 
-  Delete "$INSTDIR\warzone.wz"
+  Delete "$INSTDIR\base.wz"
   Delete "$INSTDIR\mp.wz"
 
   Delete "$INSTDIR\Readme.en.txt"
@@ -427,6 +492,11 @@ Section "Uninstall"
   Delete "$INSTDIR\Authors.txt"
   Delete "$INSTDIR\ChangeLog.txt"
 
+  Delete "$INSTDIR\music\menu.ogg"
+  Delete "$INSTDIR\music\track1.ogg"
+  Delete "$INSTDIR\music\track2.ogg"
+  Delete "$INSTDIR\music\music.wpl"
+
   Delete "$INSTDIR\uninstall.exe"
 
   Delete "$INSTDIR\styles\readme.print.css"
@@ -435,6 +505,7 @@ Section "Uninstall"
 
   Delete "$INSTDIR\fonts\fonts.conf"
   Delete "$INSTDIR\fonts\DejaVuSansMono.ttf"
+  Delete "$INSTDIR\fonts\DejaVuSansMono-Bold.ttf"
   RMDir "$INSTDIR\fonts"
 
   Delete "$INSTDIR\mods\global\autoload\music_1.0.AUTHORS.txt"
@@ -444,7 +515,14 @@ Section "Uninstall"
   Delete "$INSTDIR\mods\global\aivolution.wz"
   Delete "$INSTDIR\mods\global\grim.wz"
   RMDir "$INSTDIR\mods\global"
+
+  Delete "$INSTDIR\mods\multiplay\ntw.wz"
+  RMDir "$INSTDIR\mods\multiplay"
   RMDir "$INSTDIR\mods"
+
+  Delete "$INSTDIR\locale\cs\LC_MESSAGES\${PACKAGE}.mo"
+  RMDir "$INSTDIR\locale\cs\LC_MESSAGES"
+  RMDir "$INSTDIR\locale\cs"
 
   Delete "$INSTDIR\locale\da\LC_MESSAGES\${PACKAGE}.mo"
   RMDir "$INSTDIR\locale\da\LC_MESSAGES"
@@ -454,9 +532,29 @@ Section "Uninstall"
   RMDir "$INSTDIR\locale\de\LC_MESSAGES"
   RMDir "$INSTDIR\locale\de"
 
+  Delete "$INSTDIR\locale\en_GB\LC_MESSAGES\${PACKAGE}.mo"
+  RMDir "$INSTDIR\locale\en_GB\LC_MESSAGES"
+  RMDir "$INSTDIR\locale\en_GB"
+
+  Delete "$INSTDIR\locale\es\LC_MESSAGES\${PACKAGE}.mo"
+  RMDir "$INSTDIR\locale\es\LC_MESSAGES"
+  RMDir "$INSTDIR\locale\es"
+
+  Delete "$INSTDIR\locale\fi\LC_MESSAGES\${PACKAGE}.mo"
+  RMDir "$INSTDIR\locale\fi\LC_MESSAGES"
+  RMDir "$INSTDIR\locale\fi"
+
   Delete "$INSTDIR\locale\fr\LC_MESSAGES\${PACKAGE}.mo"
   RMDir "$INSTDIR\locale\fr\LC_MESSAGES"
   RMDir "$INSTDIR\locale\fr"
+
+  Delete "$INSTDIR\locale\fy\LC_MESSAGES\${PACKAGE}.mo"
+  RMDir "$INSTDIR\locale\fy\LC_MESSAGES"
+  RMDir "$INSTDIR\locale\fy"
+
+  Delete "$INSTDIR\locale\ga\LC_MESSAGES\${PACKAGE}.mo"
+  RMDir "$INSTDIR\locale\ga\LC_MESSAGES"
+  RMDir "$INSTDIR\locale\ga"
 
   Delete "$INSTDIR\locale\it\LC_MESSAGES\${PACKAGE}.mo"
   RMDir "$INSTDIR\locale\it\LC_MESSAGES"
@@ -466,6 +564,10 @@ Section "Uninstall"
   RMDir "$INSTDIR\locale\la\LC_MESSAGES"
   RMDir "$INSTDIR\locale\la"
 
+  Delete "$INSTDIR\locale\lt\LC_MESSAGES\${PACKAGE}.mo"
+  RMDir "$INSTDIR\locale\lt\LC_MESSAGES"
+  RMDir "$INSTDIR\locale\lt"
+
   Delete "$INSTDIR\locale\nb\LC_MESSAGES\${PACKAGE}.mo"
   RMDir "$INSTDIR\locale\nb\LC_MESSAGES"
   RMDir "$INSTDIR\locale\nb"
@@ -474,13 +576,29 @@ Section "Uninstall"
   RMDir "$INSTDIR\locale\nl\LC_MESSAGES"
   RMDir "$INSTDIR\locale\nl"
 
+  Delete "$INSTDIR\locale\pl\LC_MESSAGES\${PACKAGE}.mo"
+  RMDir "$INSTDIR\locale\pl\LC_MESSAGES"
+  RMDir "$INSTDIR\locale\pl"
+
+  Delete "$INSTDIR\locale\pt_BR\LC_MESSAGES\${PACKAGE}.mo"
+  RMDir "$INSTDIR\locale\pt_BR\LC_MESSAGES"
+  RMDir "$INSTDIR\locale\pt_BR"
+
   Delete "$INSTDIR\locale\pt\LC_MESSAGES\${PACKAGE}.mo"
   RMDir "$INSTDIR\locale\pt\LC_MESSAGES"
   RMDir "$INSTDIR\locale\pt"
 
+  Delete "$INSTDIR\locale\ro\LC_MESSAGES\${PACKAGE}.mo"
+  RMDir "$INSTDIR\locale\ro\LC_MESSAGES"
+  RMDir "$INSTDIR\locale\ro"
+
   Delete "$INSTDIR\locale\ru\LC_MESSAGES\${PACKAGE}.mo"
   RMDir "$INSTDIR\locale\ru\LC_MESSAGES"
   RMDir "$INSTDIR\locale\ru"
+
+  Delete "$INSTDIR\locale\zh_CN\LC_MESSAGES\${PACKAGE}.mo"
+  RMDir "$INSTDIR\locale\zh_CN\LC_MESSAGES"
+  RMDir "$INSTDIR\locale\zh_CN"
 
   RMDir "$INSTDIR\locale"
   RMDir "$INSTDIR"
@@ -489,6 +607,7 @@ Section "Uninstall"
   Delete "$SMPROGRAMS\$STARTMENU_FOLDER\${PACKAGE_NAME}.lnk"
   Delete "$SMPROGRAMS\$STARTMENU_FOLDER\${PACKAGE_NAME} - Grim's GFX.lnk"
   Delete "$SMPROGRAMS\$STARTMENU_FOLDER\${PACKAGE_NAME} - Aivolution.lnk"
+  Delete "$SMPROGRAMS\$STARTMENU_FOLDER\${PACKAGE_NAME} - NTW.lnk"
   RMDir "$SMPROGRAMS\$STARTMENU_FOLDER"
 
   ;Delete empty start menu parent diretories

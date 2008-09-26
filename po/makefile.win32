@@ -1,0 +1,36 @@
+top_srcdir=..
+top_builddir=$(top_srcdir)
+
+include $(top_srcdir)/makerules/common.mk
+
+include Makevars
+
+PO_FILES=nb.po de.po da.po nl.po la.po
+MO_FILES=$(patsubst %.po,%.gmo,$(PO_FILES))
+
+.PHONY: all clean update-po po-files mo-files
+
+all:
+ifdef TRANSLATION
+all: po-files mo-files
+endif
+
+po-files: $(PO_FILES)
+mo-files: $(MO_FILES)
+
+update-po: clean all
+
+$(DOMAIN).pot: POTFILES.in
+	$(XGETTEXT) $(XGETTEXT_OPTIONS) --default-domain="$(DOMAIN)" --copyright-holder="$(COPYRIGHT_HOLDER)" --msgid-bugs-address="$(MSGID_BUGS_ADDRESS)" --directory="$(top_builddir)" --add-comments=TRANSLATORS: --files-from=$<
+	$(MV) $(DOMAIN).po $@
+
+%.po: $(DOMAIN).pot
+	$(MSGMERGE) $(MSGMERGE_OPTIONS) $@ $(DOMAIN).pot -o $@.new
+	$(MV) $@.new $@
+
+%.gmo: %.po
+	$(MSGFMT) -c -o $@ $<
+
+clean:
+	$(RM_F) $(PACKAGE).pot
+	$(RM_F) $(MO_FILES)

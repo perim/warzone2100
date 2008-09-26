@@ -169,8 +169,8 @@ extern BOOL SendGroupOrderGroup(const DROID_GROUP* psGroup, DROID_ORDER order, u
 
 extern BOOL sendDroidSecondary	(const DROID* psDroid, SECONDARY_ORDER sec, SECONDARY_STATE state);
 extern BOOL sendDroidSecondaryAll(const DROID* psDroid);
-extern BOOL sendDroidEmbark     (const DROID* psDroid);
-extern BOOL sendDroidDisEmbark  (const DROID* psDroid);
+extern BOOL sendDroidEmbark     (const DROID* psDroid, const DROID* psTransporter);
+extern BOOL sendDroidDisEmbark  (const DROID* psDroid, const DROID* psTransporter);
 extern BOOL sendHappyVtol		(const DROID* psDroid);
 
 // Startup. mulitopt
@@ -192,6 +192,7 @@ extern BOOL sendCheck			(void);							//send/recv  check info
 extern BOOL sendScoreCheck		(void);							//score check only(frontend)
 extern BOOL sendPing			(void);							// allow game to request pings.
 
+extern BOOL ForceDroidSync(const DROID* droidToSend);
 // multijoin
 extern void modifyResources		(POWER_GEN_FUNCTION* psFunction);
 

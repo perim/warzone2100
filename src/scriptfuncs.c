@@ -129,7 +129,7 @@ BOOL objectInRange(BASE_OBJECT *psList, SDWORD x, SDWORD y, SDWORD range)
 
 		// skip flying vtols
 		if ( (psCurr->type == OBJ_DROID) &&
-			 vtolDroid((DROID *)psCurr) &&
+			 isVtolDroid((DROID *)psCurr) &&
 			 ((DROID *)psCurr)->sMove.Status != MOVEINACTIVE )
 		{
 			continue;
@@ -941,7 +941,7 @@ BOOL scrAddDroid(void)
 		if (psDroid)
 		{
 			addDroid(psDroid, apsDroidLists);
-			if (vtolDroid(psDroid))
+			if (isVtolDroid(psDroid))
 			{
 				// vtols start in the air
 				moveMakeVtolHover(psDroid);
@@ -1777,7 +1777,7 @@ BOOL scrGetFeatureB(void)
 		if(	( psCurrEnumFeature[bucket]->psStats->subType == psFeatureStatToFind[bucket]->subType)
 			&&( psCurrEnumFeature[bucket]->visible[playerToEnum[bucket]]	!= 0)
 			&&!TileHasStructure(mapTile(map_coord(psCurrEnumFeature[bucket]->pos.x), map_coord(psCurrEnumFeature[bucket]->pos.y)))
-			 /*&&!fireOnLocation(psCurrEnumFeature[bucket]->pos.x,psCurrEnumFeature[bucket]->pos.y )*/		// not burning.
+			&&!fireOnLocation(psCurrEnumFeature[bucket]->pos.x,psCurrEnumFeature[bucket]->pos.y )		// not burning.
 			)
 		{
 			scrFunctionResult.v.oval = psCurrEnumFeature[bucket];
@@ -3403,10 +3403,8 @@ BOOL scrPlayBackgroundAudio(void)
 
 BOOL scrPlayIngameCDAudio(void)
 {
-	if (war_GetPlayAudioCDs())
-	{
-		cdAudio_PlayTrack(playlist_ingame);
-	}
+	debug(LOG_SOUND, "Script wanted music to start");
+	cdAudio_PlayTrack(SONG_INGAME);
 
 	return true;
 }
@@ -3414,28 +3412,22 @@ BOOL scrPlayIngameCDAudio(void)
 // -----------------------------------------------------------------------------------------
 BOOL scrStopCDAudio(void)
 {
-	if (war_GetPlayAudioCDs()) {
-		cdAudio_Stop();
-	}
-
+	debug(LOG_SOUND, "Script wanted music to stop");
+	cdAudio_Stop();
 	return true;
 }
 
 // -----------------------------------------------------------------------------------------
 BOOL scrPauseCDAudio(void)
 {
-	if (war_GetPlayAudioCDs()) {
-		cdAudio_Pause();
-	}
+	cdAudio_Pause();
 	return true;
 }
 
 // -----------------------------------------------------------------------------------------
 BOOL scrResumeCDAudio(void)
 {
-	if (war_GetPlayAudioCDs()) {
-		cdAudio_Resume();
-	}
+	cdAudio_Resume();
 	return true;
 }
 
@@ -3689,7 +3681,7 @@ BOOL scrStartMission(void)
 
 	// tell the loop that a new level has to be loaded up - not yet!
 	//loopNewLevel = true;
-	strlcpy(aLevelName, pGame, sizeof(aLevelName));
+	sstrcpy(aLevelName, pGame);
 
 	// find the level dataset
 	psNewLevel = levFindDataSet(pGame);
@@ -4736,6 +4728,7 @@ BOOL scrSetNoGoArea(void)
 
 // -----------------------------------------------------------------------------------------
 // set the zoom level for the radar
+// What is the script doing setting radar zoom? Commenting out for now. - Per
 BOOL scrSetRadarZoom(void)
 {
 	SDWORD	level;
@@ -4744,17 +4737,15 @@ BOOL scrSetRadarZoom(void)
 	{
 		return true;
 	}
-
+#if 0
 	if (level < 0 || level > 2)
 	{
 		ASSERT( false, "scrSetRadarZoom: zoom level out of range" );
 		return false;
 	}
 
-
-
 	SetRadarZoom((UWORD)level);
-
+#endif
 	return true;
 }
 
@@ -4983,14 +4974,7 @@ BOOL		retVal;
 		return(false);
 	}
 
-	if(bWallsBlock)
-	{
-		retVal = visibleObjWallBlock(psSource,psDest);
-	}
-	else
-	{
-		retVal = visibleObject(psSource,psDest);
-	}
+	retVal = visibleObject(psSource, psDest, bWallsBlock);
 
 	scrFunctionResult.v.bval = retVal;
 	if(!stackPushResult(VAL_BOOL, &scrFunctionResult))
@@ -5581,7 +5565,7 @@ static BOOL structDoubleCheck(BASE_STATS *psStat,UDWORD xx,UDWORD yy, SDWORD max
 	y = yTL;	// top
 	for(x = xTL;x!=xBR+1;x++)
 	{
-		if (fpathBlockingTile(x, y, WHEELED))
+		if (fpathBlockingTile(x, y, PROPULSION_TYPE_WHEELED))
 		{
 			count++;
 			break;
@@ -5591,7 +5575,7 @@ static BOOL structDoubleCheck(BASE_STATS *psStat,UDWORD xx,UDWORD yy, SDWORD max
 	y = yBR;	// bottom
 	for(x = xTL;x!=xBR+1;x++)
 	{
-		if (fpathBlockingTile(x, y, WHEELED))
+		if (fpathBlockingTile(x, y, PROPULSION_TYPE_WHEELED))
 		{
 			count++;
 			break;
@@ -5601,7 +5585,7 @@ static BOOL structDoubleCheck(BASE_STATS *psStat,UDWORD xx,UDWORD yy, SDWORD max
 	x = xTL;	// left
 	for(y = yTL+1; y!=yBR; y++)
 	{
-		if (fpathBlockingTile(x, y, WHEELED))
+		if (fpathBlockingTile(x, y, PROPULSION_TYPE_WHEELED))
 		{
 			count++;
 			break;
@@ -5611,7 +5595,7 @@ static BOOL structDoubleCheck(BASE_STATS *psStat,UDWORD xx,UDWORD yy, SDWORD max
 	x = xBR;	// right
 	for(y = yTL+1; y!=yBR; y++)
 	{
-		if (fpathBlockingTile(x, y, WHEELED))
+		if (fpathBlockingTile(x, y, PROPULSION_TYPE_WHEELED))
 		{
 			count++;
 			break;
@@ -6361,7 +6345,7 @@ BOOL scrFireWeaponAtObj(void)
 {
 	Vector3i target;
 	BASE_OBJECT *psTarget;
-	WEAPON sWeapon = {0, 0, 0, 0, 0};
+	WEAPON sWeapon = {0, 0, 0, 0, 0, 0};
 
 	if (!stackPopParams(2, ST_WEAPON, &sWeapon.nStat, ST_BASEOBJECT, &psTarget))
 	{
@@ -6375,7 +6359,7 @@ BOOL scrFireWeaponAtObj(void)
 	}
 
 	// FIXME HACK Needed since we got those ugly Vector3uw floating around in BASE_OBJECT...
-	Vector3i_Set(&target, psTarget->pos.x, psTarget->pos.y, psTarget->pos.z);
+	target = Vector3i_New(psTarget->pos.x, psTarget->pos.y, psTarget->pos.z);
 
 	// send the projectile using the selectedPlayer so that it can always be seen
 	proj_SendProjectile(&sWeapon, NULL, selectedPlayer, target, psTarget, true, 0);
@@ -6387,7 +6371,7 @@ BOOL scrFireWeaponAtObj(void)
 BOOL scrFireWeaponAtLoc(void)
 {
 	Vector3i target;
-	WEAPON sWeapon = {0, 0, 0, 0, 0};
+	WEAPON sWeapon = {0, 0, 0, 0, 0, 0};
 
 	if (!stackPopParams(3, ST_WEAPON, &sWeapon.nStat, VAL_INT, &target.x, VAL_INT, &target.y))
 	{
@@ -6552,7 +6536,7 @@ BOOL scrIsVtol(void)
 		ASSERT( false,"scrIsVtol: null droid passed in." );
 	}
 
-	scrFunctionResult.v.bval = vtolDroid(psDroid) ;
+	scrFunctionResult.v.bval = isVtolDroid(psDroid) ;
 	if (!stackPushResult(VAL_BOOL, &scrFunctionResult))
 	{
 		return false;
@@ -6570,7 +6554,7 @@ BOOL scrTutorialTemplates(void)
 	char			pName[MAX_STR_LENGTH];
 
 	// find ViperLtMGWheels
-	strlcpy(pName, "ViperLtMGWheels", sizeof(pName));
+	sstrcpy(pName, "ViperLtMGWheels");
 	if (!getResourceName(pName))
 	{
 		debug( LOG_ERROR, "tutorial template setup failed" );
@@ -7289,7 +7273,7 @@ BOOL ThreatInRange(SDWORD player, SDWORD range, SDWORD rangeX, SDWORD rangeY, BO
 				}
 
 				//if VTOLs are excluded, skip them
-				if(!bVTOLs && ((asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat].propulsionType == LIFT) || (psDroid->droidType == DROID_TRANSPORTER)))
+				if(!bVTOLs && ((asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat].propulsionType == PROPULSION_TYPE_LIFT) || (psDroid->droidType == DROID_TRANSPORTER)))
 				{
 					continue;
 				}
@@ -7912,7 +7896,7 @@ static UDWORD costOrAmountInRange(SDWORD player, SDWORD lookingPlayer, SDWORD ra
 			}
 
 			//if VTOLs are excluded, skip them
-			if(!bVTOLs && ((asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat].propulsionType == LIFT) || (psDroid->droidType == DROID_TRANSPORTER)))
+			if(!bVTOLs && ((asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat].propulsionType == PROPULSION_TYPE_LIFT) || (psDroid->droidType == DROID_TRANSPORTER)))
 			{
 				continue;
 			}
@@ -8313,7 +8297,7 @@ UDWORD numEnemyObjInRange(SDWORD player, SDWORD range, SDWORD rangeX, SDWORD ran
 			if(psDroid->visible[player])		//can see this droid?
 			{
 				//if VTOLs are excluded, skip them
-				if(!bVTOLs && ((asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat].propulsionType == LIFT) || (psDroid->droidType == DROID_TRANSPORTER)))
+				if(!bVTOLs && ((asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat].propulsionType == PROPULSION_TYPE_LIFT) || (psDroid->droidType == DROID_TRANSPORTER)))
 				{
 					continue;
 				}
@@ -8829,7 +8813,7 @@ BOOL scrGetClosestEnemy(void)
 				}
 
 				//if VTOLs are excluded, skip them
-				if(!bVTOLs && ((asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat].propulsionType == LIFT) || (psDroid->droidType == DROID_TRANSPORTER)))
+				if(!bVTOLs && ((asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat].propulsionType == PROPULSION_TYPE_LIFT) || (psDroid->droidType == DROID_TRANSPORTER)))
 				{
 					continue;
 				}
@@ -9200,7 +9184,7 @@ BOOL scrGetClosestEnemyDroidByType(void)
 		for(psDroid = apsDroidLists[i]; psDroid; psDroid = psDroid->psNext)
 		{
 			//if VTOLs are excluded, skip them (don't check for transporter this time)
-			if(!bVTOLs && (asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat].propulsionType == LIFT) )
+			if(!bVTOLs && (asPropulsionStats[psDroid->asBits[COMP_PROPULSION].nStat].propulsionType == PROPULSION_TYPE_LIFT) )
 			{
 				continue;
 			}
@@ -10207,7 +10191,7 @@ VIEWDATA *CreateBeaconViewData(SDWORD sender, UDWORD LocX, UDWORD LocY)
  	psViewData->pName = name;
 
 	//allocate space for text strings
-	psViewData->ppTextMsg = (char **) malloc(sizeof(char *));
+	psViewData->ppTextMsg = (const char **) malloc(sizeof(char *));
 
 	//store text message, hardcoded for now
 	psViewData->ppTextMsg[0] = strdup(getPlayerName(sender));
@@ -10509,7 +10493,7 @@ BOOL objectInRangeVis(BASE_OBJECT *psList, SDWORD x, SDWORD y, SDWORD range, SDW
 
 		// skip flying vtols
 		if ( (psCurr->type == OBJ_DROID) &&
-			vtolDroid((DROID *)psCurr) &&
+			isVtolDroid((DROID *)psCurr) &&
 			((DROID *)psCurr)->sMove.Status != MOVEINACTIVE )
 		{
 			continue;
@@ -11750,4 +11734,93 @@ BOOL scrGetBodySize(void)
 		return false;
 	}
 	return true;
+}
+
+BOOL scrGettext()
+{
+	if (!stackPopParams(1, VAL_STRING, &strParam1))
+	{
+		return false;
+	}
+
+	scrFunctionResult.v.sval = (char*)gettext(strParam1);
+
+	return stackPushResult(ST_TEXTSTRING, &scrFunctionResult);
+}
+
+BOOL scrGettext_noop()
+{
+	if (!stackPopParams(1, VAL_STRING, &strParam1))
+	{
+		return false;
+	}
+
+	scrFunctionResult.v.sval = gettext_noop(strParam1);
+
+	return stackPushResult(VAL_STRING, &scrFunctionResult);
+}
+
+BOOL scrPgettext()
+{
+	char* msg_ctxt_id;
+	char* translation;
+
+	if (!stackPopParams(2, VAL_STRING, &strParam1, VAL_STRING, &strParam2))
+	{
+		return false;
+	}
+
+	asprintf(&msg_ctxt_id, "%s%s%s", strParam1, GETTEXT_CONTEXT_GLUE, strParam2);
+	if (!msg_ctxt_id)
+	{
+		debug(LOG_ERROR, "Out of memory");
+		abort();
+		return false;
+	}
+
+#ifdef DEFAULT_TEXT_DOMAIN
+	translation = (char*)dcgettext(DEFAULT_TEXT_DOMAIN, msg_ctxt_id, LC_MESSAGES);
+#else
+	translation = (char*)dcgettext(NULL,                msg_ctxt_id, LC_MESSAGES);
+#endif
+
+	/* Due to the way dcgettext works a pointer comparison is enough, hence
+	 * the reason why we free() now.
+	 */
+	free(msg_ctxt_id);
+
+	if (translation == msg_ctxt_id)
+	{
+		scrFunctionResult.v.sval = strParam2;
+	}
+	else
+	{
+		scrFunctionResult.v.sval = translation;
+	}
+
+	return stackPushResult(ST_TEXTSTRING, &scrFunctionResult);
+}
+
+BOOL scrPgettext_expr()
+{
+	if (!stackPopParams(2, VAL_STRING, &strParam1, VAL_STRING, &strParam2))
+	{
+		return false;
+	}
+
+	scrFunctionResult.v.sval = (char*)pgettext_expr(strParam1, strParam2);
+
+	return stackPushResult(ST_TEXTSTRING, &scrFunctionResult);
+}
+
+BOOL scrPgettext_noop()
+{
+	if (!stackPopParams(2, VAL_STRING, &strParam1, VAL_STRING, &strParam2))
+	{
+		return false;
+	}
+
+	scrFunctionResult.v.sval = gettext_noop(strParam1);
+
+	return stackPushResult(VAL_STRING, &scrFunctionResult);
 }

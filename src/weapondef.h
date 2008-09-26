@@ -27,10 +27,11 @@
 typedef struct _weapon
 {
 	UDWORD          nStat;          ///< The stats for the weapon type
-	UDWORD          hitPoints;
 	UDWORD          ammo;
 	UDWORD          lastFired;      ///< When the weapon last fired
 	UDWORD          recoilValue;
+	UWORD		pitch;
+	UWORD		rotation;
 } WEAPON;
 
 #endif // __INCLUDED_WEAPONDEF_H__

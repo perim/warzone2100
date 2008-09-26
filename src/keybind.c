@@ -55,7 +55,6 @@
 #include "multiplay.h"
 #include "multimenu.h"
 #include "atmos.h"
-#include "raycast.h"
 #include "advvis.h"
 #include "game.h"
 #include "difficulty.h"
@@ -71,6 +70,7 @@
 #include "lib/ivis_common/rendmode.h"
 #include "lib/ivis_common/piestate.h"
 // FIXME Direct iVis implementation include!
+#include "lib/ivis_common/piefixedpoint.h"
 #include "lib/ivis_opengl/piematrix.h"
 
 #include "keymap.h"
@@ -713,10 +713,12 @@ void	kf_ZoomOut( void )
 // --------------------------------------------------------------------------
 void	kf_RadarZoomIn( void )
 {
+	float RadarZoomLevel = GetRadarZoom();
+
 	if(RadarZoomLevel < MAX_RADARZOOM)
 	{
-		RadarZoomLevel++;
-	   	SetRadarZoom(RadarZoomLevel);
+		RadarZoomLevel += RADARZOOM_STEP;
+		SetRadarZoom(RadarZoomLevel);
 		audio_PlayTrack( ID_SOUND_BUTTON_CLICK_5 );
    	}
 	else	// at maximum already
@@ -728,9 +730,11 @@ void	kf_RadarZoomIn( void )
 // --------------------------------------------------------------------------
 void	kf_RadarZoomOut( void )
 {
-	if(RadarZoomLevel)
+	float RadarZoomLevel = GetRadarZoom();
+
+	if (RadarZoomLevel > MIN_RADARZOOM)
 	{
-		RadarZoomLevel--;
+		RadarZoomLevel -= RADARZOOM_STEP;
 	   	SetRadarZoom(RadarZoomLevel);
 		audio_PlayTrack( ID_SOUND_BUTTON_CLICK_5 );
 	}
@@ -1719,8 +1723,8 @@ void kf_SendTextMessage(void)
 	if(bAllowOtherKeyPresses)									// just starting.
 	{
 		bAllowOtherKeyPresses = false;
-		strlcpy(sTextToSend, "", sizeof(sTextToSend));
-		strlcpy(sCurrentConsoleText, "", sizeof(sTextToSend));							//for beacons
+		sstrcpy(sTextToSend, "");
+		sstrcpy(sCurrentConsoleText, "");							//for beacons
 		inputClearBuffer();
 	}
 
@@ -1734,7 +1738,7 @@ void kf_SendTextMessage(void)
 			bAllowOtherKeyPresses = true;
 		 //	flushConsoleMessages();
 
-			strlcpy(sCurrentConsoleText, "", sizeof(sCurrentConsoleText));		//reset beacon msg, since console is empty now
+			sstrcpy(sCurrentConsoleText, "");		//reset beacon msg, since console is empty now
 
 			// don't send empty lines to other players
 			if(!strcmp(sTextToSend, ""))
@@ -1752,7 +1756,7 @@ void kf_SendTextMessage(void)
 			//console callback message
 			//--------------------------
 			ConsolePlayer = selectedPlayer;
-			strlcpy(ConsoleMsg, sTextToSend, sizeof(ConsoleMsg));
+			sstrcpy(ConsoleMsg, sTextToSend);
 			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_CONSOLE);
 
 
@@ -1767,9 +1771,9 @@ void kf_SendTextMessage(void)
 			else
 			{
 				//show the message we sent on our local console as well (even in skirmish, to see console commands)
-				strlcpy(tmp, getPlayerName(selectedPlayer), sizeof(tmp));
-				strlcat(tmp, " : ", sizeof(tmp));        // seperator
-				strlcat(tmp, sTextToSend, sizeof(tmp));  // add message
+				sstrcpy(tmp, getPlayerName(selectedPlayer));
+				sstrcat(tmp, " : ");        // seperator
+				sstrcat(tmp, sTextToSend);  // add message
 				addConsoleMessage(tmp,DEFAULT_JUSTIFY, selectedPlayer);
 
 				//in skirmish send directly to AIs, for command and chat procesing
@@ -1793,13 +1797,13 @@ void kf_SendTextMessage(void)
 			if(sTextToSend[0] != '\0')							// cant delete nothing!
 			{
 				sTextToSend[strlen(sTextToSend)-1]= '\0';
-				strlcpy(sCurrentConsoleText, sTextToSend, sizeof(sCurrentConsoleText));		//beacons
+				sstrcpy(sCurrentConsoleText, sTextToSend);		//beacons
 			}
 		}
 		else if(ch == INPBUF_ESC)								//abort.
 		{
 			bAllowOtherKeyPresses = true;
-			strlcpy(sCurrentConsoleText, "", sizeof(sCurrentConsoleText));
+			sstrcpy(sCurrentConsoleText, "");
 		 //	flushConsoleMessages();
 			return;
 		}
@@ -1807,9 +1811,9 @@ void kf_SendTextMessage(void)
 		{
 			const char input_char[2] = { inputGetCharKey(), '\0' };
 
-			strlcat(sTextToSend, input_char, sizeof(sTextToSend));
+			sstrcat(sTextToSend, input_char);
 
-			strlcpy(sCurrentConsoleText, sTextToSend, sizeof(sCurrentConsoleText));
+			sstrcpy(sCurrentConsoleText, sTextToSend);
 		}
 
 		ch = (char)inputGetKey();
@@ -1820,11 +1824,11 @@ void kf_SendTextMessage(void)
 	{
 		if(keyDown(KEY_LCTRL))
 		{
-			strlcpy(ingame.phrases[0], sTextToSend, sizeof(ingame.phrases[0]));
+			sstrcpy(ingame.phrases[0], sTextToSend);
 		}
 		else
 		{
-			strlcpy(sTextToSend, ingame.phrases[0], sizeof(sTextToSend));
+			sstrcpy(sTextToSend, ingame.phrases[0]);
 			bAllowOtherKeyPresses = true;
 		 //	flushConsoleMessages();
 			sendTextMessage(sTextToSend,false);
@@ -1835,11 +1839,11 @@ void kf_SendTextMessage(void)
 	{
 		if(keyDown(KEY_LCTRL))
 		{
-			strlcpy(ingame.phrases[1], sTextToSend, sizeof(ingame.phrases[1]));
+			sstrcpy(ingame.phrases[1], sTextToSend);
 		}
 		else
 		{
-			strlcpy(sTextToSend, ingame.phrases[1], sizeof(sTextToSend));
+			sstrcpy(sTextToSend, ingame.phrases[1]);
 			bAllowOtherKeyPresses = true;
 		//	flushConsoleMessages();
 			sendTextMessage(sTextToSend,false);
@@ -1850,11 +1854,11 @@ void kf_SendTextMessage(void)
 	{
 		if(keyDown(KEY_LCTRL))
 		{
-			strlcpy(ingame.phrases[2], sTextToSend, sizeof(ingame.phrases[2]));
+			sstrcpy(ingame.phrases[2], sTextToSend);
 		}
 		else
 		{
-			strlcpy(sTextToSend, ingame.phrases[2], sizeof(sTextToSend));
+			sstrcpy(sTextToSend, ingame.phrases[2]);
 			bAllowOtherKeyPresses = true;
 		//	flushConsoleMessages();
 			sendTextMessage(sTextToSend,false);
@@ -1865,11 +1869,11 @@ void kf_SendTextMessage(void)
 	{
 		if(keyDown(KEY_LCTRL))
 		{
-			strlcpy(ingame.phrases[3], sTextToSend, sizeof(ingame.phrases[3]));
+			sstrcpy(ingame.phrases[3], sTextToSend);
 		}
 		else
 		{
-			strlcpy(sTextToSend, ingame.phrases[3], sizeof(sTextToSend));
+			sstrcpy(sTextToSend, ingame.phrases[3]);
 			bAllowOtherKeyPresses = true;
 		//	flushConsoleMessages();
 			sendTextMessage(sTextToSend,false);
@@ -1880,11 +1884,11 @@ void kf_SendTextMessage(void)
 	{
 		if(keyDown(KEY_LCTRL))
 		{
-			strlcpy(ingame.phrases[4], sTextToSend, sizeof(ingame.phrases[4]));
+			sstrcpy(ingame.phrases[4], sTextToSend);
 		}
 		else
 		{
-			strlcpy(sTextToSend, ingame.phrases[4], sizeof(sTextToSend));
+			sstrcpy(sTextToSend, ingame.phrases[4]);
 			bAllowOtherKeyPresses = true;
 		 //	flushConsoleMessages();
 			sendTextMessage(sTextToSend,false);
@@ -2036,7 +2040,7 @@ void	kf_SetDroidMoveHold( void )
 // --------------------------------------------------------------------------
 void	kf_SetDroidMovePursue( void )
 {
-	kfsf_SetSelectedDroidsState(DSO_HALTTYPE,DSS_HALT_PERSUE);	// ASK?
+	kfsf_SetSelectedDroidsState(DSO_HALTTYPE,DSS_HALT_PURSUE);	// ASK?
 }
 
 // --------------------------------------------------------------------------
@@ -2524,7 +2528,7 @@ BOOL	processConsoleCommands( char *pName )
 //Add a beacon (blip)
 void	kf_AddHelpBlip( void )
 {
-	UDWORD 	worldX,worldY;
+	int 	worldX, worldY;
 	UDWORD	i;
 	char	tempStr[255];
 	SDWORD	x,y;
@@ -2563,15 +2567,15 @@ void	kf_AddHelpBlip( void )
 	//if chat message is empty, just send player name
 	//if(!strcmp(sCurrentConsoleText, ""))
 	//{
-		strlcpy(tempStr, getPlayerName(selectedPlayer), sizeof(tempStr));		//temporary solution
+		sstrcpy(tempStr, getPlayerName(selectedPlayer));		//temporary solution
 	//}
 	//else
 	//{
-	//	strlcpy(tempStr, sCurrentConsoleText, sizeof(tempStr));
+	//	sstrcpy(tempStr, sCurrentConsoleText);
 	//}
 
 	/* add beacon for the sender */
-	strlcpy(beaconMsg[selectedPlayer], tempStr, sizeof(beaconMsg[selectedPlayer]));
+	sstrcpy(beaconMsg[selectedPlayer], tempStr);
 	sendBeaconToPlayer(worldX, worldY, selectedPlayer, selectedPlayer, beaconMsg[selectedPlayer]);
 
 	/* send beacon to other players */
@@ -2579,7 +2583,7 @@ void	kf_AddHelpBlip( void )
 	{
 		if(openchannels[i] && (i != selectedPlayer))
 		{
-			strlcpy(beaconMsg[i], tempStr, sizeof(beaconMsg[i]));
+			sstrcpy(beaconMsg[i], tempStr);
 			sendBeaconToPlayer(worldX, worldY, i, selectedPlayer, beaconMsg[i]);
 		}
 	}

@@ -1,0 +1,17 @@
+top_srcdir=../..
+top_builddir=$(top_srcdir)
+
+include $(top_srcdir)/makerules/common.mk
+
+SRC=anim.c \
+	animobj.c \
+	audp_parser.tab.c \
+	audp_lexer.lex.c \
+	gtime.c \
+	hashtabl.c
+
+LIB=gamelib
+
+CLEANFILES=audp_parser.tab.h
+
+include $(top_srcdir)/makerules/lib.mk

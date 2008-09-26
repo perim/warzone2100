@@ -129,10 +129,6 @@ BOOL loadConfig(void)
 		sound_SetMusicVolume((float)val / 100.0);
 	}
 
-	if (getWarzoneKeyNumeric("playaudiocds", &val)) {
-		war_SetPlayAudioCDs(val);
-	}
-
 	if (getWarzoneKeyNumeric("debugmode", &val))
 	{
 		bAllowDebugMode = val;
@@ -145,6 +141,11 @@ BOOL loadConfig(void)
 		bAllowDebugMode = false;
 #endif
 		setWarzoneKeyNumeric("debugmode", bAllowDebugMode);
+	}
+
+	if (getWarzoneKeyNumeric("music_enabled", &val))
+	{
+		war_SetMusicEnabled(val);
 	}
 
 	if (getWarzoneKeyNumeric("SinglePlayerFPS", &val))
@@ -269,6 +270,46 @@ BOOL loadConfig(void)
 	{
 		NETsetMasterserverName("lobby.wz2100.net");
 		setWarzoneKeyString("masterserver_name", "lobby.wz2100.net");
+	}
+
+	if (getWarzoneKeyString("fontname", sBuf))
+	{
+		iV_font(sBuf, NULL, NULL);
+	}
+	else
+	{
+#ifdef WZ_OS_MAC
+		iV_font("Lucida Grande", NULL, NULL);
+		setWarzoneKeyString("fontname", "Lucida Grande");
+#else
+		iV_font("DejaVu Sans Mono", NULL, NULL);
+		setWarzoneKeyString("fontname", "DejaVu Sans Mono");
+#endif
+	}
+
+	if (getWarzoneKeyString("fontface", sBuf))
+	{
+		iV_font(NULL, sBuf, NULL);
+	}
+	else
+	{
+#ifdef WZ_OS_MAC
+		iV_font(NULL, "Regular", NULL);
+		setWarzoneKeyString("fontface", "Regular");
+#else
+		iV_font(NULL, "Book", NULL);
+		setWarzoneKeyString("fontface", "Book");
+#endif
+	}
+
+	if (getWarzoneKeyString("fontfacebold", sBuf))
+	{
+		iV_font(NULL, NULL, sBuf);
+	}
+	else
+	{
+		iV_font(NULL, NULL, "Bold");
+		setWarzoneKeyString("fontfacebold", "Bold");
 	}
 
 	if (getWarzoneKeyNumeric("masterserver_port", &val))
@@ -558,6 +599,15 @@ BOOL loadRenderMode(void)
 		war_SetTrapCursor(false);
 	}
 
+	if (getWarzoneKeyNumeric("vsync", &val))
+	{
+		war_SetVsync(val);
+	}
+	else
+	{
+		war_SetVsync(true);
+	}
+
 	// now load the desired res..
 	// note that we only do this if we havent changed renderer..
 	if (getWarzoneKeyNumeric("width", &val)
@@ -613,7 +663,7 @@ BOOL saveConfig(void)
 	setWarzoneKeyNumeric("voicevol", (int)(sound_GetUIVolume() * 100.0));
 	setWarzoneKeyNumeric("fxvol", (int)(sound_GetEffectsVolume() * 100.0));
 	setWarzoneKeyNumeric("cdvol", (int)(sound_GetMusicVolume() * 100.0));
-	setWarzoneKeyNumeric("playaudiocds", war_GetPlayAudioCDs());
+	setWarzoneKeyNumeric("music_enabled", war_GetMusicEnabled());
 
 	setWarzoneKeyNumeric("width", war_GetWidth());
 	setWarzoneKeyNumeric("height", war_GetHeight());
@@ -645,6 +695,7 @@ BOOL saveConfig(void)
 	setWarzoneKeyNumeric("radarObjectMode",(SDWORD)bEnemyAllyRadarColor);    // enemy/allies radar view
 	setWarzoneKeyNumeric("radarTerrainMode",(SDWORD)radarDrawMode);
 	setWarzoneKeyNumeric("trapCursor", war_GetTrapCursor());
+	setWarzoneKeyNumeric("vsync", war_GetVsync());
 	setWarzoneKeyNumeric("textureSize", getTextureSize());
 	setWarzoneKeyNumeric("PauseOnFocusLoss", war_GetPauseOnFocusLoss());
 	setWarzoneKeyNumeric("ColouredCursor", war_GetColouredCursor());

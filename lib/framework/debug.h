@@ -32,6 +32,7 @@
 #endif
 
 #include <assert.h>
+#include "macros.h"
 
 #if defined(__cplusplus)
 extern "C"
@@ -50,17 +51,44 @@ extern "C"
 extern char last_called_script_event[MAX_EVENT_NAME_LEN];
 
 /**
+ * ASSERT helper macro to allow some debug functions to use an alternate
+ * calling location.
+ *
+ * \param expr                 Expression to assert on.
+ * \param location_description A string describing the calling location, e.g.:
+ *                             "filename:linenum".
+ * \param function             The name of the function that called
+ *                             ASSERT_HELPER or the debug function that uses ASSERT_HELPER.
+ *
+ * \param ...                  printf-style format string followed by its parameters
+ *
+ * \return Will return whatever assert(expr) returns. That's undefined though,
+ *         so unless you have a good reason to, don't depend on it.
+ */
+#define ASSERT_HELPER(expr, location_description, function, ...) \
+( \
+	( \
+		(expr) ? /* if (expr) */ \
+			(void)0 \
+		: /* else */\
+		( \
+			(void)_debug(LOG_ERROR, function, __VA_ARGS__), \
+			(void)_debug(LOG_ERROR, function, "Assert in Warzone: %s (%s), last script event: '%s'", \
+		                                  location_description, (#expr), last_called_script_event) \
+		) \
+	), \
+	assert(expr) \
+)
+
+/**
  *
  * Rewritten version of assert that allows a printf format text string to be passed
  * to ASSERT along with the condition.
  *
  * Arguments:	ASSERT( condition, "Format string with variables: %d, %d", var1, var2 );
  */
-#define ASSERT( expr, ... ) \
-	( (expr) ? (void)0 : (void)_debug( LOG_ERROR, __FUNCTION__, __VA_ARGS__ ) ); \
-	( (expr) ? (void)0 : (void)_debug( LOG_ERROR, __FUNCTION__, "Assert in Warzone: %s:%d (%s), last script event: '%s'", \
-		__FILE__, __LINE__, (#expr), last_called_script_event ) ); \
-	assert( expr );
+#define ASSERT(expr, ...) \
+	ASSERT_HELPER(expr, AT_MACRO, __FUNCTION__, __VA_ARGS__)
 
 
 /**
@@ -135,6 +163,13 @@ void debug_init( void );
 void debug_exit( void );
 
 /**
+ * Have the stderr output callback flush its output before returning.
+ *
+ * NOTE: This may cause significant slowdowns on some systems.
+ */
+extern void debugFlushStderr(void);
+
+/**
  * Register a callback to be called on every call to debug()
  *
  * \param	callback	Function which does the output
@@ -165,9 +200,6 @@ BOOL debug_enable_switch(const char *str);
  * Output printf style format str with additional arguments.
  *
  * Only outputs if debugging of part was formerly enabled with debug_enable_switch.
- *
- * \param	part	Code part to associate with this message
- * \param	str		printf style formatstring
  */
 #define debug(part, ...) do { if (enabled_debug[part]) _debug(part, __FUNCTION__, __VA_ARGS__); } while(0)
 void _debug( code_part part, const char *function, const char *str, ...)
@@ -184,17 +216,10 @@ extern UDWORD traceID;
 #define objTrace(id, ...) do { if (id == traceID) _realObjTrace(id, __FUNCTION__, __VA_ARGS__); } while(0)
 void _realObjTrace(int id, const char *function, const char *str, ...) WZ_DECL_FORMAT(printf, 3, 4);
 static inline void objTraceEnable(UDWORD id) { traceID = id; }
-static inline void objTraceDisable(void) { traceID = 0; }
+static inline void objTraceDisable(void) { traceID = (UDWORD)-1; }
 
 #if defined(__cplusplus)
 }
-#endif
-
-/** Dump last two debug log calls into given file descriptor. For exception handler. */
-#if defined(WZ_OS_WIN)
-extern void dumpLog(HANDLE file);
-#else
-extern void dumpLog(int file);
 #endif
 
 /** Checks if a particular debub flag was enabled */

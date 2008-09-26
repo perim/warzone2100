@@ -2184,7 +2184,14 @@ void unloadTransporter(DROID *psTransporter, UDWORD x, UDWORD y, BOOL goingHome)
 			// Inform all other players
 			if (bMultiPlayer)
 			{
-				sendDroidDisEmbark(psDroid);
+				/* This isn't used for cyborg transports, only
+				 * for "normal" ones, though we shouldn't get
+				 * those in a multiplayer game.
+				 *
+				 * NOTE: Why(!) is this here?
+				 */
+				ASSERT(!"We should never get here", "Apparently we have a \"large\" transporter in a multiplayer game, please make a bugreport from this");
+				sendDroidDisEmbark(psDroid, psTransporter);
 			}
 		}
 
@@ -2695,7 +2702,7 @@ static BOOL _intAddMissionResult(BOOL result, BOOL bPlaySuccess)
 	memset(&sFormInit, 0, sizeof(W_FORMINIT));
 
 	// add some funky beats
-	cdAudio_PlayTrack(playlist_frontend); // frontend music.
+	cdAudio_PlayTrack(SONG_FRONTEND);
 
 	pie_LoadBackDrop(SCREEN_MISSIONEND);
 

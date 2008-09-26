@@ -233,7 +233,7 @@ extern void checkForPowerGen(STRUCTURE *psPowerGen);
 
 // Set the command droid that factory production should go to
 //struct _command_droid;
-extern void assignFactoryCommandDroid(STRUCTURE *psStruct, struct _droid *psCommander);
+extern void assignFactoryCommandDroid(STRUCTURE *psStruct, struct DROID *psCommander);
 
 // remove all factories from a command droid
 void clearCommandDroidFactory(DROID *psDroid);
@@ -437,28 +437,13 @@ static inline void _setStructureTarget(STRUCTURE *psBuilding, BASE_OBJECT *psNew
 	ASSERT(psNewTarget == NULL || !psNewTarget->died, "setStructureTarget set dead target");
 #ifdef DEBUG
 	psBuilding->targetLine[idx] = line;
-	strlcpy(psBuilding->targetFunc[idx], func, MAX_EVENT_NAME_LEN);
+	sstrcpy(psBuilding->targetFunc[idx], func);
 #endif
 }
 
-#define CHECK_STRUCTURE(object) \
-do { \
-	unsigned int i; \
-\
-	assert(object != NULL); \
-	assert(object->type == OBJ_STRUCTURE); \
-	assert(object->player < MAX_PLAYERS); \
-	assert(object->pStructureType->type < NUM_DIFF_BUILDINGS); \
-	assert(object->numWeaps <= STRUCT_MAXWEAPS); \
-	for (i = 0; i < STRUCT_MAXWEAPS; ++i) \
-	{ \
-		assert(object->turretRotation[i] <= 360); \
-		if (object->psTarget[i]) \
-		{ \
-			CHECK_OBJECT(object->psTarget[i]); \
-		} \
-	} \
-} while (0)
+void checkStructure(const STRUCTURE* psStructure, const char * const location_description, const char * function, const int recurse);
+
+#define CHECK_STRUCTURE(object) checkStructure((object), AT_MACRO, __FUNCTION__, max_check_object_recursion)
 
 extern void     structureInitVars(void);
 

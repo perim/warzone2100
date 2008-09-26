@@ -80,7 +80,6 @@
 #include "multiplay.h"
 #include "projectile.h"
 #include "radar.h"
-#include "raycast.h"
 #include "lib/framework/cursors.h"
 #include "scriptextern.h"
 #include "scripttabs.h"
@@ -184,10 +183,10 @@ void registerSearchPath( const char path[], unsigned int priority )
 {
 	wzSearchPath * curSearchPath = searchPathRegistry, * tmpSearchPath = NULL;
 
-	tmpSearchPath = (wzSearchPath*)malloc(sizeof(wzSearchPath));
-	strcpy( tmpSearchPath->path, path );
-	if( path[strlen(path)-1] != *PHYSFS_getDirSeparator() )
-		strcat( tmpSearchPath->path, PHYSFS_getDirSeparator() );
+	tmpSearchPath = (wzSearchPath*)malloc(sizeof(*tmpSearchPath));
+	sstrcpy(tmpSearchPath->path, path);
+	if (path[strlen(path)-1] != *PHYSFS_getDirSeparator())
+		sstrcat(tmpSearchPath->path, PHYSFS_getDirSeparator());
 	tmpSearchPath->priority = priority;
 
 	debug( LOG_WZ, "registerSearchPath: Registering %s at priority %i", path, priority );
@@ -226,7 +225,7 @@ void registerSearchPath( const char path[], unsigned int priority )
  * \brief Rebuilds the PHYSFS searchPath with mode specific subdirs
  *
  * Priority:
- * maps > mods > plain_dir > warzone.wz
+ * maps > mods > base > base.wz
  */
 BOOL rebuildSearchPath( searchPathMode mode, BOOL force )
 {
@@ -247,12 +246,12 @@ BOOL rebuildSearchPath( searchPathMode mode, BOOL force )
 		switch ( mode )
 		{
 			case mod_clean:
-				debug( LOG_WZ, "rebuildSearchPath: Cleaning up" );
+				debug(LOG_WZ, "Cleaning up");
 
 				while( curSearchPath )
 				{
 #ifdef DEBUG
-					debug( LOG_WZ, "rebuildSearchPath: Removing [%s] from search path", curSearchPath->path );
+					debug(LOG_WZ, "Removing [%s] from search path", curSearchPath->path);
 #endif // DEBUG
 					// Remove maps and mods
 					removeSubdirs( curSearchPath->path, "maps", NULL );
@@ -264,31 +263,34 @@ BOOL rebuildSearchPath( searchPathMode mode, BOOL force )
 					removeSubdirs( curSearchPath->path, "mods/multiplay/autoload", NULL );
 
 					// Remove multiplay patches
-					strlcpy(tmpstr, curSearchPath->path, sizeof(tmpstr));
-					strlcat(tmpstr, "mp", sizeof(tmpstr));
+					sstrcpy(tmpstr, curSearchPath->path);
+					sstrcat(tmpstr, "mp");
 					PHYSFS_removeFromSearchPath( tmpstr );
-					strlcpy(tmpstr, curSearchPath->path, sizeof(tmpstr));
-					strlcat(tmpstr, "mp.wz", sizeof(tmpstr));
+					sstrcpy(tmpstr, curSearchPath->path);
+					sstrcat(tmpstr, "mp.wz");
 					PHYSFS_removeFromSearchPath( tmpstr );
 
 					// Remove plain dir
 					PHYSFS_removeFromSearchPath( curSearchPath->path );
 
-					// Remove warzone.wz
-					strlcpy(tmpstr, curSearchPath->path, sizeof(tmpstr));
-					strlcat(tmpstr, "warzone.wz", sizeof(tmpstr));
+					// Remove base files
+					sstrcpy(tmpstr, curSearchPath->path);
+					sstrcat(tmpstr, "base");
+					PHYSFS_removeFromSearchPath( tmpstr );
+					sstrcpy(tmpstr, curSearchPath->path);
+					sstrcat(tmpstr, "base.wz");
 					PHYSFS_removeFromSearchPath( tmpstr );
 
 					curSearchPath = curSearchPath->higherPriority;
 				}
 				break;
 			case mod_campaign:
-				debug( LOG_WZ, "rebuildSearchPath: Switching to campaign mods" );
+				debug(LOG_WZ, "*** Switching to campaign mods ***");
 
 				while( curSearchPath )
 				{
 #ifdef DEBUG
-					debug( LOG_WZ, "rebuildSearchPath: Adding [%s] to search path", curSearchPath->path );
+					debug(LOG_WZ, "Adding [%s] to search path", curSearchPath->path);
 #endif // DEBUG
 					// Add global and campaign mods
 					PHYSFS_addToSearchPath( curSearchPath->path, PHYSFS_APPEND );
@@ -297,26 +299,32 @@ BOOL rebuildSearchPath( searchPathMode mode, BOOL force )
 					addSubdirs( curSearchPath->path, "mods/global/autoload", PHYSFS_APPEND, NULL );
 					addSubdirs( curSearchPath->path, "mods/campaign", PHYSFS_APPEND, campaign_mods );
 					addSubdirs( curSearchPath->path, "mods/campaign/autoload", PHYSFS_APPEND, NULL );
-					PHYSFS_removeFromSearchPath( curSearchPath->path );
+					if (!PHYSFS_removeFromSearchPath( curSearchPath->path ))
+					{
+						debug(LOG_ERROR, "Failed to remove path %s again", curSearchPath->path);
+					}
 
 					// Add plain dir
 					PHYSFS_addToSearchPath( curSearchPath->path, PHYSFS_APPEND );
 
-					// Add warzone.wz
-					strlcpy(tmpstr, curSearchPath->path, sizeof(tmpstr));
-					strlcat(tmpstr, "warzone.wz", sizeof(tmpstr));
+					// Add base files
+					sstrcpy(tmpstr, curSearchPath->path);
+					sstrcat(tmpstr, "base");
+					PHYSFS_addToSearchPath( tmpstr, PHYSFS_APPEND );
+					sstrcpy(tmpstr, curSearchPath->path);
+					sstrcat(tmpstr, "base.wz");
 					PHYSFS_addToSearchPath( tmpstr, PHYSFS_APPEND );
 
 					curSearchPath = curSearchPath->higherPriority;
 				}
 				break;
 			case mod_multiplay:
-				debug( LOG_WZ, "rebuildSearchPath: Switching to multiplay mods" );
+				debug(LOG_WZ, "*** Switching to multiplay mods ***");
 
 				while( curSearchPath )
 				{
 #ifdef DEBUG
-					debug( LOG_WZ, "rebuildSearchPath: Adding [%s] to search path", curSearchPath->path );
+					debug(LOG_WZ, "Adding [%s] to search path", curSearchPath->path);
 #endif // DEBUG
 					// Add maps and global and multiplay mods
 					PHYSFS_addToSearchPath( curSearchPath->path, PHYSFS_APPEND );
@@ -328,31 +336,34 @@ BOOL rebuildSearchPath( searchPathMode mode, BOOL force )
 					PHYSFS_removeFromSearchPath( curSearchPath->path );
 
 					// Add multiplay patches
-					strlcpy(tmpstr, curSearchPath->path, sizeof(tmpstr));
-					strlcat(tmpstr, "mp", sizeof(tmpstr));
+					sstrcpy(tmpstr, curSearchPath->path);
+					sstrcat(tmpstr, "mp");
 					PHYSFS_addToSearchPath( tmpstr, PHYSFS_APPEND );
-					strlcpy( tmpstr, curSearchPath->path, sizeof(tmpstr));
-					strlcat( tmpstr, "mp.wz", sizeof(tmpstr));
+					sstrcpy(tmpstr, curSearchPath->path);
+					sstrcat(tmpstr, "mp.wz");
 					PHYSFS_addToSearchPath( tmpstr, PHYSFS_APPEND );
 
 					// Add plain dir
 					PHYSFS_addToSearchPath( curSearchPath->path, PHYSFS_APPEND );
 
-					// Add warzone.wz
-					strlcpy(tmpstr, curSearchPath->path, sizeof(tmpstr));
-					strlcat(tmpstr, "warzone.wz", sizeof(tmpstr));
+					// Add base files
+					sstrcpy(tmpstr, curSearchPath->path);
+					sstrcat(tmpstr, "base");
+					PHYSFS_addToSearchPath( tmpstr, PHYSFS_APPEND );
+					sstrcpy(tmpstr, curSearchPath->path);
+					sstrcat(tmpstr, "base.wz");
 					PHYSFS_addToSearchPath( tmpstr, PHYSFS_APPEND );
 
 					curSearchPath = curSearchPath->higherPriority;
 				}
 				break;
 			default:
-				debug( LOG_ERROR, "rebuildSearchPath: Can't switch to unknown mods %i", mode );
+				debug(LOG_ERROR, "Can't switch to unknown mods %i", mode);
 				return false;
 		}
 
 		// User's home dir must be first so we allways see what we write
-		PHYSFS_removeFromSearchPath( PHYSFS_getWriteDir() );
+		PHYSFS_removeFromSearchPath(PHYSFS_getWriteDir());
 		PHYSFS_addToSearchPath( PHYSFS_getWriteDir(), PHYSFS_PREPEND );
 
 #ifdef DEBUG
@@ -409,24 +420,21 @@ BOOL systemInitialise(void)
 
 	if ( war_getSoundEnabled() )
 	{
-		if( !audio_Init(droidAudioTrackStopped) )
-			debug( LOG_SOUND, "Couldn't initialise audio system: continuing without audio\n" );
+		if (!audio_Init(droidAudioTrackStopped))
+		{
+			debug(LOG_SOUND, "Could not initialise audio system: Continuing without audio");
+		}
+		if (war_GetMusicEnabled())
+		{
+			cdAudio_Open(UserMusicPath);
+		}
 	}
 	else
 	{
-		debug( LOG_SOUND, "Sound disabled!" );
-	}
-
-	if (war_GetPlayAudioCDs()) {
-		cdAudio_Open(UserMusicPath);
+		debug(LOG_SOUND, "Sound disabled");
 	}
 
 	if (!dataInitLoadFuncs()) // Pass all the data loading functions to the framework library
-	{
-		return false;
-	}
-
-	if (!rayInitialise()) /* Initialise the ray tables */
 	{
 		return false;
 	}
@@ -435,10 +443,6 @@ BOOL systemInitialise(void)
 	{
 		return false;
 	}
-
-#ifdef ARROWS
-	arrowInit();
-#endif
 
 	// Initialize the iVis text rendering module
 	iV_TextInit();
@@ -456,9 +460,6 @@ BOOL systemInitialise(void)
 void systemShutdown(void)
 {
 //	unsigned int i;
-#ifdef ARROWS
-	arrowShutDown();
-#endif
 
 	keyClearMappings();
 
@@ -472,11 +473,8 @@ void systemShutdown(void)
 
 	debug(LOG_MAIN, "shutting down audio subsystems");
 
-	if (war_GetPlayAudioCDs()) {
-		debug(LOG_MAIN, "shutting down CD audio");
-		cdAudio_Stop();
-		cdAudio_Close();
-	}
+	debug(LOG_MAIN, "shutting down CD audio");
+	cdAudio_Close();
 
 	if ( audio_Disabled() == false && !audio_Shutdown() )
 	{
@@ -616,10 +614,7 @@ BOOL frontendInitialise(const char *ResourceFile)
 	gameTimeInit();
 
 	// hit me with some funky beats....
-	if (war_GetPlayAudioCDs())
-	{
-		cdAudio_PlayTrack(playlist_frontend); // frontend music
-	}
+	cdAudio_PlayTrack(SONG_FRONTEND);
 
 	return true;
 }
@@ -843,6 +838,8 @@ BOOL stageOneShutDown(void)
 
 	debug(LOG_TEXTURE, "=== stageOneShutDown ===");
 	pie_TexShutDown();
+	// Use mod_multiplay as the default (campaign might have set it to mod_singleplayer)
+	rebuildSearchPath( mod_multiplay, true );
 	pie_TexInit(); // restart it
 
 	initMiscVars();
@@ -880,14 +877,10 @@ BOOL stageTwoInitialise(void)
 		return false;
 	}
 
-	LOADBARCALLBACK();	//	loadingScreenCallback();
-
 	if(!InitRadar()) 	// After resLoad cause it needs the game palette initialised.
 	{
 		return false;
 	}
-
-	LOADBARCALLBACK();	//	loadingScreenCallback();
 
 	if(!initMiscImds())			/* Set up the explosions */
 	{
@@ -902,8 +895,6 @@ BOOL stageTwoInitialise(void)
 		return false;
 	}
 
-	LOADBARCALLBACK();	//	loadingScreenCallback();
-
 #ifdef BUCKET
 	if ( !bucketSetupList() )	/* reset object list */
 	{
@@ -914,14 +905,10 @@ BOOL stageTwoInitialise(void)
    	/* Shift the interface initialisation here temporarily so that it
    		can pick up the stats after they have been loaded */
 
-	LOADBARCALLBACK();	//	loadingScreenCallback();
-
 	if (!intInitialise())
 	{
 		return false;
 	}
-
-	LOADBARCALLBACK();	//	loadingScreenCallback();
 
 	if (!initMessage())			/* Initialise the message heaps */
 	{
@@ -934,10 +921,8 @@ BOOL stageTwoInitialise(void)
 	}
 
 	// keymappings
-	LOADBARCALLBACK();	//	loadingScreenCallback();
 	keyClearMappings();
 	keyInitMappings(false);
-	LOADBARCALLBACK();	//	loadingScreenCallback();
 
 	// Set the default uncoloured cursor here, since it looks slightly
 	// better for menus and such.
@@ -958,9 +943,7 @@ BOOL stageTwoShutDown(void)
 {
 	debug(LOG_WZ, "== stageTwoShutDown ==");
 
-	if (war_GetPlayAudioCDs()) {
-		cdAudio_Stop();
-	}
+	cdAudio_Stop();
 
 	freeAllStructs();
 	freeAllDroids();
@@ -1064,6 +1047,7 @@ BOOL stageThreeInitialise(void)
 
 	driveInitVars(false);
 	displayInitVars();
+	resizeRadar();
 
 	setAllPauseStates(false);
 
@@ -1160,7 +1144,7 @@ BOOL stageThreeShutDown(void)
 	{
 		initPlayerColours();		// reset colours leaving multiplayer game.
 	}
-	
+
 	setScriptWinLoseVideo(PLAY_NONE);
 
 	return true;
@@ -1180,9 +1164,7 @@ BOOL saveGameReset(void)
 {
 	debug(LOG_MAIN, "saveGameReset");
 
-	if (war_GetPlayAudioCDs()) {
-		cdAudio_Stop();
-	}
+	cdAudio_Stop();
 
 	freeAllStructs();
 	freeAllDroids();

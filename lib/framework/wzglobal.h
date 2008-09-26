@@ -41,33 +41,34 @@
 /*
    The operating system, must be one of: (WZ_OS_x)
 
-     DARWIN   - Darwin OS (synonym for WZ_OS_MAC)
-     OS2      - OS/2
-     OS2EMX   - XFree86 on OS/2 (not PM)
-     WIN32    - Win32 (Windows 95/98/ME and Windows NT/2000/XP)
-     CYGWIN   - Cygwin
-     SOLARIS  - Sun Solaris
-     HPUX     - HP-UX
-     ULTRIX   - DEC Ultrix
-     LINUX    - Linux
-     FREEBSD  - FreeBSD
-     NETBSD   - NetBSD
-     OPENBSD  - OpenBSD
-     BSDI     - BSD/OS
-     IRIX     - SGI Irix
-     OSF      - HP Tru64 UNIX
-     SCO      - SCO OpenServer 5
-     UNIXWARE - UnixWare 7, Open UNIX 8
-     AIX      - AIX
-     HURD     - GNU Hurd
-     DGUX     - DG/UX
-     RELIANT  - Reliant UNIX
-     DYNIX    - DYNIX/ptx
-     QNX      - QNX
-     QNX6     - QNX RTP 6.1
-     LYNX     - LynxOS
-     BSD4     - Any BSD 4.4 system
-     UNIX     - Any UNIX BSD/SYSV system
+     DARWIN             - Darwin OS (synonym for WZ_OS_MAC)
+     OS2                - OS/2
+     OS2EMX             - XFree86 on OS/2 (not PM)
+     WIN32              - Win32 (Windows 95/98/ME and Windows NT/2000/XP)
+     CYGWIN             - Cygwin
+     SOLARIS            - Sun Solaris
+     HPUX               - HP-UX
+     ULTRIX             - DEC Ultrix
+     LINUX              - Linux
+     FREEBSD            - FreeBSD
+     GNU_kFREEBSD       - GNU/kFreeBSD
+     NETBSD             - NetBSD
+     OPENBSD            - OpenBSD
+     BSDI               - BSD/OS
+     IRIX               - SGI Irix
+     OSF                - HP Tru64 UNIX
+     SCO                - SCO OpenServer 5
+     UNIXWARE           - UnixWare 7, Open UNIX 8
+     AIX                - AIX
+     HURD               - GNU Hurd
+     DGUX               - DG/UX
+     RELIANT            - Reliant UNIX
+     DYNIX              - DYNIX/ptx
+     QNX                - QNX
+     QNX6               - QNX RTP 6.1
+     LYNX               - LynxOS
+     BSD4               - Any BSD 4.4 system
+     UNIX               - Any UNIX BSD/SYSV system
 */
 
 #if defined(__APPLE__) && (defined(__GNUC__) || defined(__xlC__) || defined(__xlc__))
@@ -106,6 +107,14 @@
 #elif defined(__FreeBSD__) || defined(__DragonFly__)
 #  define WZ_OS_FREEBSD
 #  define WZ_OS_BSD4
+#elif defined(__FreeBSD_kernel__) && !defined(__FreeBSD__)
+   /* We're running a non-FreeBSD system with a FreeBSD kernel. Find out what C
+    * library we're using to detect the system we're running on. */
+#  include <stdlib.h>
+#  if defined(__GLIBC__)
+     /* We're running GNU/kFreeBSD */
+#    define WZ_OS_GNU_kFREEBSD
+#  endif
 #elif defined(__NetBSD__)
 #  define WZ_OS_NETBSD
 #  define WZ_OS_BSD4
@@ -268,6 +277,16 @@
 */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
 # define WZ_C99
+#else
+/**
+ * Implements the interface of the C99 macro va_copy such that we can use it on
+ * non-C99 systems as well.
+ *
+ * This implementation assumes that va_list is just a pointer to the stack
+ * frame of the variadic function. This is by far the most common setup, though
+ * it might not always work.
+ */
+# define va_copy(dest, src) (void)((dest) = (src))
 #endif /* WZ_Cxx */
 
 
@@ -431,7 +450,7 @@
 #if defined(WZ_CC_GNU) || defined(WZ_CC_INTEL)
 #  define WZ_DECL_THREAD __thread
 #elif defined(WZ_CC_MSVC)
-#  define __declspec(thread)
+#  define WZ_DECL_THREAD __declspec(thread)
 #else
 #  error "Thread local storage attribute required"
 #endif

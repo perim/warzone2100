@@ -1458,6 +1458,39 @@ FUNC_SYMBOL asFuncTable[] =
 		1, { (INTERP_TYPE)ST_BODY },
 		0, 0, NULL, 0, 0, NULL, NULL },
 
+	// Gettext functions
+	{ "_", scrGettext, (INTERP_TYPE)ST_TEXTSTRING,
+		1, { VAL_STRING },
+		false, 0, NULL, 0, 0, NULL, NULL },
+
+	{ "gettext", scrGettext, (INTERP_TYPE)ST_TEXTSTRING,
+		1, { VAL_STRING },
+		false, 0, NULL, 0, 0, NULL, NULL },
+
+	{ "N_", scrGettext_noop, VAL_STRING,
+		1, { VAL_STRING },
+		false, 0, NULL, 0, 0, NULL, NULL },
+
+	{ "gettext_noop", scrGettext_noop, VAL_STRING,
+		1, { VAL_STRING },
+		false, 0, NULL, 0, 0, NULL, NULL },
+
+	{ "P_", scrPgettext, (INTERP_TYPE)ST_TEXTSTRING,
+		2, { VAL_STRING, VAL_STRING },
+		false, 0, NULL, 0, 0, NULL, NULL },
+
+	{ "pgettext", scrPgettext, (INTERP_TYPE)ST_TEXTSTRING,
+		2, { VAL_STRING, VAL_STRING },
+		false, 0, NULL, 0, 0, NULL, NULL },
+
+	{ "PE_", scrPgettext_expr, (INTERP_TYPE)ST_TEXTSTRING,
+		2, { VAL_STRING, VAL_STRING },
+		false, 0, NULL, 0, 0, NULL, NULL },
+
+	{ "NP_", scrPgettext_noop, VAL_STRING,
+		2, { VAL_STRING, VAL_STRING },
+		false, 0, NULL, 0, 0, NULL, NULL },
+
 	/* END new functions */
 
     /* This final entry marks the end of the function list */
@@ -1876,7 +1909,7 @@ CONST_SYMBOL asConstantTable[] =
 	{ "DSS_ALEV_NEVER",		VAL_INT,	false,	DSS_ALEV_NEVER,		NULL, NULL, 0.0f },
 	{ "DSS_HALT_HOLD",		VAL_INT,	false,	DSS_HALT_HOLD,		NULL, NULL, 0.0f },
 	{ "DSS_HALT_GUARD",		VAL_INT,	false,	DSS_HALT_GUARD,		NULL, NULL, 0.0f },
-	{ "DSS_HALT_PERSUE",	VAL_INT,	false,	DSS_HALT_PERSUE,	NULL, NULL, 0.0f },
+	{ "DSS_HALT_PERSUE",	VAL_INT,	false,	DSS_HALT_PURSUE,	NULL, NULL, 0.0f },
 	{ "DSS_RECYCLE_SET",	VAL_INT,	false,	DSS_RECYCLE_SET,	NULL, NULL, 0.0f },
 	{ "DSS_ASSPROD_START",	VAL_INT,	false,	DSS_ASSPROD_START,	NULL, NULL, 0.0f },
 	{ "DSS_ASSPROD_END ",	VAL_INT,	false,	DSS_ASSPROD_END ,	NULL, NULL, 0.0f },

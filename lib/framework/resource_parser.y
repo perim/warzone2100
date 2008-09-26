@@ -30,9 +30,6 @@ extern char* res_get_text(void);
 /* Allow frame header files to be singly included */
 #define FRAME_LIB_INCLUDE
 
-// directory printfs
-#define DEBUG_GROUP0
-
 #include "lib/framework/frame.h"
 #include <string.h>
 #include <stdlib.h>
@@ -59,16 +56,20 @@ void yyerror(const char* msg)
 %token <sval> QTEXT_T			/* Text with double quotes surrounding it */
 
 %destructor {
+#ifndef WZ_OS_WIN
 	// Force type checking by the compiler
 	char * const s = $$;
 
 	if (s)
 		free(s);
+#endif
 } TEXT_T QTEXT_T
 
 	/* keywords */
 %token DIRECTORY
 %token FILETOKEN
+%token DATABASE
+%token TABLE
 
 %%
 
@@ -78,6 +79,8 @@ res_file:			res_line
 
 res_line:			dir_line
 				|	file_line
+				|	database_line
+				|	table_line
 				;
 
 dir_line:			DIRECTORY QTEXT_T
@@ -89,12 +92,12 @@ dir_line:			DIRECTORY QTEXT_T
 					if (strncmp($2, "/:", strlen("/:")) == 0)
 					{
 						// the new dir is rooted
-						strlcpy(aCurrResDir, $2, sizeof(aCurrResDir));
+						sstrcpy(aCurrResDir, $2);
 					}
 					else
 					{
-						strlcpy(aCurrResDir, aResDir, sizeof(aCurrResDir));
-						strlcat(aCurrResDir, $2, sizeof(aCurrResDir));
+						sstrcpy(aCurrResDir, aResDir);
+						sstrcat(aCurrResDir, $2);
 					}
 					if (strlen($2) > 0)
 					{
@@ -115,6 +118,37 @@ file_line:			FILETOKEN TEXT_T QTEXT_T
 					/* load a data file */
 					debug(LOG_NEVER, "file: %s %s", $2, $3);
 					succes = resLoadFile($2, $3);
+					free($2);
+					free($3);
+
+					if (!succes)
+					{
+						YYABORT;
+					}
+				}
+				;
+
+database_line:			DATABASE QTEXT_T
+				{
+					bool succes;
+					/* Open a database file */
+					debug(LOG_NEVER, "database: %s", $2);
+					succes = resOpenDB($2);
+					free($2);
+
+					if (!succes)
+					{
+						YYABORT;
+					}
+				}
+				;
+
+table_line:			TABLE TEXT_T QTEXT_T
+				{
+					bool succes;
+					/* load a database table */
+					debug(LOG_NEVER, "table: %s", $2);
+					succes = resLoadTable($2, $3);
 					free($2);
 					free($3);
 

@@ -1,0 +1,13 @@
+top_srcdir=../..
+top_builddir=$(top_srcdir)
+
+include $(top_srcdir)/makerules/common.mk
+
+SRC=netjoin_stub.c \
+	netlog.c \
+	netplay.c \
+	nettypes.c
+
+LIB=netplay
+
+include $(top_srcdir)/makerules/lib.mk

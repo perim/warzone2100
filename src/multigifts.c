@@ -44,6 +44,7 @@
 #include "scripttabs.h"
 #include "scriptcb.h"
 #include "loop.h"
+#include "transporter.h"
 
 #include "lib/netplay/netplay.h"
 #include "multiplay.h"
@@ -233,9 +234,10 @@ static void sendGiftDroids(uint8_t from, uint8_t to)
 		// Store the next droid in the list as the list may change
 		next = psD->psNext;
 
-		if (psD->droidType == DROID_TRANSPORTER)
+		if (psD->droidType == DROID_TRANSPORTER
+		 && !transporterIsEmpty(psD))
 		{
-			CONPRINTF(ConsoleString, (ConsoleString, _("Tried to give away a %s - but this is not allowed."), psD->aName));
+			CONPRINTF(ConsoleString, (ConsoleString, _("Tried to give away a non-empty %s - but this is not allowed."), psD->aName));
 			continue;
 		}
 		if (psD->selected)
@@ -380,7 +382,7 @@ void breakAlliance(uint8_t p1, uint8_t p2, BOOL prop, BOOL allowAudio)
 
 	if (alliances[p1][p2] == ALLIANCE_FORMED)
 	{
-		strlcpy(tm1, getPlayerName(p1), sizeof(tm1));
+		sstrcpy(tm1, getPlayerName(p1));
 		CONPRINTF(ConsoleString,(ConsoleString,_("%s Breaks The Alliance With %s"),tm1,getPlayerName(p2) ));
 
 		if (allowAudio && (p1 == selectedPlayer || p2 == selectedPlayer))
@@ -406,7 +408,7 @@ void formAlliance(uint8_t p1, uint8_t p2, BOOL prop, BOOL allowAudio, BOOL allow
 	// Don't add message if already allied
 	if (bMultiPlayer && alliances[p1][p2] != ALLIANCE_FORMED && allowNotification)
 	{
-		strlcpy(tm1, getPlayerName(p1), sizeof(tm1));
+		sstrcpy(tm1, getPlayerName(p1));
 		CONPRINTF(ConsoleString,(ConsoleString,_("%s Forms An Alliance With %s"),tm1,getPlayerName(p2)));
 	}
 

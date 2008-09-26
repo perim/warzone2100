@@ -47,14 +47,15 @@ typedef struct _warzoneGlobals
 	BOOL		bFog;
 	SWORD		effectsLevel;
 	BOOL		allowSubtitles;
-	BOOL		playAudioCDs;
 	BOOL		Fullscreen;
 	BOOL		soundEnabled;
 	BOOL		trapCursor;
 	UDWORD		width;
 	UDWORD		height;
+	bool		vsync;
 	bool            pauseOnFocusLoss;
 	bool            ColouredCursor;
+	bool            MusicEnabled;
 } WARZONE_GLOBALS;
 
 /***************************************************************************/
@@ -80,18 +81,10 @@ void war_SetDefaultStates(void)//Sets all states
 {
 	//set those here and reset in clParse or loadConfig
 	war_SetFog(false);
-	war_SetPlayAudioCDs(true);
 	war_setSoundEnabled( true );
 	war_SetPauseOnFocusLoss(true);
 	war_SetColouredCursor(false);
-}
-
-void war_SetPlayAudioCDs(BOOL b) {
-	warGlobs.playAudioCDs = b;
-}
-
-BOOL war_GetPlayAudioCDs(void) {
-	return warGlobs.playAudioCDs;
+	war_SetMusicEnabled(true);
 }
 
 void war_SetAllowSubtitles(BOOL b) {
@@ -118,6 +111,16 @@ void war_SetTrapCursor(BOOL b)
 BOOL war_GetTrapCursor(void)
 {
 	return warGlobs.trapCursor;
+}
+
+void war_SetVsync(bool b)
+{
+	warGlobs.vsync = b;
+}
+
+bool war_GetVsync(void)
+{
+	return warGlobs.vsync;
 }
 
 void war_SetWidth(UDWORD width)
@@ -210,4 +213,14 @@ void war_setSoundEnabled( BOOL soundEnabled )
 BOOL war_getSoundEnabled( void )
 {
 	return warGlobs.soundEnabled;
+}
+
+bool war_GetMusicEnabled(void)
+{
+	return warGlobs.MusicEnabled;
+}
+
+void war_SetMusicEnabled(bool enabled)
+{
+	warGlobs.MusicEnabled = enabled;
 }

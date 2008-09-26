@@ -245,9 +245,11 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 	if (bestTarget)
 	{
 		ASSERT(!bestTarget->died, "aiBestNearestTarget: AI gave us a target that is already dead.");
+		targetStructure = visGetBlockingWall((BASE_OBJECT *)psDroid, bestTarget);
+
 		/* See if target is blocked by a wall; only affects direct weapons */
 		if (proj_Direct(asWeaponStats + psDroid->asWeaps[weapon_slot].nStat)
-		 && (targetStructure = visGetBlockingWall((BASE_OBJECT *)psDroid, bestTarget)))
+		 && targetStructure)
 		{
 			//are we any good against walls?
 			if(asStructStrengthModifier[weaponEffect][targetStructure->pStructureType->strength] >= 100)		//can attack atleast with default strength
@@ -467,7 +469,7 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 	}
 
 	/* We prefer objects we can see and can attack immediately */
-	if(!visibleObjWallBlock((BASE_OBJECT *)psAttacker, psTarget))
+	if(!visibleObject((BASE_OBJECT *)psAttacker, psTarget, true))
 	{
 		attackWeight /= WEIGHT_NOT_VISIBLE_F;
 	}
@@ -890,6 +892,14 @@ void aiUpdateDroid(DROID *psDroid)
 	ASSERT( psDroid != NULL,
 		"updateUnitAI: invalid Unit pointer" );
 
+	// HACK: we always want to update orders when NOT running a MP game,
+	// and we don't want to update when the droid belongs to another human player
+	if (!myResponsibility(psDroid->player) && bMultiPlayer
+		  && isHumanPlayer(psDroid->player))
+	{
+		return;		// we should not order this droid around
+	}
+
 	lookForTarget = true;
 	updateTarget = true;
 
@@ -933,7 +943,7 @@ void aiUpdateDroid(DROID *psDroid)
 	// they would switch to the guard order in the order update loop
 	if ((psDroid->order == DORDER_NONE) &&
 		(psDroid->player == selectedPlayer) &&
-		!vtolDroid(psDroid) &&
+		!isVtolDroid(psDroid) &&
 		secondaryGetState(psDroid, DSO_HALTTYPE, &state) &&
 		(state == DSS_HALT_GUARD))
 	{
@@ -948,7 +958,7 @@ void aiUpdateDroid(DROID *psDroid)
 		updateTarget = false;
 	}
 
-	if(bMultiPlayer && vtolDroid(psDroid) && isHumanPlayer(psDroid->player))
+	if(bMultiPlayer && isVtolDroid(psDroid) && isHumanPlayer(psDroid->player))
 	{
 		lookForTarget = false;
 		updateTarget = false;
@@ -1016,7 +1026,6 @@ void aiUpdateDroid(DROID *psDroid)
 
 	if (lookForTarget && !updateTarget)
 	{
-		turnOffMultiMsg(true);
 		if (psDroid->droidType == DROID_SENSOR)
 		{
 			//Watermelon:only 1 target for sensor droid
@@ -1032,7 +1041,6 @@ void aiUpdateDroid(DROID *psDroid)
 				orderDroidObj(psDroid, DORDER_ATTACKTARGET, psTarget);
 			}
 		}
-		turnOffMultiMsg(false);
 	}
 }
 

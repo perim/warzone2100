@@ -27,23 +27,15 @@
 #include "lib/framework/strres.h"
 #include "text.h"
 
-/* The numbers of strings that will be loaded */
-#define STRING_INIT		20
-#define STRING_EXT		5
-
-
 /* The string resource object */
-STR_RES *psStringRes;
+struct STR_RES* psStringRes = NULL;
 
 /* Initialise the string system */
 BOOL stringsInitialise(void)
 {
-	if (!strresCreate(&psStringRes, STRING_INIT, STRING_EXT))
-	{
-		return false;
-	}
+	psStringRes = strresCreate();
 
-	return true;
+	return psStringRes != NULL;
 }
 
 
