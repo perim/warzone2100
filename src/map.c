@@ -353,13 +353,13 @@ static void objectSaveTagged(BASE_OBJECT *psObj)
 	tagWriteLeave(0x01);
 }
 
-static void objectSensorTagged(int sensorRange, int sensorPower, int ecmRange, int ecmPower)
+static void objectSensorTagged(BASE_OBJECT *psObj)
 {
 	tagWriteEnter(0x02, 1);
-	tagWrite(0x01, sensorRange);
-	tagWrite(0x02, sensorPower);
-	tagWrite(0x03, ecmRange);
-	tagWrite(0x04, ecmPower);
+	tagWrite(0x01, psObj->sensorRange);
+	tagWrite(0x02, psObj->sensorPower);
+	tagWrite(0x03, 0);
+	tagWrite(0x04, psObj->ECMMod);
 	tagWriteLeave(0x02);
 }
 
@@ -414,7 +414,7 @@ static void droidSaveTagged(DROID *psDroid)
 	/* common groups */
 
 	objectSaveTagged((BASE_OBJECT *)psDroid); /* 0x01 */
-	objectSensorTagged(psDroid->sensorRange, psDroid->sensorPower, 0, psDroid->ECMMod); /* 0x02 */
+	objectSensorTagged((BASE_OBJECT *)psDroid); /* 0x02 */
 	objectStatTagged((BASE_OBJECT *)psDroid, psDroid->originalBody, psDroid->resistance); /* 0x03 */
 	objectWeaponTagged(psDroid->numWeaps, psDroid->asWeaps, psDroid->psActionTarget);
 
@@ -536,7 +536,7 @@ static void structureSaveTagged(STRUCTURE *psStruct)
 	/* common groups */
 
 	objectSaveTagged((BASE_OBJECT *)psStruct); /* 0x01 */
-	objectSensorTagged(psStruct->sensorRange, psStruct->sensorPower, 0, psStruct->ECMMod); /* 0x02 */
+	objectSensorTagged((BASE_OBJECT *)psStruct); /* 0x02 */
 	objectStatTagged((BASE_OBJECT *)psStruct, psStruct->pStructureType->bodyPoints, psStruct->resistance); /* 0x03 */
 	objectWeaponTagged(psStruct->numWeaps, psStruct->asWeaps, psStruct->psTarget);
 
@@ -682,7 +682,7 @@ static void featureSaveTagged(FEATURE *psFeat)
 	/* common groups */
 
 	objectSaveTagged((BASE_OBJECT *)psFeat); /* 0x01 */
-	objectSensorTagged(psFeat->sensorRange, psFeat->sensorPower, 0, psFeat->ECMMod); /* 0x02 */
+	objectSensorTagged((BASE_OBJECT *)psFeat); /* 0x02 */
 	objectStatTagged((BASE_OBJECT *)psFeat, psFeat->psStats->body, 0); /* 0x03 */
 
 	/* FEATURE GROUP */
