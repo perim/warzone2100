@@ -90,5 +90,6 @@ uint32_t gameRandU32()
 int32_t gameRand(uint32_t limit)
 {
 	syncDebug("Used a random number.");
+//syncDebugBacktrace();
 	return gamePseudorandomNumberGenerator.u32()%limit;
 }

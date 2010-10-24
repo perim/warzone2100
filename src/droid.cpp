@@ -761,26 +761,33 @@ void droidUpdate(DROID *psDroid)
 	// update the cluster of the droid
 	if ((psDroid->id + gameTime)/2000 != (psDroid->id + gameTime - deltaGameTime)/2000)
 	{
+syncDebug("A");
 		clustUpdateObject((BASE_OBJECT *)psDroid);
 	}
 
 	// ai update droid
+syncDebug("B");
 	aiUpdateDroid(psDroid);
+syncDebug("C");
 
 	// Update the droids order. The droid may be killed here due to burn out.
 	orderUpdateDroid(psDroid);
+syncDebug("D");
 	if (isDead((BASE_OBJECT *)psDroid))
 	{
+syncDebug("E");
 		return;	// FIXME: Workaround for babarians that were burned to death
 	}
 
 	// update the action of the droid
 	actionUpdateDroid(psDroid);
+syncDebug("F");
 
 	syncDebugDroid(psDroid, 'M');
 
 	// update the move system
 	moveUpdateDroid(psDroid);
+syncDebug("G");
 
 	/* Only add smoke if they're visible */
 	if((psDroid->visible[selectedPlayer]) && psDroid->droidType != DROID_PERSON)
@@ -812,6 +819,7 @@ void droidUpdate(DROID *psDroid)
 	}
 
 	processVisibilityLevel((BASE_OBJECT*)psDroid);
+syncDebug("H");
 
 	// -----------------
 	/* Are we a sensor droid or a command droid? Show where we target for selectedPlayer. */
@@ -871,11 +879,14 @@ void droidUpdate(DROID *psDroid)
 	// At this point, the droid may be dead due to burn damage.
 	if (isDead((BASE_OBJECT *)psDroid))
 	{
+syncDebug("I");
 		return;
 	}
 
 	droidUpdateRecoil(psDroid);
+syncDebug("J");
 	calcDroidIllumination(psDroid);
+syncDebug("K");
 
 	// Check the resistance level of the droid
 	if ((psDroid->id + gameTime)/833 != (psDroid->id + gameTime - deltaGameTime)/833)
@@ -885,6 +896,7 @@ void droidUpdate(DROID *psDroid)
 		{
 			// Increase over time if low
 			psDroid->resistance++;
+syncDebug("L");
 		}
 	}
 
