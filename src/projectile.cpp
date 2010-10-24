@@ -376,6 +376,9 @@ bool proj_SendProjectile(WEAPON *psWeap, SIMPLE_OBJECT *psAttacker, int player, 
 	ASSERT_OR_RETURN( false, psStats != NULL, "Invalid weapon stats" );
 	ASSERT_OR_RETURN( false, psTarget == NULL || !psTarget->died, "Aiming at dead target!" );
 
+	syncDebug("player%d,target{%d,%d,%d}%d,ws%d", player, target.x, target.y, target.z, psTarget == NULL? 0 : psTarget->id, weapon_slot);
+	syncDebugBacktrace();
+
 	/* get muzzle offset */
 	if (psAttacker == NULL)
 	{
