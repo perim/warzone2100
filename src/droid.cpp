@@ -761,27 +761,27 @@ void droidUpdate(DROID *psDroid)
 	// update the cluster of the droid
 	if ((psDroid->id + gameTime)/2000 != (psDroid->id + gameTime - deltaGameTime)/2000)
 	{
-syncDebug("A");
+syncDebugDroid(psDroid, 'A');
 		clustUpdateObject((BASE_OBJECT *)psDroid);
 	}
 
 	// ai update droid
-syncDebug("B");
+syncDebugDroid(psDroid, 'B');
 	aiUpdateDroid(psDroid);
-syncDebug("C");
+syncDebugDroid(psDroid, 'C');
 
 	// Update the droids order. The droid may be killed here due to burn out.
 	orderUpdateDroid(psDroid);
-syncDebug("D");
+syncDebugDroid(psDroid, 'D');
 	if (isDead((BASE_OBJECT *)psDroid))
 	{
-syncDebug("E");
+syncDebugDroid(psDroid, 'E');
 		return;	// FIXME: Workaround for babarians that were burned to death
 	}
 
 	// update the action of the droid
 	actionUpdateDroid(psDroid);
-syncDebug("F");
+syncDebugDroid(psDroid, 'F');
 
 	syncDebugDroid(psDroid, 'M');
 

@@ -850,12 +850,24 @@ void actionUpdateDroid(DROID *psDroid)
 
 	psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
 	ASSERT_OR_RETURN(, psPropStats != NULL, "Invalid propulsion stats pointer");
+for (i = 1; i < DROID_MAXWEAPS; ++i)
+{
+	if (nonNullWeapon[i] || targetVisibile[i])
+	{
+		ASSERT(false, "aaa");
+		*(int*)0=0;
+	}
+}
 
+syncDebug("A");
+syncDebugDroid(psDroid, 'A');
 	// clear the target if it has died
 	for (i = 0; i < DROID_MAXWEAPS; i++)
 	{
 		if (psDroid->psActionTarget[i] && psDroid->psActionTarget[i]->died)
 		{
+syncDebug("B %d", i);
+syncDebugDroid(psDroid, 'B');
 			setDroidActionTarget(psDroid, NULL, i);
 			if (i == 0)
 			{
@@ -882,6 +894,8 @@ void actionUpdateDroid(DROID *psDroid)
 		}
 	}
 
+syncDebug("C");
+syncDebugDroid(psDroid, 'C');
 	//if the droid has been attacked by an EMP weapon, it is temporarily disabled
 	if (psDroid->lastHitWeapon == WSC_EMP)
 	{
@@ -915,6 +929,8 @@ void actionUpdateDroid(DROID *psDroid)
 
 	psTarget = psDroid->psTarget;
 
+syncDebug("D");
+syncDebugDroid(psDroid, 'D');
 	switch (psDroid->action)
 	{
 	case DACTION_NONE:
@@ -1064,15 +1080,20 @@ void actionUpdateDroid(DROID *psDroid)
 		break;
 	case DACTION_MOVEFIRE:
 		//check if vtol that its armed
+syncDebug("Da");
+syncDebugDroid(psDroid, 'a');
 		if (vtolEmpty(psDroid))
 		{
 			moveToRearm(psDroid);
 		}
+syncDebug("Db");
+syncDebugDroid(psDroid, 'b');
 
 		bHasTarget = false;
 		//loop through weapons and look for target for each weapon
 		for (i = 0; i < psDroid->numWeaps; ++i)
 		{
+syncDebug("Dbæ %d", psDroid->psActionTarget[i]? psDroid->psActionTarget[i]->id : 0);
 			if (psDroid->psActionTarget[i] != NULL && aiObjectIsProbablyDoomed(psDroid->psActionTarget[i]))
 			{
 				setDroidActionTarget(psDroid, NULL, i);  // Target not worth shooting at anymore.
@@ -1084,6 +1105,7 @@ void actionUpdateDroid(DROID *psDroid)
 
 				if (aiBestNearestTarget(psDroid, &psTemp, i, NULL) >= 0)
 				{
+syncDebug("Dba %d", psTemp? psTemp->id : 0);
 					bHasTarget = true;
 					setDroidActionTarget(psDroid, psTemp, i);
 				}
@@ -1092,20 +1114,25 @@ void actionUpdateDroid(DROID *psDroid)
 			if (psDroid->psActionTarget[i]
 			 && visibleObject((BASE_OBJECT*)psDroid, psDroid->psActionTarget[i], false))
 			{
+syncDebug("Dbb");
 				hasVisibleTarget = true;
 				targetVisibile[i] = true;
 			}
 		}
+syncDebugDroid(psDroid, 'c');
 
 		for (j = 0;j < psDroid->numWeaps;j++)
 		{
+syncDebug("Dca %d, %d", j, psDroid->psActionTarget[j] != NULL);
 			//vtResult uses psActionTarget[0] for now since it's the first target
 			if (psDroid->psActionTarget[j] != NULL &&
 				validTarget((BASE_OBJECT *)psDroid, psDroid->psActionTarget[j], j))
 			{
+syncDebug("Dcb");
 				// firing on something while moving
 				if (DROID_STOPPED(psDroid))
 				{
+syncDebug("Dcc");
 					// Got to desitination
 					psDroid->action = DACTION_NONE;
 					break;
@@ -1114,13 +1141,16 @@ void actionUpdateDroid(DROID *psDroid)
 				      || !validTarget((BASE_OBJECT *)psDroid, psDroid->psActionTarget[j], j)
 				      || (secondaryGetState(psDroid, DSO_ATTACK_LEVEL) != DSS_ALEV_ALWAYS))
 				{
+syncDebug("Dcd");
 					if (j == (psDroid->numWeaps - 1) && !bHasTarget)
 					{
+syncDebug("Dce");
 						// Target lost
 						psDroid->action = DACTION_MOVE;
 					}
 					else
 					{
+syncDebug("Dcf");
 						continue;
 					}
 					//if Vtol - return to rearm pad
@@ -1133,43 +1163,54 @@ void actionUpdateDroid(DROID *psDroid)
 				else if	(electronicDroid(psDroid) &&
 						(psDroid->player == psDroid->psActionTarget[j]->player))
 				{
+syncDebug("Dcg");
 					setDroidActionTarget(psDroid, NULL, i);
 					psDroid->action = DACTION_NONE;
 				}
 				else
 				{
+syncDebug("Dch");
 					if (!hasVisibleTarget
 					 && !bHasTarget
 					 && j == (psDroid->numWeaps - 1))
 					{
+syncDebug("Dci");
 						// lost the target
 						psDroid->action = DACTION_MOVE;
 						for (i = 0; i < psDroid->numWeaps;i++)
 						{
+syncDebug("Dcj");
 							setDroidActionTarget(psDroid, NULL, i);
 						}
 					}
 
+syncDebug("Dck");
 					if (targetVisibile[j])
 					{
+syncDebug("Dcl");
 						bHasTarget = true;
 						//to fix a AA-weapon attack ground unit exploit
 						if (nonNullWeapon[j])
 						{
 							BASE_OBJECT* psActionTarget = psDroid->psActionTarget[j];
+syncDebug("Dcm %d", psActionTarget? psActionTarget->id : 0);
 
 							if (!psActionTarget)
 							{
+syncDebug("Dcn");
 								if (targetVisibile[0])
 								{
+syncDebug("Dco");
 									psActionTarget = psDroid->psActionTarget[0];
 								}
 							}
+syncDebug("Dcp");
 
 							if (psActionTarget && validTarget((BASE_OBJECT *)psDroid, psActionTarget, j)
 							 && actionTargetTurret((BASE_OBJECT*)psDroid, psActionTarget, &psDroid->asWeaps[j]))
 							{
 								// In range - fire !!!
+syncDebug("Dcq %d", psActionTarget->id);
 								combFire(&psDroid->asWeaps[j], (BASE_OBJECT *)psDroid, psActionTarget, j);
 							}
 						}
@@ -1177,6 +1218,7 @@ void actionUpdateDroid(DROID *psDroid)
 				}
 			}
 		}
+syncDebug("Dd");
 
 		/* Extra bit of paranoia, in case none of the weapons have a target */
 		bHasTarget = false;
@@ -1188,10 +1230,12 @@ void actionUpdateDroid(DROID *psDroid)
 				break;
 			}
 		}
+syncDebug("De");
 		if (!bHasTarget)
 		{
 			psDroid->action = DACTION_MOVE;
 		}
+syncDebug("Df");
 
 		//check its a VTOL unit since adding Transporter's into multiPlayer
 		/* check vtol attack runs */
@@ -2353,6 +2397,7 @@ void actionUpdateDroid(DROID *psDroid)
 		ASSERT(!"unknown action", "unknown action");
 		break;
 	}
+syncDebug("E");
 
 	if (psDroid->action != DACTION_MOVEFIRE &&
 		psDroid->action != DACTION_ATTACK &&
@@ -2383,6 +2428,7 @@ void actionUpdateDroid(DROID *psDroid)
 			}
 		}
 	}
+syncDebug("F");
 	CHECK_DROID(psDroid);
 }
 

@@ -1076,6 +1076,7 @@ static BOOL updateAttackTarget(BASE_OBJECT * psAttacker, SDWORD weapon_slot)
 
 	return false;
 }
+#include "lib/netplay/netplay.h"
 
 /* Do the AI for a droid */
 void aiUpdateDroid(DROID *psDroid)
@@ -1086,11 +1087,13 @@ void aiUpdateDroid(DROID *psDroid)
 	ASSERT(psDroid != NULL, "Invalid droid pointer");
 	if (!psDroid || isDead((BASE_OBJECT *)psDroid))
 	{
+syncDebug("No droid");
 		return;
 	}
 
 	lookForTarget = false;
 	updateTarget = false;
+syncDebug("A look %d, update %d", lookForTarget, updateTarget);
 	
 	// look for a target if doing nothing
 	if (orderState(psDroid, DORDER_NONE) ||
@@ -1098,23 +1101,27 @@ void aiUpdateDroid(DROID *psDroid)
 		orderState(psDroid, DORDER_TEMP_HOLD))
 	{
 		lookForTarget = true;
+syncDebug("B look %d, update %d", lookForTarget, updateTarget);
 	}
 	// but do not choose another target if doing anything while guarding
 	if (orderState(psDroid, DORDER_GUARD) &&
 		(psDroid->action != DACTION_NONE))
 	{
 		lookForTarget = false;
+syncDebug("C look %d, update %d", lookForTarget, updateTarget);
 	}
 	// except when self-repairing
 	if (psDroid->action == DACTION_DROIDREPAIR &&
 	    psDroid->psActionTarget[0] == (BASE_OBJECT *)psDroid)
 	{
 		lookForTarget = true;
+syncDebug("D look %d, update %d", lookForTarget, updateTarget);
 	}
 	// don't look for a target if sulking
 	if (psDroid->action == DACTION_SULK)
 	{
 		lookForTarget = false;
+syncDebug("E look %d, update %d", lookForTarget, updateTarget);
 	}
 
 	/* Only try to update target if already have some target */
@@ -1124,12 +1131,14 @@ void aiUpdateDroid(DROID *psDroid)
 		psDroid->action == DACTION_ROTATETOATTACK)
 	{
 		updateTarget = true;
+syncDebug("F look %d, update %d", lookForTarget, updateTarget);
 	}
 	if ((orderState(psDroid, DORDER_OBSERVE) || orderState(psDroid, DORDER_ATTACKTARGET)) &&
 	    psDroid->psTarget && aiObjectIsProbablyDoomed(psDroid->psTarget))
 	{
 		lookForTarget = true;
 		updateTarget = false;
+syncDebug("G look %d, update %d", lookForTarget, updateTarget);
 	}
 
 	/* Don't update target if we are sent to attack and reached
@@ -1137,6 +1146,7 @@ void aiUpdateDroid(DROID *psDroid)
 	if (orderState(psDroid, DORDER_ATTACK) && psDroid->psActionTarget[0] == psDroid->psTarget)
 	{
 		updateTarget = false;
+syncDebug("H look %d, update %d", lookForTarget, updateTarget);
 	}
 
 	// don't look for a target if there are any queued orders
@@ -1144,6 +1154,7 @@ void aiUpdateDroid(DROID *psDroid)
 	{
 		lookForTarget = false;
 		updateTarget = false;
+syncDebug("I look %d, update %d", lookForTarget, updateTarget);
 	}
 
 	// don't allow units to start attacking if they will switch to guarding the commander
@@ -1151,18 +1162,21 @@ void aiUpdateDroid(DROID *psDroid)
 	{
 		lookForTarget = false;
 		updateTarget = false;
+syncDebug("J look %d, update %d", lookForTarget, updateTarget);
 	}
 
 	if(bMultiPlayer && isVtolDroid(psDroid) && isHumanPlayer(psDroid->player))
 	{
 		lookForTarget = false;
 		updateTarget = false;
+syncDebug("K look %d, update %d", lookForTarget, updateTarget);
 	}
 
 	// do not look for a target if droid is currently under direct control.
 	if(driveModeActive() && (psDroid == driveGetDriven())) {
 		lookForTarget = false;
 		updateTarget = false;
+syncDebug("L look %d, update %d", lookForTarget, updateTarget);
 	}
 
 	// CB and VTOL CB droids can't autotarget.
@@ -1170,18 +1184,21 @@ void aiUpdateDroid(DROID *psDroid)
 	{
 		lookForTarget = false;
 		updateTarget = false;
+syncDebug("M look %d, update %d", lookForTarget, updateTarget);
 	}
 
 	// do not attack if the attack level is wrong
 	if (secondaryGetState(psDroid, DSO_ATTACK_LEVEL) != DSS_ALEV_ALWAYS)
 	{
 		lookForTarget = false;
+syncDebug("N look %d, update %d", lookForTarget, updateTarget);
 	}
 
 	/* For commanders and non-assigned non-commanders:
 	 look for a better target once in a while */
 	if(!lookForTarget && updateTarget)
 	{
+syncDebug("O look %d, update %d", lookForTarget, updateTarget);
 		if((psDroid->numWeaps > 0) && !hasCommander(psDroid))	//not assigned to commander
 		{
 			if((psDroid->id + gameTime)/TARGET_UPD_SKIP_FRAMES != (psDroid->id + gameTime - deltaGameTime)/TARGET_UPD_SKIP_FRAMES)
@@ -1198,16 +1215,19 @@ void aiUpdateDroid(DROID *psDroid)
 			}
 		}
 	}
+syncDebugDroid(psDroid, 'P');
 
 	/* Null target - see if there is an enemy to attack */
 
 	if (lookForTarget && !updateTarget)
 	{
+syncDebug("Q look %d, update %d", lookForTarget, updateTarget);
 		if (psDroid->droidType == DROID_SENSOR)
 		{
 			if (aiChooseSensorTarget((BASE_OBJECT *)psDroid, &psTarget))
 			{
 				orderDroidObj(psDroid, DORDER_OBSERVE, psTarget, ModeImmediate);
+syncDebugDroid(psDroid, 'R');
 			}
 		}
 		else
@@ -1215,6 +1235,7 @@ void aiUpdateDroid(DROID *psDroid)
 			if (aiChooseTarget((BASE_OBJECT *)psDroid, &psTarget, 0, true, NULL))
 			{
 				orderDroidObj(psDroid, DORDER_ATTACKTARGET, psTarget, ModeImmediate);
+syncDebugDroid(psDroid, 'S');
 			}
 		}
 	}
