@@ -3924,6 +3924,9 @@ void structureUpdate(STRUCTURE *psBuilding, bool mission)
 
 	syncDebugStructure(psBuilding, '<');
 
+	printf("Updating structure %d\n", psBuilding->id);
+	CHECK_STRUCTURE(psBuilding);
+
 	if (psBuilding->pStructureType->type == REF_GATE)
 	{
 		if (psBuilding->state == SAS_OPEN && psBuilding->lastStateTime + SAS_STAY_OPEN_TIME < gameTime)
@@ -4106,6 +4109,7 @@ void structureUpdate(STRUCTURE *psBuilding, bool mission)
 	syncDebugStructure(psBuilding, '>');
 
 	CHECK_STRUCTURE(psBuilding);
+	printf("Did update structure %d\n", psBuilding->id);
 }
 
 STRUCTURE::STRUCTURE(uint32_t id, unsigned player)
@@ -8095,9 +8099,20 @@ BOOL structureCheckReferences(STRUCTURE *psVictimStruct)
 	return true;
 }
 
+static int compar(const void *a, const void *b)
+{
+	unsigned x = *(unsigned *)a;
+	unsigned y = *(unsigned *)b;
+	return x < y? -1 : x > y? 1 : 0;
+}
+
 void checkStructure(const STRUCTURE* psStructure, const char * const location_description, const char * function, const int recurse)
 {
 	unsigned int i;
+
+	unsigned structureIds[20000];
+	unsigned numStructureIds = 0;
+	static int error = 0;
 
 	if (recurse < 0)
 		return;
@@ -8114,5 +8129,28 @@ void checkStructure(const STRUCTURE* psStructure, const char * const location_de
 		{
 			checkObject(psStructure->psTarget[i], location_description, function, recurse - 1);
 		}
+	}
+
+	for (i = 0; i < MAX_PLAYERS; ++i)
+	{
+		STRUCTURE *s = apsStructLists[i];
+		while (s != NULL)
+		{
+			structureIds[numStructureIds++] = s->id;
+			s = s->psNext;
+		}
+	}
+
+	qsort(structureIds, numStructureIds, sizeof(*structureIds), compar);
+	for (i = 1; i < numStructureIds; ++i)
+	{
+		ASSERT_HELPER(structureIds[i - 1] != structureIds[i], location_description, function, "CHECK_STRUCTURE: Duplicate structure ID %u!!!", structureIds[i]);
+		if (structureIds[i - 1] == structureIds[i])
+		{
+			++error;
+			syncDebug("dump desynch logs = %d\n", selectedPlayer);
+		}
+		if (error > 1000)
+			*(int *)0=0;  // Crash.
 	}
 }

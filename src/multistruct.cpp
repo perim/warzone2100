@@ -58,6 +58,8 @@ BOOL SendBuildFinished(STRUCTURE *psStruct)
 	uint8_t player = psStruct->player;
 	ASSERT( player < MAX_PLAYERS, "invalid player %u", player);
 
+CHECK_STRUCTURE(psStruct);
+
 	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_BUILDFINISHED);
 		NETuint32_t(&psStruct->id);		// ID of building
 
@@ -99,6 +101,7 @@ BOOL recvBuildFinished(NETQUEUE queue)
 			buildingComplete(psStruct);
 		}
 		debug(LOG_SYNC, "Created normal building %u for player %u", psStruct->id, player);
+CHECK_STRUCTURE(psStruct);
 		return true;
 	}
 
@@ -115,6 +118,7 @@ BOOL recvBuildFinished(NETQUEUE queue)
 		if (asStructureStats[typeindex].type == psStruct->pStructureType->type)
 		{
 			// Correct type, correct location, just rename the id's to sync it.. (urgh)
+printf("Changed %d -> %d!!\n", psStruct->id, structId);
 			psStruct->id = structId;
 			psStruct->status = SS_BUILT;
 			buildingComplete(psStruct);
@@ -122,6 +126,7 @@ BOOL recvBuildFinished(NETQUEUE queue)
 #if defined (DEBUG)
 			NETlogEntry("structure id modified", SYNC_FLAG, player);
 #endif
+CHECK_STRUCTURE(psStruct);
 			return true;
 		}
 	}
