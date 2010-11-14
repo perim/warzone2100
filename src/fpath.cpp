@@ -126,7 +126,7 @@ static int fpathResultQueueLength(void)
 	return count;
 }
 
-
+#include <unistd.h>
 /** This runs in a separate thread */
 static int fpathThreadFunc(WZ_DECL_UNUSED void *data)
 {
@@ -178,6 +178,7 @@ static int fpathThreadFunc(WZ_DECL_UNUSED void *data)
 		memset(&result, 0, sizeof(result));
 		result.sMove.asPath = NULL;
 		fpathExecute(&job, &result);
+if (rand()%100 == 0) usleep(150);
 
 		wzMutexLock(fpathMutex);
 
