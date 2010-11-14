@@ -203,7 +203,6 @@ uint32_t generateSynchronisedObjectId(void)
 	// Generate odd ID for synchronized objects
 	uint32_t ret = synchObjID++*2 + 1;
 	syncDebug("New objectId = %u", ret);
-printf("New objectId = %u\n", ret);
 	return ret;
 }
 
