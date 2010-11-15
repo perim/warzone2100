@@ -1835,15 +1835,19 @@ syncDebug("Df");
 		}
 		break;
 	case DACTION_BUILD:
+syncDebugDroid(psDroid, '!');
 		if (!psDroid->psTarStats)
 		{
+syncDebugDroid(psDroid, '@');
 			psDroid->action = DACTION_NONE;
 			break;
 		}
+syncDebugDroid(psDroid, '#');
 		if (DROID_STOPPED(psDroid) &&
 			!actionReachedBuildPos(psDroid,
 						(SDWORD)psDroid->orderX,(SDWORD)psDroid->orderY, psDroid->psTarStats))
 		{
+syncDebugDroid(psDroid, '$');
 			objTrace(psDroid->id, "DACTION_BUILD: Starting to drive toward construction site");
 			moveDroidToNoFormation(psDroid, psDroid->orderX, psDroid->orderY);
 		}
@@ -1853,19 +1857,25 @@ syncDebug("Df");
 				actionReachedBuildPos(psDroid,
 						(SDWORD)psDroid->orderX,(SDWORD)psDroid->orderY, psDroid->psTarStats))
 		{
+syncDebugDroid(psDroid, '%');
 			objTrace(psDroid->id, "DACTION_BUILD: Stopped - at construction site");
 			moveStopDroid(psDroid);
 		}
+syncDebugDroid(psDroid, '^');
 		if (psDroid->action == DACTION_SULK)
 		{
+syncDebugDroid(psDroid, '&');
 			objTrace(psDroid->id, "Failed to go to objective, aborting build action");
 			psDroid->action = DACTION_NONE;
 			break;
 		}
+syncDebugDroid(psDroid, '*');
 		if (droidUpdateBuild(psDroid))
 		{
+syncDebugDroid(psDroid, '(');
 			actionTargetTurret((BASE_OBJECT*)psDroid, psDroid->psActionTarget[0], &psDroid->asWeaps[0]);
 		}
+syncDebugDroid(psDroid, ')');
 		break;
 	case DACTION_MOVETODEMOLISH:
 	case DACTION_MOVETOREPAIR:
@@ -2643,6 +2653,7 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 		ASSERT((psDroid->psTarget != NULL) && (psDroid->psTarget->type == OBJ_STRUCTURE),
 			"invalid target for demolish order" );
 		psDroid->psTarStats = (BASE_STATS *)((STRUCTURE *)psDroid->psTarget)->pStructureType;
+syncDebug("psTarStatsA = %c\n", psDroid->psTarStats? "!" : "?");
 		setDroidActionTarget(psDroid, psAction->psObj, 0);
 		moveDroidTo(psDroid, psAction->x, psAction->y);
 		break;
@@ -2657,6 +2668,7 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 		ASSERT((psDroid->psActionTarget[0] != NULL) && (psDroid->psActionTarget[0]->type == OBJ_STRUCTURE),
 			"invalid target for demolish order" );
 		psDroid->psTarStats = (BASE_STATS *)((STRUCTURE *)psDroid->psActionTarget[0])->pStructureType;
+syncDebug("psTarStatsB = %c\n", psDroid->psTarStats? "!" : "?");
 		if (secondaryGetState(psDroid, DSO_HALTTYPE) == DSS_HALT_HOLD &&
 		    (psDroid->order == DORDER_NONE || psDroid->order == DORDER_TEMP_HOLD))
 		{
@@ -2762,6 +2774,7 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 		ASSERT( (psDroid->psTarget != NULL) && (psDroid->psTarget->type == OBJ_STRUCTURE),
 			"invalid target for restore order" );
 		psDroid->psTarStats = (BASE_STATS *)((STRUCTURE *)psDroid->psTarget)->pStructureType;
+syncDebug("psTarStatsC = %c\n", psDroid->psTarStats? "!" : "?");
 		setDroidActionTarget(psDroid, psAction->psObj, 0);
 		moveDroidTo(psDroid, psAction->x, psAction->y);
 		break;
@@ -2774,6 +2787,7 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 		ASSERT( (psDroid->psTarget != NULL) && (psDroid->psTarget->type == OBJ_FEATURE),
 			"invalid target for demolish order" );
 		psDroid->psTarStats = (BASE_STATS *)((FEATURE *)psDroid->psTarget)->psStats;
+syncDebug("psTarStatsD = %c\n", psDroid->psTarStats? "!" : "?");
 		setDroidActionTarget(psDroid, psDroid->psTarget, 0);
 		moveDroidTo(psDroid, psAction->x, psAction->y);
 		break;

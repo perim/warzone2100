@@ -702,7 +702,7 @@ void _syncDebugDroid(const char *function, DROID *psDroid, char ch)
 		actTarLen += sprintf(actTar + actTarLen, "_%u", psDroid->psActionTarget[i]? psDroid->psActionTarget[i]->id : 0);
 	}
 
-	_syncDebug(function, "%c droid%d = p%d;pos(%d.%d,%d.%d,%d),rot(%d,%d,%d),ord%d(%d,%d)^%d,act%d%s,so%X,bp%d,sMove(st%d,spd%d,mdir%d,path%d/%d,src(%d,%d),tar(%d,%d),dst(%d,%d),bump(%d,%d,%d,%d,(%d,%d),%d)),exp%u, power = %"PRId64"", ch,
+	_syncDebug(function, "%c droid%d = p%d;pos(%d.%d,%d.%d,%d),rot(%d,%d,%d),ord%d(%d,%d)^%d,act%d%s,so%X,bp%d,sMove(st%d,spd%d,mdir%d,path%d/%d,src(%d,%d),tar(%d,%d),dst(%d,%d),bump(%d,%d,%d,%d,(%d,%d),%d)),exp%u, power = %"PRId64" MEOW%c", ch,
 	          psDroid->id,
 
 	          psDroid->player,
@@ -719,7 +719,9 @@ void _syncDebugDroid(const char *function, DROID *psDroid, char ch)
 	          psDroid->sMove.bumpDir, psDroid->sMove.bumpTime, psDroid->sMove.lastBump, psDroid->sMove.pauseTime, psDroid->sMove.bumpX, psDroid->sMove.bumpY, psDroid->sMove.shuffleStart,
 	          psDroid->experience,
 
-	          getPrecisePower(psDroid->player));
+	          getPrecisePower(psDroid->player),
+
+	          psDroid->psTarStats? '!' : '?');
 }
 
 /* The main update routine for all droids */
@@ -1246,6 +1248,7 @@ BOOL droidUpdateClearing( DROID *psDroid )
 
 		/* reset target stats */
 		psDroid->psTarStats = NULL;
+syncDebug("psTarStatsG = %c\n", psDroid->psTarStats? "!" : "?");
 
 		CHECK_DROID(psDroid);
 
