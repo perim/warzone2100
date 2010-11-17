@@ -2653,7 +2653,7 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 		ASSERT((psDroid->psTarget != NULL) && (psDroid->psTarget->type == OBJ_STRUCTURE),
 			"invalid target for demolish order" );
 		psDroid->psTarStats = (BASE_STATS *)((STRUCTURE *)psDroid->psTarget)->pStructureType;
-syncDebug("psTarStatsA = %c\n", psDroid->psTarStats? "!" : "?");
+syncDebug("psTarStatsA = %c\n", psDroid->psTarStats? '!' : '?');
 		setDroidActionTarget(psDroid, psAction->psObj, 0);
 		moveDroidTo(psDroid, psAction->x, psAction->y);
 		break;
@@ -2668,7 +2668,7 @@ syncDebug("psTarStatsA = %c\n", psDroid->psTarStats? "!" : "?");
 		ASSERT((psDroid->psActionTarget[0] != NULL) && (psDroid->psActionTarget[0]->type == OBJ_STRUCTURE),
 			"invalid target for demolish order" );
 		psDroid->psTarStats = (BASE_STATS *)((STRUCTURE *)psDroid->psActionTarget[0])->pStructureType;
-syncDebug("psTarStatsB = %c\n", psDroid->psTarStats? "!" : "?");
+syncDebug("psTarStatsB = %c\n", psDroid->psTarStats? '!' : '?');
 		if (secondaryGetState(psDroid, DSO_HALTTYPE) == DSS_HALT_HOLD &&
 		    (psDroid->order == DORDER_NONE || psDroid->order == DORDER_TEMP_HOLD))
 		{
@@ -2774,7 +2774,7 @@ syncDebug("psTarStatsB = %c\n", psDroid->psTarStats? "!" : "?");
 		ASSERT( (psDroid->psTarget != NULL) && (psDroid->psTarget->type == OBJ_STRUCTURE),
 			"invalid target for restore order" );
 		psDroid->psTarStats = (BASE_STATS *)((STRUCTURE *)psDroid->psTarget)->pStructureType;
-syncDebug("psTarStatsC = %c\n", psDroid->psTarStats? "!" : "?");
+syncDebug("psTarStatsC = %c\n", psDroid->psTarStats? '!' : '?');
 		setDroidActionTarget(psDroid, psAction->psObj, 0);
 		moveDroidTo(psDroid, psAction->x, psAction->y);
 		break;
@@ -2787,7 +2787,7 @@ syncDebug("psTarStatsC = %c\n", psDroid->psTarStats? "!" : "?");
 		ASSERT( (psDroid->psTarget != NULL) && (psDroid->psTarget->type == OBJ_FEATURE),
 			"invalid target for demolish order" );
 		psDroid->psTarStats = (BASE_STATS *)((FEATURE *)psDroid->psTarget)->psStats;
-syncDebug("psTarStatsD = %c\n", psDroid->psTarStats? "!" : "?");
+syncDebug("psTarStatsD = %c\n", psDroid->psTarStats? '!' : '?');
 		setDroidActionTarget(psDroid, psDroid->psTarget, 0);
 		moveDroidTo(psDroid, psAction->x, psAction->y);
 		break;

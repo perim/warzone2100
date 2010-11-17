@@ -1248,7 +1248,7 @@ BOOL droidUpdateClearing( DROID *psDroid )
 
 		/* reset target stats */
 		psDroid->psTarStats = NULL;
-syncDebug("psTarStatsG = %c\n", psDroid->psTarStats? "!" : "?");
+syncDebug("psTarStatsG = %c\n", psDroid->psTarStats? '!' : '?');
 
 		CHECK_DROID(psDroid);
 

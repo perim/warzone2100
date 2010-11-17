@@ -374,7 +374,7 @@ void orderUpdateDroid(DROID *psDroid)
 			psDroid->order = DORDER_NONE;
 			setDroidTarget(psDroid, NULL);
 			psDroid->psTarStats = NULL;
-syncDebug("psTarStatsH = %c\n", psDroid->psTarStats? "!" : "?");
+syncDebug("psTarStatsH = %c\n", psDroid->psTarStats? '!' : '?');
 		}
 		break;
 	case DORDER_TRANSPORTOUT:
@@ -407,7 +407,7 @@ syncDebug("psTarStatsH = %c\n", psDroid->psTarStats? "!" : "?");
 			    psDroid->order = DORDER_NONE;
 				setDroidTarget(psDroid, NULL);
 			    psDroid->psTarStats = NULL;
-syncDebug("psTarStatsI = %c\n", psDroid->psTarStats? "!" : "?");
+syncDebug("psTarStatsI = %c\n", psDroid->psTarStats? '!' : '?');
             }
 		}
 		break;
@@ -419,7 +419,7 @@ syncDebug("psTarStatsI = %c\n", psDroid->psTarStats? "!" : "?");
 			psDroid->order = DORDER_NONE;
 			setDroidTarget(psDroid, NULL);
 			psDroid->psTarStats = NULL;
-syncDebug("psTarStatsJ = %c\n", psDroid->psTarStats? "!" : "?");
+syncDebug("psTarStatsJ = %c\n", psDroid->psTarStats? '!' : '?');
 
 //FFS! You only wan't to do this if the droid being tracked IS the transporter! Not all the time!
 // What about if your happily playing the game and tracking a droid, and re-enforcements come in!
@@ -460,7 +460,7 @@ syncDebug("psTarStatsJ = %c\n", psDroid->psTarStats? "!" : "?");
 			psDroid->order = DORDER_NONE;
 			setDroidTarget(psDroid, NULL);
 			psDroid->psTarStats = NULL;
-syncDebug("psTarStatsM = %c\n", psDroid->psTarStats? "!" : "?");
+syncDebug("psTarStatsM = %c\n", psDroid->psTarStats? '!' : '?');
 		}
 		break;
 	case DORDER_RECOVER:
@@ -865,7 +865,7 @@ syncDebug("psTarStatsM = %c\n", psDroid->psTarStats? "!" : "?");
 					orderDroid(psDroid, DORDER_STOP, ModeImmediate);
 					setDroidTarget(psDroid, NULL);
 					psDroid->psTarStats = NULL;
-syncDebug("psTarStatsN = %c\n", psDroid->psTarStats? "!" : "?");
+syncDebug("psTarStatsN = %c\n", psDroid->psTarStats? '!' : '?');
 					secondarySetState(psDroid, DSO_RETURN_TO_LOC, DSS_NONE);
 
 					/* We must add the droid to the transporter only *after*
@@ -990,7 +990,7 @@ syncDebug("psTarStatsN = %c\n", psDroid->psTarStats? "!" : "?");
 				psDroid->order = DORDER_NONE;
 				setDroidTarget(psDroid, NULL);
 				psDroid->psTarStats = NULL;
-syncDebug("psTarStatsO = %c\n", psDroid->psTarStats? "!" : "?");
+syncDebug("psTarStatsO = %c\n", psDroid->psTarStats? '!' : '?');
 				break;
 			}
 
@@ -1548,7 +1548,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		psDroid->order = DORDER_NONE;
 		setDroidTarget(psDroid, NULL);
 		psDroid->psTarStats = NULL;
-syncDebug("psTarStatsP = %c\n", psDroid->psTarStats? "!" : "?");
+syncDebug("psTarStatsP = %c\n", psDroid->psTarStats? '!' : '?');
 		psDroid->orderX = 0;
 		psDroid->orderY = 0;
 		psDroid->orderX2 = 0;
