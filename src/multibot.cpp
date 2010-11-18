@@ -465,11 +465,14 @@ BOOL recvDroid(NETQUEUE queue)
 
 	// Create that droid on this machine.
 	psDroid = reallyBuildDroid(pT, pos.x, pos.y, player, false);
+syncDebug("0rot.pitch = %d", psDroid->rot.pitch);
 
 	// If we were able to build the droid set it up
 	if (psDroid)
 	{
 		psDroid->id = id;
+syncDebugDroid(psDroid, '~');
+syncDebug("!rot.pitch = %d", psDroid->rot.pitch);
 		addDroid(psDroid, apsDroidLists);
 
 		if (haveInitialOrders)

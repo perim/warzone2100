@@ -2531,6 +2531,7 @@ DROID *reallyBuildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD pl
 	}
 
 	droidSetBits(pTemplate,psDroid);
+syncDebug("1rot.pitch = %d", psDroid->rot.pitch);
 
 	//calculate the droids total weight
 	psDroid->weight = calcDroidWeight(pTemplate);
@@ -2538,7 +2539,9 @@ DROID *reallyBuildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD pl
 	// Initialise the movement stuff
 	psDroid->baseSpeed = calcDroidBaseSpeed(pTemplate, psDroid->weight, (UBYTE)player);
 
+syncDebug("2rot.pitch = %d", psDroid->rot.pitch);
 	initDroidMovement(psDroid);
+syncDebug("3rot.pitch = %d", psDroid->rot.pitch);
 
 	// it was never drawn before
 	psDroid->sDisplay.frameNumber = 0;
@@ -2548,6 +2551,7 @@ DROID *reallyBuildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD pl
 	objEcmCache((BASE_OBJECT *)psDroid, asECMStats + pTemplate->asParts[COMP_ECM]);
 	psDroid->body = calcTemplateBody(pTemplate, (UBYTE)player);  // Redundant? (Is set in droidSetBits, too.)
 	psDroid->originalBody = psDroid->body;  // Redundant? (Is set in droidSetBits, too.)
+syncDebug("4rot.pitch = %d", psDroid->rot.pitch);
 
 	if (cyborgDroid(psDroid))
 	{
@@ -2571,6 +2575,7 @@ DROID *reallyBuildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD pl
 			}
 		}
 	}
+syncDebug("5rot.pitch = %d", psDroid->rot.pitch);
 
 	//init the resistance to indicate no EW performed on this droid
 	psDroid->resistance = ACTION_START_TIME;
@@ -2589,18 +2594,22 @@ DROID *reallyBuildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD pl
 	/* Set droid's initial illumination */
 	psDroid->illumination = UBYTE_MAX;
 	psDroid->sDisplay.imd = BODY_IMD(psDroid, psDroid->player);
+syncDebug("6rot.pitch = %d, ? = %d", psDroid->rot.pitch, onMission);
 
 	//don't worry if not on homebase cos not being drawn yet
 	if (!onMission)
 	{
+syncDebug("6rot.pitch = %d, droidType = %d", psDroid->rot.pitch, psDroid->droidType);
 		/* People always stand upright */
 		if(psDroid->droidType != DROID_PERSON)
 		{
 			updateDroidOrientation(psDroid);
 		}
+syncDebug("6½rot.pitch = %d", psDroid->rot.pitch);
 		visTilesUpdate((BASE_OBJECT *)psDroid);
  		clustNewDroid(psDroid);
 	}
+syncDebug("7rot.pitch = %d", psDroid->rot.pitch);
 
 	/* transporter-specific stuff */
 	if (psDroid->droidType == DROID_TRANSPORTER)
@@ -2617,11 +2626,13 @@ DROID *reallyBuildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD pl
 		/* reset halt secondary order from guard to hold */
 		secondarySetState( psDroid, DSO_HALTTYPE, DSS_HALT_HOLD );
 	}
+syncDebug("8rot.pitch = %d", psDroid->rot.pitch);
 
 	if(player == selectedPlayer)
 	{
 		scoreUpdateVar(WD_UNITS_BUILT);
 	}
+syncDebug("9rot.pitch = %d", psDroid->rot.pitch);
 
 	return psDroid;
 }

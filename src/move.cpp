@@ -494,6 +494,7 @@ void updateDroidOrientation(DROID *psDroid)
 	if(psDroid->droidType == DROID_PERSON || cyborgDroid(psDroid) || psDroid->droidType == DROID_TRANSPORTER
 		|| isFlying(psDroid))
 	{
+syncDebug("RETURN");
 		/* The ground doesn't affect the pitch/roll of these droids*/
 		return;
 	}
@@ -506,14 +507,18 @@ void updateDroidOrientation(DROID *psDroid)
 	hx0 = map_Height(MAX(0, psDroid->pos.x - d), psDroid->pos.y);
 	hy1 = map_Height(psDroid->pos.x, psDroid->pos.y + d);
 	hy0 = map_Height(psDroid->pos.x, MAX(0, psDroid->pos.y - d));
+syncDebug("aHUH %d %d %d %d, (%d, %d, %d)  --  %d", hx1, hx0, hy1, hy0, psDroid->pos.x, psDroid->pos.y, psDroid->pos.z, psDroid->rot.pitch);
 
 	//update height in case were in the bottom of a trough
 	psDroid->pos.z = MAX(psDroid->pos.z, (hx0 + hx1)/2);
+syncDebug("bHUH %d %d %d %d, (%d, %d, %d)  --  %d", hx1, hx0, hy1, hy0, psDroid->pos.x, psDroid->pos.y, psDroid->pos.z, psDroid->rot.pitch);
 	psDroid->pos.z = MAX(psDroid->pos.z, (hy0 + hy1)/2);
+syncDebug("cHUH %d %d %d %d, (%d, %d, %d)  --  %d", hx1, hx0, hy1, hy0, psDroid->pos.x, psDroid->pos.y, psDroid->pos.z, psDroid->rot.pitch);
 
 	// Vector of length 65536 pointing in direction droid is facing.
 	vX = iSin(psDroid->rot.direction);
 	vY = iCos(psDroid->rot.direction);
+syncDebug("dHUH %d %d %d %d, (%d, %d, %d), (%d, %d)  --  %d", hx1, hx0, hy1, hy0, psDroid->pos.x, psDroid->pos.y, psDroid->pos.z, vX, vY, psDroid->rot.pitch);
 
 	// Calculate pitch of ground.
 	dzdx = hx1 - hx0;                                    // 2*d*∂z(x, y)/∂x       of ground
@@ -525,6 +530,7 @@ void updateDroidOrientation(DROID *psDroid)
 
 	// Limit the rate the front comes down to simulate momentum
 	pitchLimit = gameTimeAdjustedIncrement(DEG(PITCH_LIMIT));
+syncDebug("eHUH %d %d %d %d, (%d, %d, %d), (%d, %d), %d, %d, %d, %d, %d, %d  --  %d", hx1, hx0, hy1, hy0, psDroid->pos.x, psDroid->pos.y, psDroid->pos.z, vX, vY, dzdx, dzdy, dzdv, newPitch, deltaPitch, pitchLimit, psDroid->rot.pitch);
 	deltaPitch = MAX(deltaPitch, -pitchLimit);
 
 	// Update pitch.
@@ -532,7 +538,9 @@ void updateDroidOrientation(DROID *psDroid)
 
 	// Calculate and update roll of ground (not taking pitch into account, but good enough).
 	dzdw = dzdx * vY - dzdy * vX;				// 2*d*∂z(x, y)/∂w << 16 of ground, where w is at right angles to the direction the droid is facing.
+syncDebug("eHUH %d %d %d %d, (%d, %d, %d), (%d, %d), %d, %d, %d, %d, %d, %d, %d  --  %d", hx1, hx0, hy1, hy0, psDroid->pos.x, psDroid->pos.y, psDroid->pos.z, vX, vY, dzdx, dzdy, dzdv, newPitch, deltaPitch, pitchLimit, dzdw, psDroid->rot.pitch);
 	psDroid->rot.roll = iAtan2(dzdw, (2*d) << 16);		// pitch = atan(∂z(x, y)/∂w)/2π << 16
+syncDebug("eHUH %d %d %d %d, (%d, %d, %d), (%d, %d), %d, %d, %d, %d, %d, %d, %d, %d  --  %d", hx1, hx0, hy1, hy0, psDroid->pos.x, psDroid->pos.y, psDroid->pos.z, vX, vY, dzdx, dzdy, dzdv, newPitch, deltaPitch, pitchLimit, dzdw, psDroid->rot.roll, psDroid->rot.pitch);
 }
 
 
