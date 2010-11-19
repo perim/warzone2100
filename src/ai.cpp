@@ -33,6 +33,7 @@
 #include "mapgrid.h"
 #include "map.h"
 #include "projectile.h"
+#include "lib/netplay/netplay.h"
 
 #define FRUSTRATED_TIME (1000 * 5)
 
@@ -508,14 +509,17 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 	UWORD				tmpOrigin = ORIGIN_UNKNOWN;
 
 	// reset origin
+syncDebug("Line %d", __LINE__);
 	if (targetOrigin)
 	{
+syncDebug("Line %d", __LINE__);
 		*targetOrigin = ORIGIN_UNKNOWN;
 	}
 
 	//don't bother looking if empty vtol droid
 	if (vtolEmpty(psDroid))
 	{
+syncDebug("Line %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0);
 		return failure;
 	}
 
@@ -523,6 +527,7 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 	// The ai orders a non-combat droid to patrol = crash without it...
 	if ((psDroid->asWeaps[0].nStat == 0 || psDroid->numWeaps == 0) && psDroid->droidType != DROID_SENSOR)
 	{
+syncDebug("Line %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0);
 		return failure;
 	}
 	// Check if we have a CB target to begin with
@@ -532,6 +537,7 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 
 		bestTarget = aiSearchSensorTargets((BASE_OBJECT *)psDroid, weapon_slot, psWStats, &tmpOrigin);
 		bestMod = targetAttackWeight(bestTarget, (BASE_OBJECT *)psDroid, weapon_slot);
+syncDebug("Line %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0);
 	}
 
 	weaponEffect = ((WEAPON_STATS *)(asWeaponStats + psDroid->asWeaps[weapon_slot].nStat))->weaponEffect;
@@ -544,34 +550,42 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 	{
 		friendlyObj = NULL;
 		targetInQuestion = iter;
+syncDebug("Line %d, %d, %d, %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0, targetInQuestion->player, psDroid->player, targetInQuestion->type);
 
 		/* This is a friendly unit, check if we can reuse its target */
 		if(aiCheckAlliances(targetInQuestion->player,psDroid->player))
 		{
 			friendlyObj = targetInQuestion;
 			targetInQuestion = NULL;
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 
 			/* Can we see what it is doing? */
 			if(friendlyObj->visible[psDroid->player])
 			{
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 				if(friendlyObj->type == OBJ_DROID)
 				{
 					DROID	*friendlyDroid = (DROID *)friendlyObj;
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 
 					/* See if friendly droid has a target */
 					tempTarget = friendlyDroid->psActionTarget[0];
 					if(tempTarget && !aiObjectIsProbablyDoomed(tempTarget))
 					{
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 						//make sure a weapon droid is targeting it
 						if(friendlyDroid->numWeaps > 0)
 						{
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 							// make sure this target wasn't assigned explicitly to this droid
 							if(friendlyDroid->order != DORDER_ATTACK)
 							{
 								// make sure target is near enough
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 								if (aiDroidHasRange(psDroid, tempTarget, weapon_slot))
 								{
 									targetInQuestion = tempTarget;		//consider this target
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 								}
 							}
 						}
@@ -579,10 +593,12 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 				}
 				else if(friendlyObj->type == OBJ_STRUCTURE)
 				{
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 					tempTarget = ((STRUCTURE*)friendlyObj)->psTarget[0];
 					if (tempTarget && !aiObjectIsProbablyDoomed(tempTarget) && aiDroidHasRange(psDroid, tempTarget, weapon_slot))
 					{
 						targetInQuestion = tempTarget;
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 					}
 				}
 			}
@@ -596,8 +612,10 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 		    && validTarget((BASE_OBJECT *)psDroid, targetInQuestion, weapon_slot)
 		    && aiDroidHasRange(psDroid, targetInQuestion, weapon_slot))
 		{
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 			if (targetInQuestion->type == OBJ_DROID)
 			{
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 				// in multiPlayer - don't attack Transporters with EW
 				if (bMultiPlayer)
 				{
@@ -608,6 +626,7 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 					{
 						//only a valid target if NOT a transporter
 						psTarget = targetInQuestion;
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 					}
 				}
 				else
@@ -618,6 +637,7 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 			else if (targetInQuestion->type == OBJ_STRUCTURE)
 			{
 				STRUCTURE *psStruct = (STRUCTURE *)targetInQuestion;
+syncDebug("Line %d, %d, %d, %d, nStat = %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0, psStruct->asWeaps[0].nStat);
 
 				if (electronic)
 				{
@@ -625,17 +645,20 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 					if (validStructResistance((STRUCTURE *)targetInQuestion))
 					{
 						psTarget = targetInQuestion;
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 					}
 				}
 				else if (psStruct->asWeaps[0].nStat > 0)
 				{
 					// structure with weapons - go for this
 					psTarget = targetInQuestion;
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 				}
 				else if ((psStruct->pStructureType->type != REF_WALL && psStruct->pStructureType->type != REF_WALLCORNER)
 				         || driveModeActive() || (bMultiPlayer && !isHumanPlayer(psDroid->player)))
 				{
 					psTarget = targetInQuestion;
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 				}
 			}
 			else if (targetInQuestion->type == OBJ_FEATURE
@@ -644,16 +667,19 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 			         && !(game.scavengers && psDroid->player == 7))			// hack to avoid scavs blowing up their nice feature walls
 			{
 				psTarget = targetInQuestion;
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0);
 			}
 
 			/* Check if our weapon is most effective against this object */
 			if(psTarget != NULL && psTarget == targetInQuestion)		//was assigned?
 			{
 				newMod = targetAttackWeight(psTarget, (BASE_OBJECT *)psDroid, weapon_slot);
+syncDebug("Line %d, %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0, newMod);
 
 				/* Remember this one if it's our best target so far */
 				if( newMod >= 0 && (newMod > bestMod || bestTarget == NULL))
 				{
+syncDebug("Line %d, %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetInQuestion? targetInQuestion->id : 0, newMod);
 					bestMod = newMod;
 					tmpOrigin = ORIGIN_ALLY;
 					bestTarget = psTarget;
@@ -668,26 +694,32 @@ SDWORD aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot
 	{
 		ASSERT(!bestTarget->died, "aiBestNearestTarget: AI gave us a target that is already dead.");
 		targetStructure = visGetBlockingWall((BASE_OBJECT *)psDroid, bestTarget);
+syncDebug("Line %d, %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0, targetStructure? targetStructure->id : 0);
 
 		/* See if target is blocked by a wall; only affects direct weapons */
 		if (proj_Direct(asWeaponStats + psDroid->asWeaps[weapon_slot].nStat)
 		 && targetStructure)
 		{
+syncDebug("Line %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0);
 			//are we any good against walls?
 			if(asStructStrengthModifier[weaponEffect][targetStructure->pStructureType->strength] >= 100)		//can attack atleast with default strength
 			{
 				bestTarget = (BASE_OBJECT *)targetStructure;			//attack wall
+syncDebug("Line %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0);
 			}
 		}
 
 		if (targetOrigin)
 		{
 			*targetOrigin = tmpOrigin;
+syncDebug("Line %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0);
 		}
 		*ppsObj = bestTarget;
+syncDebug("Line %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0);
 		return bestMod;
 	}
 
+syncDebug("Line %d, %d, %d", __LINE__, bestMod, bestTarget? bestTarget->id : 0);
 	return failure;
 }
 
@@ -769,8 +801,10 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 	SDWORD			curTargetWeight=-1;
 	UWORD 			tmpOrigin = ORIGIN_UNKNOWN;
 
+syncDebug("Line %d", __LINE__);
 	if (targetOrigin)
 	{
+syncDebug("Line %d", __LINE__);
 		*targetOrigin = ORIGIN_UNKNOWN;
 	}
 		
@@ -780,6 +814,7 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 	case OBJ_DROID:
 		if (((DROID *)psObj)->asWeaps[weapon_slot].nStat == 0)
 		{
+syncDebug("Line %d", __LINE__);
 			return false;
 		}
 
@@ -787,6 +822,7 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 			((DROID *)psObj)->droidType != DROID_SENSOR)
 		{
 			// Can't attack without a weapon
+syncDebug("Line %d", __LINE__);
 			return false;
 		}
 		break;
@@ -794,6 +830,7 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 		if (((STRUCTURE *)psObj)->numWeaps == 0 || ((STRUCTURE *)psObj)->asWeaps[0].nStat == 0)
 		{
 			// Can't attack without a weapon
+syncDebug("Line %d", __LINE__);
 			return false;
 		}
 		break;
@@ -801,6 +838,7 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 		break;
 	}
 
+syncDebug("Line %d", __LINE__);
 	/* See if there is a something in range */
 	if (psObj->type == OBJ_DROID)
 	{
@@ -808,12 +846,14 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 
 		/* find a new target */
 		int newTargetWeight = aiBestNearestTarget((DROID *)psObj, &psTarget, weapon_slot, NULL);
+syncDebug("Line %d, %d %d", __LINE__, newTargetWeight, psTarget? psTarget->id : 0);
 
 		/* Calculate weight of the current target if updating; but take care not to target
 		 * ourselves... */
 		if (bUpdateTarget && psCurrTarget != psObj)
 		{
 			curTargetWeight = targetAttackWeight(psCurrTarget, psObj, weapon_slot);
+syncDebug("Line %d", __LINE__);
 		}
 
 		if (newTargetWeight >= 0		// found a new target
@@ -824,6 +864,7 @@ BOOL aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 		    && (aiDroidHasRange((DROID *)psObj, psTarget, weapon_slot) || (secondaryGetState((DROID *)psObj, DSO_HALTTYPE) != DSS_HALT_HOLD)))
 		{
 			ASSERT(!isDead(psTarget), "aiChooseTarget: Droid found a dead target!");
+syncDebug("Line %d", __LINE__);
 			*ppsTarget = psTarget;
 			return true;
 		}
@@ -1046,11 +1087,14 @@ static BOOL updateAttackTarget(BASE_OBJECT * psAttacker, SDWORD weapon_slot)
 	BASE_OBJECT		*psBetterTarget=NULL;
 	UWORD			tmpOrigin = ORIGIN_UNKNOWN;
 
+syncDebug("Line %d", __LINE__);
 	if(aiChooseTarget(psAttacker, &psBetterTarget, weapon_slot, true, &tmpOrigin))	//update target
 	{
+syncDebug("Line %d, %d", __LINE__, psBetterTarget->id);
 		if(psAttacker->type == OBJ_DROID)
 		{
 			DROID *psDroid = (DROID *)psAttacker;
+syncDebug("Line %d", __LINE__);
 
 			if( (orderState(psDroid, DORDER_NONE) ||
 				orderState(psDroid, DORDER_GUARD) ||
@@ -1058,10 +1102,12 @@ static BOOL updateAttackTarget(BASE_OBJECT * psAttacker, SDWORD weapon_slot)
 				weapon_slot == 0)	//Watermelon:only primary slot(0) updates affect order
 			{
 				orderDroidObj((DROID *)psAttacker, DORDER_ATTACKTARGET, psBetterTarget, ModeImmediate);
+syncDebug("Line %d", __LINE__);
 			}
 			else	//can't override current order
 			{
 				setDroidActionTarget(psDroid, psBetterTarget, weapon_slot);
+syncDebug("Line %d", __LINE__);
 			}
 		}
 		else if (psAttacker->type == OBJ_STRUCTURE)
@@ -1069,6 +1115,7 @@ static BOOL updateAttackTarget(BASE_OBJECT * psAttacker, SDWORD weapon_slot)
 			STRUCTURE *psBuilding = (STRUCTURE *)psAttacker;
 
 			setStructureTarget(psBuilding, psBetterTarget, weapon_slot, tmpOrigin);
+syncDebug("Line %d", __LINE__);
 		}
 
 		return true;
@@ -1076,7 +1123,6 @@ static BOOL updateAttackTarget(BASE_OBJECT * psAttacker, SDWORD weapon_slot)
 
 	return false;
 }
-#include "lib/netplay/netplay.h"
 
 /* Do the AI for a droid */
 void aiUpdateDroid(DROID *psDroid)
