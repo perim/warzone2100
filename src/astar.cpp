@@ -567,7 +567,7 @@ void fpathSetBlockingMap(PATHJOB *psJob)
 				for (int x = 0; x < mapWidth; ++x)
 			{
 				auxMap ^= ((auxTile(x, y, type.owner)>>bit)&1)*(factor = 3*factor + 1);
-				blockMap ^= ((auxTile(x, y, MAX(0, type.owner - MAX_PLAYERS))>>bit)&1)*(factor = 3*factor + 1);
+				blockMap ^= ((blockTile(x, y, MAX(0, type.owner - MAX_PLAYERS))>>bit)&1)*(factor = 3*factor + 1);
 			}
 			syncDebug("Bit %d = %08X %08X\n", bit, auxMap, blockMap);
 		}

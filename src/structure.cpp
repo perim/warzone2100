@@ -79,6 +79,7 @@
 #include "scriptextern.h"
 #include "keymap.h"
 #include "game.h"
+#include "lib/framework/crc.h"
 
 #include "advvis.h"
 #include "multiplay.h"
@@ -214,6 +215,7 @@ static void auxStructureNonblocking(STRUCTURE *psStructure)
 			auxClearAll(map.x + i, map.y + j, AUXBITS_ANY_BUILDING | AUXBITS_OUR_BUILDING);
 		}
 	}
+	syncDebug("id=%d", psStructure->id);
 }
 
 static void auxStructureBlocking(STRUCTURE *psStructure)
@@ -229,6 +231,7 @@ static void auxStructureBlocking(STRUCTURE *psStructure)
 			auxSetAll(map.x + i, map.y + j, AUXBITS_ANY_BUILDING);
 		}
 	}
+	syncDebug("id=%d,player=%d,pos=(%d,%d),wh=(%d,%d)", psStructure->id, psStructure->player, psStructure->pos.x, psStructure->pos.y, sWidth, sBreadth);
 }
 
 BOOL IsStatExpansionModule(STRUCTURE_STATS *psStats)
@@ -3900,7 +3903,7 @@ void _syncDebugStructure(const char *function, STRUCTURE *psStruct, char ch)
 			break;
 	}
 
-	_syncDebug(function, "%c structure%d = p%d;pos(%d,%d,%d),stat%d,type%d%s%.0d,bld%d,pwr%d,bp%d, power = %"PRId64"", ch,
+	_syncDebug(function, "%c structure%d = p%d;pos(%d,%d,%d),stat%d,type%d%s%.0d,bld%d,pwr%d,bp%d,aux%08X,block%08X, power = %"PRId64"", ch,
 	          psStruct->id,
 
 	          psStruct->player,
@@ -3910,6 +3913,8 @@ void _syncDebugStructure(const char *function, STRUCTURE *psStruct, char ch)
 	          psStruct->currentBuildPts,
 	          psStruct->currentPowerAccrued,
 	          psStruct->body,
+	          ~crcSum(0, psAuxMap[psStruct->player], mapWidth*mapHeight*0),
+	          ~crcSum(0, psBlockMap[0], mapWidth*mapHeight*0),
 
 	          getPrecisePower(psStruct->player));
 }

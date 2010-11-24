@@ -52,6 +52,7 @@
 #include "levels.h"
 #include "scriptfuncs.h"
 #include "lib/framework/wzapp_c.h"
+#include "lib/framework/crc.h"
 
 #define GAME_TICKS_FOR_DANGER (GAME_TICKS_PER_SEC * 2)
 
@@ -1856,9 +1857,12 @@ void mapUpdate()
 		wzSemaphoreWait(dangerDoneSemaphore);
 
 		auxMapRestore(lastDangerPlayer, AUX_DANGERMAP, AUXBITS_THREAT | AUXBITS_AATHREAT | AUXBITS_DANGER);
+syncDebug("auxMapRestore[%d]: %08X", lastDangerPlayer, ~crcSum(0, psAuxMap[lastDangerPlayer], mapWidth*mapHeight));
 		lastDangerPlayer = (lastDangerPlayer + 1 ) % game.maxPlayers;
 		auxMapStore(lastDangerPlayer, AUX_DANGERMAP);
+syncDebug("auxMapStore[%d]: %08X %08X", lastDangerPlayer, ~crcSum(0, psAuxMap[MAX_PLAYERS + AUX_DANGERMAP], mapWidth*mapHeight), ~crcSum(0, psBlockMap[AUX_DANGERMAP], mapWidth*mapHeight));
 		threatUpdate(lastDangerPlayer);
+syncDebug("getPlayerStartPosition(%d) = (%d,%d)", lastDangerPlayer, getPlayerStartPosition(lastDangerPlayer).x, getPlayerStartPosition(lastDangerPlayer).y);
 		wzSemaphorePost(dangerSemaphore);
 	}
 }

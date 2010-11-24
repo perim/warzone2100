@@ -570,6 +570,7 @@ static bool moveBlockingTileCallback(Vector3i pos, int32_t dist, void *data_)
 {
 	BLOCKING_CALLBACK_DATA *data = (BLOCKING_CALLBACK_DATA *)data_;
 	data->blocking |= fpathBlockingTile(map_coord(pos.x), map_coord(pos.y), data->propulsionType);
+syncDebug("fpathBlockingTile(%d, %d, %d) = %d", map_coord(pos.x), map_coord(pos.y), data->propulsionType, data->blocking);
 	return !data->blocking;
 }
 
@@ -593,6 +594,7 @@ static bool moveBestTarget(DROID *psDroid)
 {
 	int positionIndex = psDroid->sMove.Position - 1;
 	int32_t dist = moveDirectPathToWaypoint(psDroid, positionIndex);
+syncDebug("moveDirectPathToWaypoint(%d, %d) = %d", psDroid->id, positionIndex, dist);
 	if (dist >= 0)
 	{
 		// Look ahead in the path.
@@ -605,6 +607,7 @@ static bool moveBestTarget(DROID *psDroid)
 				break;  // Reached end of path.
 			}
 			dist = moveDirectPathToWaypoint(psDroid, positionIndex);
+syncDebug("moveDirectPathToWaypoint(%d, %d) = %d", psDroid->id, positionIndex, dist);
 		}
 		if (dist < 0)
 		{
@@ -618,6 +621,7 @@ static bool moveBestTarget(DROID *psDroid)
 		{
 			--positionIndex;
 			dist = moveDirectPathToWaypoint(psDroid, positionIndex);
+syncDebug("moveDirectPathToWaypoint(%d, %d) = %d", psDroid->id, positionIndex, dist);
 		}
 		if (dist < 0)
 		{
@@ -1305,6 +1309,7 @@ static void moveGetObstacleVector(DROID *psDroid, int32_t *pX, int32_t *pY)
 		if (psObj->type != OBJ_DROID)
 		{
 			// Object wrong type to worry about.
+syncDebug("Skip %d, z", psObj->id);
 			continue;
 		}
 
@@ -1312,6 +1317,7 @@ static void moveGetObstacleVector(DROID *psDroid, int32_t *pX, int32_t *pY)
 		if ( (isVtolDroid(psDroid) && (psObj->type != OBJ_DROID || !isVtolDroid((DROID *)psObj))) ||
 			 (!isVtolDroid(psDroid) && psObj->type == OBJ_DROID && isVtolDroid((DROID *)psObj)) )
 		{
+syncDebug("Skip %d, x", psObj->id);
 			continue;
 		}
 
@@ -1320,6 +1326,7 @@ static void moveGetObstacleVector(DROID *psDroid, int32_t *pX, int32_t *pY)
 			 psObj->player != psDroid->player))
 		{
 			// don't avoid people on the other side - run over them
+syncDebug("Skip %d, c", psObj->id);
 			continue;
 		}
 		xdiff = psObj->pos.x - psDroid->pos.x;
@@ -1327,6 +1334,7 @@ static void moveGetObstacleVector(DROID *psDroid, int32_t *pX, int32_t *pY)
 		if (xdiff * *pX + ydiff * *pY < 0)
 		{
 			// object behind
+syncDebug("Skip %d, v", psObj->id);
 			continue;
 		}
 
@@ -1336,7 +1344,9 @@ static void moveGetObstacleVector(DROID *psDroid, int32_t *pX, int32_t *pY)
 		dirY += ydiff * 65536 / distSq;
 		distTot += distSq;
 		numObst += 1;
+syncDebug("Do %d, dir=(%d,%d),distTot=%d,numObst=%d", psObj->id, dirX, dirY, distTot, numObst);
 	}
+syncDebug("A: dir=(%d,%d),distTot=%d,numObst=%d,*p=(%d,%d)", dirX, dirY, distTot, numObst, *pX, *pY);
 
 	if (dirX != 0 || dirY != 0)
 	{
@@ -1367,6 +1377,7 @@ static void moveGetObstacleVector(DROID *psDroid, int32_t *pX, int32_t *pY)
 
 		*pX = *pX * ratio / 256 + avoidX * ((AVOID_DIST * AVOID_DIST) - ratio) / 65536;
 		*pY = *pY * ratio / 256 + avoidY * ((AVOID_DIST * AVOID_DIST) - ratio) / 65536;
+syncDebug("avoid=(%d,%d),o=(%d,%d),dist=%d,ratio=%d,*p=(%d,%d)", avoidX, avoidY, ox, oy, dist, (int)ratio, *pX, *pY);
 	}
 }
 
@@ -1385,6 +1396,7 @@ static uint16_t moveGetDirection(DROID *psDroid)
 	if (psDroid->droidType != DROID_TRANSPORTER)
 	{
 		moveGetObstacleVector(psDroid, &dest.x, &dest.y);
+syncDebug("moveGetObstacleVector gave (%d,%d)", dest.x, dest.y);
 	}
 
 	return iAtan2(dest);
@@ -1723,31 +1735,43 @@ static void moveUpdateGroundModel(DROID *psDroid, SDWORD speed, uint16_t directi
 
 	// Used to update some kind of weird neighbour list here.
 
+syncDebugDroid(psDroid, '1');
 	moveCheckFinalWaypoint( psDroid, &speed );
+syncDebugDroid(psDroid, '2');
 
 	moveUpdateDroidDirection(psDroid, &speed, direction, TRACKED_SPIN_ANGLE, spinSpeed, turnSpeed, &iDroidDir);
+syncDebugDroid(psDroid, '3');
 
 	fNormalSpeed = moveCalcNormalSpeed(psDroid, speed, iDroidDir, TRACKED_ACCEL, TRACKED_DECEL);
 	fPerpSpeed   = moveCalcPerpSpeed(psDroid, iDroidDir, skidDecel);
+syncDebug("fNor,fPer=%d,%d", fNormalSpeed, fPerpSpeed);
 
 	moveCombineNormalAndPerpSpeeds(psDroid, fNormalSpeed, fPerpSpeed, iDroidDir);
+syncDebugDroid(psDroid, '4');
 	moveGetDroidPosDiffs(psDroid, &dx, &dy);
+syncDebug("d=(%d,%d)", dx, dy);
 	moveCheckSquished(psDroid, dx,dy);
+syncDebugDroid(psDroid, '5');
 	moveCalcDroidSlide(psDroid, &dx, &dy);
+syncDebug("d=(%d,%d)", dx, dy);
 	bx = dx;
 	by = dy;
 	moveCalcBlockingSlide(psDroid, &bx, &by, direction, &slideDir);
+syncDebug("b=(%d,%d)", bx, by);
 	if (bx != dx || by != dy)
 	{
 		moveUpdateDroidDirection(psDroid, &speed, slideDir, TRACKED_SPIN_ANGLE, psDroid->baseSpeed, psDroid->baseSpeed/3, &iDroidDir);
+syncDebugDroid(psDroid, '6');
 		psDroid->rot.direction = iDroidDir;
 	}
 
 	moveUpdateDroidPos(psDroid, bx, by);
+syncDebugDroid(psDroid, '7');
 
 	//set the droid height here so other routines can use it
 	psDroid->pos.z = map_Height(psDroid->pos.x, psDroid->pos.y);//jps 21july96
 	updateDroidOrientation(psDroid);
+syncDebugDroid(psDroid, '8');
 }
 
 /* Update a persons position and speed given target values */
@@ -2021,6 +2045,8 @@ static void moveUpdateCyborgModel(DROID *psDroid, SDWORD moveSpeed, uint16_t mov
 	int32_t				iDist, iDx, iDy, iDz, iDroidZ;
 
 	CHECK_DROID(psDroid);
+syncDebugDroid(psDroid, 'c');
+syncDebug("iMapZ=%d", iMapZ);
 
 	// nothing to do if the droid is stopped
 	if ( moveDroidStopped( psDroid, moveSpeed ) == true )
@@ -2515,6 +2541,7 @@ syncDebugDroid(psDroid, '$');
 	case MOVEPOINTTOPOINT:
 	case MOVEPAUSE:
 		// moving between two way points
+syncDebugDroid(psDroid, '[');
 		if (psDroid->sMove.numPoints == 0)
 		{
 			debug(LOG_WARNING, "No path to follow, but psDroid->sMove.Status = %d", psDroid->sMove.Status);
@@ -2528,22 +2555,28 @@ syncDebugDroid(psDroid, '$');
 		if (psDroid->sMove.numPoints == 0 || !moveBestTarget(psDroid))
 		{
 			// Got stuck somewhere, can't find the path.
+syncDebugDroid(psDroid, ']');
 			moveDroidTo(psDroid, psDroid->sMove.DestinationX, psDroid->sMove.DestinationY);
+syncDebugDroid(psDroid, '{');
 		}
 
 		// See if the target point has been reached
 		if (moveReachedWayPoint(psDroid))
 		{
+syncDebugDroid(psDroid, '}');
 			// Got there - move onto the next waypoint
 			if (!moveNextTarget(psDroid))
 			{
+syncDebugDroid(psDroid, '(');
 				// No more waypoints - finish
 				if ( psPropStats->propulsionType == PROPULSION_TYPE_LIFT )
 				{
+syncDebugDroid(psDroid, ')');
 					psDroid->sMove.Status = MOVEHOVER;
 				}
 				else
 				{
+syncDebugDroid(psDroid, '/');
 					psDroid->sMove.Status = MOVETURN;
 				}
 				objTrace(psDroid->id, "Arrived at destination!");
@@ -2551,6 +2584,7 @@ syncDebugDroid(psDroid, '$');
 			}
 		}
 
+syncDebugDroid(psDroid, '?');
 		moveDir = moveGetDirection(psDroid);
 		moveSpeed = moveCalcDroidSpeed(psDroid);
 
@@ -2575,6 +2609,7 @@ syncDebugDroid(psDroid, '$');
 		{
 			psDroid->sMove.Status = MOVEPOINTTOPOINT;
 		}
+syncDebugDroid(psDroid, '!');
 
 		break;
 	case MOVETURN:
@@ -2618,6 +2653,7 @@ syncDebugDroid(psDroid, '$');
 		ASSERT( false, "moveUpdateUnit: unknown move state" );
 		break;
 	}
+syncDebug("moveDir = %04X, moveSpeed = %d, pos = (%d.%d,%d.%d), tar=(%d,%d)", moveDir, moveSpeed, psDroid->pos.x, psDroid->sMove.eBitX, psDroid->pos.y, psDroid->sMove.eBitY, psDroid->sMove.targetX, psDroid->sMove.targetY);
 
 	// Update the movement model for the droid
 	oldx = psDroid->pos.x;
@@ -2626,18 +2662,22 @@ syncDebugDroid(psDroid, '$');
 	if ( psDroid->droidType == DROID_PERSON )
 	{
 		moveUpdatePersonModel(psDroid, moveSpeed, moveDir);
+syncDebugDroid(psDroid, 'P');
 	}
 	else if (cyborgDroid(psDroid))
 	{
 		moveUpdateCyborgModel(psDroid, moveSpeed, moveDir, oldStatus);
+syncDebugDroid(psDroid, 'C');
 	}
 	else if ( psPropStats->propulsionType == PROPULSION_TYPE_LIFT )
 	{
 		moveUpdateVtolModel(psDroid, moveSpeed, moveDir);
+syncDebugDroid(psDroid, 'V');
 	}
 	else
 	{
 		moveUpdateGroundModel(psDroid, moveSpeed, moveDir);
+syncDebugDroid(psDroid, 'G');
 	}
 
 	if (map_coord(oldx) != map_coord(psDroid->pos.x)
@@ -2648,6 +2688,7 @@ syncDebugDroid(psDroid, '$');
 		// object moved from one tile to next, check to see if droid is near stuff.(oil)
 		checkLocalFeatures(psDroid);
 	}
+syncDebugDroid(psDroid, 'q');
 
 	// See if it's got blocked
 	if ( (psPropStats->propulsionType != PROPULSION_TYPE_LIFT) && moveBlocked(psDroid) )
@@ -2668,12 +2709,14 @@ syncDebugDroid(psDroid, '$');
 //			}
 //		}
 //	}
+syncDebugDroid(psDroid, 'w');
 
 	/* If it's sitting in water then it's got to go with the flow! */
 	if (worldOnMap(psDroid->pos.x, psDroid->pos.y) && terrainType(mapTile(map_coord(psDroid->pos.x), map_coord(psDroid->pos.y))) == TER_WATER)
 	{
 		updateDroidOrientation(psDroid);
 	}
+syncDebugDroid(psDroid, 'e');
 
 	if( (psDroid->inFire && psDroid->droidType != DROID_PERSON) && psDroid->visible[selectedPlayer])
 	{
