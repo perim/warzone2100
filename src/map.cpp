@@ -1107,6 +1107,7 @@ BOOL mapShutdown(void)
 	return true;
 }
 
+extern bool megadebug;
 /// The max height of the terrain and water at the specified world coordinates
 extern int32_t map_Height(int x, int y)
 {
@@ -1148,6 +1149,8 @@ extern int32_t map_Height(int x, int y)
 		}
 	}
 	center /= 4;
+if (megadebug)
+syncDebug("map_Height using (%d,%d),(%d,%d),(%d,%d,%d,%d),%d", tileX, tileY, onTileX, onTileY, height[0][0], height[0][1], height[1][0], height[1][1], center);
 
 	// we have:
 	//   y ->

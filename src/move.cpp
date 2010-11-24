@@ -482,6 +482,7 @@ void moveReallyStopDroid(DROID *psDroid)
 
 #define PITCH_LIMIT 150
 
+bool megadebug = false;
 /* Get pitch and roll from direction and tile data */
 void updateDroidOrientation(DROID *psDroid)
 {
@@ -503,10 +504,25 @@ syncDebug("RETURN");
 	//    hy0
 	// hx0 * hx1      (* = droid)
 	//    hy1
+megadebug=true;
 	hx1 = map_Height(psDroid->pos.x + d, psDroid->pos.y);
 	hx0 = map_Height(MAX(0, psDroid->pos.x - d), psDroid->pos.y);
 	hy1 = map_Height(psDroid->pos.x, psDroid->pos.y + d);
 	hy0 = map_Height(psDroid->pos.x, MAX(0, psDroid->pos.y - d));
+megadebug = false;
+
+if (psDroid->pos.x > 0 && map_coord(psDroid->pos.x) < mapWidth - 1 && psDroid->pos.y > 0 && map_coord(psDroid->pos.y) < mapHeight - 1)
+syncDebug("%d %d %d %d, %d %d %d %d, %d %d",
+map_TileHeight(map_coord(psDroid->pos.x), map_coord(psDroid->pos.y)),
+map_TileHeight(map_coord(psDroid->pos.x+1), map_coord(psDroid->pos.y)),
+map_TileHeight(map_coord(psDroid->pos.x), map_coord(psDroid->pos.y+1)),
+map_TileHeight(map_coord(psDroid->pos.x+1), map_coord(psDroid->pos.y+1)),
+map_WaterHeight(map_coord(psDroid->pos.x), map_coord(psDroid->pos.y)),
+map_WaterHeight(map_coord(psDroid->pos.x+1), map_coord(psDroid->pos.y)),
+map_WaterHeight(map_coord(psDroid->pos.x), map_coord(psDroid->pos.y+1)),
+map_WaterHeight(map_coord(psDroid->pos.x+1), map_coord(psDroid->pos.y+1)),
+mapWidth, mapHeight
+);
 syncDebug("aHUH %d %d %d %d, (%d, %d, %d)  --  %d", hx1, hx0, hy1, hy0, psDroid->pos.x, psDroid->pos.y, psDroid->pos.z, psDroid->rot.pitch);
 
 	//update height in case were in the bottom of a trough
