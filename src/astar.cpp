@@ -560,6 +560,17 @@ void fpathSetBlockingMap(PATHJOB *psJob)
 				checksumDangerMap ^= map[x + y*mapWidth]*(factor = 3*factor + 1);
 			}
 		}
+		for (unsigned bit = 0; bit < 8; ++bit)
+		{
+			uint32_t auxMap = 0, blockMap = 0, factor = 0;
+			for (int y = 0; y < mapHeight; ++y)
+				for (int x = 0; x < mapWidth; ++x)
+			{
+				auxMap ^= ((auxTile(x, y, type.owner)>>bit)&1)*(factor = 3*factor + 1);
+				blockMap ^= ((auxTile(x, y, MAX(0, type.owner - MAX_PLAYERS))>>bit)&1)*(factor = 3*factor + 1);
+			}
+			syncDebug("Bit %d = %08X %08X\n", bit, auxMap, blockMap);
+		}
 		syncDebug("blockingMap(%d,%d,%d,%d) = %08X %08X", gameTime, psJob->propulsion, psJob->owner, psJob->moveType, checksumMap, checksumDangerMap);
 	}
 	else
