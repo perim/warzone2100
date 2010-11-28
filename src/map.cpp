@@ -1702,11 +1702,8 @@ static int dangerThreadFunc(WZ_DECL_UNUSED void *data)
 {
 	while (lastDangerPlayer != -1)
 	{
-if (rand()%4000 == 0) SDL_Delay(2500);
 		dangerFloodFill(lastDangerPlayer);	// Do the actual work
-if (rand()%4000 == 0) SDL_Delay(2500);
 		wzSemaphorePost(dangerDoneSemaphore);   // Signal that we are done
-if (rand()%4000 == 0) SDL_Delay(2500);
 		wzSemaphoreWait(dangerSemaphore);	// Go to sleep until needed.
 	}
 	return 0;
