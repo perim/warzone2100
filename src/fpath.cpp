@@ -590,7 +590,6 @@ FPATH_RETVAL fpathDroidRoute(DROID* psDroid, SDWORD tX, SDWORD tY, FPATH_MOVETYP
 {
 	bool acceptNearest;
 	PROPULSION_STATS *psPropStats = getPropulsionStats(psDroid);
-	int asdf;
 syncDebugDroid(psDroid, '!');
 
 	// override for AI to blast our way through stuff
@@ -662,7 +661,7 @@ syncDebugDroid(psDroid, '!');
 		break;
 	}
 syncDebugDroid(psDroid, '#');
-	asdf = fpathRoute(&psDroid->sMove, psDroid->id, psDroid->pos.x, psDroid->pos.y, tX, tY, psPropStats->propulsionType, 
+	FPATH_RETVAL asdf = fpathRoute(&psDroid->sMove, psDroid->id, psDroid->pos.x, psDroid->pos.y, tX, tY, psPropStats->propulsionType, 
 	                  psDroid->droidType, moveType, psDroid->player, acceptNearest);
 syncDebugDroid(psDroid, '@');
 return asdf;

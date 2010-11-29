@@ -30,6 +30,7 @@
 #include "terrain.h"
 #include "multiplay.h"
 #include "display.h"
+#include "lib/netplay/netplay.h"
 
 /* The different types of terrain as far as the game is concerned */
 typedef enum _terrain_type
@@ -227,12 +228,14 @@ WZ_DECL_ALWAYS_INLINE static inline void auxClearAll(int x, int y, int state)
 WZ_DECL_ALWAYS_INLINE static inline void auxSetBlocking(int x, int y, int state)
 {
 	psBlockMap[0][x + y * mapWidth] |= state;
+syncDebug("(%d,%d)|%d", x, y, state);
 }
 
 /// Clear blocking bits. Always set identically for all players. States not cleared are retained.
 WZ_DECL_ALWAYS_INLINE static inline void auxClearBlocking(int x, int y, int state)
 {
 	psBlockMap[0][x + y * mapWidth] &= ~state;
+syncDebug("(%d,%d)&~%d", x, y, state);
 }
 
 /**

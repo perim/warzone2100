@@ -243,6 +243,13 @@ static inline void destroyObject(OBJECT* list[], OBJECT* object)
 	ASSERT(object != NULL,
 	       "destroyObject: Invalid pointer");
 
+for (int y = 0; y < mapHeight; ++y)
+	for (int x = 0; x < mapWidth; ++x)
+		if (mapTile(x, y)->psObject == object)
+		{
+			ASSERT(false, "Eeek, (%d,%d) = %p, %d", x, y, object, object->type);
+		}
+
 	// If the message to remove is the first one in the list then mark the next one as the first
 	if (list[object->player] == object)
 	{
