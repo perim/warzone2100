@@ -758,8 +758,7 @@ UPNP_GetValidIGD(struct UPNPDev * devlist,
 		{
 			/* we should choose an internet gateway device.
 		 	* with st == urn:schemas-upnp-org:device:InternetGatewayDevice:1 */
-			descXML = miniwget_getaddr(dev->descURL, &descXMLsize,
-			   	                        lanaddr, lanaddrlen);
+			descXML = (char *)miniwget_getaddr(dev->descURL, &descXMLsize, lanaddr, lanaddrlen);
 			if(descXML)
 			{
 				ndev++;
@@ -809,8 +808,7 @@ UPNP_GetIGDFromUrl(const char * rootdescurl,
 {
 	char * descXML;
 	int descXMLsize = 0;
-	descXML = miniwget_getaddr(rootdescurl, &descXMLsize,
-	   	                       lanaddr, lanaddrlen);
+	descXML = (char *)miniwget_getaddr(rootdescurl, &descXMLsize, lanaddr, lanaddrlen);
 	if(descXML) {
 		memset(data, 0, sizeof(struct IGDdatas));
 		memset(urls, 0, sizeof(struct UPNPUrls));

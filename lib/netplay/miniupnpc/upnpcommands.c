@@ -321,7 +321,7 @@ UPNP_AddPortMapping(const char * controlURL, const char * servicetype,
 	if(!inPort || !inClient || !proto || !extPort)
 		return UPNPCOMMAND_INVALID_ARGS;
 
-	AddPortMappingArgs = calloc(9, sizeof(struct UPNParg));
+	AddPortMappingArgs = (struct UPNParg *)calloc(9, sizeof(struct UPNParg));
 	AddPortMappingArgs[0].elt = "NewRemoteHost";
 	AddPortMappingArgs[0].val = remoteHost;
 	AddPortMappingArgs[1].elt = "NewExternalPort";
@@ -372,7 +372,7 @@ UPNP_DeletePortMapping(const char * controlURL, const char * servicetype,
 	if(!extPort || !proto)
 		return UPNPCOMMAND_INVALID_ARGS;
 
-	DeletePortMappingArgs = calloc(4, sizeof(struct UPNParg));
+	DeletePortMappingArgs = (struct UPNParg *)calloc(4, sizeof(struct UPNParg));
 	DeletePortMappingArgs[0].elt = "NewRemoteHost";
 	DeletePortMappingArgs[0].val = remoteHost;
 	DeletePortMappingArgs[1].elt = "NewExternalPort";
@@ -419,7 +419,7 @@ UPNP_GetGenericPortMappingEntry(const char * controlURL,
 		return UPNPCOMMAND_INVALID_ARGS;
 	intClient[0] = '\0';
 	intPort[0] = '\0';
-	GetPortMappingArgs = calloc(2, sizeof(struct UPNParg));
+	GetPortMappingArgs = (struct UPNParg *)calloc(2, sizeof(struct UPNParg));
 	GetPortMappingArgs[0].elt = "NewPortMappingIndex";
 	GetPortMappingArgs[0].val = index;
 	simpleUPnPcommand(-1, controlURL, servicetype,
@@ -540,7 +540,7 @@ UPNP_GetSpecificPortMappingEntry(const char * controlURL,
 	if(!intPort || !intClient || !extPort || !proto)
 		return UPNPCOMMAND_INVALID_ARGS;
 
-	GetPortMappingArgs = calloc(4, sizeof(struct UPNParg));
+	GetPortMappingArgs = (struct UPNParg *)calloc(4, sizeof(struct UPNParg));
 	GetPortMappingArgs[0].elt = "NewRemoteHost";
 	GetPortMappingArgs[1].elt = "NewExternalPort";
 	GetPortMappingArgs[1].val = extPort;

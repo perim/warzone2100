@@ -233,7 +233,7 @@ miniwget2(const char * url, const char * host,
  *    1 - Success         */
 int parseURL(const char * url, char * hostname, unsigned short * port, char * * path)
 {
-	char * p1, *p2, *p3;
+	char const *p1, *p2, *p3;
 
 	if (!url)
 		return 0;
@@ -266,7 +266,7 @@ int parseURL(const char * url, char * hostname, unsigned short * port, char * * 
 			p2++;
 		}
 	}
-	*path = p3;
+	*path = (char *)p3;
 	return 1;
 }
 

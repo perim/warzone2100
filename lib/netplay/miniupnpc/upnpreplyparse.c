@@ -27,7 +27,7 @@ NameValueParserGetData(void * d, const char * datas, int l)
 {
     struct NameValueParserData * data = (struct NameValueParserData *)d;
     struct NameValue * nv;
-    nv = malloc(sizeof(struct NameValue));
+    nv = (struct NameValue *)malloc(sizeof(struct NameValue));
     if(l>63)
         l = 63;
     strncpy(nv->name, data->curelt, 64);

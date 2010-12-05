@@ -96,8 +96,6 @@ typedef enum _struct_strength
 	NUM_STRUCT_STRENGTH,
 } STRUCT_STRENGTH;
 
-#define INVALID_STRENGTH	(NUM_STRUCT_STRENGTH + 1)
-
 typedef UWORD STRUCTSTRENGTH_MODIFIER;
 
 #define SAS_OPEN_SPEED		(GAME_TICKS_PER_SEC * 2)
@@ -263,8 +261,7 @@ typedef struct _structure
 
 	STRUCTURE_STATS*	pStructureType;		/* pointer to the structure stats for this
 											   type of building */
-	UBYTE		status;						/* defines whether the structure is being
-											   built, doing nothing or performing a function*/
+	STRUCT_STATES          status;                  ///< defines whether the structure is being built, doing nothing or performing a function
     SWORD		currentBuildPts;			/* the build points currently assigned to this
 											   structure */
     SWORD       currentPowerAccrued;        /* the power accrued for building this structure*/
