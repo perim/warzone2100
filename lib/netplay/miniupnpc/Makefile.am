@@ -18,15 +18,15 @@ noinst_HEADERS = \
 	bsdqueue.h
 
 libminiupnpc_a_SOURCES = \
-	miniwget.c \
-	minixml.c \
-	igd_desc_parse.c \
-	minisoap.c \
-	miniupnpc.c \
-	upnpreplyparse.c \
-	upnpcommands.c \
-	minissdpc.c \
-	upnperrors.c
+	miniwget.cpp \
+	minixml.cpp \
+	igd_desc_parse.cpp \
+	minisoap.cpp \
+	miniupnpc.cpp \
+	upnpreplyparse.cpp \
+	upnpcommands.cpp \
+	minissdpc.cpp \
+	upnperrors.cpp
 
 EXTRA_DIST = LICENCE README
 

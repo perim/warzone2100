@@ -74,24 +74,24 @@ libframework_a_SOURCES = \
 	resource_parser.tab.c \
 	strres_lexer.lex.c \
 	strres_parser.tab.c \
-	configfile.c \
+	configfile.cpp \
 	crc.cpp \
-	cursors16.c \
-	cursors32.c \
-	cursors.c \
-	debug.c \
-	frame.c \
-	frameresource.c \
-	i18n.c \
-	input.c \
-	lexer_input.c \
-	SDL_framerate.c \
-	stdio_ext.c \
-	strres.c \
-	tagfile.c \
-	treap.c \
-	trig.c \
-	utf.c
+	cursors16.cpp \
+	cursors32.cpp \
+	cursors.cpp \
+	debug.cpp \
+	frame.cpp \
+	frameresource.cpp \
+	i18n.cpp \
+	input.cpp \
+	lexer_input.cpp \
+	SDL_framerate.cpp \
+	stdio_ext.cpp \
+	strres.cpp \
+	tagfile.cpp \
+	treap.cpp \
+	trig.cpp \
+	utf.cpp
 
 # HACK Don't give make errors when switching between trunk and branches.
 # Works by finding the .deps/*.Po files which refer to source files that don't exist, and replacing them with a single dependency on the correct source file.

@@ -6,15 +6,15 @@ CPPFLAGS:=-DSTATICLIB $(CPPFLAGS)
 include $(top_srcdir)/makerules/common.mk
 
 SRC= \
-	miniwget.c \
-	minixml.c \
-	igd_desc_parse.c \
-	minisoap.c \
-	miniupnpc.c \
-	upnpreplyparse.c \
-	upnpcommands.c \
-	minissdpc.c \
-	upnperrors.c
+	miniwget.cpp \
+	minixml.cpp \
+	igd_desc_parse.cpp \
+	minisoap.cpp \
+	miniupnpc.cpp \
+	upnpreplyparse.cpp \
+	upnpcommands.cpp \
+	minissdpc.cpp \
+	upnperrors.cpp
 
 LIB=miniupnpc
 
