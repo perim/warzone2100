@@ -111,12 +111,10 @@ static void objmemDestroy(BASE_OBJECT *psObj)
 			{
 				return;
 			}
-			structureRelease((STRUCTURE *)psObj);
 			break;
 
 		case OBJ_FEATURE:
 			debug(LOG_MEMORY, "freeing feature at %p", psObj);
-			featureRelease((FEATURE *)psObj);
 			break;
 
 		default:
@@ -355,11 +353,7 @@ static inline BASE_OBJECT* findObjectInList(BASE_OBJECT list[], UDWORD idNum)
 	return NULL;
 }
 
-// Necessary for a nice looking cast in calls to releaseAllObjectsInList
-typedef void (*OBJECT_DESTRUCTOR)(BASE_OBJECT*);
-static inline void doNothing(BASE_OBJECT *) {}
-
-static inline void releaseAllObjectsInList(BASE_OBJECT *list[], OBJECT_DESTRUCTOR objectDestructor)
+static inline void releaseAllObjectsInList(BASE_OBJECT *list[])
 {
 	UDWORD i;
 	BASE_OBJECT *psCurr, *psNext;
@@ -372,9 +366,6 @@ static inline void releaseAllObjectsInList(BASE_OBJECT *list[], OBJECT_DESTRUCTO
 		{
 	 		psNext = psCurr->psNext;
 
-			// Call a specialized destruction function
-			// (will do all cleanup except for releasing memory of object)
-			objectDestructor(psCurr);
 			// FIXME: the next call is disabled for now, yes, it will leak memory again.
 			// issue is with campaign games, and the swapping pointers 'trick' Pumpkin uses.
 			//	visRemoveVisibility(psCurr);
@@ -457,7 +448,7 @@ void killDroid(DROID *psDel)
 /* Remove all droids */
 void freeAllDroids(void)
 {
-	releaseAllObjectsInList((BASE_OBJECT**)apsDroidLists, doNothing);
+	releaseAllObjectsInList((BASE_OBJECT**)apsDroidLists);
 }
 
 /*Remove a single Droid from a list*/
@@ -492,13 +483,13 @@ void removeDroid(DROID *psDroidToRemove, DROID *pList[MAX_PLAYERS])
 /*Removes all droids that may be stored in the mission lists*/
 void freeAllMissionDroids(void)
 {
-	releaseAllObjectsInList((BASE_OBJECT**)mission.apsDroidLists, doNothing);
+	releaseAllObjectsInList((BASE_OBJECT**)mission.apsDroidLists);
 }
 
 /*Removes all droids that may be stored in the limbo lists*/
 void freeAllLimboDroids(void)
 {
-	releaseAllObjectsInList((BASE_OBJECT**)apsLimboDroids, doNothing);
+	releaseAllObjectsInList((BASE_OBJECT**)apsLimboDroids);
 }
 
 /**************************  STRUCTURE  *******************************/
@@ -573,7 +564,7 @@ void killStruct(STRUCTURE *psBuilding)
 /* Remove heapall structures */
 void freeAllStructs(void)
 {
-	releaseAllObjectsInList((BASE_OBJECT**)apsStructLists, (OBJECT_DESTRUCTOR)structureRelease);
+	releaseAllObjectsInList((BASE_OBJECT**)apsStructLists);
 }
 
 /*Remove a single Structure from a list*/
@@ -613,7 +604,7 @@ void killFeature(FEATURE *psDel)
 /* Remove all features */
 void freeAllFeatures(void)
 {
-	releaseAllObjectsInList((BASE_OBJECT**)apsFeatureLists, (OBJECT_DESTRUCTOR)featureRelease);
+	releaseAllObjectsInList((BASE_OBJECT**)apsFeatureLists);
 }
 
 /**************************  FLAG_POSITION ********************************/
