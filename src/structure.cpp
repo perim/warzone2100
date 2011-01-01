@@ -231,7 +231,7 @@ static void auxStructureBlocking(STRUCTURE *psStructure)
 			auxSetAll(map.x + i, map.y + j, AUXBITS_ANY_BUILDING);
 		}
 	}
-	syncDebug("id=%d,player=%d,pos=(%d,%d),wh=(%d,%d)", psStructure->id, psStructure->player, psStructure->pos.x, psStructure->pos.y, sWidth, sBreadth);
+	syncDebug("id=%d,player=%d,pos=(%d,%d),wh=(%d,%d)", psStructure->id, psStructure->player, psStructure->pos.x, psStructure->pos.y, size.x, size.y);
 }
 
 BOOL IsStatExpansionModule(STRUCTURE_STATS *psStats)
