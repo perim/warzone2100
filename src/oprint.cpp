@@ -169,11 +169,10 @@ static void printWeaponInfo(const WEAPON_STATS* psStats)
 	CONPRINTF(ConsoleString,(ConsoleString,"Weapon: "));
 	printComponentInfo((COMPONENT_STATS *)psStats);
 	CONPRINTF(ConsoleString,(ConsoleString,"   lRng %d mRng %d %s\n"
-			  "   lHt %d pause %d dam %d\n",
+			  "   pause %d dam %d\n",
 				proj_GetLongRange(psStats), psStats->minRange,
 				proj_Direct(psStats) ? "direct" : "indirect",
-				weaponLongHit(psStats,
-				(UBYTE)selectedPlayer), weaponFirePause(psStats,(UBYTE)selectedPlayer),
+				weaponFirePause(psStats,(UBYTE)selectedPlayer),
 				weaponDamage(psStats, (UBYTE)selectedPlayer)));
 	CONPRINTF(ConsoleString,(ConsoleString,"   rad %d radHt %d radDam %d\n"
 			  "   inTime %d inDam %d inRad %d\n",

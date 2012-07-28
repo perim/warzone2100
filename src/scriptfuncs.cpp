@@ -10681,27 +10681,6 @@ static DROID_TEMPLATE* scrCheckTemplateExists(SDWORD player, DROID_TEMPLATE *psT
 	return NULL;
 }
 
-bool scrWeaponLongHitUpgrade(void)
-{
-	SDWORD					player,weapIndex;
-	const WEAPON_STATS		*psWeapStats;
-
-	if (!stackPopParams(2, VAL_INT, &player, ST_WEAPON, &weapIndex))
-	{
-		return false;
-	}
-
-	psWeapStats = &asWeaponStats[weapIndex];
-
-	scrFunctionResult.v.ival = asWeaponUpgrade[player][psWeapStats->weaponSubClass].longHit;
-	if (!stackPushResult(VAL_INT, &scrFunctionResult))
-	{
-		return false;
-	}
-
-	return true;
-}
-
 bool scrWeaponDamageUpgrade(void)
 {
 	SDWORD					player,weapIndex;

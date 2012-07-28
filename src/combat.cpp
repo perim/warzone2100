@@ -161,65 +161,19 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 		}
 	}
 
-	int baseHitChance = 0;
-	if (dist <= longRange && dist >= psStats->minRange)
-	{
-		// get weapon chance to hit in the long range
-		baseHitChance = weaponLongHit(psStats,psAttacker->player);
-
-		// adapt for height adjusted artillery shots
-		if (min_angle > DEG(PROJ_MAX_PITCH))
-		{
-			baseHitChance = baseHitChance * iCos(min_angle) / iCos(DEG(PROJ_MAX_PITCH));
-		}
-	}
-	else
+	if (dist > longRange || dist < psStats->minRange)
 	{
 		/* Out of range */
 		objTrace(psAttacker->id, "combFire(%u[%s]->%u): Out of range", psAttacker->id, psStats->pName, psTarget->id);
 		return false;
 	}
 
-	// apply experience accuracy modifiers to the base
-	//hit chance, not to the final hit chance
-	int resultHitChance = baseHitChance;
-
-	// add the attacker's experience
-	if (psAttacker->type == OBJ_DROID)
-	{
-		SDWORD	level = getDroidEffectiveLevel((DROID *) psAttacker);
-
-		// increase total accuracy by EXP_ACCURACY_BONUS % for each experience level
-		resultHitChance += EXP_ACCURACY_BONUS * level * baseHitChance / 100;
-	}
-
-	// subtract the defender's experience
-	if (psTarget->type == OBJ_DROID)
-	{
-		SDWORD	level = getDroidEffectiveLevel((DROID *) psTarget);
-
-		// decrease weapon accuracy by EXP_ACCURACY_BONUS % for each experience level
-		resultHitChance -= EXP_ACCURACY_BONUS * level * baseHitChance / 100;
-
-	}
-
 	// fire while moving modifiers
-	if (psAttacker->type == OBJ_DROID &&
-		((DROID *)psAttacker)->sMove.Status != MOVEINACTIVE)
+	if (psAttacker->type == OBJ_DROID
+	    && ((DROID *)psAttacker)->sMove.Status != MOVEINACTIVE
+	    && psStats->fireOnMove == FOM_NO)
 	{
-		switch (psStats->fireOnMove)
-		{
-		case FOM_NO:
-			// Can't fire while moving
-			return false;
-			break;
-		case FOM_PARTIAL:
-			resultHitChance = FOM_PARTIAL_ACCURACY_PENALTY * resultHitChance / 100;
-			break;
-		case FOM_YES:
-			// can fire while moving
-			break;
-		}
+		return false;	// Can't fire while moving
 	}
 
 	/* -------!!! From that point we are sure that we are firing !!!------- */
@@ -282,7 +236,7 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	}
 
 	/* Kerrrbaaang !!!!! a hit */
-	objTrace(psAttacker->id, "combFire: [%s]->%u: resultHitChance=%d, visibility=%d", psStats->pName, psTarget->id, resultHitChance, (int)psTarget->visible[psAttacker->player]);
+	objTrace(psAttacker->id, "combFire: [%s]->%u: visibility=%d", psStats->pName, psTarget->id, (int)psTarget->visible[psAttacker->player]);
 	syncDebug("hit=(%d,%d,%d)", predict.x, predict.y, predict.z);
 
 	// Make sure we don't pass any negative or out of bounds numbers to proj_SendProjectile

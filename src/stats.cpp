@@ -625,7 +625,7 @@ bool loadWeaponStats(const char *pWeaponData, UDWORD bufferSize)
 	char			fireOnMove[MAX_STR_LENGTH], weaponClass[MAX_STR_LENGTH], weaponSubClass[MAX_STR_LENGTH],
 					weaponEffect[MAX_STR_LENGTH], movement[MAX_STR_LENGTH], facePlayer[MAX_STR_LENGTH],  //weaponEffect[15] caused stack corruption. --Qamly
 					faceInFlight[MAX_STR_LENGTH],lightWorld[MAX_STR_LENGTH];
-	UDWORD			effectSize, numAttackRuns, designable;
+	UDWORD			effectSize, numAttackRuns, designable, longHit;
 	UDWORD			numRounds;
 
 	char			*StatsName;
@@ -676,7 +676,7 @@ bool loadWeaponStats(const char *pWeaponData, UDWORD bufferSize)
 			&psStats->weight, &weaponsize, &dummyVal,
 			&psStats->body, GfxFile, mountGfx, muzzleGfx, flightGfx,
 			hitGfx, missGfx, waterGfx, trailGfx, &dummyVal,
-			&psStats->longRange, &dummyVal, &psStats->longHit,
+			&psStats->longRange, &dummyVal, &longHit,
 			&psStats->firePause, &psStats->numExplosions, &numRounds,
 			&psStats->reloadTime, &psStats->damage, &psStats->radius,
 			&psStats->radiusHit, &psStats->radiusDamage, &psStats->incenTime,
@@ -823,7 +823,8 @@ bool loadWeaponStats(const char *pWeaponData, UDWORD bufferSize)
 		}
 		else if (!strcmp(fireOnMove,"PARTIAL"))
 		{
-			psStats->fireOnMove = FOM_PARTIAL;
+			debug(LOG_WARNING, "Fire-on-move type PARTIAL is no longer supported! (used by %s)", getStatName(psStats));
+			psStats->fireOnMove = FOM_YES;
 		}
 		else if (!strcmp(fireOnMove,"YES"))
 		{
@@ -1004,11 +1005,11 @@ bool loadWeaponStats(const char *pWeaponData, UDWORD bufferSize)
 		// Compensate for automatic hits by making fire pause or reload time longer
 		if (psStats->reloadTime > 0)
 		{
-			psStats->reloadTime += psStats->reloadTime * (100 - psStats->longHit) / 100;
+			psStats->reloadTime += psStats->reloadTime * (100 - longHit) / 100;
 		}
 		else
 		{
-			psStats->firePause += psStats->firePause * (100 - psStats->longHit) / 100;
+			psStats->firePause += psStats->firePause * (100 - longHit) / 100;
 		}
 
 		//save the stats
@@ -2841,12 +2842,6 @@ UDWORD	weaponReloadTime(WEAPON_STATS *psStats, UBYTE player)
 {
 	return (psStats->reloadTime - (psStats->reloadTime * asWeaponUpgrade[player][
 		psStats->weaponSubClass].firePause)/100);
-}
-
-UDWORD	weaponLongHit(const WEAPON_STATS* psStats, UBYTE player)
-{
-	return (psStats->longHit + (psStats->longHit * asWeaponUpgrade[player][
-		psStats->weaponSubClass].longHit)/100);
 }
 
 UDWORD	weaponDamage(const WEAPON_STATS* psStats, UBYTE player)

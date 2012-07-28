@@ -269,7 +269,6 @@ extern UWORD weaponROF(WEAPON_STATS *psStat, SBYTE player);
 extern UDWORD	weaponFirePause(const WEAPON_STATS* psStats, UBYTE player);
 extern UDWORD	weaponReloadTime(WEAPON_STATS *psStats, UBYTE player);
 extern UDWORD	weaponShortHit(const WEAPON_STATS* psStats, UBYTE player);
-extern UDWORD	weaponLongHit(const WEAPON_STATS* psStats, UBYTE player);
 extern UDWORD	weaponDamage(const WEAPON_STATS* psStats, UBYTE player);
 extern UDWORD	weaponRadDamage(WEAPON_STATS *psStats, UBYTE player);
 extern UDWORD	weaponIncenDamage(WEAPON_STATS *psStats, UBYTE player);

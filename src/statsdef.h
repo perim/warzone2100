@@ -370,7 +370,6 @@ enum SENSOR_TYPE
 enum FIREONMOVE
 {
 	FOM_NO,			///< no capability - droid must stop
-	FOM_PARTIAL,	///< partial capability - droid has 50% chance to hit
 	FOM_YES,		///< full capability - droid fires normally on move
 };
 

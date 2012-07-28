@@ -483,10 +483,8 @@ static bool loadDroidSensorUpgradeFunction(const char *pData)
 static bool loadWeaponUpgradeFunction(const char *pData)
 {
 	WEAPON_UPGRADE_FUNCTION	*psFunction;
-	char						functionName[MAX_STR_LENGTH],
-	                            weaponSubClass[MAX_STR_LENGTH];
-	UDWORD						firePause, dummyVal, longHit, damage,
-	                            radiusDamage, incenDamage, radiusHit;
+	char functionName[MAX_STR_LENGTH], weaponSubClass[MAX_STR_LENGTH];
+	UDWORD firePause, dummyVal, longHit, damage, radiusDamage, incenDamage, radiusHit;
 
 	//allocate storage
 	psFunction = (WEAPON_UPGRADE_FUNCTION *)malloc(sizeof(WEAPON_UPGRADE_FUNCTION));
@@ -530,11 +528,13 @@ static bool loadWeaponUpgradeFunction(const char *pData)
 
 	//copy the data across
 	psFunction->firePause = (UBYTE)firePause;
-	psFunction->longHit = (UWORD)longHit;
 	psFunction->damage = (UWORD)damage;
 	psFunction->radiusDamage = (UWORD)radiusDamage;
 	psFunction->incenDamage = (UWORD)incenDamage;
 	psFunction->radiusHit = (UWORD)radiusHit;
+
+	// we now longer have hit chance, so increase fire pause bonus instead
+	psFunction->firePause += longHit;
 
 	return true;
 }
@@ -1140,16 +1140,13 @@ void weaponUpgrade(FUNCTION *pFunction, UBYTE player)
 	//check upgrades increase all values!
 	if (asWeaponUpgrade[player][pUpgrade->subClass].firePause < pUpgrade->firePause)
 	{
-		//make sure don't go less than 100%
-		if (pUpgrade->firePause > 100)
+		// make sure don't go more than 99%, since we deduct this percentage
+		// and do not want infinitely fast weapons
+		if (pUpgrade->firePause >= 100)
 		{
-			pUpgrade->firePause = 100;
+			pUpgrade->firePause = 99;
 		}
 		asWeaponUpgrade[player][pUpgrade->subClass].firePause = pUpgrade->firePause;
-	}
-	if (asWeaponUpgrade[player][pUpgrade->subClass].longHit < pUpgrade->longHit)
-	{
-		asWeaponUpgrade[player][pUpgrade->subClass].longHit = pUpgrade->longHit;
 	}
 	if (asWeaponUpgrade[player][pUpgrade->subClass].damage < pUpgrade->damage)
 	{

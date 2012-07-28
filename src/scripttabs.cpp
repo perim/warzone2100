@@ -1359,10 +1359,6 @@ FUNC_SYMBOL asFuncTable[] =
 		4, { VAL_INT, (INTERP_TYPE)ST_BODY, (INTERP_TYPE)ST_PROPULSION, (INTERP_TYPE)ST_WEAPON },
 		0, 0, NULL, 0, 0, NULL, NULL },
 
-	{ "weaponLongHitUpgrade",	scrWeaponLongHitUpgrade,	VAL_INT,
-		2, { VAL_INT, (INTERP_TYPE)ST_WEAPON },
-		0, 0, NULL, 0, 0, NULL, NULL },
-
 	{ "weaponDamageUpgrade",	scrWeaponDamageUpgrade,		VAL_INT,
 		2, { VAL_INT, (INTERP_TYPE)ST_WEAPON },
 		0, 0, NULL, 0, 0, NULL, NULL },
@@ -1632,10 +1628,6 @@ VAR_SYMBOL asObjTable[] =
 	//weapon long range
 	{ "longRange",	VAL_INT,	ST_OBJECT,
 		(INTERP_TYPE)ST_WEAPON,	WEAPID_LONG_RANGE,	scrWeaponObjGet,	NULL, 0, {0}, NULL },
-
-	//weapon long hit chance
-	{ "longHit",	VAL_INT,	ST_OBJECT,
-		(INTERP_TYPE)ST_WEAPON,	WEAPID_LONG_HIT,	scrWeaponObjGet,	NULL, 0, {0}, NULL },
 
 	//weapon damage
 	{ "damage",	VAL_INT,	ST_OBJECT,
