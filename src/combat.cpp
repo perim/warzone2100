@@ -281,37 +281,15 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 		}
 	}
 
-	/* Fire off the bullet to the miss location. The miss is only visible if the player owns the target. (Why? - Per) */
-	// What bVisible really does is to make the projectile audible even if it misses you. Since the target is NULL, proj_SendProjectile can't check if it was fired at you.
-	bool bVisibleAnyway = psTarget->player == selectedPlayer;
-
-	// see if we were lucky to hit the target
-	bool isHit = gameRand(100) <= resultHitChance;
-	if (isHit)
-	{
-		/* Kerrrbaaang !!!!! a hit */
-		objTrace(psAttacker->id, "combFire: [%s]->%u: resultHitChance=%d, visibility=%d", psStats->pName, psTarget->id, resultHitChance, (int)psTarget->visible[psAttacker->player]);
-		syncDebug("hit=(%d,%d,%d)", predict.x, predict.y, predict.z);
-	}
-	else /* Deal with a missed shot */
-	{
-		const int minOffset = 5;
-
-		int missDist = 2 * (100 - resultHitChance) + minOffset;
-		Vector3i miss = Vector3i(iSinCosR(gameRand(DEG(360)), missDist), 0);
-		predict += miss;
-
-		psTarget = NULL;  // Missed the target, so don't expect to hit it.
-
-		objTrace(psAttacker->id, "combFire: Missed shot by (%4d,%4d)", miss.x, miss.y);
-		syncDebug("miss=(%d,%d,%d)", predict.x, predict.y, predict.z);
-	}
+	/* Kerrrbaaang !!!!! a hit */
+	objTrace(psAttacker->id, "combFire: [%s]->%u: resultHitChance=%d, visibility=%d", psStats->pName, psTarget->id, resultHitChance, (int)psTarget->visible[psAttacker->player]);
+	syncDebug("hit=(%d,%d,%d)", predict.x, predict.y, predict.z);
 
 	// Make sure we don't pass any negative or out of bounds numbers to proj_SendProjectile
 	CLIP(predict.x, 0, world_coord(mapWidth - 1));
 	CLIP(predict.y, 0, world_coord(mapHeight - 1));
 
-	proj_SendProjectileAngled(psWeap, psAttacker, psAttacker->player, predict, psTarget, bVisibleAnyway, weapon_slot, min_angle, fireTime);
+	proj_SendProjectileAngled(psWeap, psAttacker, psAttacker->player, predict, psTarget, (psTarget->player == selectedPlayer), weapon_slot, min_angle, fireTime);
 	return true;
 }
 

@@ -1001,6 +1001,16 @@ bool loadWeaponStats(const char *pWeaponData, UDWORD bufferSize)
 		psStats->iAudioFireID = NO_SOUND;
 		psStats->iAudioImpactID = NO_SOUND;
 
+		// Compensate for automatic hits by making fire pause or reload time longer
+		if (psStats->reloadTime > 0)
+		{
+			psStats->reloadTime += psStats->reloadTime * (100 - psStats->longHit) / 100;
+		}
+		else
+		{
+			psStats->firePause += psStats->firePause * (100 - psStats->longHit) / 100;
+		}
+
 		//save the stats
 		statsSetWeapon(psStats, i);
 
