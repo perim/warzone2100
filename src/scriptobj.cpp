@@ -460,10 +460,6 @@ bool scrWeaponObjGet(UDWORD index)
 		type = VAL_INT;
 		scrFunctionResult.v.ival = asWeaponStats[weapIndex].longRange;
 		break;
-	case WEAPID_LONG_HIT:
-		type = VAL_INT;
-		scrFunctionResult.v.ival = asWeaponStats[weapIndex].longHit;
-		break;
 	case WEAPID_DAMAGE:
 		type = VAL_INT;
 		scrFunctionResult.v.ival = asWeaponStats[weapIndex].damage;
