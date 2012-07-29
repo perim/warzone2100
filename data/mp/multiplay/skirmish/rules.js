@@ -102,9 +102,10 @@ function eventGameInit()
 		makeComponentAvailable("CyborgSpade", playnum);
 		makeComponentAvailable("CyborgRepair", playnum);
 
+		setPower(500, playnum);
+
 		if (baseType == CAMP_CLEAN)
 		{
-			setPower(1300, playnum);
 			for (var count = 0; count < numCleanTech; count++)
 			{
 				completeResearch(techlist[count], playnum);
@@ -114,9 +115,9 @@ function eventGameInit()
 			for (var i = 0; i < structs.length; i++)
 			{
 				var s = structs[i];
-				if (playerData[playnum].difficulty != INSANE
+				if ((playerData[playnum].difficulty != INSANE && s.stattype != HQ)
 				    || (s.stattype != WALL && s.stattype != DEFENSE && s.stattype != GATE
-				        && s.stattype != RESOURCE_EXTRACTOR))
+				        && s.stattype != RESOURCE_EXTRACTOR && s.stattype != HQ))
 				{
 					removeObject(s, false);
 				}
@@ -124,7 +125,6 @@ function eventGameInit()
 		}
 		else if (baseType == CAMP_BASE)
 		{
-			setPower(2500, playnum);
 			for (var count = 0; count < numBaseTech; count++)
 			{
 				completeResearch(techlist[count], playnum);
@@ -143,7 +143,6 @@ function eventGameInit()
 		}
 		else // CAMP_WALLS
 		{
-			setPower(2500, playnum);
 			for (var count = 0; count < techlist.length; count++)
 			{
 				completeResearch(techlist[count], playnum);
@@ -247,23 +246,5 @@ function eventAttacked(victimObj, attackerObj)
 		{
 			playSound("pcv399.ogg", victimObj.x, victimObj.y, victimObj.z);
 		}
-	}
-}
-
-function eventStructureBuilt(struct)
-{
-	if (struct.player == selectedPlayer && struct.type == STRUCTURE && struct.stattype == HQ)
-	{
-		setMiniMap(true); // show minimap
-		setDesign(true); // permit designs
-	}
-}
-
-function eventDestroyed(victim)
-{
-	if (victim.player == selectedPlayer && victim.type == STRUCTURE && victim.stattype == HQ)
-	{
-		setMiniMap(false); // hide minimap if HQ is destroyed
-		setDesign(false); // and disallow design
 	}
 }
