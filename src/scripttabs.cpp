@@ -1359,14 +1359,6 @@ FUNC_SYMBOL asFuncTable[] =
 		4, { VAL_INT, (INTERP_TYPE)ST_BODY, (INTERP_TYPE)ST_PROPULSION, (INTERP_TYPE)ST_WEAPON },
 		0, 0, NULL, 0, 0, NULL, NULL },
 
-	{ "weaponShortHitUpgrade",	scrWeaponShortHitUpgrade,	VAL_INT,
-		2, { VAL_INT, (INTERP_TYPE)ST_WEAPON },
-		0, 0, NULL, 0, 0, NULL, NULL },
-
-	{ "weaponLongHitUpgrade",	scrWeaponLongHitUpgrade,	VAL_INT,
-		2, { VAL_INT, (INTERP_TYPE)ST_WEAPON },
-		0, 0, NULL, 0, 0, NULL, NULL },
-
 	{ "weaponDamageUpgrade",	scrWeaponDamageUpgrade,		VAL_INT,
 		2, { VAL_INT, (INTERP_TYPE)ST_WEAPON },
 		0, 0, NULL, 0, 0, NULL, NULL },
@@ -1633,21 +1625,9 @@ VAR_SYMBOL asObjTable[] =
 
 	/* Weapon Stats */
 
-	//weapon short range
-	{ "shortRange",	VAL_INT,	ST_OBJECT,
-		(INTERP_TYPE)ST_WEAPON,	WEAPID_SHORT_RANGE,	scrWeaponObjGet,	NULL, 0, {0}, NULL },
-
 	//weapon long range
 	{ "longRange",	VAL_INT,	ST_OBJECT,
 		(INTERP_TYPE)ST_WEAPON,	WEAPID_LONG_RANGE,	scrWeaponObjGet,	NULL, 0, {0}, NULL },
-
-	//weapon short hit chance
-	{ "shortHit",	VAL_INT,	ST_OBJECT,
-		(INTERP_TYPE)ST_WEAPON,	WEAPID_SHORT_HIT,	scrWeaponObjGet,	NULL, 0, {0}, NULL },
-
-	//weapon long hit chance
-	{ "longHit",	VAL_INT,	ST_OBJECT,
-		(INTERP_TYPE)ST_WEAPON,	WEAPID_LONG_HIT,	scrWeaponObjGet,	NULL, 0, {0}, NULL },
 
 	//weapon damage
 	{ "damage",	VAL_INT,	ST_OBJECT,
@@ -1850,7 +1830,6 @@ CONST_SYMBOL asConstantTable[] =
 	{ "DACTION_FIRESUPPORT_RETREAT",VAL_INT,	false,	DACTION_FIRESUPPORT_RETREAT,NULL, NULL, 0.0f },
 
 	// secondary orders
-	{ "DSO_ATTACK_RANGE",	VAL_INT,	false,	DSO_ATTACK_RANGE,	NULL, NULL, 0.0f },
 	{ "DSO_REPAIR_LEVEL",	VAL_INT,	false,	DSO_REPAIR_LEVEL,	NULL, NULL, 0.0f },
 	{ "DSO_ATTACK_LEVEL",	VAL_INT,	false,	DSO_ATTACK_LEVEL,	NULL, NULL, 0.0f },
 	{ "DSO_RECYCLE",		VAL_INT,	false,	DSO_RECYCLE,		NULL, NULL, 0.0f },

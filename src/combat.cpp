@@ -161,70 +161,19 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 		}
 	}
 
-	int baseHitChance = 0;
-	if (dist <= psStats->shortRange && dist >= psStats->minRange)
-	{
-		// get weapon chance to hit in the short range
-		baseHitChance = weaponShortHit(psStats,psAttacker->player);
-	}
-	else if (dist <= longRange && dist >= psStats->minRange)
-	{
-		// get weapon chance to hit in the long range
-		baseHitChance = weaponLongHit(psStats,psAttacker->player);
-
-		// adapt for height adjusted artillery shots
-		if (min_angle > DEG(PROJ_MAX_PITCH))
-		{
-			baseHitChance = baseHitChance * iCos(min_angle) / iCos(DEG(PROJ_MAX_PITCH));
-		}
-	}
-	else
+	if (dist > longRange || dist < psStats->minRange)
 	{
 		/* Out of range */
 		objTrace(psAttacker->id, "combFire(%u[%s]->%u): Out of range", psAttacker->id, psStats->pName, psTarget->id);
 		return false;
 	}
 
-	// apply experience accuracy modifiers to the base
-	//hit chance, not to the final hit chance
-	int resultHitChance = baseHitChance;
-
-	// add the attacker's experience
-	if (psAttacker->type == OBJ_DROID)
-	{
-		SDWORD	level = getDroidEffectiveLevel((DROID *) psAttacker);
-
-		// increase total accuracy by EXP_ACCURACY_BONUS % for each experience level
-		resultHitChance += EXP_ACCURACY_BONUS * level * baseHitChance / 100;
-	}
-
-	// subtract the defender's experience
-	if (psTarget->type == OBJ_DROID)
-	{
-		SDWORD	level = getDroidEffectiveLevel((DROID *) psTarget);
-
-		// decrease weapon accuracy by EXP_ACCURACY_BONUS % for each experience level
-		resultHitChance -= EXP_ACCURACY_BONUS * level * baseHitChance / 100;
-
-	}
-
 	// fire while moving modifiers
-	if (psAttacker->type == OBJ_DROID &&
-		((DROID *)psAttacker)->sMove.Status != MOVEINACTIVE)
+	if (psAttacker->type == OBJ_DROID
+	    && ((DROID *)psAttacker)->sMove.Status != MOVEINACTIVE
+	    && psStats->fireOnMove == FOM_NO)
 	{
-		switch (psStats->fireOnMove)
-		{
-		case FOM_NO:
-			// Can't fire while moving
-			return false;
-			break;
-		case FOM_PARTIAL:
-			resultHitChance = FOM_PARTIAL_ACCURACY_PENALTY * resultHitChance / 100;
-			break;
-		case FOM_YES:
-			// can fire while moving
-			break;
-		}
+		return false;	// Can't fire while moving
 	}
 
 	/* -------!!! From that point we are sure that we are firing !!!------- */
@@ -286,37 +235,15 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 		}
 	}
 
-	/* Fire off the bullet to the miss location. The miss is only visible if the player owns the target. (Why? - Per) */
-	// What bVisible really does is to make the projectile audible even if it misses you. Since the target is NULL, proj_SendProjectile can't check if it was fired at you.
-	bool bVisibleAnyway = psTarget->player == selectedPlayer;
-
-	// see if we were lucky to hit the target
-	bool isHit = gameRand(100) <= resultHitChance;
-	if (isHit)
-	{
-		/* Kerrrbaaang !!!!! a hit */
-		objTrace(psAttacker->id, "combFire: [%s]->%u: resultHitChance=%d, visibility=%d", psStats->pName, psTarget->id, resultHitChance, (int)psTarget->visible[psAttacker->player]);
-		syncDebug("hit=(%d,%d,%d)", predict.x, predict.y, predict.z);
-	}
-	else /* Deal with a missed shot */
-	{
-		const int minOffset = 5;
-
-		int missDist = 2 * (100 - resultHitChance) + minOffset;
-		Vector3i miss = Vector3i(iSinCosR(gameRand(DEG(360)), missDist), 0);
-		predict += miss;
-
-		psTarget = NULL;  // Missed the target, so don't expect to hit it.
-
-		objTrace(psAttacker->id, "combFire: Missed shot by (%4d,%4d)", miss.x, miss.y);
-		syncDebug("miss=(%d,%d,%d)", predict.x, predict.y, predict.z);
-	}
+	/* Kerrrbaaang !!!!! a hit */
+	objTrace(psAttacker->id, "combFire: [%s]->%u: visibility=%d", psStats->pName, psTarget->id, (int)psTarget->visible[psAttacker->player]);
+	syncDebug("hit=(%d,%d,%d)", predict.x, predict.y, predict.z);
 
 	// Make sure we don't pass any negative or out of bounds numbers to proj_SendProjectile
 	CLIP(predict.x, 0, world_coord(mapWidth - 1));
 	CLIP(predict.y, 0, world_coord(mapHeight - 1));
 
-	proj_SendProjectileAngled(psWeap, psAttacker, psAttacker->player, predict, psTarget, bVisibleAnyway, weapon_slot, min_angle, fireTime);
+	proj_SendProjectileAngled(psWeap, psAttacker, psAttacker->player, predict, psTarget, (psTarget->player == selectedPlayer), weapon_slot, min_angle, fireTime);
 	return true;
 }
 

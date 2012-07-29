@@ -370,7 +370,6 @@ enum SENSOR_TYPE
 enum FIREONMOVE
 {
 	FOM_NO,			///< no capability - droid must stop
-	FOM_PARTIAL,	///< partial capability - droid has 50% chance to hit
 	FOM_YES,		///< full capability - droid fires normally on move
 };
 
@@ -445,11 +444,9 @@ struct REPAIR_STATS : public COMPONENT_STATS
 
 struct WEAPON_STATS : public COMPONENT_STATS
 {
-	UDWORD			shortRange;				///< Max distance to target for	short	range	shot
 	UDWORD			longRange;				///< Max distance to target for	long range shot
 	UDWORD			minRange;				///< Min distance to target for	shot
 	UDWORD			shortHit;				///< Chance to hit at short range
-	UDWORD			longHit;				///< Chance to hit at long range
 	UDWORD			firePause;				///< Time between each weapon fire
 	UDWORD			numExplosions;			///< The number of explosions per shot
 	UBYTE			numRounds;				///< The number of rounds	per salvo(magazine)
