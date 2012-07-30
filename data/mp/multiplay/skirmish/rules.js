@@ -150,19 +150,9 @@ function eventGameInit()
 		}
 	}
 
-	// Disabled by default
-	setMiniMap(false);
-	setDesign(false);
-	// This is the only template that should be enabled before design is allowed
+	setMiniMap(true);
+	setDesign(true);
 	enableTemplate("ConstructionDroid");
-
-	var structlist = enumStruct(me, HQ);
-	for (var i = 0; i < structlist.length; i++)
-	{
-		// Simulate build events to enable minimap/unit design when an HQ exists
-		eventStructureBuilt(structlist[i]);
-	}
-
 	hackNetOn();
 	setTimer("checkEndConditions", 100);
 }
