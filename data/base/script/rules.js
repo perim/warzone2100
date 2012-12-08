@@ -7,7 +7,9 @@ function eventStartLevel()
 	// Disable by default
 	setMiniMap(false);
 	setDesign(false);
-	setDroidLimit(0, 100);
+	setDroidLimit(0, 100, DROID_ANY);
+	setDroidLimit(0, 10, DROID_COMMAND);
+	setDroidLimit(0, 15, DROID_CONSTRUCT);
 
 	var structlist = enumStruct(me, HQ);
 	for (var i = 0; i < structlist.length; i++)
@@ -19,6 +21,16 @@ function eventStartLevel()
 	for (var i = 0; i < structlist.length; i++)
 	{
 		eventStructureBuilt(structlist[i]);
+	}
+
+	// set income modifier for player 0 (human)
+	if (difficulty == EASY)
+	{
+		setPowerModifier(110);
+	}
+	else if (difficulty == HARD)
+	{
+		setPowerModifier(90);
 	}
 }
 

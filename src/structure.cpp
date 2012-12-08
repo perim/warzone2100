@@ -174,8 +174,12 @@ static int structureTotalReturn(STRUCTURE *psStruct);
 // last time the maximum units message was displayed
 static UDWORD	lastMaxUnitMessage;
 
-/// max number of units
+// max number of units
 static int droidLimit[MAX_PLAYERS];
+// max number of commanders
+static int commanderLimit[MAX_PLAYERS];
+// max number of constructors
+static int constructorLimit[MAX_PLAYERS];
 
 #define MAX_UNIT_MESSAGE_PAUSE 20000
 
@@ -290,6 +294,8 @@ void structureInitVars(void)
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
 		droidLimit[i] = INT16_MAX;
+		commanderLimit[i] = INT16_MAX;
+		constructorLimit[i] = INT16_MAX;
 		asStructLimits[i] = NULL;
 		for (j = 0; j < NUM_FLAG_TYPES; j++)
 		{
@@ -997,8 +1003,9 @@ bool structSetManufacture(STRUCTURE *psStruct, DROID_TEMPLATE *psTempl, QUEUE_MO
 	                 || psStruct->pStructureType->type == REF_VTOL_FACTORY, "Invalid structure type %d for factory",
 	                 (int)psStruct->pStructureType->type);
 	/* psTempl might be NULL if the build is being cancelled in the middle */
-
-	ASSERT_OR_RETURN(false, (validTemplateForFactory(psTempl, psStruct, true) && researchedTemplate(psTempl, psStruct->player, true, true)) || psStruct->player == scavengerPlayer() || !bMultiPlayer,
+	ASSERT_OR_RETURN(false, !psTempl
+	                 || (validTemplateForFactory(psTempl, psStruct, true) && researchedTemplate(psTempl, psStruct->player, true, true)) 
+	                 || psStruct->player == scavengerPlayer() || !bMultiPlayer, 
 	                 "Wrong template for player %d factory, type %d.", psStruct->player, psStruct->pStructureType->type);
 
 	psFact = &psStruct->pFunctionality->factory;
@@ -1007,7 +1014,6 @@ bool structSetManufacture(STRUCTURE *psStruct, DROID_TEMPLATE *psTempl, QUEUE_MO
 	{
 		sendStructureInfo(psStruct, STRUCTUREINFO_MANUFACTURE, psTempl);
 		setStatusPendingStart(*psFact, psTempl);
-
 		return true;  // Wait for our message before doing anything.
 	}
 
@@ -2548,9 +2554,29 @@ void setMaxDroids(int player, int value)
 	droidLimit[player] = value;
 }
 
+void setMaxCommanders(int player, int value)
+{
+	commanderLimit[player] = value;
+}
+
+void setMaxConstructors(int player, int value)
+{
+	constructorLimit[player] = value;
+}
+
 int getMaxDroids(int player)
 {
 	return droidLimit[player];
+}
+
+int getMaxCommanders(int player)
+{
+	return commanderLimit[player];
+}
+
+int getMaxConstructors(int player)
+{
+	return constructorLimit[player];
 }
 
 bool IsPlayerDroidLimitReached(int player)
@@ -2566,14 +2592,14 @@ static bool maxDroidsByTypeReached(STRUCTURE *psStructure)
 	CHECK_STRUCTURE(psStructure);
 
 	if (droidTemplateType((DROID_TEMPLATE *)psFact->psSubject) == DROID_COMMAND
-	 && getNumCommandDroids(psStructure->player) >= MAX_COMMAND_DROIDS)
+	 && getNumCommandDroids(psStructure->player) >= getMaxCommanders(psStructure->player))
 	{
 		return true;
 	}
 
 	if ((droidTemplateType((DROID_TEMPLATE *)psFact->psSubject) == DROID_CONSTRUCT
 	  || droidTemplateType((DROID_TEMPLATE *)psFact->psSubject) == DROID_CYBORG_CONSTRUCT)
-	 && getNumConstructorDroids(psStructure->player) >= MAX_CONSTRUCTOR_DROIDS)
+	 && getNumConstructorDroids(psStructure->player) >= getMaxConstructors(psStructure->player))
 	{
 		return true;
 	}

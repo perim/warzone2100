@@ -41,6 +41,7 @@
 #include "lib/gamelib/gtime.h"
 #include "multiplay.h"
 #include "map.h"
+#include "difficulty.h"
 
 #include "qtscriptfuncs.h"
 
@@ -416,7 +417,14 @@ bool loadPlayerScript(QString path, int player, int difficulty)
 	engine->globalObject().setProperty("gameTime", gameTime, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	//== \item[difficulty] The currently set campaign difficulty, or the current AI's difficulty setting. It will be one of
 	//== EASY, MEDIUM, HARD or INSANE.
-	engine->globalObject().setProperty("difficulty", difficulty, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+	if (game.type == SKIRMISH)
+	{
+		engine->globalObject().setProperty("difficulty", difficulty, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+	}
+	else // campaign
+	{
+		engine->globalObject().setProperty("difficulty", (int)getDifficultyLevel(), QScriptValue::ReadOnly | QScriptValue::Undeletable);
+	}
 	//== \item[mapName] The name of the current map.
 	engine->globalObject().setProperty("mapName", game.map, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	//== \item[baseType] The type of base that the game starts with. It will be one of CAMP_CLEAN, CAMP_BASE or CAMP_WALLS.
@@ -912,6 +920,33 @@ bool triggerEventChat(int from, int to, const char *message)
 	return true;
 }
 
+//__ \subsection{eventBeacon(x, y, from, to[, message])}
+//__ An event that is run whenever a beacon message is received. The \emph{from} parameter is the
+//__ player sending the beacon. For the moment, the \emph{to} parameter is always the script player.
+//__ Message may be undefined.
+bool triggerEventBeacon(int from, int to, const char *message, int x, int y)
+{
+	for (int i = 0; i < scripts.size() && message; ++i)
+	{
+		QScriptEngine *engine = scripts.at(i);
+		int me = engine->globalObject().property("me").toInt32();
+		if (me == to)
+		{
+			QScriptValueList args;
+			args += QScriptValue(map_coord(x));
+			args += QScriptValue(map_coord(y));
+			args += QScriptValue(from);
+			args += QScriptValue(to);
+			if (message)
+			{
+				args += QScriptValue(message);
+			}
+			callFunction(engine, "eventBeacon", args);
+		}
+	}
+	return true;
+}
+
 //__ \subsection{eventGroupLoss(object, group id, new size)}
 //__ An event that is run whenever a group becomes empty. Input parameter
 //__ is the about to be killed object, the group's id, and the new group size.
@@ -925,3 +960,27 @@ bool triggerEventGroupLoss(BASE_OBJECT *psObj, int group, int size, QScriptEngin
 	callFunction(engine, "eventGroupLoss", args);
 	return true;
 }
+
+// This is not a trigger yet.
+bool triggerEventDroidMoved(DROID *psDroid, int oldx, int oldy)
+{
+	return areaLabelCheck(psDroid);
+}
+
+//__ \subsection{eventArea<label>(droid)}
+//__ An event that is run whenever a droid enters an area label. The area is then
+//__ deactived. Call resetArea() to reactivate it. The name of the event is 
+//__ eventArea + the name of the label.
+bool triggerEventArea(QString label, DROID *psDroid)
+{
+	for (int i = 0; i < scripts.size(); ++i)
+	{
+		QScriptEngine *engine = scripts.at(i);
+		QScriptValueList args;
+		args += QScriptValue(label);
+		args += convDroid(psDroid, engine);
+		callFunction(engine, QString("eventArea" + label), args);
+	}
+	return true;
+}
+
