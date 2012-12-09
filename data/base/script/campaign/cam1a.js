@@ -1,6 +1,6 @@
 var lastHitTime = 0;
 var numArtifact = 0;
-var scav1groupid, scav2groupid, scav3groupid, scav4groupid, seen1id, seenbase2id, seenbase3id, seenbase4id;
+var scav1groupid, scav2groupid, scav3groupid, scav4groupid, seenbase2id, seenbase3id, seenbase4id;
 var scavstarted = false;
 var artifactid;
 var cheatmode = false;
@@ -12,9 +12,55 @@ function gameLost()
 	gameOverMessage(false);
 }
 
+// player zero's droid enteres this area
+function eventAreaLaunchScavAttack(droid)
+{
+	debug("-- LAUNCHING SCAV ATTACK");
+	var spos = label("scav1soundpos");
+	playSound("pcv375.ogg", spos.x, spos.y, 0);
+	playSound("pcv456.ogg");
+	hackAddMessage("MB1A_MSG", MISS_MSG, 0, true);
+	hackAddMessage("C1A_OBJ1", PROX_MSG, 0, false);
+	scavstarted = true;
+	hackMarkTiles(); // clear any marked tiles from debugging
+	var droids = enumArea("ScavAttack1", ALL_PLAYERS, false);
+	// send scavengers on war path if triggered above
+	var startpos = label("playerBase");
+	for (var i = 0; scavstarted && i < droids.length; i++)
+	{
+		if ((droids[i].player == 7 || droids[i].player == 6) && droids[i].type == DROID)
+		{
+			orderDroidLoc(droids[i], DORDER_SCOUT, startpos.x, startpos.y);
+		}
+	}
+	if (cheatmode)
+	{
+		hackMarkTiles("ScavAttack1"); // mark next area
+	}
+}
+
+// player zero's droid enteres this area
+function eventAreaScavAttack1(droid)
+{
+	hackRemoveMessage("C1A_OBJ1", PROX_MSG, 0);
+	hackMarkTiles(); // clear marks
+	hackAddMessage("C1A_BASE0", PROX_MSG, 0, false);
+}
+
 function eventCheatMode(entered)
 {
 	cheatmode = entered; // remember this setting
+	if (entered)
+	{
+		if (!scavstarted)
+		{
+			hackMarkTiles("LaunchScavAttack");
+		}
+	}
+	else
+	{
+		hackMarkTiles(); // clear any marked tiles
+	}
 }
 
 // proceed to next level
@@ -39,50 +85,21 @@ function eventChat(from, to, message)
 		}
 		queue(gameWon);
 	}
-}
-
-// used to be that it went away when droids reached 4928, 6592 with radius 5 tiles
-// but we have no nice way of doing that yet...
-function removefirstobjective()
-{
-	hackRemoveMessage("C1A_OBJ1", PROX_MSG, 0);
+	else if (message == "status" && cheatmode)
+	{
+		console("numArtifact = " + numArtifact);
+		if (scavstarted) console("scavstarted ON");
+			else console("scavstarted OFF");
+		if (seenbase2) console("seen base 2 ON");
+			 else console("seen base 2 OFF");
+		if (seenbase3) console("seen base 3 ON");
+			else console("seen base 3 OFF");
+	}
 }
 
 // things that need checking every second
 function tick()
 {
-	// check if we should launch the scavs yet
-	if (!scavstarted)
-	{
-		var droids = enumArea("launchScavAttack");
-		for (var i = 0; i < droids.length; i++)
-		{
-			if (droids[i].player == 0) // there is a human droid in this area
-			{
-				debug("-- LAUNCHING SCAV ATTACK");
-				var spos = label("scav1soundpos");
-				playSound("pcv375.ogg", spos.x, spos.y, 0);
-				playSound("pcv456.ogg");
-				hackAddMessage("MB1A_MSG", MISS_MSG, 0, true);
-				hackAddMessage("C1A_OBJ1", PROX_MSG, 0, false);
-				scavstarted = true;
-				queue("removefirstobjective", 12000); // go away after a short while
-				break;
-			}
-		}
-		// send scavengers on war path if triggered above
-		var startpos = label("playerBase");
-		// FIXME, really should be only inside area 4416, 6336, 5440, 7104 that we send from
-		for (var i = 0; scavstarted && i < droids.length; i++)
-		{
-			if ((droids[i].player == 7 || droids[i].player == 6) && droids[i].type == DROID)
-			{
-debug("  sending " + droids[i].name + " to attack player");
-				orderDroidLoc(droids[i], DORDER_SCOUT, startpos.x, startpos.y);
-			}
-else debug("  NOT sending " +droids[i].name+ " to attack", droids[i].player, droids[i].type);
-		}
-	}
 	// check if game is lost
 	var factories = countStruct("A0LightFactory") + countStruct("A0CyborgFactory");
 	var droids = countDroid(DROID_CONSTRUCT);
@@ -124,17 +141,14 @@ function showbase3()
 
 function eventObjectSeen(viewer, seen)
 {
-	if (seen.id == seen1id)
-	{
-		hackAddMessage("C1A_BASE0", PROX_MSG, 0, false);
-	}
-	else if (seen.id == seenbase2id && !seenbase2)
+	if (seen.id == seenbase2id && !seenbase2)
 	{
 debug("seen base 2");
 		queue("showbase2", 1000);
 	}
 	else if (seen.id == seenbase3id && !seenbase3)
 	{
+debug("seen base 3");
 		queue("showbase3", 1000);
 	}
 	else if (seen.id == seenbase4id)
@@ -207,7 +221,6 @@ function eventGameInit()
 	scav2groupid = label("scavgroup2").id;
 	scav3groupid = label("scavgroup3").id;
 	scav4groupid = label("scavgroup4").id;
-	seen1id = label("seen1").id;
 	seenbase2id = label("seenbase2").id;
 	seenbase3id = label("seenbase3").id;
 	seenbase4id = label("seenbase4").id;
@@ -296,6 +309,7 @@ function eventPickup(feature, droid)
 // /////////////////////////////////////////////////////////////////
 // WARNING MESSAGES
 // Base Under Attack
+// FIXME -- if this is present in every script, put it in rules.js instead?
 function eventAttacked(victimObj, attackerObj)
 {
 	if (gameTime > lastHitTime + 5000)
