@@ -1763,7 +1763,7 @@ static void addDifficultyChooser(int player)
 		sButInit.pTip = NULL;
 		switch (i)
 		{
-		case 0: sButInit.pTip = _("Less aggressive"); break;
+		case 0: sButInit.pTip = _("Starts disadvantaged"); break;
 		case 1: sButInit.pTip = _("Plays nice"); break;
 		case 2: sButInit.pTip = _("No holds barred"); break;
 		case 3: sButInit.pTip = _("Starts with advantages"); break;
@@ -2524,7 +2524,7 @@ static void SendFireUp(void)
 	NETbeginEncode(NETbroadcastQueue(), NET_FIREUP);
 		NETuint32_t(&randomSeed);
 	NETend();
-
+	printSearchPath();
 	gameSRand(randomSeed);  // Set the seed for the synchronised random number generator. The clients will use the same seed.
 }
 
@@ -3075,7 +3075,7 @@ static void processMultiopWidgets(UDWORD id)
 		addPlayerBox(!ingame.bHostSetup || bHosted);
 	}
 
-	if (id >= MULTIOP_DIFFICULTY_CHOOSE_START && id <= MULTIOP_DIFFICULTY_CHOOSE_END)
+	if (id >= MULTIOP_DIFFICULTY_CHOOSE_START && id <= MULTIOP_DIFFICULTY_CHOOSE_END && difficultyChooserUp != -1)
 	{
 		int idx = id - MULTIOP_DIFFICULTY_CHOOSE_START;
 		NetPlay.players[difficultyChooserUp].difficulty = idx;
@@ -3085,7 +3085,7 @@ static void processMultiopWidgets(UDWORD id)
 		addPlayerBox(!ingame.bHostSetup || bHosted);
 	}
 
-	if (id >= MULTIOP_AI_START && id <= MULTIOP_AI_END)
+	if (id >= MULTIOP_AI_START && id <= MULTIOP_AI_END && aiChooserUp != -1)
 	{
 		int idx = id - MULTIOP_AI_START;
 		NetPlay.players[aiChooserUp].ai = idx;

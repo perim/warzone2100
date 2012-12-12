@@ -77,7 +77,15 @@ typedef QMap<BASE_OBJECT *, int> GROUPMAP;
 typedef QMap<QScriptEngine *, GROUPMAP *> ENGINEMAP;
 static ENGINEMAP groups;
 
-struct labeltype { Vector2i p1, p2; int id; int type; int player; QList<int> idlist; };
+struct labeltype
+{
+	Vector2i p1, p2;
+	int id;
+	int type;
+	int player;
+	QList<int> idlist;
+	bool operator==(const class labeltype &other) const { return id == other.id && type == other.type && player == other.player; }
+};
 typedef QMap<QString, labeltype> LABELMAP;
 static LABELMAP labels;
 
@@ -148,6 +156,7 @@ static bool groupAddObject(BASE_OBJECT *psObj, int groupId, QScriptEngine *engin
 //;; \item[started] A boolean saying whether or not this research has been started by current player or any of its allies.
 //;; \item[done] A boolean saying whether or not this research has been completed.
 //;; \item[name] A string containing the canonical name of the research.
+//;; \item[type] The type will always be RESEARCH_DATA.
 //;; \end{description}
 QScriptValue convResearch(RESEARCH *psResearch, QScriptEngine *engine, int player)
 {
@@ -166,6 +175,7 @@ QScriptValue convResearch(RESEARCH *psResearch, QScriptEngine *engine, int playe
 	value.setProperty("started", started); // including whether an ally has started it
 	value.setProperty("done", IsResearchCompleted(&asPlayerResList[player][psResearch->index]));
 	value.setProperty("name", psResearch->pName);
+	value.setProperty("type", SCRIPT_RESEARCH);
 	return value;
 }
 
@@ -671,6 +681,7 @@ bool writeLabels(const char *filename)
 //-- Reset the trigger on an area. Next time a unit enters the area, it will trigger
 //-- an area event. Optionally add a filter on it in the second parameter, which can
 //-- be a specific player to watch for, or ALL_PLAYERS by default.
+//-- This is a fast operation of O(log n) algorithmic complexity.
 static QScriptValue js_resetArea(QScriptContext *context, QScriptEngine *engine)
 {
 	QString labelName = context->argument(0).toString();
@@ -699,6 +710,7 @@ static QScriptValue js_enumLabels(QScriptContext *, QScriptEngine *engine)
 
 //-- \subsection{addLabel(object, label)}
 //-- Add a label to a game object. If the game object already has a label, it is overwritten.
+//-- This is a fast operation of O(log n) algorithmic complexity.
 static QScriptValue js_addLabel(QScriptContext *context, QScriptEngine *engine)
 {
 	struct labeltype value;
@@ -713,6 +725,26 @@ static QScriptValue js_addLabel(QScriptContext *context, QScriptEngine *engine)
 	return QScriptValue();
 }
 
+//-- \subsection{getLabel(object)}
+//-- Get a label string belonging to a game object. If the object has multiple labels, only the first
+//-- label found will be returned. If the object has no labels, null is returned.
+//-- This is a relatively slow operation of O(n) algorithmic complexity.
+static QScriptValue js_getLabel(QScriptContext *context, QScriptEngine *engine)
+{
+	struct labeltype value;
+	QScriptValue structVal = context->argument(0);
+	value.id = structVal.property("id").toInt32();
+	value.player = structVal.property("player").toInt32();
+	BASE_OBJECT *psObj = IdToPointer(value.id, value.player);
+	SCRIPT_ASSERT(context, psObj, "Object id %d not found belonging to player %d", value.id, value.player);
+	QString label = labels.key(value, QString());
+	if (!label.isEmpty())
+	{
+		return QScriptValue(label);
+	}
+	return QScriptValue::NullValue;
+}
+
 //-- \subsection{label(key)}
 //-- Fetch something denoted by a label. A label refers to an area, a position or a \emph{game object} on 
 //-- the map defined using the map editor and stored together with the map. The only argument
@@ -720,6 +752,7 @@ static QScriptValue js_addLabel(QScriptContext *context, QScriptEngine *engine)
 //-- is (in case this is unclear). This type will be one of DROID, STRUCTURE, FEATURE, AREA
 //-- and POSITION. The AREA has defined 'x', 'y', 'x2', and 'y2', while POSITION has only
 //-- defined 'x' and 'y'.
+//-- This is a fast operation of O(log n) algorithmic complexity.
 static QScriptValue js_label(QScriptContext *context, QScriptEngine *engine)
 {
 	DROID *psDroid;
@@ -793,6 +826,7 @@ static QScriptValue js_enumBlips(QScriptContext *context, QScriptEngine *engine)
 		QScriptValue v = engine->newObject();
 		v.setProperty("x", map_coord(p.x), QScriptValue::ReadOnly);
 		v.setProperty("y", map_coord(p.y), QScriptValue::ReadOnly);
+		v.setProperty("type", SCRIPT_POSITION, QScriptValue::ReadOnly);
 		result.setProperty(i, v);
 	}
 	return result;
@@ -2071,12 +2105,11 @@ static QScriptValue js_setStructureLimits(QScriptContext *context, QScriptEngine
 
 //-- \subsection{centreView(x, y)}
 //-- Center the player's camera at the given position.
-static QScriptValue js_centreView(QScriptContext *context, QScriptEngine *engine)
+static QScriptValue js_centreView(QScriptContext *context, QScriptEngine *)
 {
 	int x = context->argument(0).toInt32();
 	int y = context->argument(1).toInt32();
 	setViewPos(x, y, false);
-	Q_UNUSED(engine);
 	return QScriptValue();
 }
 
@@ -2430,6 +2463,7 @@ static QScriptValue js_playerPower(QScriptContext *context, QScriptEngine *engin
 }
 
 //-- \subsection{isStructureAvailable(structure type[, player])}
+//-- Returns true if given structure can be built. It checks both research and unit limits.
 static QScriptValue js_isStructureAvailable(QScriptContext *context, QScriptEngine *engine)
 {
 	QString building = context->argument(0).toString();
@@ -2491,7 +2525,7 @@ static QScriptValue js_hackGetObj(QScriptContext *context, QScriptEngine *engine
 }
 
 //-- \subsection{hackAssert(condition, message...)}
-//-- Function to perform unit testing.
+//-- Function to perform unit testing. It will throw a script error and a game assert.
 static QScriptValue js_hackAssert(QScriptContext *context, QScriptEngine *engine)
 {
 	bool condition = context->argument(0).toBool();
@@ -2892,6 +2926,7 @@ static QScriptValue js_removeBeacon(QScriptContext *context, QScriptEngine *engi
 			if (psMessage)
 			{
 				removeMessage(psMessage, i);
+				triggerEventBeaconRemoved(me, i);
 			}
 		}
 	}
@@ -3034,7 +3069,7 @@ static QScriptValue js_getDroidLimit(QScriptContext *context, QScriptEngine *eng
 }
 
 //-- \subsection{getExperienceModifier(player)}
-//-- Get the % of experience this player droids are going to gain.
+//-- Get the % of experience this player droids are going to gain. (3.2+ only)
 static QScriptValue js_getExperienceModifier(QScriptContext *context, QScriptEngine *)
 {
 	int player = context->argument(0).toInt32();
@@ -3042,7 +3077,7 @@ static QScriptValue js_getExperienceModifier(QScriptContext *context, QScriptEng
 }
 
 //-- \subsection{setExperienceModifier(player, percent)}
-//-- Set the % of experience this player droids are going to gain.
+//-- Set the % of experience this player droids are going to gain. (3.2+ only)
 static QScriptValue js_setExperienceModifier(QScriptContext *context, QScriptEngine *)
 {
 	int player = context->argument(0).toInt32();
@@ -3279,9 +3314,19 @@ static QScriptValue js_hackMarkTiles(QScriptContext *context, QScriptEngine *)
 //-- Slide the camera over to the given position on the map. (3.2+ only)
 static QScriptValue js_cameraSlide(QScriptContext *context, QScriptEngine *)
 {
-	int x = context->argument(0).toNumber();
-	int y = context->argument(1).toNumber();
+	float x = context->argument(0).toNumber();
+	float y = context->argument(1).toNumber();
 	requestRadarTrack(x, y);
+	return QScriptValue();
+}
+
+//-- \subsection{cameraZoom(z, speed)}
+//-- Slide the camera to the given zoom distance. Normal camera zoom ranges between 500 and 5000.
+static QScriptValue js_cameraZoom(QScriptContext *context, QScriptEngine *)
+{
+	float z = context->argument(0).toNumber();
+	float speed = context->argument(1).toNumber();
+	setZoom(speed, z);
 	return QScriptValue();
 }
 
@@ -3365,6 +3410,7 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 	engine->globalObject().setProperty("dump", engine->newFunction(js_dump));
 	engine->globalObject().setProperty("label", engine->newFunction(js_label));
 	engine->globalObject().setProperty("addLabel", engine->newFunction(js_addLabel));
+	engine->globalObject().setProperty("getLabel", engine->newFunction(js_getLabel));
 	engine->globalObject().setProperty("enumLabels", engine->newFunction(js_enumLabels));
 	engine->globalObject().setProperty("enumGateways", engine->newFunction(js_enumGateways));
 	engine->globalObject().setProperty("enumTemplates", engine->newFunction(js_enumTemplates));
@@ -3376,6 +3422,7 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 	engine->globalObject().setProperty("setSky", engine->newFunction(js_setSky));
 	engine->globalObject().setProperty("cameraSlide", engine->newFunction(js_cameraSlide));
 	engine->globalObject().setProperty("cameraTrack", engine->newFunction(js_cameraTrack));
+	engine->globalObject().setProperty("cameraZoom", engine->newFunction(js_cameraZoom));
 	engine->globalObject().setProperty("resetArea", engine->newFunction(js_resetArea));
 
 	// horrible hacks follow -- do not rely on these being present!
