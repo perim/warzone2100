@@ -1,11 +1,13 @@
 var lastHitTime = 0;
 var numArtifact = 0;
-var scav1groupid, scav2groupid, scav3groupid, scav4groupid, seenbase2id, seenbase3id, seenbase4id;
-var scavstarted = false;
+var scav1groupid, scav2groupid, scav3groupid, scav4groupid;
 var artifactid;
 var cheatmode = false;
-var seenbase2 = false;
-var seenbase3 = false;
+var stage = 0;
+var base1destroyed = false;
+var base2destroyed = false;
+var base3destroyed = false;
+var base4destroyed = false;
 
 function gameLost()
 {
@@ -15,18 +17,17 @@ function gameLost()
 // player zero's droid enteres this area
 function eventAreaLaunchScavAttack(droid)
 {
-	debug("-- LAUNCHING SCAV ATTACK");
+	stage++;
 	var spos = label("scav1soundpos");
 	playSound("pcv375.ogg", spos.x, spos.y, 0);
 	playSound("pcv456.ogg");
 	hackAddMessage("MB1A_MSG", MISS_MSG, 0, true);
 	hackAddMessage("C1A_OBJ1", PROX_MSG, 0, false);
-	scavstarted = true;
 	hackMarkTiles(); // clear any marked tiles from debugging
 	var droids = enumArea("ScavAttack1", ALL_PLAYERS, false);
 	// send scavengers on war path if triggered above
 	var startpos = label("playerBase");
-	for (var i = 0; scavstarted && i < droids.length; i++)
+	for (var i = 0; i < droids.length; i++)
 	{
 		if ((droids[i].player == 7 || droids[i].player == 6) && droids[i].type == DROID)
 		{
@@ -42,6 +43,7 @@ function eventAreaLaunchScavAttack(droid)
 // player zero's droid enteres this area
 function eventAreaScavAttack1(droid)
 {
+	stage++;
 	hackRemoveMessage("C1A_OBJ1", PROX_MSG, 0);
 	hackMarkTiles(); // clear marks
 	hackAddMessage("C1A_BASE0", PROX_MSG, 0, false);
@@ -52,9 +54,17 @@ function eventCheatMode(entered)
 	cheatmode = entered; // remember this setting
 	if (entered)
 	{
-		if (!scavstarted)
+		if (stage == 0)
 		{
 			hackMarkTiles("LaunchScavAttack");
+		}
+		else if (stage == 1)
+		{
+			hackMarkTiles("ScavAttack1");
+		}
+		else
+		{
+			hackMarkTiles(); // clear marks
 		}
 	}
 	else
@@ -88,12 +98,7 @@ function eventChat(from, to, message)
 	else if (message == "status" && cheatmode)
 	{
 		console("numArtifact = " + numArtifact);
-		if (scavstarted) console("scavstarted ON");
-			else console("scavstarted OFF");
-		if (seenbase2) console("seen base 2 ON");
-			 else console("seen base 2 OFF");
-		if (seenbase3) console("seen base 3 ON");
-			else console("seen base 3 OFF");
+		console("stage = " + stage);
 	}
 }
 
@@ -105,59 +110,48 @@ function tick()
 	var droids = countDroid(DROID_CONSTRUCT);
 	if (droids == 0 && factories == 0)
 	{
-		queue("gameLost", 2000); // wait 2 secs before throwing the game
+		queue("gameLost", 4000); // wait 4 secs before throwing the game
 	}
 	// check if game is won
 	var hostiles = countStruct("A0BaBaFactory", 6) + countStruct("A0BaBaFactory", 7)
 	               + countDroid(DROID_ANY, 6) + countDroid(DROID_ANY, 7);
-	if (!hostiles && numArtifact > 4)
+	if (!hostiles && numArtifact >= 4 && stage >= 6)
 	{
-		queue("gameWon", 4000); // wait 4 secs before giving it
+		queue("gameWon", 6000); // wait 6 secs before giving it
 	}
 }
 
 function showbase2()
 {
-	if (!seenbase2) // extra safety, world goes boom if message added twice
+	if (!base2destroyed)
 	{
-debug("adding C1A_BASE1");
-		seenbase2 = true;
 		hackAddMessage("C1A_BASE1", PROX_MSG, 0, false);
 		var spos = label("scav2soundpos");
 		playSound("pcv374.ogg", spos.x, spos.y, 0);
 	}
+	stage++;
 }
 
 function showbase3()
 {
-	if (!seenbase3) // extra safety, world goes boom if message added twice
+	if (!base3destroyed)
 	{
-		seenbase3 = true;
 		hackAddMessage("C1A_BASE2", PROX_MSG, 0, false);
 		var spos = label("scav3soundpos");
 		playSound("pcv374.ogg", spos.x, spos.y, 0);
 	}
+	stage++;
 }
 
-function eventObjectSeen(viewer, seen)
+function showbase4()
 {
-	if (seen.id == seenbase2id && !seenbase2)
+	if (!base4destroyed)
 	{
-debug("seen base 2");
-		queue("showbase2", 1000);
-	}
-	else if (seen.id == seenbase3id && !seenbase3)
-	{
-debug("seen base 3");
-		queue("showbase3", 1000);
-	}
-	else if (seen.id == seenbase4id)
-	{
-debug("seen base 4");
 		hackAddMessage("C1A_BASE3", PROX_MSG, 0, false);
 		var spos = label("retreat4");
 		playSound("pcv374.ogg", spos.x, spos.y, 0);
 	}
+	stage++;
 }
 
 function eventGroupLoss(obj, groupid, newsize)
@@ -170,49 +164,58 @@ function eventGroupLoss(obj, groupid, newsize)
 		hackRemoveMessage("C1A_BASE0", PROX_MSG, 0);
 		var spos = label("scav1soundpos");
 		playSound("pcv391.ogg", spos.x, spos.y, 0);
+		queue("showbase2", 2000);
+		base1destroyed = true;
 	}
 	else if (groupid == scav2groupid && newsize == 0)
 	{
 		// eliminated scav base 2
-		debug("SCAV BASE 2 ELIMINATED!!");
 		leftovers = enumArea("scavbase2area");
 		hackRemoveMessage("C1A_BASE1", PROX_MSG, 0);
 		var spos = label("scav2soundpos");
 		playSound("pcv392.ogg", spos.x, spos.y, 0);
-		if (!seenbase3)		// show next base, if not discovered yet
-		{
-			queue("showbase3", 2000);
-		}
+		queue("showbase3", 2000);
+		base2destroyed = true;
 	}
 	else if (groupid == scav3groupid && newsize == 0)
 	{
 		// eliminated scav base 3
-		debug("SCAV BASE 3 ELIMINATED!!");
 		leftovers = enumArea("scavbase3area");
 		hackRemoveMessage("C1A_BASE2", PROX_MSG, 0);
 		var spos = label("scav3soundpos");
 		playSound("pcv392.ogg", spos.x, spos.y, 0);
+		queue("showbase4", 2000);
+		base3destroyed = true;
 	}
 	else if (groupid == scav4groupid && newsize == 0)
 	{
 		// eliminated scav base 4
-		debug("SCAV BASE 4 ELIMINATED!!");
 		leftovers = enumArea("scavbase4area");
 		hackRemoveMessage("C1A_BASE3", PROX_MSG, 0);
 		var spos = label("retreat4");
 		playSound("pcv392.ogg", spos.x, spos.y, 0);
+		stage = 6;
+		base4destroyed = true;
 	}
 	// if scav group gone, nuke any leftovers, such as scav walls
 	for (var i = 0; leftovers && i < leftovers.length; i++)
 	{
-		if ((leftovers[i].player == 6 || leftovers[i].player == 7) && leftovers[i].type == STRUCTURE)
+		if (((leftovers[i].player == 6 || leftovers[i].player == 7) && leftovers[i].type == STRUCTURE)
+		    || (leftovers[i].type == FEATURE && leftovers[i].stattype == BUILDING))
 		{
 			removeObject(leftovers[i], true); // remove with special effect
 		}
 	}
 }
 
-function eventGameInit()
+function addartifact(poslabel, artilabel)
+{
+	var artpos = label(poslabel);
+	var artifact = addFeature("Crate", artpos.x, artpos.y);
+	addLabel(artifact, artilabel);
+}
+
+function eventStartLevel()
 {
 	var startpos = label("startPosition");
 	var lz = label("landingZone");
@@ -221,9 +224,6 @@ function eventGameInit()
 	scav2groupid = label("scavgroup2").id;
 	scav3groupid = label("scavgroup3").id;
 	scav4groupid = label("scavgroup4").id;
-	seenbase2id = label("seenbase2").id;
-	seenbase3id = label("seenbase3").id;
-	seenbase4id = label("seenbase4").id;
 
 	centreView(startpos.x, startpos.y);
 	setNoGoArea(lz.x, lz.y, lz.x2, lz.y2, 0);
@@ -252,10 +252,11 @@ function eventGameInit()
 	setReinforcementTime(-1);
 	setMissionTime(-1); // was 36000
 
-	var art4pos = label("artifact4pos");
-	var artifact4 = addFeature("Crate", art4pos.x, art4pos.y);
-	addLabel(artifact4, "artifact");
-	numArtifact = 1;
+	// Add artifacts
+	addartifact("artifact4pos", "artifact1");
+	addartifact("artifact1pos", "artifact2");
+	addartifact("artifact3pos", "artifact3");
+	addartifact("artifact2pos", "artifact4");
 
 	//groupAddArea(scavGroup, enemy1, 4416, 6336, 5440, 7104);
 	//setGroupRetreatPoint(scavGroup, 4416, 5440);	//retreat to crossroads
@@ -274,35 +275,31 @@ function eventPickup(feature, droid)
 		return; // not interested!
 	}
 	playSound("pcv352.ogg", feature.x, feature.y, feature.z);
+	var lab = getLabel(feature);
 	removeObject(feature); // artifacts are not self-removing...
-	if (numArtifact == 1) // first artifact
+	if (lab == "artifact1") // first artifact
 	{
 		enableResearch("R-Wpn-MG-Damage01");
-		var art1pos = label("artifact1pos");
-		var artifact1 = addFeature("Crate", art1pos.x, art1pos.y);
-		addLabel(artifact1, "artifact");
 		numArtifact++;
 	}
-	else if (numArtifact == 2) // second artifact
+	else if (lab == "artifact2") // second artifact
 	{
 		enableResearch("R-Wpn-Flamer01Mk1");
-		var art3pos = label("artifact3pos");
-		var artifact3 = addFeature("Crate", art3pos.x, art3pos.y);
-		addLabel(artifact3, "artifact");
 		numArtifact++;
 	}
-	else if (numArtifact == 3) // third artifact
+	else if (lab == "artifact3") // third artifact
 	{
 		enableResearch("R-Defense-Tower01");
-		var art2pos = label("artifact2pos");
-		var artifact2 = addFeature("Crate", art2pos.x, art2pos.y);
-		addLabel(artifact2, "artifact");
 		numArtifact++;
 	}
-	else if (numArtifact == 4) // final artifact
+	else if (lab == "artifact4") // final artifact
 	{
 		enableResearch("R-Sys-Engineering01");
 		numArtifact++;
+	}
+	else
+	{
+		debug("Bad artifact found in cam1a!");
 	}
 }
 
