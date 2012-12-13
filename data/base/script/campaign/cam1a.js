@@ -1,9 +1,9 @@
+var timercoming = 0; // start mission timer after first power gen and derrick is built
 var lastHitTime = 0;
-var numArtifact = 0;
-var scav1groupid, scav2groupid, scav3groupid, scav4groupid;
-var artifactid;
+var scav1group, scav2group, scav3group, scav4group; // premade groups
 var cheatmode = false;
 var stage = 0;
+var numArtifact = 0;
 var base1destroyed = false;
 var base2destroyed = false;
 var base3destroyed = false;
@@ -129,7 +129,6 @@ function showbase2()
 		var spos = label("scav2soundpos");
 		playSound("pcv374.ogg", spos.x, spos.y, 0);
 	}
-	stage++;
 }
 
 function showbase3()
@@ -140,7 +139,6 @@ function showbase3()
 		var spos = label("scav3soundpos");
 		playSound("pcv374.ogg", spos.x, spos.y, 0);
 	}
-	stage++;
 }
 
 function showbase4()
@@ -151,13 +149,12 @@ function showbase4()
 		var spos = label("retreat4");
 		playSound("pcv374.ogg", spos.x, spos.y, 0);
 	}
-	stage++;
 }
 
 function eventGroupLoss(obj, groupid, newsize)
 {
 	var leftovers;
-	if (groupid == scav1groupid && newsize == 0)
+	if (groupid == scav1group && newsize == 0)
 	{
 		// eliminated scav base 1
 		leftovers = enumArea("scavbase1area");
@@ -166,8 +163,9 @@ function eventGroupLoss(obj, groupid, newsize)
 		playSound("pcv391.ogg", spos.x, spos.y, 0);
 		queue("showbase2", 2000);
 		base1destroyed = true;
+		stage++;
 	}
-	else if (groupid == scav2groupid && newsize == 0)
+	else if (groupid == scav2group && newsize == 0)
 	{
 		// eliminated scav base 2
 		leftovers = enumArea("scavbase2area");
@@ -176,8 +174,9 @@ function eventGroupLoss(obj, groupid, newsize)
 		playSound("pcv392.ogg", spos.x, spos.y, 0);
 		queue("showbase3", 2000);
 		base2destroyed = true;
+		stage++;
 	}
-	else if (groupid == scav3groupid && newsize == 0)
+	else if (groupid == scav3group && newsize == 0)
 	{
 		// eliminated scav base 3
 		leftovers = enumArea("scavbase3area");
@@ -186,15 +185,16 @@ function eventGroupLoss(obj, groupid, newsize)
 		playSound("pcv392.ogg", spos.x, spos.y, 0);
 		queue("showbase4", 2000);
 		base3destroyed = true;
+		stage++;
 	}
-	else if (groupid == scav4groupid && newsize == 0)
+	else if (groupid == scav4group && newsize == 0)
 	{
 		// eliminated scav base 4
 		leftovers = enumArea("scavbase4area");
 		hackRemoveMessage("C1A_BASE3", PROX_MSG, 0);
 		var spos = label("retreat4");
 		playSound("pcv392.ogg", spos.x, spos.y, 0);
-		stage = 6;
+		stage++;
 		base4destroyed = true;
 	}
 	// if scav group gone, nuke any leftovers, such as scav walls
@@ -220,10 +220,10 @@ function eventStartLevel()
 	var startpos = label("startPosition");
 	var lz = label("landingZone");
 
-	scav1groupid = label("scavgroup1").id;
-	scav2groupid = label("scavgroup2").id;
-	scav3groupid = label("scavgroup3").id;
-	scav4groupid = label("scavgroup4").id;
+	scav1group = label("scavgroup1").id;
+	scav2group = label("scavgroup2").id;
+	scav3group = label("scavgroup3").id;
+	scav4group = label("scavgroup4").id;
 
 	centreView(startpos.x, startpos.y);
 	setNoGoArea(lz.x, lz.y, lz.x2, lz.y2, 0);
@@ -250,7 +250,7 @@ function eventStartLevel()
 	hackAddMessage("CMB1_MSG", CAMP_MSG, 0, false);
 
 	setReinforcementTime(-1);
-	setMissionTime(-1); // was 36000
+	setMissionTime(-1);
 
 	// Add artifacts
 	addartifact("artifact4pos", "artifact1");
@@ -264,6 +264,22 @@ function eventStartLevel()
 	//setGroupRetreatLeadership(scavGroup, 10);
 
 	setTimer("tick", 1000);
+}
+
+function eventStructureBuilt(structure, droid)
+{
+	if (structure.type == POWER_GEN)
+	{
+		timercoming++;
+	}
+	else if (structure.type == RESOURCE_EXTRACTOR)
+	{
+		timercoming++;
+	}
+	if (timercoming)
+	{
+		setMissionTime(36000);
+	}
 }
 
 // Called when a human droid moves close to a crate. Remove it, then
