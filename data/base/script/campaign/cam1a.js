@@ -268,15 +268,15 @@ function eventStartLevel()
 
 function eventStructureBuilt(structure, droid)
 {
-	if (structure.type == POWER_GEN)
+	if (structure.stattype == POWER_GEN)
 	{
 		timercoming++;
 	}
-	else if (structure.type == RESOURCE_EXTRACTOR)
+	else if (structure.stattype == RESOURCE_EXTRACTOR)
 	{
 		timercoming++;
 	}
-	if (timercoming)
+	if (timercoming == 2)
 	{
 		setMissionTime(36000);
 	}
