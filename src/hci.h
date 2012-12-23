@@ -31,6 +31,12 @@
 
 #include "message.h"
 
+enum RETICULE_TYPE
+{
+	RET_STANDARD,
+	RET_DROID,
+	RET_STRUCTURE,
+};
 
 #define BASE_COORDS_X	(640)
 #define BASE_COORDS_Y	(480)
@@ -302,8 +308,8 @@ extern INT_RETVAL intRunWidgets(void);
 extern void intDisplayWidgets(void);
 
 /* Add the reticule widgets to the widget screen */
-extern bool intAddReticule(void);
-extern void intRemoveReticule(void);
+extern bool intAddReticule(RETICULE_TYPE ret = RET_STANDARD);
+extern void intRemoveReticule();
 
 /* Set the map view point to the world coordinates x,y */
 extern void intSetMapPos(UDWORD x, UDWORD y);
