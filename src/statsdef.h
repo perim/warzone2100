@@ -523,6 +523,15 @@ struct BODY_STATS : public COMPONENT_STATS
 	UDWORD		powerOutput;	///< this is the engine output of the body
 	iIMDShape	**ppIMDList;	///< list of IMDs to use for propulsion unit - up to numPropulsionStats
 	iIMDShape	*pFlameIMD;		///< pointer to which flame graphic to use - for VTOLs only at the moment
+	char		bodyClass[40]; // TBD make into QString once this struct is class-safe
+
+	struct
+	{
+		int power;
+		int body;
+		int armour;
+		int thermal;
+	} upgrade[MAX_PLAYERS];
 };
 
 /************************************************************************************
@@ -582,14 +591,6 @@ struct REPAIR_UPGRADE
 struct CONSTRUCTOR_UPGRADE
 {
 	UWORD	constructPoints;
-};
-
-/*body stats which can be upgraded by research*/
-struct BODY_UPGRADE
-{
-	UWORD	powerOutput;
-	UWORD	body;
-	UWORD	armourValue[WC_NUM_WEAPON_CLASSES];
 };
 
 #endif // __INCLUDED_STATSDEF_H__

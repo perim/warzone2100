@@ -63,7 +63,6 @@ SENSOR_UPGRADE		asSensorUpgrade[MAX_PLAYERS];
 ECM_UPGRADE		asECMUpgrade[MAX_PLAYERS];
 REPAIR_UPGRADE		asRepairUpgrade[MAX_PLAYERS];
 CONSTRUCTOR_UPGRADE	asConstUpgrade[MAX_PLAYERS];
-BODY_UPGRADE		asBodyUpgrade[MAX_PLAYERS][BODY_TYPE];
 
 /* The number of different stats stored */
 UDWORD		numBodyStats;
@@ -424,7 +423,6 @@ void statsInitVars(void)
 	memset(asECMUpgrade, 0, sizeof(asECMUpgrade));
 	memset(asRepairUpgrade, 0, sizeof(asRepairUpgrade));
 	memset(asConstUpgrade, 0, sizeof(asConstUpgrade));
-	memset(asBodyUpgrade, 0, sizeof(asBodyUpgrade));
 
 	// init the max values
 	maxComponentWeight = maxBodyArmour = maxBodyPower =
@@ -842,6 +840,14 @@ bool loadBodyStats(const char *pFileName)
 		psStats->armourValue[WC_KINETIC] = ini.value("armourKinetic").toInt();
 		psStats->armourValue[WC_HEAT] = ini.value("armourHeat").toInt();
 		psStats->designable = ini.value("designable", false).toBool();
+		sstrcpy(psStats->bodyClass, ini.value("class").toString().toUtf8().constData());
+		for (int j = 0; j < MAX_PLAYERS; j++)
+		{
+			psStats->upgrade[j].body = 0;
+			psStats->upgrade[j].thermal = 0;
+			psStats->upgrade[j].armour = 0;
+			psStats->upgrade[j].power = 0;
+		}
 		QString dtype = ini.value("droidType", "DROID").toString();
 		psStats->droidTypeOverride = DROID_DEFAULT;
 		if (dtype.compare("PERSON") == 0)
@@ -2302,22 +2308,20 @@ UDWORD	constructorPoints(CONSTRUCT_STATS *psStats, UBYTE player)
 	return (psStats->constructPoints + (psStats->constructPoints * asConstUpgrade[player].constructPoints) / 100);
 }
 
-UDWORD	bodyPower(BODY_STATS *psStats, UBYTE player, UBYTE bodyType)
+UDWORD	bodyPower(BODY_STATS *psStats, UBYTE player)
 {
-	return (psStats->powerOutput + (psStats->powerOutput * asBodyUpgrade[player][bodyType].powerOutput) / 100);
+	return psStats->powerOutput + psStats->powerOutput * psStats->upgrade[player].power / 100;
 }
 
-UDWORD bodyArmour(BODY_STATS *psStats, UBYTE player, UBYTE bodyType, WEAPON_CLASS weaponClass)
+UDWORD bodyArmour(BODY_STATS *psStats, UBYTE player, WEAPON_CLASS weaponClass)
 {
 	switch (weaponClass)
 	{
 	case WC_KINETIC:
-		//case WC_EXPLOSIVE:
-		return (psStats->armourValue[WC_KINETIC] + (psStats->armourValue[WC_KINETIC] * asBodyUpgrade[player][bodyType].armourValue[WC_KINETIC]) / 100);
+		return psStats->armourValue[WC_KINETIC] + (psStats->armourValue[WC_KINETIC] * psStats->upgrade[player].armour / 100);
 	case WC_HEAT:
-		//case WC_MISC:
-		return (psStats->armourValue[WC_HEAT] + (psStats->armourValue[WC_HEAT] * asBodyUpgrade[player][bodyType].armourValue[WC_HEAT]) / 100);
-	default:
+		return psStats->armourValue[WC_KINETIC] + (psStats->armourValue[WC_KINETIC] * psStats->upgrade[player].thermal / 100);
+	case WC_NUM_WEAPON_CLASSES:
 		break;
 	}
 	ASSERT(false, "Unknown weapon class");
@@ -2581,8 +2585,6 @@ void updateMaxConstStats(UWORD maxValue)
 	}
 }
 
-//propulsion stats are not upgradeable
-
 void adjustMaxDesignStats(void)
 {
 	UWORD       weaponDamage, sensorRange, repairPoints,
@@ -2592,6 +2594,15 @@ void adjustMaxDesignStats(void)
 	weaponDamage = sensorRange = repairPoints = ecmRange = constPoints = bodyPoints = bodyPower = bodyArmour = 0;
 
 	//go thru' all the functions getting the max upgrade values for the stats
+
+	for (int j = 0; j < numBodyStats; j++)
+	{
+		BODY_STATS *psStats = asBodyStats + j;
+		bodyPoints = MAX(bodyPoints, psStats->upgrade[selectedPlayer].body);
+		bodyArmour = MAX(bodyPoints, psStats->upgrade[selectedPlayer].armour);
+		bodyPower = MAX(bodyPoints, psStats->upgrade[selectedPlayer].power);
+	}
+
 	for (inc = 0; inc < numFunctions; inc++)
 	{
 		switch (asFunctions[inc]->type)
@@ -2606,24 +2617,6 @@ void adjustMaxDesignStats(void)
 			if (ecmRange < ((UPGRADE_FUNCTION *)asFunctions[inc])->upgradePoints)
 			{
 				ecmRange = ((UPGRADE_FUNCTION *)asFunctions[inc])->upgradePoints;
-			}
-			break;
-		case DROIDBODY_UPGRADE_TYPE:
-			if (bodyPoints < ((DROIDBODY_UPGRADE_FUNCTION *)asFunctions[inc])->body)
-			{
-				bodyPoints = ((DROIDBODY_UPGRADE_FUNCTION *)asFunctions[inc])->body;
-			}
-			if (bodyPower < ((DROIDBODY_UPGRADE_FUNCTION *)asFunctions[inc])->upgradePoints)
-			{
-				bodyPower = ((DROIDBODY_UPGRADE_FUNCTION *)asFunctions[inc])->upgradePoints;
-			}
-			if (bodyArmour < ((DROIDBODY_UPGRADE_FUNCTION *)asFunctions[inc])->armourValue[WC_KINETIC])
-			{
-				bodyArmour = ((DROIDBODY_UPGRADE_FUNCTION *)asFunctions[inc])->armourValue[WC_KINETIC];
-			}
-			if (bodyArmour < ((DROIDBODY_UPGRADE_FUNCTION *)asFunctions[inc])->armourValue[WC_HEAT])
-			{
-				bodyArmour = ((DROIDBODY_UPGRADE_FUNCTION *)asFunctions[inc])->armourValue[WC_HEAT];
 			}
 			break;
 		case DROIDSENSOR_UPGRADE_TYPE:

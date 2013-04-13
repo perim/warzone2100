@@ -24,6 +24,7 @@
 #ifndef __INCLUDED_RESEARCHDEF_H__
 #define __INCLUDED_RESEARCHDEF_H__
 
+#include <QStringList>
 #include "lib/framework/frame.h"
 #include "statsdef.h"
 
@@ -58,6 +59,7 @@ struct RESEARCH : public BASE_STATS
 	std::vector<UWORD>	pStructureResults;	///< List of Structures that are possible after this research
 	QList<COMPONENT_STATS *> componentResults;	///< List of Components that are possible after this research
 	QList<RES_COMP_REPLACEMENT> componentReplacement;	///< List of Components that are automatically replaced with new onew after research
+	QStringList		resultStrings;		///< List of hints to javascript interface how to deal with the research
 	const struct VIEWDATA *pViewData;               // data used to display a message in the Intelligence Screen
 	UWORD			iconID;				/* the ID from 'Framer' for which graphic to draw in interface*/
 	BASE_STATS      *psStat;   /* A stat used to define which graphic is drawn instead of the two fields below */

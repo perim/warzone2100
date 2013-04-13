@@ -177,6 +177,8 @@ bool loadResearch(QString filename)
 		ASSERT_OR_RETURN(false, checkResearchName(&research, inc), "Research name '%s' used already", research.pName);
 
 		research.ref = REF_RESEARCH_START + inc;
+
+		research.resultStrings = ini.value("results").toStringList();
 		
 		//set subGroup icon
 		QString subGroup = ini.value("subgroupIconID", "").toString();
@@ -871,33 +873,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 				// for the current player, upgrade the constructor stats
 				constructorUpgrade(pFunction, player);
 				// message/sound for constructor upgrade
-				break;
-			case DROIDBODY_UPGRADE_TYPE:
-				// for each droid in the player's list, upgrade the body points
-				for (psDroid = apsDroidLists[player]; psDroid != NULL; psDroid = psDroid->psNext)
-				{
-					droidBodyUpgrade(pFunction, psDroid);
-				}
-				for (psDroid = mission.apsDroidLists[player]; psDroid != NULL; psDroid = psDroid->psNext)
-				{
-					droidBodyUpgrade(pFunction, psDroid);
-					if (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER)
-					{
-						upgradeTransporterDroids(psDroid, droidSensorUpgrade);
-					}
-				}
-				for (psDroid = apsLimboDroids[player]; psDroid != NULL; psDroid = psDroid->psNext)
-				{
-					droidBodyUpgrade(pFunction, psDroid);
-					if (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER)
-					{
-						upgradeTransporterDroids(psDroid, droidSensorUpgrade);
-					}
-				}
-				// DO THIS AFTER so above calculations can use the previous upgrade values for
-				// the current player, upgrade the body stats
-				bodyUpgrade(pFunction, player);
-				// message/sound for body upgrade
 				break;
 			case STRUCTURE_UPGRADE_TYPE:
 				// for each structure in the player's list, upgrade the stats

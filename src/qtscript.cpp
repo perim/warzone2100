@@ -1189,13 +1189,14 @@ bool triggerEventChat(int from, int to, const char *message)
 	{
 		QScriptEngine *engine = scripts.at(i);
 		int me = engine->globalObject().property("me").toInt32();
-		if (me == to || me == -1)
+		if (me == to || (me == -1 && to == from))
 		{
 			QScriptValueList args;
 			args += QScriptValue(from);
 			args += QScriptValue(to);
 			args += QScriptValue(message);
 			callFunction(engine, "eventChat", args);
+			break; // only call once
 		}
 	}
 	return true;

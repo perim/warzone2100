@@ -43,7 +43,6 @@ enum FUNCTION_TYPE
 	REPAIR_UPGRADE_TYPE,
 	DROIDREPAIR_UPGRADE_TYPE,
 	DROIDECM_UPGRADE_TYPE,
-	DROIDBODY_UPGRADE_TYPE,
 	DROIDSENSOR_UPGRADE_TYPE,
 	DROIDCONST_UPGRADE_TYPE,
 	REARM_TYPE,
@@ -162,15 +161,6 @@ struct WALLDEFENCE_UPGRADE_FUNCTION : public FUNCTION
 typedef UPGRADE_FUNCTION	DROIDREPAIR_UPGRADE_FUNCTION;
 typedef UPGRADE_FUNCTION	DROIDECM_UPGRADE_FUNCTION;
 typedef UPGRADE_FUNCTION	DROIDCONSTR_UPGRADE_FUNCTION;
-
-struct DROIDBODY_UPGRADE_FUNCTION : public UPGRADE_FUNCTION
-{
-	UWORD					body;		//The % to increase the whole vehicle body points by*/
-	UWORD					armourValue[WC_NUM_WEAPON_CLASSES];
-	UBYTE					cyborg;		//flag to specify the upgrade is valid for cyborgs
-	UBYTE					droid;		/*flag to specify the upgrade is valid
-										  for droids (non cyborgs!)*/
-};
 
 struct DROIDSENSOR_UPGRADE_FUNCTION : public UPGRADE_FUNCTION
 {

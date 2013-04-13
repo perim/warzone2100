@@ -7,9 +7,12 @@
 // /////////////////////////////////////////////////////////////////
 
 var lastHitTime = 0;
+var cheatmode = false;
 
 function eventGameInit()
 {
+	hackChangeMe(-1); // TODO, find a better way to do this
+
 	if (tilesetType != "ARIZONA")
 	{
 		setSky("texpages/page-25-sky-urban.png", 0.5, 10000.0);
@@ -285,5 +288,47 @@ function eventDestroyed(victim)
 	{
 		setMiniMap(false); // hide minimap if HQ is destroyed
 		setDesign(false); // and disallow design
+	}
+}
+
+function eventResearched(research, structure, player)
+{
+	//debug("RESEARCH : " + research.fullname + "(" + research.name + ") for " + player + " results=" + research.results);
+	for (var v = 0; v < research.results.length; v++)
+	{
+		var s = research.results[v].split(":");
+		if (['Droids', 'Cyborgs'].indexOf(s[0]) >= 0)
+		{
+			for (var i in Upgrades[player].Body)
+			{
+				if (Upgrades[player].Body[i].bodyClass === s[0])
+				{
+					Upgrades[player].Body[i][s[1]] += s[2];
+				}
+			}
+		}
+	}
+}
+
+function eventCheatMode(entered)
+{
+	cheatmode = entered; // remember this setting
+}
+
+function eventChat(from, to, message)
+{
+	if (message == "makesuperior" && cheatmode)
+	{
+		for (var i in Upgrades[from].Body)
+		{
+			if (Upgrades[from].Body[i].bodyClass === 'Droids' || Upgrades[from].Body[i].bodyClass === 'Cyborgs')
+			{
+				Upgrades[from].Body[i].HitPoints += 500;
+				Upgrades[from].Body[i].Armour += 500;
+				Upgrades[from].Body[i].Thermal += 500;
+				Upgrades[from].Body[i].Power += 500;
+			}
+		}
+		console("Made player " + from + "'s units SUPERIOR!");
 	}
 }

@@ -112,10 +112,6 @@ static FUNCTION_TYPE functionType(const char *pType)
 	{
 		return DROIDCONST_UPGRADE_TYPE;
 	}
-	if (!strcmp(pType, "VehicleBody Upgrade"))
-	{
-		return DROIDBODY_UPGRADE_TYPE;
-	}
 	if (!strcmp(pType, "VehicleSensor Upgrade"))
 	{
 		return DROIDSENSOR_UPGRADE_TYPE;
@@ -361,65 +357,6 @@ static bool loadDroidConstUpgradeFunction(const char *pData)
 static bool loadReArmUpgradeFunction(const char *pData)
 {
 	return loadUpgradeFunction(pData, REARM_UPGRADE_TYPE);
-}
-
-
-static bool loadDroidBodyUpgradeFunction(const char *pData)
-{
-	DROIDBODY_UPGRADE_FUNCTION *psFunction;
-	char functionName[MAX_STR_LENGTH];
-	UDWORD modifier, armourKinetic, armourHeat, body, droid, cyborg;
-
-	//allocate storage
-	psFunction = (DROIDBODY_UPGRADE_FUNCTION *)malloc(sizeof(DROIDBODY_UPGRADE_FUNCTION));
-	memset(psFunction, 0, sizeof(DROIDBODY_UPGRADE_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = DROIDBODY_UPGRADE_TYPE;
-
-	//read the data in
-	functionName[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%d,%d,%d,%d,%d,%d", functionName, &modifier,
-	       &body, &armourKinetic,	&armourHeat, &droid, &cyborg);
-
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
-	if (modifier > UWORD_MAX || armourKinetic > UWORD_MAX || armourHeat > UWORD_MAX || body > UWORD_MAX)
-	{
-		ASSERT(false, "One or more modifiers too large");
-		return false;
-	}
-
-	//store the % upgrades
-	psFunction->upgradePoints = (UWORD)modifier;
-	psFunction->body = (UWORD)body;
-	psFunction->armourValue[WC_KINETIC] = (UWORD)armourKinetic;
-	psFunction->armourValue[WC_HEAT] = (UWORD)armourHeat;
-	if (droid)
-	{
-		psFunction->droid = true;
-	}
-	else
-	{
-		psFunction->droid = false;
-	}
-	if (cyborg)
-	{
-		psFunction->cyborg = true;
-	}
-	else
-	{
-		psFunction->cyborg = false;
-	}
-
-	return true;
 }
 
 static bool loadDroidSensorUpgradeFunction(const char *pData)
@@ -1063,16 +1000,13 @@ void droidECMUpgrade(DROID *psDroid)
 	objEcmCache((BASE_OBJECT *)psDroid, asECMStats + psDroid->asBits[COMP_ECM].nStat);
 }
 
-void droidBodyUpgrade(FUNCTION *pFunction, DROID *psDroid)
+void droidBodyUpgrade(DROID *psDroid)
 {
-	UDWORD	increase, prevBaseBody, newBaseBody, base;
-	DROID   *psCurr;
-
-	increase = ((DROIDBODY_UPGRADE_FUNCTION *)pFunction)->body;
-
-	prevBaseBody = psDroid->originalBody;
-	base = calcDroidBaseBody(psDroid);
-	newBaseBody =  base + (base * increase) / 100;
+	BODY_STATS *psStats = getBodyStats(psDroid);
+	int increase = psStats->upgrade[psDroid->player].body;
+	int prevBaseBody = psDroid->originalBody;
+	int base = calcDroidBaseBody(psDroid);
+	int newBaseBody =  base + (base * increase) / 100;
 
 	if (newBaseBody > prevBaseBody)
 	{
@@ -1082,12 +1016,11 @@ void droidBodyUpgrade(FUNCTION *pFunction, DROID *psDroid)
 	//if a transporter droid then need to upgrade the contents
 	if (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER)
 	{
-		for (psCurr = psDroid->psGroup->psList; psCurr != NULL; psCurr =
-		        psCurr->psGrpNext)
+		for (DROID *psCurr = psDroid->psGroup->psList; psCurr != NULL; psCurr = psCurr->psGrpNext)
 		{
 			if (psCurr != psDroid)
 			{
-				droidBodyUpgrade(pFunction, psCurr);
+				droidBodyUpgrade(psCurr);
 			}
 		}
 	}
@@ -1192,65 +1125,6 @@ void constructorUpgrade(FUNCTION *pFunction, UBYTE player)
 	}
 }
 
-//upgrade the body stats
-void bodyUpgrade(FUNCTION *pFunction, UBYTE player)
-{
-	DROIDBODY_UPGRADE_FUNCTION		*pUpgrade;
-	UBYTE							inc;
-
-	pUpgrade = (DROIDBODY_UPGRADE_FUNCTION *)pFunction;
-
-	//check upgrades increase all values!
-	if (pUpgrade->droid)
-	{
-		if (asBodyUpgrade[player][DROID_BODY_UPGRADE].powerOutput <
-		    pUpgrade->upgradePoints)
-		{
-			asBodyUpgrade[player][DROID_BODY_UPGRADE].powerOutput =
-			    pUpgrade->upgradePoints;
-		}
-		if (asBodyUpgrade[player][DROID_BODY_UPGRADE].body <
-		    pUpgrade->body)
-		{
-			asBodyUpgrade[player][DROID_BODY_UPGRADE].body =
-			    pUpgrade->body;
-		}
-		for (inc = 0; inc < WC_NUM_WEAPON_CLASSES; inc++)
-		{
-			if (asBodyUpgrade[player][DROID_BODY_UPGRADE].armourValue[inc] <
-			    pUpgrade->armourValue[inc])
-			{
-				asBodyUpgrade[player][DROID_BODY_UPGRADE].armourValue[inc] =
-				    pUpgrade->armourValue[inc];
-			}
-		}
-	}
-	if (pUpgrade->cyborg)
-	{
-		if (asBodyUpgrade[player][CYBORG_BODY_UPGRADE].powerOutput <
-		    pUpgrade->upgradePoints)
-		{
-			asBodyUpgrade[player][CYBORG_BODY_UPGRADE].powerOutput =
-			    pUpgrade->upgradePoints;
-		}
-		if (asBodyUpgrade[player][CYBORG_BODY_UPGRADE].body <
-		    pUpgrade->body)
-		{
-			asBodyUpgrade[player][CYBORG_BODY_UPGRADE].body =
-			    pUpgrade->body;
-		}
-		for (inc = 0; inc < WC_NUM_WEAPON_CLASSES; inc++)
-		{
-			if (asBodyUpgrade[player][CYBORG_BODY_UPGRADE].armourValue[inc] <
-			    pUpgrade->armourValue[inc])
-			{
-				asBodyUpgrade[player][CYBORG_BODY_UPGRADE].armourValue[inc] =
-				    pUpgrade->armourValue[inc];
-			}
-		}
-	}
-}
-
 //upgrade the structure stats for the correct player
 void structureUpgrade(FUNCTION *pFunction, UBYTE player)
 {
@@ -1344,7 +1218,6 @@ bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize)
 		loadRepairUpgradeFunction,
 		loadDroidRepairUpgradeFunction,
 		loadDroidECMUpgradeFunction,
-		loadDroidBodyUpgradeFunction,
 		loadDroidSensorUpgradeFunction,
 		loadDroidConstUpgradeFunction,
 		loadReArmFunction,

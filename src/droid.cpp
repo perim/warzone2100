@@ -1601,7 +1601,7 @@ UDWORD calcTemplateBody(DROID_TEMPLATE *psTemplate, UBYTE player)
 	}
 
 	//add on any upgrade value that may need to be applied
-	body += (body * asBodyUpgrade[player]->body / 100);
+	body += body * psStats->upgrade[player].body / 100;
 	return body;
 }
 
@@ -1655,14 +1655,13 @@ UDWORD calcDroidBaseSpeed(DROID_TEMPLATE *psTemplate, UDWORD weight, UBYTE playe
 		speed = (asPropulsionTypes[(asPropulsionStats + psTemplate->
 			asParts[COMP_PROPULSION])->propulsionType].powerRatioMult *
 			bodyPower(asBodyStats + psTemplate->asParts[COMP_BODY],
-			player, CYBORG_BODY_UPGRADE)) / MAX(1, weight);
+			player)) / MAX(1, weight);
 	}
 	else
 	{
 		speed = (asPropulsionTypes[(asPropulsionStats + psTemplate->
 			asParts[COMP_PROPULSION])->propulsionType].powerRatioMult *
-			bodyPower(asBodyStats + psTemplate->asParts[COMP_BODY],
-			player, DROID_BODY_UPGRADE)) / MAX(1, weight);
+			bodyPower(asBodyStats + psTemplate->asParts[COMP_BODY], player)) / MAX(1, weight);
 	}
 
 	// reduce the speed of medium/heavy VTOLs
@@ -1899,8 +1898,7 @@ DROID *reallyBuildDroid(DROID_TEMPLATE *pTemplate, Position pos, UDWORD player, 
 
 	for (inc = 0; inc < WC_NUM_WEAPON_CLASSES; inc++)
 	{
-		psDroid->armour[inc] = bodyArmour(asBodyStats + pTemplate->asParts[COMP_BODY], player, 
-		                                  cyborgDroid(psDroid) ? CYBORG_BODY_UPGRADE : DROID_BODY_UPGRADE, (WEAPON_CLASS)inc);
+		psDroid->armour[inc] = bodyArmour(asBodyStats + pTemplate->asParts[COMP_BODY], player, (WEAPON_CLASS)inc);
 	}
 
 	/* Set droid's initial illumination */

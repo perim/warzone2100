@@ -300,6 +300,12 @@ QScriptValue convResearch(RESEARCH *psResearch, QScriptEngine *engine, int playe
 	value.setProperty("name", psResearch->pName); // will be changed to contain fullname
 	value.setProperty("id", psResearch->pName);
 	value.setProperty("type", SCRIPT_RESEARCH);
+	QScriptValue results = engine->newArray(psResearch->resultStrings.size());
+	for (int i = 0; i < psResearch->resultStrings.size(); i++)
+	{
+		results.setProperty(i, psResearch->resultStrings[i]);
+	}
+	value.setProperty("results", results);
 	return value;
 }
 
@@ -3845,6 +3851,72 @@ void prepareLabels()
 	updateLabelModel();
 }
 
+QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
+{
+	QScriptValue callee = context->callee();
+	if (context->argumentCount() == 1) // setter
+	{
+		int value = context->argument(0).toInt32();
+		callee.setProperty("value", value);
+		COMPONENT_TYPE type = (COMPONENT_TYPE)callee.property("type").toInt32();
+		int player = callee.property("player").toInt32();
+		int index = callee.property("index").toInt32();
+		QString name = callee.property("name").toString();
+		if (type == COMP_BODY)
+		{
+			BODY_STATS *psStats = asBodyStats + index;
+			if (name == "HitPoints")
+			{
+				psStats->upgrade[player].body = value;
+				for (DROID *psDroid = apsDroidLists[player]; psDroid != NULL; psDroid = psDroid->psNext)
+				{
+					droidBodyUpgrade(psDroid);
+				}
+				for (DROID *psDroid = mission.apsDroidLists[player]; psDroid != NULL; psDroid = psDroid->psNext)
+				{
+					droidBodyUpgrade(psDroid);
+				}
+				for (DROID *psDroid = apsLimboDroids[player]; psDroid != NULL; psDroid = psDroid->psNext)
+				{
+					droidBodyUpgrade(psDroid);
+				}
+			}
+			else if (name == "Armour")
+			{
+				psStats->upgrade[player].armour = value;
+			}
+			else if (name == "Thermal")
+			{
+				psStats->upgrade[player].thermal = value;
+			}
+			else if (name == "Power")
+			{
+				psStats->upgrade[player].power = value;
+			}
+			else
+			{
+				SCRIPT_ASSERT(context, false, "Upgrade component %s not found", name.toUtf8().constData());
+			}
+		}
+		else
+		{
+			SCRIPT_ASSERT(context, false, "Component type not found for upgrade");
+		}
+	}
+	return callee.property("value");
+}
+
+static void setStatsFunc(QScriptValue &base, QScriptEngine *engine, QString name, int player, COMPONENT_TYPE type, int index, int value)
+{
+	QScriptValue v = engine->newFunction(js_stats);
+	base.setProperty(name, v, QScriptValue::PropertyGetter | QScriptValue::PropertySetter);
+	v.setProperty("player", player, QScriptValue::SkipInEnumeration | QScriptValue::ReadOnly | QScriptValue::Undeletable);
+	v.setProperty("type", type, QScriptValue::SkipInEnumeration | QScriptValue::ReadOnly | QScriptValue::Undeletable);
+	v.setProperty("index", index, QScriptValue::SkipInEnumeration | QScriptValue::ReadOnly | QScriptValue::Undeletable);
+	v.setProperty("value", value, QScriptValue::SkipInEnumeration | QScriptValue::Undeletable);
+	v.setProperty("name", name, QScriptValue::SkipInEnumeration | QScriptValue::ReadOnly | QScriptValue::Undeletable);
+}
+
 bool registerFunctions(QScriptEngine *engine, QString scriptName)
 {
 	debug(LOG_WZ, "Loading functions for engine %p, script %s", engine, scriptName.toUtf8().constData());
@@ -3852,6 +3924,28 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 	// Create group map
 	GROUPMAP *psMap = new GROUPMAP;
 	groups.insert(engine, psMap);
+
+	// Register 'Upgrades' object
+	QScriptValue upgrades = engine->newArray(MAX_PLAYERS);
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		QScriptValue node = engine->newObject();
+		QScriptValue bodybase = engine->newObject();
+		for (int j = 0; j < numBodyStats; j++)
+		{
+			BODY_STATS *psStats = asBodyStats + j;
+			QScriptValue body = engine->newObject();
+			setStatsFunc(body, engine, "HitPoints", i, COMP_BODY, j, psStats->upgrade[i].body);
+			setStatsFunc(body, engine, "Power", i, COMP_BODY, j, psStats->upgrade[i].power);
+			setStatsFunc(body, engine, "Armour", i, COMP_BODY, j, psStats->upgrade[i].armour);
+			setStatsFunc(body, engine, "Thermal", i, COMP_BODY, j, psStats->upgrade[i].thermal);
+			body.setProperty("bodyClass", psStats->bodyClass, QScriptValue::SkipInEnumeration | QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			bodybase.setProperty(getStatName(psStats), body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		node.setProperty("Body", bodybase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		upgrades.setProperty(i, node, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+	}
+	engine->globalObject().setProperty("Upgrades", upgrades, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 
 	// Register functions to the script engine here
 	engine->globalObject().setProperty("_", engine->newFunction(js_translate));

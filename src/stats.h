@@ -53,11 +53,6 @@ extern SENSOR_UPGRADE		asSensorUpgrade[MAX_PLAYERS];
 extern ECM_UPGRADE			asECMUpgrade[MAX_PLAYERS];
 extern REPAIR_UPGRADE		asRepairUpgrade[MAX_PLAYERS];
 extern CONSTRUCTOR_UPGRADE	asConstUpgrade[MAX_PLAYERS];
-//body upgrades are possible for droids and/or cyborgs
-#define		DROID_BODY_UPGRADE	0
-#define		CYBORG_BODY_UPGRADE	1
-#define		BODY_TYPE		2
-extern BODY_UPGRADE			asBodyUpgrade[MAX_PLAYERS][BODY_TYPE];
 
 /* The number of different stats stored */
 extern UDWORD		numBodyStats;
@@ -265,9 +260,8 @@ extern UDWORD	repairPoints(REPAIR_STATS *psStats, UBYTE player);
 /*Access functions for the upgradeable stats of a constructor*/
 extern UDWORD	constructorPoints(CONSTRUCT_STATS *psStats, UBYTE player);
 /*Access functions for the upgradeable stats of a body*/
-extern UDWORD	bodyPower(BODY_STATS *psStats, UBYTE player, UBYTE bodyType);
-extern UDWORD	bodyArmour(BODY_STATS *psStats, UBYTE player, UBYTE bodyType,
-				   WEAPON_CLASS weaponClass);
+UDWORD bodyPower(BODY_STATS *psStats, UBYTE player);
+UDWORD bodyArmour(BODY_STATS *psStats, UBYTE player, WEAPON_CLASS weaponClass);
 
 extern void adjustMaxDesignStats(void);
 
