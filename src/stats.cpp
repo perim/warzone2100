@@ -710,6 +710,20 @@ bool loadWeaponStats(const char *pFileName)
 			return false;
 		}
 
+		// set max extra weapon range on misses, make this modifiable one day by mod makers
+		if (psStats->weaponSubClass == WSC_MGUN || psStats->weaponSubClass == WSC_COMMAND)
+		{
+			psStats->distanceExtensionFactor = 120;
+		}
+		else if (psStats->weaponSubClass == WSC_AAGUN)
+		{
+			psStats->distanceExtensionFactor = 100;
+		}
+		else // default
+		{
+			psStats->distanceExtensionFactor = 150;
+		}
+
 		//set the weapon effect
 		if (!getWeaponEffect(ini.value("weaponEffect").toString().toUtf8().constData(), &psStats->weaponEffect))
 		{
@@ -2235,7 +2249,7 @@ char *allocateName(const char *name)
 	 */
 	if (!strresGetString(psStringRes, name))
 	{
-		debug(LOG_FATAL, "Unable to find string resource for %s", name);
+		ASSERT(false, "Unable to find string resource for %s", name);
 		return NULL;
 	}
 	return strdup(name);
