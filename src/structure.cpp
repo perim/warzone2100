@@ -487,7 +487,19 @@ bool loadStructureStats(QString filename)
 
 		// save indexes of special structures for futher use
 		initModuleStats(inc, psStats->type);  // This function looks like a hack. But slightly less hacky than before.
-		
+
+		psStats->base.research = ini.value("researchPoints", 0).toInt();
+		psStats->base.production = ini.value("productionPoints", 0).toInt();
+		psStats->base.repair = ini.value("repairPoints", 0).toInt();
+		psStats->base.power = ini.value("powerPoints", 0).toInt();
+		for (int i = 0; i < MAX_PLAYERS; i++)
+		{
+			psStats->upgrade[i].research = psStats->base.research;
+			psStats->upgrade[i].power = psStats->base.power;
+			psStats->upgrade[i].repair = psStats->base.repair;
+			psStats->upgrade[i].production = psStats->base.production;
+		}
+	
 		// set structure strength
 		QString strength = ini.value("strength", "").toString();
 		ASSERT_OR_RETURN(false, structStrength.contains(strength), "Invalid strength '%s' of structure '%s'", strength.toUtf8().constData(), psStats->pName);
@@ -1717,9 +1729,6 @@ STRUCTURE* buildStructureDir(STRUCTURE_STATS *pStructureType, UDWORD x, UDWORD y
 				bodyDiff = 65536 - getStructureDamage(psBuilding);
 
 				psBuilding->capacity++;
-				psBuilding->pFunctionality->researchFacility.researchPoints += ((
-					RESEARCH_FUNCTION*)pStructureType->asFuncList[0])->
-					researchPoints;
 				bUpgraded = true;
 				//cancel any research - put on hold now
 				if (psBuilding->pFunctionality->researchFacility.psSubject)
@@ -1950,11 +1959,6 @@ static bool setFunctionality(STRUCTURE	*psBuilding, STRUCTURE_TYPE functionType)
 			}
 
 			structureProductionUpgrade(psBuilding); // set production output
-			break;
-		}
-		case REF_RESEARCH:
-		{
-			structureResearchUpgrade(psBuilding); // set research points
 			break;
 		}
 		case REF_POWER_GEN:
@@ -3127,7 +3131,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 			{
 				pResearch = (RESEARCH *)pSubject;
 
-				pointsToAdd = gameTimeAdjustedAverage(psResFacility->researchPoints);
+				pointsToAdd = gameTimeAdjustedAverage(getBuildingResearchPoints(psStructure));
 				pointsToAdd = MIN(pointsToAdd, pResearch->researchPoints - pPlayerRes->currentPoints);
 
 				if (pointsToAdd > 0 && pPlayerRes->currentPoints == 0)
@@ -5681,7 +5685,7 @@ void printStructureInfo(STRUCTURE *psStructure)
 		{
 			CONPRINTF(ConsoleString, (ConsoleString, "%s - Damage % 3.2f%% - Unique ID %u - Research Points: %u",
 					  getStatName(psStructure->pStructureType), getStructureDamage(psStructure) * (100.f/65536.f), psStructure->id,
-					  psStructure->pFunctionality->researchFacility.researchPoints));
+					  getBuildingResearchPoints(psStructure)));
 		}
 		else
 #endif

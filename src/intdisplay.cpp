@@ -259,7 +259,7 @@ void intUpdateProgressBar(WIDGET *psWidget, W_CONTEXT *psContext)
 			}
 			if (currentPoints != 0)
 			{
-				int researchRate = Research->timeStartHold == 0 ? Research->researchPoints : 0;
+				int researchRate = Research->timeStartHold == 0 ? getBuildingResearchPoints(Structure) : 0;
 				formatTime(BarGraph, currentPoints, Research->psSubject->researchPoints, researchRate, _("Research Progress"));
 			}
 			else

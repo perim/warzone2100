@@ -135,6 +135,14 @@ struct STRUCTURE_STATS : public BASE_STATS
 
 	SDWORD		defaultFunc;		/*The default function*/
 	std::vector<struct FUNCTION *> asFuncList;               ///< List of pointers to allowable functions - unalterable
+
+	struct
+	{
+		short research;
+		short repair;
+		short power;
+		short production;
+	} upgrade[MAX_PLAYERS], base;
 };
 
 enum STRUCT_STATES
@@ -163,7 +171,6 @@ struct RESEARCH_FACILITY
 	RESEARCH *      psSubjectPending;               // The subject the structure is going to work on when the GAME_RESEARCHSTATUS message is received.
 	StatusPending   statusPending;                  ///< Pending = not yet synchronised.
 	unsigned        pendingCount;                   ///< Number of messages sent but not yet processed.
-	UDWORD		researchPoints;			/* Research Points produced per research cycle*/
 	RESEARCH *      psBestTopic;                    // The topic with the most research points that was last performed
 	UDWORD		timeStartHold;		    /* The time the research facility was put on hold*/
 };

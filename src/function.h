@@ -33,7 +33,6 @@ extern UDWORD numFunctions;
 extern bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize);
 
 extern void productionUpgrade(FUNCTION *pFunction, UBYTE player);
-extern void researchUpgrade(FUNCTION *pFunction, UBYTE player);
 extern void powerUpgrade(FUNCTION *pFunction, UBYTE player);
 extern void reArmUpgrade(FUNCTION *pFunction, UBYTE player);
 extern void repairFacUpgrade(FUNCTION *pFunction, UBYTE player);
@@ -44,7 +43,6 @@ extern void structureBodyUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding);
 extern void structureArmourUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding);
 extern void structureResistanceUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding);
 extern void structureProductionUpgrade(STRUCTURE *psBuilding);
-extern void structureResearchUpgrade(STRUCTURE *psBuilding);
 extern void structurePowerUpgrade(STRUCTURE *psBuilding);
 extern void structureRepairUpgrade(STRUCTURE *psBuilding);
 extern void structureSensorUpgrade(STRUCTURE *psBuilding);

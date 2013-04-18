@@ -1,15 +1,6 @@
 Production,FacProd1,LIGHT,10
 Production,FacMod1,LIGHT,10
 Production,BaBaFacProd,LIGHT,10
-Research Upgrade,Struc-Research-Upgrade01,30
-Research Upgrade,Struc-Research-Upgrade02,60
-Research Upgrade,Struc-Research-Upgrade03,90
-Research Upgrade,Struc-Research-Upgrade04,120
-Research Upgrade,Struc-Research-Upgrade05,150
-Research Upgrade,Struc-Research-Upgrade06,180
-Research Upgrade,Struc-Research-Upgrade07,210
-Research Upgrade,Struc-Research-Upgrade08,240
-Research Upgrade,Struc-Research-Upgrade09,270
 Repair Droid,RepairFacilityFunc,40
 Power Generator,PowGen1,0,55,0,0,0,0
 Power Generator,BaBaPowGen,400,50,0,0,0,0
@@ -210,8 +201,6 @@ WallDefence Upgrade,Defense-WallUpgrade09,305,270
 WallDefence Upgrade,Defense-WallUpgrade10,340,300
 WallDefence Upgrade,Defense-WallUpgrade11,375,330
 WallDefence Upgrade,Defense-WallUpgrade12,410,360
-Research,Research Facility,14
-Research,Research Module,12
 Repair Upgrade,RepairFacility-Upgrade01,10
 Repair Upgrade,RepairFacility-Upgrade02,20
 Repair Upgrade,RepairFacility-Upgrade03,30

@@ -694,28 +694,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 				}
 			   	// message/sound in here for production boost
 				break;
-			case RESEARCH_UPGRADE_TYPE:
-				researchUpgrade(pFunction, player);
-				//search the list of players structures for a Research Facility
-				for (psCurr = apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					if (psCurr->pStructureType->type == REF_RESEARCH)
-					{
-						// upgrade the research points
-						structureResearchUpgrade(psCurr);
-					}
-				}
-				// and the mission structures
-				for (psCurr = mission.apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					if (psCurr->pStructureType->type == REF_RESEARCH)
-					{
-						// upgrade the research points
-						structureResearchUpgrade(psCurr);
-					}
-				}
-				// Stuff a message in here/sound whatever for research boost.
-				break;
 			case POWER_UPGRADE_TYPE:
 				powerUpgrade(pFunction, player);
 				// search the list of players structures for a Power Gens
@@ -1823,7 +1801,8 @@ std::vector<AllyResearch> const &listAllyResearch(unsigned ref)
 				r.timeToResearch = -1;
 				if (r.powerNeeded == -1)
 				{
-					r.timeToResearch = (subject.researchPoints - playerRes.currentPoints) / std::max(res->researchPoints, 1u);
+					r.timeToResearch = (subject.researchPoints - playerRes.currentPoints)
+					                   / MAX(psStruct->pStructureType->base.research, 1u);
 				}
 				r.active = psStruct->status == SS_BUILT;
 				researches[cRef].push_back(r);

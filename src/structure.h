@@ -514,5 +514,25 @@ static inline STRUCTURE *castStructure(SIMPLE_OBJECT *psObject)             { re
 // Returns STRUCTURE const * if structure or NULL if not.
 static inline STRUCTURE const *castStructure(SIMPLE_OBJECT const *psObject) { return isStructure(psObject)? (STRUCTURE const *)psObject : (STRUCTURE const *)NULL; }
 
+static inline int getBuildingResearchPoints(STRUCTURE *psStruct)
+{
+	return psStruct->pStructureType->upgrade[psStruct->player].research * psStruct->capacity;
+}
+
+static inline int getBuildingProductionPoints(STRUCTURE *psStruct)
+{
+	return psStruct->pStructureType->upgrade[psStruct->player].production * psStruct->capacity;
+}
+
+static inline int getBuildingPowerPoints(STRUCTURE *psStruct)
+{
+	int power = psStruct->pStructureType->upgrade[psStruct->player].power;
+	return power + power * psStruct->capacity / 2;
+}
+
+static inline int getBuildingRepairPoints(STRUCTURE *psStruct)
+{
+	return psStruct->pStructureType->upgrade[psStruct->player].repair * psStruct->capacity;
+}
 
 #endif // __INCLUDED_SRC_STRUCTURE_H__

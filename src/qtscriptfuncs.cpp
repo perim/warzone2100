@@ -68,6 +68,11 @@
 #define ALLIES -2
 #define ENEMIES -3
 
+#define SCRCB_RES (COMP_NUMCOMPONENTS + 0)
+#define SCRCB_REP (COMP_NUMCOMPONENTS + 1)
+#define SCRCB_POW (COMP_NUMCOMPONENTS + 2)
+#define SCRCB_CON (COMP_NUMCOMPONENTS + 3)
+
 // TODO, move this stuff into a script common subsystem
 #include "scriptfuncs.h"
 extern bool structDoubleCheck(BASE_STATS *psStat,UDWORD xx,UDWORD yy, SDWORD maxBlockingTiles);
@@ -842,8 +847,7 @@ bool writeLabels(const char *filename)
 // All script functions should be prefixed with "js_" then followed by same name as in script.
 
 //-- \subsection{getWeaponInfo(weapon id)}
-//-- Return information about a particular weapon type.
-// TODO, add more and document
+//-- Return information about a particular weapon type. DEPRECATED - query the Stats object instead.
 static QScriptValue js_getWeaponInfo(QScriptContext *context, QScriptEngine *engine)
 {
 	QString id = context->argument(0).toString();
@@ -3851,7 +3855,7 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 	{
 		int value = context->argument(0).toInt32();
 		callee.setProperty("value", value);
-		COMPONENT_TYPE type = (COMPONENT_TYPE)callee.property("type").toInt32();
+		int type = callee.property("type").toInt32();
 		int player = callee.property("player").toInt32();
 		int index = callee.property("index").toInt32();
 		QString name = callee.property("name").toString();
@@ -3891,6 +3895,17 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 				SCRIPT_ASSERT(context, false, "Upgrade component %s not found", name.toUtf8().constData());
 			}
 		}
+		else if (type == SCRCB_RES || type == SCRCB_REP || type == SCRCB_POW || type == SCRCB_CON)
+		{
+			STRUCTURE_STATS *psStats = asStructureStats + index;
+			switch (type)
+			{
+			case SCRCB_RES: psStats->upgrade[player].research = value; break;
+			case SCRCB_REP: psStats->upgrade[player].repair = value; break;
+			case SCRCB_POW: psStats->upgrade[player].power = value; break;
+			case SCRCB_CON: psStats->upgrade[player].production = value; break;
+			}
+		}
 		else
 		{
 			SCRIPT_ASSERT(context, false, "Component type not found for upgrade");
@@ -3899,7 +3914,7 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 	return callee.property("value");
 }
 
-static void setStatsFunc(QScriptValue &base, QScriptEngine *engine, QString name, int player, COMPONENT_TYPE type, int index, int value)
+static void setStatsFunc(QScriptValue &base, QScriptEngine *engine, QString name, int player, int type, int index, int value)
 {
 	QScriptValue v = engine->newFunction(js_stats);
 	base.setProperty(name, v, QScriptValue::PropertyGetter | QScriptValue::PropertySetter);
@@ -3918,11 +3933,54 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 	GROUPMAP *psMap = new GROUPMAP;
 	groups.insert(engine, psMap);
 
-	// Register 'Upgrades' object
+	// Register 'Stats' object. It is a read-only representation of basic game component states.
+	// TODO, add auto-documentation of these values...
+	QScriptValue stats = engine->newObject();
+	{
+		// Droid bodies
+		QScriptValue bodybase = engine->newObject();
+		for (int j = 0; j < numBodyStats; j++)
+		{
+			BODY_STATS *psStats = asBodyStats + j;
+			QScriptValue body = engine->newObject();
+			body.setProperty("Id", psStats->pName, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("Weight", psStats->weight, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("BuildPower", psStats->buildPower, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("BuildTime", psStats->buildPoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("HitPoints", psStats->body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("Power", psStats->powerOutput, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("Armour", psStats->armourValue[WC_KINETIC], QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("Thermal", psStats->armourValue[WC_HEAT], QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("Size", psStats->size, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("WeaponSlots", psStats->weaponSlots, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("BodyClass", psStats->bodyClass, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			bodybase.setProperty(getStatName(psStats), body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		stats.setProperty("Body", bodybase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// Buildings
+		QScriptValue structbase = engine->newObject();
+		for (int j = 0; j < numStructureStats; j++)
+		{
+			STRUCTURE_STATS *psStats = asStructureStats + j;
+			QScriptValue strct = engine->newObject();
+			strct.setProperty("Id", psStats->pName, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			strct.setProperty("ResearchPoints", psStats->base.research, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			strct.setProperty("RepairPoints", psStats->base.repair, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			strct.setProperty("PowerPoints", psStats->base.power, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			strct.setProperty("ProductionPoints", psStats->base.production, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			structbase.setProperty(getStatName(psStats), strct, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		stats.setProperty("Building", structbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+	}
+	engine->globalObject().setProperty("Stats", stats, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+
+	// Register 'Upgrades' object. This is a read-and-write representation of modified values
+	// of game components.
 	QScriptValue upgrades = engine->newArray(MAX_PLAYERS);
 	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
 		QScriptValue node = engine->newObject();
+		// Droid bodies
 		QScriptValue bodybase = engine->newObject();
 		for (int j = 0; j < numBodyStats; j++)
 		{
@@ -3932,10 +3990,23 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			setStatsFunc(body, engine, "Power", i, COMP_BODY, j, psStats->upgrade[i].power);
 			setStatsFunc(body, engine, "Armour", i, COMP_BODY, j, psStats->upgrade[i].armour);
 			setStatsFunc(body, engine, "Thermal", i, COMP_BODY, j, psStats->upgrade[i].thermal);
-			body.setProperty("bodyClass", psStats->bodyClass, QScriptValue::SkipInEnumeration | QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			bodybase.setProperty(getStatName(psStats), body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
 		node.setProperty("Body", bodybase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// Buildings
+		QScriptValue structbase = engine->newObject();
+		for (int j = 0; j < numStructureStats; j++)
+		{
+			STRUCTURE_STATS *psStats = asStructureStats + j;
+			QScriptValue strct = engine->newObject();
+			setStatsFunc(strct, engine, "ResearchPoints", i, SCRCB_RES, j, psStats->upgrade[i].research);
+			setStatsFunc(strct, engine, "RepairPoints", i, SCRCB_REP, j, psStats->upgrade[i].repair);
+			setStatsFunc(strct, engine, "PowerPoints", i, SCRCB_POW, j, psStats->upgrade[i].power);
+			setStatsFunc(strct, engine, "ProductionPoints", i, SCRCB_CON, j, psStats->upgrade[i].production);
+			structbase.setProperty(getStatName(psStats), strct, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		node.setProperty("Building", structbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// Finally
 		upgrades.setProperty(i, node, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	}
 	engine->globalObject().setProperty("Upgrades", upgrades, QScriptValue::ReadOnly | QScriptValue::Undeletable);

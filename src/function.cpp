@@ -30,7 +30,6 @@
 #include "stats.h"
 #include "structure.h"
 #include "text.h"
-#include "research.h"
 #include "droid.h"
 #include "group.h"
 
@@ -55,14 +54,6 @@ static FUNCTION_TYPE functionType(const char *pType)
 	if (!strcmp(pType, "Production Upgrade"))
 	{
 		return PRODUCTION_UPGRADE_TYPE;
-	}
-	if (!strcmp(pType, "Research"))
-	{
-		return RESEARCH_TYPE;
-	}
-	if (!strcmp(pType, "Research Upgrade"))
-	{
-		return RESEARCH_UPGRADE_TYPE;
 	}
 	if (!strcmp(pType, "Power Generator"))
 	{
@@ -228,34 +219,6 @@ static bool loadProductionUpgradeFunction(const char *pData)
 	return true;
 }
 
-static bool loadResearchFunction(const char *pData)
-{
-	RESEARCH_FUNCTION *psFunction;
-	char functionName[MAX_STR_LENGTH];
-
-	//allocate storage
-	psFunction = (RESEARCH_FUNCTION *)malloc(sizeof(RESEARCH_FUNCTION));
-	memset(psFunction, 0, sizeof(RESEARCH_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = RESEARCH_TYPE;
-
-	//read the data in
-	functionName[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%d", functionName, &psFunction->researchPoints);
-
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
-	return true;
-}
-
 static bool loadReArmFunction(const char *pData)
 {
 	REARM_FUNCTION *psFunction;
@@ -323,11 +286,6 @@ static bool loadUpgradeFunction(const char *pData, FUNCTION_TYPE type)
 	return true;
 }
 
-
-static bool loadResearchUpgradeFunction(const char *pData)
-{
-	return loadUpgradeFunction(pData, RESEARCH_UPGRADE_TYPE);
-}
 
 static bool loadPowerUpgradeFunction(const char *pData)
 {
@@ -722,19 +680,6 @@ void productionUpgrade(FUNCTION *pFunction, UBYTE player)
 	}
 }
 
-void researchUpgrade(FUNCTION *pFunction, UBYTE player)
-{
-	RESEARCH_UPGRADE_FUNCTION		*pUpgrade;
-
-	pUpgrade = (RESEARCH_UPGRADE_FUNCTION *)pFunction;
-
-	//check upgrades increase all values
-	if (asResearchUpgrade[player].modifier < pUpgrade->upgradePoints)
-	{
-		asResearchUpgrade[player].modifier = pUpgrade->upgradePoints;
-	}
-}
-
 void repairFacUpgrade(FUNCTION *pFunction, UBYTE player)
 {
 	REPAIR_UPGRADE_FUNCTION		*pUpgrade;
@@ -897,31 +842,6 @@ void structureProductionUpgrade(STRUCTURE *psBuilding)
 
 	pFact->productionOutput = (baseOutput + (pFactFunc->productionOutput *
 	        asProductionUpgrade[psBuilding->player][type].modifier) / 100);
-}
-
-void structureResearchUpgrade(STRUCTURE *psBuilding)
-{
-	RESEARCH_FACILITY			*pRes = &psBuilding->pFunctionality->researchFacility;
-	RESEARCH_FUNCTION			*pResFunc;
-	UDWORD                       baseOutput;
-	STRUCTURE_STATS             *psStat;
-
-	//upgrade the research points
-	ASSERT(pRes != NULL, "structureResearchUpgrade: invalid Research pointer");
-
-	pResFunc = (RESEARCH_FUNCTION *)psBuilding->pStructureType->asFuncList[0];
-	ASSERT(pResFunc != NULL,
-	       "structureResearchUpgrade: invalid Function pointer");
-
-	//current base value depends on whether there are modules attached to the structure
-	baseOutput = pResFunc->researchPoints;
-	psStat = getModuleStat(psBuilding);
-	if (psStat && psBuilding->capacity)
-	{
-		baseOutput += ((RESEARCH_FUNCTION *)psStat->asFuncList[0])->researchPoints;
-	}
-	pRes->researchPoints = baseOutput + (pResFunc->researchPoints *
-	        asResearchUpgrade[psBuilding->player].modifier) / 100;
 }
 
 void structureReArmUpgrade(STRUCTURE *psBuilding)
@@ -1198,8 +1118,6 @@ bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize)
 	{
 		loadProduction,
 		loadProductionUpgradeFunction,
-		loadResearchFunction,
-		loadResearchUpgradeFunction,
 		loadPowerGenFunction,
 		loadResourceFunction,
 		loadRepairDroidFunction,

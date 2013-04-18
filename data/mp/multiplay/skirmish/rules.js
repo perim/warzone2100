@@ -297,13 +297,23 @@ function eventResearched(research, structure, player)
 	for (var v = 0; v < research.results.length; v++)
 	{
 		var s = research.results[v].split(":");
-		if (['Droids', 'Cyborgs'].indexOf(s[0]) >= 0)
+		if (['Droids', 'Cyborgs'].indexOf(s[0]) >= 0) // research result applies to droids and cyborgs
 		{
-			for (var i in Upgrades[player].Body)
+			for (var i in Upgrades[player].Body) // loop over all bodies
 			{
-				if (Upgrades[player].Body[i].bodyClass === s[0])
+				if (Stats.Body[i].BodyClass === s[0]) // if match against hint in ini file, change it
 				{
 					Upgrades[player].Body[i][s[1]] += s[2];
+				}
+			}
+		}
+		else if ('ResearchPoints' === s[0])
+		{
+			for (var i in Upgrades[player].Building)
+			{
+				if (Stats.Building[i].ResearchPoints > 0)
+				{
+					Upgrades[player].Building[i].ResearchPoints += Stats.Building[i].ResearchPoints * s[1] / 100;
 				}
 			}
 		}
