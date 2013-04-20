@@ -1,8 +1,4 @@
 Repair Droid,RepairFacilityFunc,40
-Power Generator,PowGen1,0,55,0,0,0,0
-Power Generator,BaBaPowGen,400,50,0,0,0,0
-Power Generator,PowerModule,0,28,0,0,0,0
-Resource,Resource,12500
 Weapon Upgrade,Wpn-Cannon-Accuracy01,CANNON,0,10,10,0,0,0,0
 Weapon Upgrade,Wpn-Cannon-Damage01,CANNON,0,0,0,25,25,0,0
 Weapon Upgrade,Wpn-Cannon-Damage02,CANNON,0,0,0,50,50,0,0
@@ -180,14 +176,6 @@ Repair Upgrade,Struc-RprFac-Upgrade03,150
 Repair Upgrade,Struc-RprFac-Upgrade04,200
 Repair Upgrade,Struc-RprFac-Upgrade05,250
 Repair Upgrade,Struc-RprFac-Upgrade06,300
-Power Upgrade,Struc-PowerModuleMk1,25
-Power Upgrade,Struc-Power Upgrade01,50
-Power Upgrade,Struc-Power Upgrade02,130
-Power Upgrade,Struc-Power Upgrade03,160
-Power Upgrade,Struc-Power-Cam2,30
-Power Upgrade,Struc-Power Upgrade01b,75
-Power Upgrade,Struc-Power Upgrade01c,100
-Power Upgrade,Struc-Power Upgrade03a,190
 VehicleConst Upgrade,Sys-Engineering-Upgrade01,10
 VehicleConst Upgrade,Sys-Engineering-Upgrade02,30
 VehicleConst Upgrade,Sys-Engineering-Upgrade03,50

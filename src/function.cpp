@@ -47,14 +47,6 @@ typedef bool (*LoadFunction)(const char *pData);
 /*Returns the Function type based on the string - used for reading in data */
 static FUNCTION_TYPE functionType(const char *pType)
 {
-	if (!strcmp(pType, "Power Generator"))
-	{
-		return POWER_GEN_TYPE;
-	}
-	if (!strcmp(pType, "Resource"))
-	{
-		return RESOURCE_TYPE;
-	}
 	if (!strcmp(pType, "Repair Droid"))
 	{
 		return REPAIR_DROID_TYPE;
@@ -74,10 +66,6 @@ static FUNCTION_TYPE functionType(const char *pType)
 	if (!strcmp(pType, "WallDefence Upgrade"))
 	{
 		return WALLDEFENCE_UPGRADE_TYPE;
-	}
-	if (!strcmp(pType, "Power Upgrade"))
-	{
-		return POWER_UPGRADE_TYPE;
 	}
 	if (!strcmp(pType, "Repair Upgrade"))
 	{
@@ -183,12 +171,6 @@ static bool loadUpgradeFunction(const char *pData, FUNCTION_TYPE type)
 	psFunction->upgradePoints = (UWORD)modifier;
 
 	return true;
-}
-
-
-static bool loadPowerUpgradeFunction(const char *pData)
-{
-	return loadUpgradeFunction(pData, POWER_UPGRADE_TYPE);
 }
 
 static bool loadRepairUpgradeFunction(const char *pData)
@@ -395,90 +377,6 @@ static bool loadWallDefenceUpgradeFunction(const char *pData)
 	return true;
 }
 
-
-static bool loadPowerGenFunction(const char *pData)
-{
-	POWER_GEN_FUNCTION			*psFunction;
-	char						functionName[MAX_STR_LENGTH];
-	int dummy;
-
-	//allocate storage
-	psFunction = (POWER_GEN_FUNCTION *)malloc(sizeof(POWER_GEN_FUNCTION));
-	memset(psFunction, 0, sizeof(POWER_GEN_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = POWER_GEN_TYPE;
-
-	//read the data in
-	functionName[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%d,%d,%d,%d,%d,%d", functionName,
-	       &psFunction->powerOutput, &psFunction->powerMultiplier,
-	       &dummy, &dummy, &dummy, &dummy);
-
-	if (bMultiPlayer)
-	{
-		switch (game.power)
-		{
-			// Multiply by 3/4
-		case LEV_LOW:
-			psFunction->powerMultiplier *= 3;
-			psFunction->powerMultiplier /= 4;
-			break;
-			// No change
-		case LEV_MED:
-			break;
-			// Multiply by 5/4
-		case LEV_HI:
-			psFunction->powerMultiplier *= 5;
-			psFunction->powerMultiplier /= 4;
-			break;
-		default:
-			break;
-		}
-	}
-
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
-	return true;
-}
-
-static bool loadResourceFunction(const char *pData)
-{
-	RESOURCE_FUNCTION			*psFunction;
-	char						functionName[MAX_STR_LENGTH];
-	int dummy;
-
-	//allocate storage
-	psFunction = (RESOURCE_FUNCTION *)malloc(sizeof(RESOURCE_FUNCTION));
-	memset(psFunction, 0, sizeof(RESOURCE_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = RESOURCE_TYPE;
-
-	//no data to read in
-	functionName[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%d", functionName, &dummy);
-
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
-	return true;
-}
-
-
 static bool loadRepairDroidFunction(const char *pData)
 {
 	REPAIR_DROID_FUNCTION		*psFunction;
@@ -559,19 +457,6 @@ void repairFacUpgrade(FUNCTION *pFunction, UBYTE player)
 	if (asRepairFacUpgrade[player].modifier < pUpgrade->upgradePoints)
 	{
 		asRepairFacUpgrade[player].modifier = pUpgrade->upgradePoints;
-	}
-}
-
-void powerUpgrade(FUNCTION *pFunction, UBYTE player)
-{
-	POWER_UPGRADE_FUNCTION		*pUpgrade;
-
-	pUpgrade = (POWER_UPGRADE_FUNCTION *)pFunction;
-
-	//check upgrades increase all values
-	if (asPowerUpgrade[player].modifier < pUpgrade->upgradePoints)
-	{
-		asPowerUpgrade[player].modifier = pUpgrade->upgradePoints;
 	}
 }
 
@@ -679,26 +564,6 @@ void structureReArmUpgrade(STRUCTURE *psBuilding)
 
 	pPad->reArmPoints = pPadFunc->reArmPoints + (pPadFunc->reArmPoints *
 	        asReArmUpgrade[psBuilding->player].modifier) / 100;
-}
-
-void structurePowerUpgrade(STRUCTURE *psBuilding)
-{
-	POWER_GEN		*pPowerGen = &psBuilding->pFunctionality->powerGenerator;
-	POWER_GEN_FUNCTION	*pPGFunc = (POWER_GEN_FUNCTION *)psBuilding->pStructureType->asFuncList[0];
-	UDWORD			multiplier;
-	STRUCTURE_STATS		*psStat;
-
-	ASSERT(pPowerGen != NULL, "Invalid Power Gen pointer");
-	ASSERT(pPGFunc != NULL, "Invalid function pointer");
-
-	// Current base value depends on whether there are modules attached to the structure
-	multiplier = pPGFunc->powerMultiplier;
-	psStat = getModuleStat(psBuilding);
-	if (psStat && psBuilding->capacity)
-	{
-		multiplier += ((POWER_GEN_FUNCTION *)psStat->asFuncList[0])->powerMultiplier;
-	}
-	pPowerGen->multiplier = multiplier + (pPGFunc->powerMultiplier * asPowerUpgrade[psBuilding->player].modifier) / 100;
 }
 
 void structureRepairUpgrade(STRUCTURE *psBuilding)
@@ -938,14 +803,11 @@ bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize)
 	//array of functions pointers for each load function
 	static const LoadFunction pLoadFunction[NUMFUNCTIONS] =
 	{
-		loadPowerGenFunction,
-		loadResourceFunction,
 		loadRepairDroidFunction,
 		loadWeaponUpgradeFunction,
 		loadWallFunction,
 		loadStructureUpgradeFunction,
 		loadWallDefenceUpgradeFunction,
-		loadPowerUpgradeFunction,
 		loadRepairUpgradeFunction,
 		loadDroidRepairUpgradeFunction,
 		loadDroidECMUpgradeFunction,

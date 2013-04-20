@@ -662,27 +662,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 
 		switch (pFunction->type)
 		{
-			case POWER_UPGRADE_TYPE:
-				powerUpgrade(pFunction, player);
-				// search the list of players structures for a Power Gens
-				for (psCurr = apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					if (psCurr->pStructureType->type == REF_POWER_GEN)
-					{
-						// upgrade the power points
-						structurePowerUpgrade(psCurr);
-					}
-				}
-				// and the mission structure
-				for (psCurr = mission.apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					if (psCurr->pStructureType->type == REF_POWER_GEN)
-					{
-						// upgrade the power points
-						structurePowerUpgrade(psCurr);
-					}
-				}
-				break;
 			case REARM_UPGRADE_TYPE:
 				reArmUpgrade(pFunction, player);
 				// search the list of players structures for a ReArm pad

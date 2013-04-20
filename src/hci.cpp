@@ -3199,7 +3199,7 @@ static bool intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected, 
 			case REF_FACTORY:
 			case REF_CYBORG_FACTORY:
 			case REF_VTOL_FACTORY:
-				sBarInit2.size = Structure->pStructureType->upgrade[Structure->player].production;	// Need to scale?
+				sBarInit2.size = getBuildingProductionPoints(Structure);
 				if (sBarInit2.size > WBAR_SCALE)
 				{
 					sBarInit2.size = WBAR_SCALE;
@@ -3210,7 +3210,7 @@ static bool intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected, 
 				break;
 
 			case REF_RESEARCH:
-				sBarInit2.size = getBuildingResearchPoints(Structure); // Need to scale?
+				sBarInit2.size = getBuildingResearchPoints(Structure);
 				if (sBarInit2.size > WBAR_SCALE)
 				{
 					sBarInit2.size = WBAR_SCALE;

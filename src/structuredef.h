@@ -202,7 +202,6 @@ struct RES_EXTRACTOR
 
 struct POWER_GEN
 {
-	UDWORD			multiplier;				///< Factor to multiply output by - percentage
 	struct STRUCTURE *      apResExtractors[NUM_POWER_MODULES];     ///< Pointers to associated oil derricks
 };
 

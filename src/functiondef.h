@@ -28,14 +28,11 @@
 
 enum FUNCTION_TYPE
 {
-	POWER_GEN_TYPE,
-	RESOURCE_TYPE,
 	REPAIR_DROID_TYPE,
 	WEAPON_UPGRADE_TYPE,
 	WALL_TYPE,
 	STRUCTURE_UPGRADE_TYPE,
 	WALLDEFENCE_UPGRADE_TYPE,
-	POWER_UPGRADE_TYPE,
 	REPAIR_UPGRADE_TYPE,
 	DROIDREPAIR_UPGRADE_TYPE,
 	DROIDECM_UPGRADE_TYPE,
@@ -68,8 +65,6 @@ struct REPAIR_DROID_FUNCTION : public FUNCTION
 /*To generate and supply power to other structures*/
 struct POWER_GEN_FUNCTION : public FUNCTION
 {
-	UDWORD		powerOutput;		/*How much power is generated per power cycle*/
-	UDWORD		powerMultiplier;	/*Multiplies the output - upgradeable*/
 };
 
 /*function used by walls to define which corner to use*/

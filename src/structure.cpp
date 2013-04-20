@@ -124,7 +124,6 @@ STRUCTURE_UPGRADE	asStructureUpgrade[MAX_PLAYERS];
 WALLDEFENCE_UPGRADE	asWallDefenceUpgrade[MAX_PLAYERS];
 
 //holds the upgrades for the functionality of structures through research
-POWER_UPGRADE		asPowerUpgrade[MAX_PLAYERS];
 REPAIR_FACILITY_UPGRADE		asRepairFacUpgrade[MAX_PLAYERS];
 REARM_UPGRADE		asReArmUpgrade[MAX_PLAYERS];
 
@@ -611,7 +610,6 @@ bool loadStructureStats(QString filename)
 	// initialise the structure upgrade arrays
 	memset(asStructureUpgrade, 0, MAX_PLAYERS * sizeof(STRUCTURE_UPGRADE));
 	memset(asWallDefenceUpgrade, 0, MAX_PLAYERS * sizeof(WALLDEFENCE_UPGRADE));
-	memset(asPowerUpgrade, 0, MAX_PLAYERS * sizeof(POWER_UPGRADE));
 	memset(asRepairFacUpgrade, 0, MAX_PLAYERS * sizeof(REPAIR_FACILITY_UPGRADE));
 	memset(asReArmUpgrade, 0, MAX_PLAYERS * sizeof(REARM_UPGRADE));
 
@@ -1750,7 +1748,6 @@ STRUCTURE* buildStructureDir(STRUCTURE_STATS *pStructureType, UDWORD x, UDWORD y
 
 				//need to inform any res Extr associated that not digging until complete
 				releasePowerGen(psBuilding);
-				structurePowerUpgrade(psBuilding);
 			}
 		}
 		if (bUpgraded)
@@ -1953,9 +1950,8 @@ static bool setFunctionality(STRUCTURE	*psBuilding, STRUCTURE_TYPE functionType)
 			break;
 		}
 		case REF_POWER_GEN:
+		case REF_HQ:
 		{
-			// Take advantage of upgrades
-			structurePowerUpgrade(psBuilding);
 			break;
 		}
 		case REF_RESOURCE_EXTRACTOR:
@@ -1965,11 +1961,6 @@ static bool setFunctionality(STRUCTURE	*psBuilding, STRUCTURE_TYPE functionType)
 			// Make the structure inactive
 			psResExtracter->active = false;
 			psResExtracter->psPowerGen = NULL;
-			break;
-		}
-		case REF_HQ:
-		{
-			// If an HQ has just been built make sure the radar is displayed!
 			break;
 		}
 		case REF_REPAIR_FACILITY:
@@ -3233,7 +3224,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 
 			if (psFactory->buildPointsRemaining > 0)
 			{
-				int progress = gameTimeAdjustedAverage(psStructure->pStructureType->upgrade[psStructure->player].production);
+				int progress = gameTimeAdjustedAverage(getBuildingProductionPoints(psStructure));
 				if (psFactory->buildPointsRemaining == psFactory->psSubject->buildPoints && progress > 0)
 				{
 					// We're just starting to build, check for power.
@@ -5643,7 +5634,7 @@ void printStructureInfo(STRUCTURE *psStructure)
 		{
 			CONPRINTF(ConsoleString, (ConsoleString, "%s -  Connected %u of %u - Unique ID %u - Multiplier: %u",
 					  getStatName(psStructure->pStructureType), numConnected, NUM_POWER_MODULES,
-					  psStructure->id, psPowerGen->multiplier));
+					  psStructure->id, getBuildingPowerPoints(psStructure)));
 		}
 		else
 #endif
@@ -5660,7 +5651,7 @@ void printStructureInfo(STRUCTURE *psStructure)
 		{
 			CONPRINTF(ConsoleString, (ConsoleString, "%s - Damage % 3.2f%% - Unique ID %u - Production Output: %u - BuildPointsRemaining: %u",
 					  getStatName(psStructure->pStructureType), getStructureDamage(psStructure) * (100.f/65536.f), psStructure->id,
-					  psStructure->pStructureType->upgrade[psStructure->player].production,
+					  getBuildingProductionPoints(psStructure),
 					  psStructure->pFunctionality->factory.buildPointsRemaining));
 		}
 		else

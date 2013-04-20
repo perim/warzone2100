@@ -21,14 +21,23 @@ function eventGameInit()
 	hackNetOff();
 	for (var playnum = 0; playnum < maxPlayers; playnum++)
 	{
+		if (powerType == 0)
+		{
+			setPowerModifier(85, playnum);
+		}
+		else if (powerType == 2)
+		{
+			setPowerModifier(125, playnum);
+		}
+
 		// insane difficulty is meant to be insane...
 		if (playerData[playnum].difficulty == INSANE)
 		{
-			setPowerModifier(200, playnum);
+			setPowerModifier(200 + 15 * game.power, playnum);
 		}
 		else if (playerData[playnum].difficulty == EASY)
 		{
-			setPowerModifier(75, playnum);
+			setPowerModifier(70 + 5 * game.power, playnum);
 		}
 
 		setDroidLimit(playnum, 150, DROID_ANY);
@@ -307,7 +316,7 @@ function eventResearched(research, structure, player)
 				}
 			}
 		}
-		else if (['ResearchPoints', 'ProductionPoints'].indexOf(s[0]) >= 0)
+		else if (['ResearchPoints', 'ProductionPoints', 'PowerPoints'].indexOf(s[0]) >= 0)
 		{
 			for (var i in Upgrades[player].Building)
 			{
@@ -318,6 +327,10 @@ function eventResearched(research, structure, player)
 				else if (Stats.Building[i].ProductionPoints > 0 && s[0] === 'ProductionPoints')
 				{
 					Upgrades[player].Building[i].ProductionPoints += Stats.Building[i].ProductionPoints * s[1] / 100;
+				}
+				else if (Stats.Building[i].ProductionPoints > 0 && s[0] === 'PowerPoints')
+				{
+					Upgrades[player].Building[i].PowerPoints += Stats.Building[i].PowerPoints * s[1] / 100;
 				}
 			}
 		}
