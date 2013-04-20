@@ -34,6 +34,7 @@
 #include <QtGui/QStandardItemModel>
 
 #include "action.h"
+#include "combat.h"
 #include "console.h"
 #include "design.h"
 #include "display3d.h"
@@ -73,6 +74,10 @@
 #define SCRCB_POW (COMP_NUMCOMPONENTS + 2)
 #define SCRCB_CON (COMP_NUMCOMPONENTS + 3)
 #define SCRCB_REA (COMP_NUMCOMPONENTS + 4)
+#define SCRCB_ARM (COMP_NUMCOMPONENTS + 5)
+#define SCRCB_HEA (COMP_NUMCOMPONENTS + 6)
+#define SCRCB_ELW (COMP_NUMCOMPONENTS + 7)
+#define SCRCB_HIT (COMP_NUMCOMPONENTS + 8)
 
 // TODO, move this stuff into a script common subsystem
 #include "scriptfuncs.h"
@@ -597,8 +602,8 @@ QScriptValue convObj(BASE_OBJECT *psObj, QScriptEngine *engine)
 	value.setProperty("y", map_coord(psObj->pos.y), QScriptValue::ReadOnly);
 	value.setProperty("z", map_coord(psObj->pos.z), QScriptValue::ReadOnly);
 	value.setProperty("player", psObj->player, QScriptValue::ReadOnly);
-	value.setProperty("armour", psObj->armour[WC_KINETIC], QScriptValue::ReadOnly);
-	value.setProperty("thermal", psObj->armour[WC_HEAT], QScriptValue::ReadOnly);
+	value.setProperty("armour", objArmour(psObj, WC_KINETIC), QScriptValue::ReadOnly);
+	value.setProperty("thermal", objArmour(psObj, WC_HEAT), QScriptValue::ReadOnly);
 	value.setProperty("type", psObj->type, QScriptValue::ReadOnly);
 	value.setProperty("selected", psObj->selected, QScriptValue::ReadOnly);
 	value.setProperty("name", objInfo(psObj), QScriptValue::ReadOnly);
@@ -3896,7 +3901,8 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 				SCRIPT_ASSERT(context, false, "Upgrade component %s not found", name.toUtf8().constData());
 			}
 		}
-		else if (type == SCRCB_RES || type == SCRCB_REP || type == SCRCB_POW || type == SCRCB_CON || type == SCRCB_REA)
+		else if (type == SCRCB_RES || type == SCRCB_REP || type == SCRCB_POW || type == SCRCB_CON || type == SCRCB_REA
+		         || type == SCRCB_HIT || type == SCRCB_ELW || type == SCRCB_ARM || type == SCRCB_HEA)
 		{
 			STRUCTURE_STATS *psStats = asStructureStats + index;
 			switch (type)
@@ -3906,6 +3912,10 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 			case SCRCB_POW: psStats->upgrade[player].power = value; break;
 			case SCRCB_CON: psStats->upgrade[player].production = value; break;
 			case SCRCB_REA: psStats->upgrade[player].rearm = value; break;
+			case SCRCB_ELW: psStats->upgrade[player].resistance = value; break;
+			case SCRCB_HIT: psStats->upgrade[player].hitpoints = value; break;
+			case SCRCB_HEA: psStats->upgrade[player].thermal = value; break;
+			case SCRCB_ARM: psStats->upgrade[player].armour = value; break;
 			}
 		}
 		else
@@ -3966,11 +3976,28 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			STRUCTURE_STATS *psStats = asStructureStats + j;
 			QScriptValue strct = engine->newObject();
 			strct.setProperty("Id", psStats->pName, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			if (psStats->type == REF_DEFENSE || psStats->type == REF_WALL || psStats->type == REF_WALLCORNER
+			    || psStats->type == REF_BLASTDOOR || psStats->type == REF_GATE)
+			{
+				strct.setProperty("Type", "Wall", QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			}
+			else if (psStats->type != REF_DEMOLISH)
+			{
+				strct.setProperty("Type", "Structure", QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			}
+			else
+			{
+				strct.setProperty("Type", "Demolish", QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			}
 			strct.setProperty("ResearchPoints", psStats->base.research, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			strct.setProperty("RepairPoints", psStats->base.repair, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			strct.setProperty("PowerPoints", psStats->base.power, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			strct.setProperty("ProductionPoints", psStats->base.production, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			strct.setProperty("RearmPoints", psStats->base.rearm, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			strct.setProperty("Armour", psStats->base.armour, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			strct.setProperty("Thermal", psStats->base.thermal, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			strct.setProperty("HitPoints", psStats->base.hitpoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			strct.setProperty("Resistance", psStats->base.resistance, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			structbase.setProperty(getStatName(psStats), strct, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
 		stats.setProperty("Building", structbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
@@ -4007,6 +4034,10 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			setStatsFunc(strct, engine, "PowerPoints", i, SCRCB_POW, j, psStats->upgrade[i].power);
 			setStatsFunc(strct, engine, "ProductionPoints", i, SCRCB_CON, j, psStats->upgrade[i].production);
 			setStatsFunc(strct, engine, "RearmPoints", i, SCRCB_REA, j, psStats->upgrade[i].rearm);
+			setStatsFunc(strct, engine, "Armour", i, SCRCB_ARM, j, psStats->upgrade[i].armour);
+			setStatsFunc(strct, engine, "Resistance", i, SCRCB_ELW, j, psStats->upgrade[i].resistance);
+			setStatsFunc(strct, engine, "Thermal", i, SCRCB_HEA, j, psStats->upgrade[i].thermal);
+			setStatsFunc(strct, engine, "HitPoints", i, SCRCB_HIT, j, psStats->upgrade[i].hitpoints);
 			structbase.setProperty(getStatName(psStats), strct, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
 		node.setProperty("Building", structbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);

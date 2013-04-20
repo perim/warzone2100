@@ -113,14 +113,7 @@ struct STRUCTURE_STATS : public BASE_STATS
 									  the structure*/
 	UDWORD		height;				/*The height above/below the terrain - negative
 									  values denote below the terrain*/
-	UDWORD		armourValue;		/*The armour value for the structure - can be
-									  upgraded */
-	UDWORD		bodyPoints;			/*The structure's body points - A structure goes
-									  off-line when 50% of its body points are lost*/
 	UDWORD		powerToBuild;		/*How much power the structure requires to build*/
-	UDWORD		resistance;			/*The number used to determine whether a
-									  structure can resist an enemy takeover -
-									  0 = cannot be attacked electrically*/
 	std::vector<iIMDShape *> pIMD;          // The IMDs to draw for this structure, for each possible number of modules.
 	iIMDShape	*pBaseIMD;	/*The base IMD to draw for this structure */
 	struct ECM_STATS	*pECM;		/*Which ECM is standard for the structure -
@@ -143,6 +136,10 @@ struct STRUCTURE_STATS : public BASE_STATS
 		short power;
 		short production;
 		short rearm;
+		short armour;
+		short thermal;
+		short hitpoints;
+		short resistance;	// resist enemy takeover; 0 = immune
 	} upgrade[MAX_PLAYERS], base;
 };
 
@@ -326,21 +323,6 @@ struct ProductionRunEntry
 	DROID_TEMPLATE *                psTemplate;           //template to build
 };
 typedef std::vector<ProductionRunEntry> ProductionRun;
-
-/* structure stats which can be upgraded by research*/
-struct STRUCTURE_UPGRADE
-{
-	UWORD			armour;
-	UWORD			body;
-	UWORD			resistance;
-};
-
-/* wall/Defence structure stats which can be upgraded by research*/
-struct WALLDEFENCE_UPGRADE
-{
-	UWORD			armour;
-	UWORD			body;
-};
 
 struct UPGRADE
 {

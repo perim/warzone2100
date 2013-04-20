@@ -1276,7 +1276,7 @@ bool droidUpdateRestore( DROID *psDroid )
 	ASSERT_OR_RETURN(false, psDroid->action == DACTION_RESTORE, "unit is not restoring");
 	psStruct = (STRUCTURE *)psDroid->order.psObj;
 	ASSERT_OR_RETURN(false, psStruct->type == OBJ_STRUCTURE, "target is not a structure");
-	ASSERT_OR_RETURN(false, psStruct->pStructureType->resistance != 0, "invalid structure for EW");
+	ASSERT_OR_RETURN(false, psStruct->pStructureType->upgrade[psStruct->player].resistance != 0, "invalid structure for EW");
 
 	ASSERT_OR_RETURN(false, psDroid->asWeaps[0].nStat > 0, "droid doesn't have any weapons");
 
@@ -3374,9 +3374,6 @@ SWORD   droidResistance(DROID *psDroid)
 		//ensure resistance is a base minimum
 		resistance = MAX(resistance, DROID_RESISTANCE_FACTOR);
 	}
-
-	//structure resistance upgrades are passed on to droids
-	resistance = resistance + resistance*asStructureUpgrade[psDroid->player].resistance / 100;
 
 	//ensure resistance is a base minimum
 	resistance = MAX(resistance, DROID_RESISTANCE_FACTOR);

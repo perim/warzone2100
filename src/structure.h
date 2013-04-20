@@ -45,8 +45,6 @@
 /*This should correspond to the structLimits! */
 #define	MAX_FACTORY			5
 
-
-
 //used to flag when the Factory is ready to start building
 #define ACTION_START_TIME	0
 
@@ -67,16 +65,10 @@ extern SBYTE         productionPlayer;
 extern STRUCTURE_STATS		*asStructureStats;
 extern UDWORD				numStructureStats;
 extern STRUCTURE_LIMITS		*asStructLimits[MAX_PLAYERS];
-//holds the upgrades attained through research for structure stats
-extern STRUCTURE_UPGRADE	asStructureUpgrade[MAX_PLAYERS];
-extern WALLDEFENCE_UPGRADE	asWallDefenceUpgrade[MAX_PLAYERS];
-//holds the upgrades for the functionality of structures through research
-extern REARM_UPGRADE		asReArmUpgrade[MAX_PLAYERS];
 
 //used to hold the modifiers cross refd by weapon effect and structureStrength
 extern STRUCTSTRENGTH_MODIFIER		asStructStrengthModifier[WE_NUMEFFECTS][
 													NUM_STRUCT_STRENGTH];
-
 extern void handleAbandonedStructures(void);
 
 int getMaxDroids(int player);
@@ -262,8 +254,6 @@ unsigned structureBodyBuilt(STRUCTURE const *psStruct);  ///< Returns the maximu
 extern UDWORD	structureBody(const STRUCTURE *psStruct);
 extern UDWORD	structureArmour(STRUCTURE_STATS *psStats, UBYTE player);
 extern UDWORD	structureResistance(STRUCTURE_STATS *psStats, UBYTE player);
-/*this returns the Base Body points of a structure - regardless of upgrade*/
-extern UDWORD	structureBaseBody(const STRUCTURE *psStructure);
 
 extern void hqReward(UBYTE losingPlayer, UBYTE rewardPlayer);
 

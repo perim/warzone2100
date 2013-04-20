@@ -1807,7 +1807,7 @@ static void dealWithLMBStructure(STRUCTURE* psStructure, SELECTION_TYPE selectio
 		if (getDebugMappingStatus())
 		{
 			CONPRINTF(ConsoleString, (ConsoleString, "(Enemy!) %s, ref: %d, ID: %d Damage %d%%", psStructure->pStructureType->pName, psStructure->pStructureType->ref,
-				psStructure->id, 100 - clip(PERCENT(psStructure->body, psStructure->pStructureType->bodyPoints), 0, 100)));
+				psStructure->id, 100 - clip(PERCENT(psStructure->body, psStructure->pStructureType->upgrade[psStructure->player].hitpoints), 0, 100)));
 		}
 #endif
 		orderSelectedObjAdd(selectedPlayer, (BASE_OBJECT*)psStructure, ctrlShiftDown());

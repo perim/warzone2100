@@ -141,32 +141,6 @@ Wall Function,baba Wall Function,A0BabaCornerWall,73
 Wall Function,TankTrapFunc,TankTrapC,187
 Wall Function,Collective Wall1,CollectiveCWall,231
 Wall Function,NEXUS Wall1,NEXUSCWall,232
-Structure Upgrade,Struc-Materials01,35,30,0
-Structure Upgrade,Struc-Materials02,70,60,0
-Structure Upgrade,Struc-Materials03,105,90,0
-Structure Upgrade,Sys-Resistance-Upgrade01,0,0,60
-Structure Upgrade,Sys-Resistance-Upgrade02,0,0,120
-Structure Upgrade,Sys-Resistance-Upgrade03,0,0,300
-Structure Upgrade,Struc-Materials04,140,120,0
-Structure Upgrade,Struc-Materials05,175,150,0
-Structure Upgrade,Struc-Materials06,210,180,0
-Structure Upgrade,Struc-Materials07,245,210,0
-Structure Upgrade,Struc-Materials08,270,240,0
-Structure Upgrade,Struc-Materials09,305,270,0
-Structure Upgrade,Struc-Materials10,340,300,0
-Structure Upgrade,Sys-Resistance-Upgrade0,0,0,10
-WallDefence Upgrade,Defense-WallUpgrade01,35,30
-WallDefence Upgrade,Defense-WallUpgrade02,70,60
-WallDefence Upgrade,Defense-WallUpgrade03,105,90
-WallDefence Upgrade,Defense-WallUpgrade04,140,120
-WallDefence Upgrade,Defense-WallUpgrade05,175,150
-WallDefence Upgrade,Defense-WallUpgrade06,205,180
-WallDefence Upgrade,Defense-WallUpgrade07,240,210
-WallDefence Upgrade,Defense-WallUpgrade08,275,240
-WallDefence Upgrade,Defense-WallUpgrade09,305,270
-WallDefence Upgrade,Defense-WallUpgrade10,340,300
-WallDefence Upgrade,Defense-WallUpgrade11,375,330
-WallDefence Upgrade,Defense-WallUpgrade12,410,360
 VehicleConst Upgrade,Sys-Engineering-Upgrade01,10
 VehicleConst Upgrade,Sys-Engineering-Upgrade02,30
 VehicleConst Upgrade,Sys-Engineering-Upgrade03,50

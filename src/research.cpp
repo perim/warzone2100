@@ -757,68 +757,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 				constructorUpgrade(pFunction, player);
 				// message/sound for constructor upgrade
 				break;
-			case STRUCTURE_UPGRADE_TYPE:
-				// for each structure in the player's list, upgrade the stats
-				for (psCurr = apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					//do this for none wallDefense structs
-					if (!wallDefenceStruct(psCurr->pStructureType))
-					{
-						structureBodyUpgrade(pFunction, psCurr);
-						structureArmourUpgrade(pFunction, psCurr);
-						structureResistanceUpgrade(pFunction, psCurr);
-					}
-					// Defense type can have resistance upgrade now - AB 19/02/99
-					if (psCurr->pStructureType->type == REF_DEFENSE)
-					{
-						structureResistanceUpgrade(pFunction, psCurr);
-					}
-				}
-				for (psCurr = mission.apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					//do this for none wallDefense structs
-					if (!wallDefenceStruct(psCurr->pStructureType))
-					{
-						structureBodyUpgrade(pFunction, psCurr);
-						structureArmourUpgrade(pFunction, psCurr);
-						structureResistanceUpgrade(pFunction, psCurr);
-					}
-					// Defense type can have resistance upgrade now - AB 19/02/99
-					if (psCurr->pStructureType->type == REF_DEFENSE)
-					{
-						structureResistanceUpgrade(pFunction, psCurr);
-					}
-				}
-				// DO THIS AFTER so above calculations can use the previous upgrade values
-				// for the current player, upgrade the structure stats
-				structureUpgrade(pFunction, player);
-				// message/sound for structure upgrade
-				break;
-			case WALLDEFENCE_UPGRADE_TYPE:
-				//for each structure in the player's list, upgrade the stats
-				for (psCurr = apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					// do this for wallDefense structs
-					if (wallDefenceStruct(psCurr->pStructureType))
-					{
-						structureBodyUpgrade(pFunction, psCurr);
-						structureArmourUpgrade(pFunction, psCurr);
-					}
-				}
-				for (psCurr = mission.apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					// do this for wallDefense structs
-					if (wallDefenceStruct(psCurr->pStructureType))
-					{
-						structureBodyUpgrade(pFunction, psCurr);
-						structureArmourUpgrade(pFunction, psCurr);
-					}
-				}
-				// DO THIS AFTER so above calculations can use the previous upgrade values
-				// for the current player, upgrade the wall/defence structure stats
-				wallDefenceUpgrade(pFunction, player);
-				// message/sound for wall/defence structure upgrade
-				break;
 			default:
 				ASSERT(false, "Invalid function type");
 				break;

@@ -59,14 +59,6 @@ static FUNCTION_TYPE functionType(const char *pType)
 	{
 		return WALL_TYPE;
 	}
-	if (!strcmp(pType, "Structure Upgrade"))
-	{
-		return STRUCTURE_UPGRADE_TYPE;
-	}
-	if (!strcmp(pType, "WallDefence Upgrade"))
-	{
-		return WALLDEFENCE_UPGRADE_TYPE;
-	}
 	if (!strcmp(pType, "VehicleRepair Upgrade"))
 	{
 		return DROIDREPAIR_UPGRADE_TYPE;
@@ -244,89 +236,6 @@ static bool loadWeaponUpgradeFunction(const char *pData)
 	return true;
 }
 
-static bool loadStructureUpgradeFunction(const char *pData)
-{
-	STRUCTURE_UPGRADE_FUNCTION *psFunction;
-	char functionName[MAX_STR_LENGTH];
-	UDWORD armour, body, resistance;
-
-	//allocate storage
-	psFunction = (STRUCTURE_UPGRADE_FUNCTION *)malloc(sizeof(STRUCTURE_UPGRADE_FUNCTION));
-	memset(psFunction, 0, sizeof(STRUCTURE_UPGRADE_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = STRUCTURE_UPGRADE_TYPE;
-
-	//read the data in
-	functionName[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%d,%d,%d", functionName, &armour, &body, &resistance);
-
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
-	//check none of the %increases are over UWORD max
-	if (armour > UWORD_MAX ||
-	    body > UWORD_MAX ||
-	    resistance > UWORD_MAX)
-	{
-		debug(LOG_ERROR, "A percentage increase for Structure Upgrade function is too large");
-		return false;
-	}
-
-	//copy the data across
-	psFunction->armour = (UWORD)armour;
-	psFunction->body = (UWORD)body;
-	psFunction->resistance = (UWORD)resistance;
-
-	return true;
-}
-
-static bool loadWallDefenceUpgradeFunction(const char *pData)
-{
-	WALLDEFENCE_UPGRADE_FUNCTION  *psFunction;
-	char						functionName[MAX_STR_LENGTH];
-	UDWORD						armour, body;
-
-	//allocate storage
-	psFunction = (WALLDEFENCE_UPGRADE_FUNCTION *)malloc(sizeof(WALLDEFENCE_UPGRADE_FUNCTION));
-	memset(psFunction, 0, sizeof(WALLDEFENCE_UPGRADE_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = WALLDEFENCE_UPGRADE_TYPE;
-
-	//read the data in
-	functionName[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%d,%d", functionName, &armour, &body);
-
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
-	//check none of the %increases are over UWORD max
-	if (armour > UWORD_MAX || body > UWORD_MAX)
-	{
-		debug(LOG_ERROR, "A percentage increase for WallDefence Upgrade function is too large");
-		return false;
-	}
-
-	//copy the data across
-	psFunction->armour = (UWORD)armour;
-	psFunction->body = (UWORD)body;
-
-	return true;
-}
-
 static bool loadRepairDroidFunction(const char *pData)
 {
 	REPAIR_DROID_FUNCTION		*psFunction;
@@ -395,84 +304,6 @@ static bool loadWallFunction(const char *pData)
 	psFunction->pCornerStat = NULL;
 
 	return true;
-}
-
-void structureBodyUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding)
-{
-	UWORD	increase, prevBaseBody, newBaseBody;
-
-	switch (psBuilding->pStructureType->type)
-	{
-	case REF_WALL:
-	case REF_WALLCORNER:
-	case REF_DEFENSE:
-	case REF_BLASTDOOR:
-	case REF_GATE:
-		increase = ((WALLDEFENCE_UPGRADE_FUNCTION *)pFunction)->body;
-		break;
-	default:
-		increase = ((STRUCTURE_UPGRADE_FUNCTION *)pFunction)->body;
-		break;
-	}
-
-	prevBaseBody = (UWORD)structureBody(psBuilding);
-	newBaseBody = (UWORD)(structureBaseBody(psBuilding) +
-	        (structureBaseBody(psBuilding) * increase) / 100);
-
-	if (newBaseBody > prevBaseBody)
-	{
-		psBuilding->body = (UWORD)((psBuilding->body * newBaseBody) / prevBaseBody);
-		//psBuilding->baseBodyPoints = newBaseBody;
-	}
-}
-
-void structureArmourUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding)
-{
-	UWORD	increase, prevBaseArmour, newBaseArmour;
-
-	switch (psBuilding->pStructureType->type)
-	{
-	case REF_WALL:
-	case REF_WALLCORNER:
-	case REF_DEFENSE:
-	case REF_BLASTDOOR:
-	case REF_GATE:
-		increase = ((WALLDEFENCE_UPGRADE_FUNCTION *)pFunction)->armour;
-		break;
-	default:
-		increase = ((STRUCTURE_UPGRADE_FUNCTION *)pFunction)->armour;
-		break;
-	}
-
-	prevBaseArmour = (UWORD)structureArmour(psBuilding->pStructureType, psBuilding->player);
-	newBaseArmour = (UWORD)(psBuilding->pStructureType->armourValue + (psBuilding->
-	        pStructureType->armourValue * increase) / 100);
-
-	if (newBaseArmour > prevBaseArmour)
-	{
-		for (int j = 0; j < WC_NUM_WEAPON_CLASSES; j++)
-		{
-			psBuilding->armour[j] = (UWORD)((psBuilding->armour[j] * newBaseArmour) / prevBaseArmour);
-		}
-	}
-}
-
-void structureResistanceUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding)
-{
-	UWORD	increase, prevBaseResistance, newBaseResistance;
-
-	increase = ((STRUCTURE_UPGRADE_FUNCTION *)pFunction)->resistance;
-
-	prevBaseResistance = (UWORD)structureResistance(psBuilding->pStructureType,
-	        psBuilding->player);
-	newBaseResistance = (UWORD)(psBuilding->pStructureType->resistance + (psBuilding
-	        ->pStructureType->resistance * increase) / 100);
-
-	if (newBaseResistance > prevBaseResistance)
-	{
-		psBuilding->resistance = (UWORD)((psBuilding->resistance * newBaseResistance) /
-		        prevBaseResistance);
-	}
 }
 
 void structureSensorUpgrade(STRUCTURE *psBuilding)
@@ -620,46 +451,6 @@ void constructorUpgrade(FUNCTION *pFunction, UBYTE player)
 	}
 }
 
-//upgrade the structure stats for the correct player
-void structureUpgrade(FUNCTION *pFunction, UBYTE player)
-{
-	STRUCTURE_UPGRADE_FUNCTION		*pUpgrade;
-
-	pUpgrade = (STRUCTURE_UPGRADE_FUNCTION *)pFunction;
-
-	//check upgrades increase all values!
-	if (asStructureUpgrade[player].armour < pUpgrade->armour)
-	{
-		asStructureUpgrade[player].armour = pUpgrade->armour;
-	}
-	if (asStructureUpgrade[player].body < pUpgrade->body)
-	{
-		asStructureUpgrade[player].body = pUpgrade->body;
-	}
-	if (asStructureUpgrade[player].resistance < pUpgrade->resistance)
-	{
-		asStructureUpgrade[player].resistance = pUpgrade->resistance;
-	}
-}
-
-//upgrade the wall/Defence structure stats for the correct player
-void wallDefenceUpgrade(FUNCTION *pFunction, UBYTE player)
-{
-	WALLDEFENCE_UPGRADE_FUNCTION		*pUpgrade;
-
-	pUpgrade = (WALLDEFENCE_UPGRADE_FUNCTION *)pFunction;
-
-	//check upgrades increase all values!
-	if (asWallDefenceUpgrade[player].armour < pUpgrade->armour)
-	{
-		asWallDefenceUpgrade[player].armour = pUpgrade->armour;
-	}
-	if (asWallDefenceUpgrade[player].body < pUpgrade->body)
-	{
-		asWallDefenceUpgrade[player].body = pUpgrade->body;
-	}
-}
-
 /*upgrades the droids inside a Transporter uwith the appropriate upgrade function*/
 void upgradeTransporterDroids(DROID *psTransporter, void(*pUpgradeFunction)(DROID *psDroid))
 {
@@ -701,8 +492,6 @@ bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize)
 		loadRepairDroidFunction,
 		loadWeaponUpgradeFunction,
 		loadWallFunction,
-		loadStructureUpgradeFunction,
-		loadWallDefenceUpgradeFunction,
 		loadDroidRepairUpgradeFunction,
 		loadDroidECMUpgradeFunction,
 		loadDroidSensorUpgradeFunction,

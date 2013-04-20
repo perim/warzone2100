@@ -31,8 +31,6 @@ enum FUNCTION_TYPE
 	REPAIR_DROID_TYPE,
 	WEAPON_UPGRADE_TYPE,
 	WALL_TYPE,
-	STRUCTURE_UPGRADE_TYPE,
-	WALLDEFENCE_UPGRADE_TYPE,
 	DROIDREPAIR_UPGRADE_TYPE,
 	DROIDECM_UPGRADE_TYPE,
 	DROIDSENSOR_UPGRADE_TYPE,
@@ -123,16 +121,11 @@ struct WEAPON_UPGRADE_FUNCTION : public FUNCTION
 /*Upgrade the structure stats for all non wall and defence structures*/
 struct STRUCTURE_UPGRADE_FUNCTION : public FUNCTION
 {
-	UWORD			armour;			/*The % to increase the armour value*/
-	UWORD			body;			/*The % to increase the body points*/
-	UWORD			resistance;		/*The % to increase the resistance*/
 };
 
 /*Upgrade the structure stats for all wall and defence structures*/
 struct WALLDEFENCE_UPGRADE_FUNCTION : public FUNCTION
 {
-	UWORD			armour;			/*The % to increase the armour value*/
-	UWORD			body;			/*The % to increase the body points*/
 };
 
 typedef UPGRADE_FUNCTION	DROIDREPAIR_UPGRADE_FUNCTION;

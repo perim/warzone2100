@@ -114,13 +114,6 @@ UDWORD				numStructureStats;
 //holder for the limits of each structure per map
 STRUCTURE_LIMITS	*asStructLimits[MAX_PLAYERS];
 
-//holds the upgrades attained through research for structure stats
-STRUCTURE_UPGRADE	asStructureUpgrade[MAX_PLAYERS];
-WALLDEFENCE_UPGRADE	asWallDefenceUpgrade[MAX_PLAYERS];
-
-//holds the upgrades for the functionality of structures through research
-REPAIR_FACILITY_UPGRADE		asRepairFacUpgrade[MAX_PLAYERS];
-
 //used to hold the modifiers cross refd by weapon effect and structureStrength
 STRUCTSTRENGTH_MODIFIER		asStructStrengthModifier[WE_NUMEFFECTS][NUM_STRUCT_STRENGTH];
 
@@ -484,6 +477,10 @@ bool loadStructureStats(QString filename)
 		psStats->base.repair = ini.value("repairPoints", 0).toInt();
 		psStats->base.power = ini.value("powerPoints", 0).toInt();
 		psStats->base.rearm = ini.value("rearmPoints", 0).toInt();
+		psStats->base.resistance = ini.value("resistance", 0).toUInt();
+		psStats->base.hitpoints = ini.value("bodyPoints", 1).toUInt();
+		psStats->base.armour = ini.value("armour", 0).toUInt();
+		psStats->base.thermal = ini.value("thermal", 0).toUInt();
 		for (int i = 0; i < MAX_PLAYERS; i++)
 		{
 			psStats->upgrade[i].research = psStats->base.research;
@@ -491,6 +488,10 @@ bool loadStructureStats(QString filename)
 			psStats->upgrade[i].repair = psStats->base.repair;
 			psStats->upgrade[i].production = psStats->base.production;
 			psStats->upgrade[i].rearm = psStats->base.rearm;
+			psStats->upgrade[i].resistance = ini.value("resistance", 0).toUInt();
+			psStats->upgrade[i].hitpoints = ini.value("bodyPoints", 1).toUInt();
+			psStats->upgrade[i].armour = ini.value("armour", 0).toUInt();
+			psStats->upgrade[i].thermal = ini.value("thermal", 0).toUInt();
 		}
 	
 		// set structure strength
@@ -506,12 +507,9 @@ bool loadStructureStats(QString filename)
 		psStats->baseBreadth = ini.value("baseBreadth", 0).toUInt();
 		ASSERT_OR_RETURN(false, psStats->baseBreadth < 100, "Invalid baseBreadth '%d' for structure '%s'", psStats->baseBreadth, psStats->pName);
 		
-		psStats->bodyPoints = ini.value("bodyPoints", 1).toUInt();
-		psStats->armourValue = ini.value("armour").toUInt();
 		psStats->height = ini.value("height").toUInt();
 		psStats->powerToBuild = ini.value("buildPower").toUInt();
 		psStats->buildPoints = ini.value("buildPoints").toUInt();
-		psStats->resistance = ini.value("resistance").toUInt();
 
 		// set structure models
 		QStringList models = ini.value("structureModel").toStringList();
@@ -602,11 +600,6 @@ bool loadStructureStats(QString filename)
 		asStructLimits[player] = (STRUCTURE_LIMITS *)malloc(sizeof(STRUCTURE_LIMITS) * numStructureStats);
 	}
 	initStructLimits();
-
-	// initialise the structure upgrade arrays
-	memset(asStructureUpgrade, 0, MAX_PLAYERS * sizeof(STRUCTURE_UPGRADE));
-	memset(asWallDefenceUpgrade, 0, MAX_PLAYERS * sizeof(WALLDEFENCE_UPGRADE));
-	memset(asRepairFacUpgrade, 0, MAX_PLAYERS * sizeof(REPAIR_FACILITY_UPGRADE));
 
 	// Wall Function requires a structure stat so can allocate it now
 	for (int i = 0; i < numFunctions; ++i)
@@ -775,7 +768,7 @@ int32_t structureDamage(STRUCTURE *psStructure, unsigned damage, WEAPON_CLASS we
 	CHECK_STRUCTURE(psStructure);
 
 	debug(LOG_ATTACK, "structure id %d, body %d, armour %d, damage: %d",
-		  psStructure->id, psStructure->body, psStructure->armour[weaponClass], damage);
+		  psStructure->id, psStructure->body, objArmour(psStructure, weaponClass), damage);
 
 	relativeDamage = objDamage(psStructure, damage, structureBody(psStructure), weaponClass, weaponSubClass, isDamagePerSecond);
 
@@ -800,7 +793,7 @@ int32_t getStructureDamage(const STRUCTURE *psStructure)
 
 	unsigned maxBody = structureBodyBuilt(psStructure);
 
-	int64_t health = (int64_t)65536 * psStructure->body / maxBody;
+	int64_t health = (int64_t)65536 * psStructure->body / MAX(1, maxBody);
 	CLIP(health, 0, 65536);
 
 	return 65536 - health;
@@ -1548,10 +1541,6 @@ STRUCTURE* buildStructureDir(STRUCTURE_STATS *pStructureType, UDWORD x, UDWORD y
 			}
 		}
 
-		for (int j = 0; j < WC_NUM_WEAPON_CLASSES; j++)
-		{
-			psBuilding->armour[j] = (UWORD)structureArmour(pStructureType, (UBYTE)player);
-		}
 		psBuilding->resistance = (UWORD)structureResistance(pStructureType, (UBYTE)player);
 		psBuilding->lastResistance = ACTION_START_TIME;
 
@@ -3086,8 +3075,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 			//electronic warfare affects the functionality of some structures in multiPlayer
 			if (bMultiPlayer)
 			{
-				if (psStructure->resistance < (SWORD)structureResistance(psStructure->
-					pStructureType, psStructure->player))
+				if (psStructure->resistance < structureResistance(psStructure->pStructureType, psStructure->player))
 				{
 					return;
 				}
@@ -3181,8 +3169,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 			//electronic warfare affects the functionality of some structures in multiPlayer
 			if (bMultiPlayer)
 			{
-				if (psStructure->resistance < (SWORD)structureResistance(psStructure->
-					pStructureType, psStructure->player))
+				if (psStructure->resistance < structureResistance(psStructure->pStructureType, psStructure->player))
 				{
 					return;
 				}
@@ -3291,8 +3278,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 					//don't do anything if the resistance is low in multiplayer
 					if (bMultiPlayer)
 					{
-						if (psStructure->resistance < (SWORD)structureResistance(psStructure->
-							pStructureType, psStructure->player))
+						if (psStructure->resistance < structureResistance(psStructure->pStructureType, psStructure->player))
 						{
 							objTrace(psStructure->id, "Resistance too low for repair");
 							return;
@@ -3669,8 +3655,7 @@ void structureUpdate(STRUCTURE *psBuilding, bool mission)
 	}
 
 	//check the resistance level of the structure
-	iPointsRequired = structureResistance(psBuilding->pStructureType,
-		psBuilding->player);
+	iPointsRequired = structureResistance(psBuilding->pStructureType, psBuilding->player);
 	if (psBuilding->resistance < (SWORD)iPointsRequired)
 	{
 		//start the resistance increase
@@ -5530,7 +5515,7 @@ void printStructureInfo(STRUCTURE *psStructure)
 		{
 			CONPRINTF(ConsoleString, (ConsoleString, "%s - %d Units assigned - ID %d - armour %d|%d - sensor range %d - ECM %d - born %u - depth %.02f",
 				getStatName(psStructure->pStructureType), countAssignedDroids(psStructure),
-				psStructure->id, psStructure->armour[WC_KINETIC], psStructure->armour[WC_HEAT],
+				psStructure->id, objArmour(psStructure, WC_KINETIC), objArmour(psStructure, WC_HEAT),
 					structSensorRange(psStructure), structConcealment(psStructure), psStructure->born, psStructure->foundationDepth));
 		} else
 #endif
@@ -5743,7 +5728,7 @@ bool electronicDamage(BASE_OBJECT *psTarget, UDWORD damage, UBYTE attackPlayer)
 		psStructure = (STRUCTURE *)psTarget;
 		bCompleted = false;
 
-		if (psStructure->pStructureType->resistance == 0)
+		if (psStructure->pStructureType->upgrade[psStructure->player].resistance == 0)
 		{
 			return false;	// this structure type cannot be taken over
 		}
@@ -5860,7 +5845,7 @@ bool validStructResistance(STRUCTURE *psStruct)
 
 	ASSERT_OR_RETURN(false, psStruct != NULL, "Invalid structure pointer");
 
-	if (psStruct->pStructureType->resistance != 0)
+	if (psStruct->pStructureType->upgrade[psStruct->player].resistance != 0)
 	{
 		/*certain structures will only provide rewards in multiplayer so
 		before they can become valid targets their resistance must be at least
@@ -5875,8 +5860,7 @@ bool validStructResistance(STRUCTURE *psStruct)
 			case REF_CYBORG_FACTORY:
 			case REF_HQ:
 			case REF_REPAIR_FACILITY:
-				if (psStruct->resistance >= (SDWORD) (structureResistance(psStruct->
-					pStructureType, psStruct->player) / 2))
+				if (psStruct->resistance >= structureResistance(psStruct->pStructureType, psStruct->player) / 2)
 				{
 					bTarget = true;
 				}
@@ -5912,115 +5896,17 @@ unsigned structureBodyBuilt(STRUCTURE const *psStructure)
 /*Access functions for the upgradeable stats of a structure*/
 UDWORD structureBody(const STRUCTURE *psStructure)
 {
-	const STRUCTURE_STATS *psStats = psStructure->pStructureType;
-	const UBYTE player = psStructure->player;
-
-	switch(psStats->type)
-	{
-		// wall/defence structures:
-		case REF_DEFENSE:
-		case REF_WALL:
-		case REF_WALLCORNER:
-		case REF_GATE:
-		case REF_BLASTDOOR:
-			return psStats->bodyPoints + (psStats->bodyPoints * asWallDefenceUpgrade[player].body)/100;
-		// all other structures:
-		default:
-			return structureBaseBody(psStructure) + (structureBaseBody(psStructure) * asStructureUpgrade[player].body)/100;
-	}
+	return psStructure->pStructureType->upgrade[psStructure->player].hitpoints;
 }
-
-
-/*this returns the Base Body points of a structure - regardless of upgrade*/
-UDWORD structureBaseBody(const STRUCTURE *psStructure)
-{
-	const STRUCTURE_STATS *psStats = psStructure->pStructureType;
-
-	ASSERT_OR_RETURN(0, psStructure != NULL, "Invalid structure pointer");
-
-	switch(psStats->type)
-	{
-		// modules may be attached:
-		case REF_FACTORY:
-		case REF_VTOL_FACTORY:
-			ASSERT_OR_RETURN(0, psStructure->pFunctionality != NULL, "Invalid structure functionality pointer for factory base body");
-			if (psStructure->capacity > 0)
-			{
-				//add on the default for the factory
-				return psStats->bodyPoints + asStructureStats[factoryModuleStat].bodyPoints * psStructure->capacity;
-			}
-			else
-			{
-				//no modules
-				return psStats->bodyPoints;
-			}
-		case REF_RESEARCH:
-			ASSERT_OR_RETURN(0, psStructure->pFunctionality != NULL, "Invalid structure functionality pointer for research base body");
-			if (psStructure->capacity > 0)
-			{
-				//add on the default for the factory
-				return psStats->bodyPoints + asStructureStats[researchModuleStat].bodyPoints;
-			}
-			else
-			{
-				//no modules
-				return psStats->bodyPoints;
-			}
-		case REF_POWER_GEN:
-			ASSERT_OR_RETURN(0, psStructure->pFunctionality != NULL, "Invalid structure functionality pointer for power gen base body");
-			if (psStructure->capacity > 0)
-			{
-				//add on the default for the factory
-				return psStats->bodyPoints + asStructureStats[powerModuleStat].bodyPoints;
-			}
-			else
-			{
-				//no modules
-				return psStats->bodyPoints;
-			}
-		// all other structures:
-		default:
-			return psStats->bodyPoints;
-	}
-}
-
 
 UDWORD	structureArmour(STRUCTURE_STATS *psStats, UBYTE player)
 {
-	switch(psStats->type)
-	{
-	case REF_DEFENSE:
-	case REF_WALL:
-	case REF_WALLCORNER:
-	case REF_GATE:
-	case REF_BLASTDOOR:
-		return (psStats->armourValue + (psStats->armourValue *
-			asWallDefenceUpgrade[player].armour)/100);
-		break;
-	default:
-		return (psStats->armourValue + (psStats->armourValue *
-			asStructureUpgrade[player].armour)/100);
-		break;
-	}
+	return psStats->upgrade[player].armour;
 }
-
 
 UDWORD	structureResistance(STRUCTURE_STATS *psStats, UBYTE player)
 {
-	switch(psStats->type)
-	{
-	case REF_WALL:
-	case REF_GATE:
-	case REF_WALLCORNER:
-	case REF_BLASTDOOR:
-		//not upgradeable
-		return psStats->resistance;
-		break;
-	default:
-		return (psStats->resistance + (psStats->resistance *
-			asStructureUpgrade[player].resistance)/100);
-		break;
-	}
+	return psStats->upgrade[player].resistance;
 }
 
 
@@ -7083,8 +6969,7 @@ STRUCTURE * giftSingleStructure(STRUCTURE *psStructure, UBYTE attackPlayer, bool
 			psStructure->player	= (UBYTE)attackPlayer;
 
 			//restore the resistance value
-			psStructure->resistance = (UWORD)structureResistance(psStructure->
-				pStructureType, psStructure->player);
+			psStructure->resistance = (UWORD)structureResistance(psStructure->pStructureType, psStructure->player);
 
 			// add to other list.
 			addStructure(psStructure);

@@ -316,29 +316,23 @@ function eventResearched(research, structure, player)
 				}
 			}
 		}
-		else if (['ResearchPoints', 'ProductionPoints', 'PowerPoints'].indexOf(s[0]) >= 0)
+		else if (['ResearchPoints', 'ProductionPoints', 'PowerPoints', 'Wall', 'Structure'].indexOf(s[0]) >= 0)
 		{
 			for (var i in Upgrades[player].Building)
 			{
-				if (Stats.Building[i].ResearchPoints > 0 && s[0] === 'ResearchPoints')
+				if (Stats.Building[i][s[0]] > 0) // only applies if building has this stat already
 				{
-					Upgrades[player].Building[i].ResearchPoints += Stats.Building[i].ResearchPoints * s[1] / 100;
+					Upgrades[player].Building[i][s[0]] += Stats.Building[i][s[0]] * s[1] / 100;
 				}
-				else if (Stats.Building[i].ProductionPoints > 0 && s[0] === 'ProductionPoints')
+			}
+		}
+		else if (['Wall', 'Structure'].indexOf(s[0]) >= 0)
+		{
+			for (var i in Upgrades[player].Building)
+			{
+				if (Stats.Building[i].Type === s[0]) // applies to specific building type
 				{
-					Upgrades[player].Building[i].ProductionPoints += Stats.Building[i].ProductionPoints * s[1] / 100;
-				}
-				else if (Stats.Building[i].ProductionPoints > 0 && s[0] === 'PowerPoints')
-				{
-					Upgrades[player].Building[i].PowerPoints += Stats.Building[i].PowerPoints * s[1] / 100;
-				}
-				else if (Stats.Building[i].RepairPoints > 0 && s[0] === 'RepairPoints')
-				{
-					Upgrades[player].Building[i].RepairPoints += Stats.Building[i].RepairPoints * s[1] / 100;
-				}
-				else if (Stats.Building[i].RearmPoints > 0 && s[0] === 'RearmPoints')
-				{
-					Upgrades[player].Building[i].RearmPoints += Stats.Building[i].RearmPoints * s[1] / 100;
+					Upgrades[player].Building[i][s[1]] += Stats.Building[i][s[1]] * s[2] / 100;
 				}
 			}
 		}
