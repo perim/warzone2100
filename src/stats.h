@@ -49,8 +49,6 @@ extern WEAPON_MODIFIER		asWeaponModifierBody[WE_NUMEFFECTS][SIZE_NUM];
 
 //used to hold the current upgrade level per player per weapon subclass
 extern WEAPON_UPGRADE		asWeaponUpgrade[MAX_PLAYERS][WSC_NUM_WEAPON_SUBCLASSES];
-extern SENSOR_UPGRADE		asSensorUpgrade[MAX_PLAYERS];
-extern ECM_UPGRADE			asECMUpgrade[MAX_PLAYERS];
 extern REPAIR_UPGRADE		asRepairUpgrade[MAX_PLAYERS];
 extern CONSTRUCTOR_UPGRADE	asConstUpgrade[MAX_PLAYERS];
 

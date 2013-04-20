@@ -312,7 +312,7 @@ function eventResearched(research, structure, player)
 			{
 				if (Stats.Body[i].BodyClass === s[0]) // if match against hint in ini file, change it
 				{
-					Upgrades[player].Body[i][s[1]] += s[2];
+					Upgrades[player].Body[i][s[1]] += s[2]; // eg Upgrades[0].Body['Tiger']['Armour']
 				}
 			}
 		}
@@ -334,6 +334,14 @@ function eventResearched(research, structure, player)
 				{
 					Upgrades[player].Building[i][s[1]] += Stats.Building[i][s[1]] * s[2] / 100;
 				}
+			}
+		}
+		else if (['ECM', 'Sensor'].indexOf(s[0]) >= 0)
+		{
+			for (var i in Upgrades[player][s[0]])
+			{
+				// Upgrades.player.type.buildingName.parameter ... hard to read but short and flexible
+				Upgrades[player][s[0]][i][s[1]] += Stats[s[0]][i][s[1]] * s[2] / 100;
 			}
 		}
 	}

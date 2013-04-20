@@ -243,8 +243,6 @@ FEATURE * buildFeature(FEATURE_STATS *psStats, UDWORD x, UDWORD y,bool FromSave)
 	psFeature->body = psStats->body;
 	psFeature->periodicalDamageStart = 0;
 	psFeature->periodicalDamage = 0;
-	objSensorCache(psFeature, NULL);
-	objEcmCache(psFeature, NULL);
 
 	// it has never been drawn
 	psFeature->sDisplay.frameNumber = 0;

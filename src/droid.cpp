@@ -1891,8 +1891,6 @@ DROID *reallyBuildDroid(DROID_TEMPLATE *pTemplate, Position pos, UDWORD player, 
 	initDroidMovement(psDroid);
 
 	//allocate 'easy-access' data!
-	objSensorCache((BASE_OBJECT *)psDroid, asSensorStats + pTemplate->asParts[COMP_SENSOR]);
-	objEcmCache((BASE_OBJECT *)psDroid, asECMStats + pTemplate->asParts[COMP_ECM]);
 	psDroid->body = calcTemplateBody(pTemplate, (UBYTE)player);  // Redundant? (Is set in droidSetBits, too.)
 	psDroid->originalBody = psDroid->body;  // Redundant? (Is set in droidSetBits, too.)
 

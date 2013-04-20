@@ -3893,7 +3893,7 @@ static void showWeaponRange(BASE_OBJECT *psObj)
 
 static void showSensorRange2(BASE_OBJECT *psObj)
 {
-	showEffectCircle(psObj->pos, psObj->sensorRange, 80, EFFECT_EXPLOSION, EXPLOSION_TYPE_LASER);
+	showEffectCircle(psObj->pos, objSensorRange(psObj), 80, EFFECT_EXPLOSION, EXPLOSION_TYPE_LASER);
 	showWeaponRange(psObj);
 }
 

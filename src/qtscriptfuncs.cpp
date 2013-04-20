@@ -3490,8 +3490,6 @@ static QScriptValue js_getDroidProduction(QScriptContext *context, QScriptEngine
 	droidSetBits(psTemp, psDroid);
 	psDroid->weight = calcDroidWeight(psTemp);
 	psDroid->baseSpeed = calcDroidBaseSpeed(psTemp, psDroid->weight, player);
-	objSensorCache((BASE_OBJECT *)psDroid, asSensorStats + psTemp->asParts[COMP_SENSOR]);
-	objEcmCache((BASE_OBJECT *)psDroid, asECMStats + psTemp->asParts[COMP_ECM]);
 	return convDroid(psDroid, engine);
 }
 
@@ -3901,6 +3899,18 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 				SCRIPT_ASSERT(context, false, "Upgrade component %s not found", name.toUtf8().constData());
 			}
 		}
+		else if (type == COMP_SENSOR)
+		{
+			SENSOR_STATS *psStats = asSensorStats + index;
+			SCRIPT_ASSERT(context, name == "Range", "Invalid sensor parameter");
+			psStats->upgrade[player].range = value;
+		}
+		else if (type == COMP_ECM)
+		{
+			ECM_STATS *psStats = asECMStats + index;
+			SCRIPT_ASSERT(context, name == "Range", "Invalid ECM parameter");
+			psStats->upgrade[player].range = value;
+		}
 		else if (type == SCRCB_RES || type == SCRCB_REP || type == SCRCB_POW || type == SCRCB_CON || type == SCRCB_REA
 		         || type == SCRCB_HIT || type == SCRCB_ELW || type == SCRCB_ARM || type == SCRCB_HEA)
 		{
@@ -3917,6 +3927,9 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 			case SCRCB_HEA: psStats->upgrade[player].thermal = value; break;
 			case SCRCB_ARM: psStats->upgrade[player].armour = value; break;
 			}
+			// FIXME - this is _really_ slow! we could be doing this for dozens of buildings one at a time!
+			// TBD - iterate over all structures, set hp to 100% again if current + value would make it so,
+			// leave damaged units more %-wise damaged instead
 		}
 		else
 		{
@@ -3969,6 +3982,36 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			bodybase.setProperty(getStatName(psStats), body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
 		stats.setProperty("Body", bodybase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// Sensors
+		QScriptValue sensorbase = engine->newObject();
+		for (int j = 0; j < numSensorStats; j++)
+		{
+			SENSOR_STATS *psStats = asSensorStats + j;
+			QScriptValue sensor = engine->newObject();
+			sensor.setProperty("Id", psStats->pName, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			sensor.setProperty("Weight", psStats->weight, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			sensor.setProperty("BuildPower", psStats->buildPower, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			sensor.setProperty("BuildTime", psStats->buildPoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			sensor.setProperty("HitPoints", psStats->body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			sensor.setProperty("Range", psStats->base.range, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			sensorbase.setProperty(getStatName(psStats), sensor, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		stats.setProperty("Sensor", sensorbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// ECM
+		QScriptValue ecmbase = engine->newObject();
+		for (int j = 0; j < numECMStats; j++)
+		{
+			ECM_STATS *psStats = asECMStats + j;
+			QScriptValue ecm = engine->newObject();
+			ecm.setProperty("Id", psStats->pName, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			ecm.setProperty("Weight", psStats->weight, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			ecm.setProperty("BuildPower", psStats->buildPower, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			ecm.setProperty("BuildTime", psStats->buildPoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			ecm.setProperty("HitPoints", psStats->body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			ecm.setProperty("Range", psStats->base.range, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			ecmbase.setProperty(getStatName(psStats), ecm, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		stats.setProperty("ECM", ecmbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		// Buildings
 		QScriptValue structbase = engine->newObject();
 		for (int j = 0; j < numStructureStats; j++)
@@ -4023,6 +4066,26 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			bodybase.setProperty(getStatName(psStats), body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
 		node.setProperty("Body", bodybase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// Sensors
+		QScriptValue sensorbase = engine->newObject();
+		for (int j = 0; j < numSensorStats; j++)
+		{
+			SENSOR_STATS *psStats = asSensorStats + j;
+			QScriptValue sensor = engine->newObject();
+			setStatsFunc(sensor, engine, "Range", i, COMP_SENSOR, j, psStats->upgrade[i].range);
+			sensorbase.setProperty(getStatName(psStats), sensor, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		node.setProperty("Sensor", sensorbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// ECM
+		QScriptValue ecmbase = engine->newObject();
+		for (int j = 0; j < numECMStats; j++)
+		{
+			ECM_STATS *psStats = asECMStats + j;
+			QScriptValue ecm = engine->newObject();
+			setStatsFunc(ecm, engine, "Range", i, COMP_ECM, j, psStats->upgrade[i].range);
+			ecmbase.setProperty(getStatName(psStats), ecm, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		node.setProperty("ECM", ecmbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		// Buildings
 		QScriptValue structbase = engine->newObject();
 		for (int j = 0; j < numStructureStats; j++)

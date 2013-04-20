@@ -59,8 +59,6 @@ WEAPON_MODIFIER		asWeaponModifierBody[WE_NUMEFFECTS][SIZE_NUM];
 
 //used to hold the current upgrade level per player per weapon subclass
 WEAPON_UPGRADE		asWeaponUpgrade[MAX_PLAYERS][WSC_NUM_WEAPON_SUBCLASSES];
-SENSOR_UPGRADE		asSensorUpgrade[MAX_PLAYERS];
-ECM_UPGRADE		asECMUpgrade[MAX_PLAYERS];
 REPAIR_UPGRADE		asRepairUpgrade[MAX_PLAYERS];
 CONSTRUCTOR_UPGRADE	asConstUpgrade[MAX_PLAYERS];
 
@@ -419,8 +417,6 @@ void statsInitVars(void)
 
 	//initialise the upgrade structures
 	memset(asWeaponUpgrade, 0, sizeof(asWeaponUpgrade));
-	memset(asSensorUpgrade, 0, sizeof(asSensorUpgrade));
-	memset(asECMUpgrade, 0, sizeof(asECMUpgrade));
 	memset(asRepairUpgrade, 0, sizeof(asRepairUpgrade));
 	memset(asConstUpgrade, 0, sizeof(asConstUpgrade));
 
@@ -459,8 +455,6 @@ bool statsShutDown(void)
 	deallocBodyStats();
 	STATS_DEALLOC(asBrainStats, numBrainStats);
 	STATS_DEALLOC(asPropulsionStats, numPropulsionStats);
-	STATS_DEALLOC(asSensorStats, numSensorStats);
-	STATS_DEALLOC(asECMStats, numECMStats);
 	STATS_DEALLOC(asRepairStats, numRepairStats);
 	STATS_DEALLOC(asConstructStats, numConstructStats);
 	deallocPropulsionTypes();
@@ -1109,9 +1103,12 @@ bool loadSensorStats(const char *pFileName)
 		psStats->buildPoints = ini.value("buildPoints", 0).toInt();
 		psStats->weight = ini.value("weight", 0).toInt();
 		psStats->body = ini.value("bodyPoints", 0).toInt();
-		psStats->range = ini.value("range").toInt();
+		psStats->base.range = ini.value("range").toInt();
+		for (int j = 0; j < MAX_PLAYERS; j++)
+		{
+			psStats->upgrade[j].range = psStats->base.range;
+		}
 		psStats->time = ini.value("time").toInt();
-		psStats->power = ini.value("power").toInt();
 		psStats->designable = ini.value("designable", false).toBool();
 
 		allocateStatName((BASE_STATS *)psStats, list[i].toUtf8().constData());
@@ -1173,7 +1170,7 @@ bool loadSensorStats(const char *pFileName)
 		// set the max stat values for the design screen
 		if (psStats->designable)
 		{
-			setMaxSensorRange(psStats->range);
+			setMaxSensorRange(psStats->base.range);
 			setMaxComponentWeight(psStats->weight);
 		}
 
@@ -1207,7 +1204,11 @@ bool loadECMStats(const char *pFileName)
 		psStats->buildPoints = ini.value("buildPoints", 0).toInt();
 		psStats->weight = ini.value("weight", 0).toInt();
 		psStats->body = ini.value("body", 0).toInt();
-		psStats->range = ini.value("range").toInt();
+		psStats->base.range = ini.value("range").toInt();
+		for (int j = 0; j < MAX_PLAYERS; j++)
+		{
+			psStats->upgrade[j].range = psStats->base.range;
+		}
 		psStats->designable = ini.value("designable", false).toBool();
 
 		allocateStatName((BASE_STATS *)psStats, list[i].toUtf8().constData());
@@ -1238,7 +1239,7 @@ bool loadECMStats(const char *pFileName)
 		// Set the max stat values for the design screen
 		if (psStats->designable)
 		{
-			setMaxECMRange(psStats->range);
+			setMaxECMRange(psStats->base.range);
 			setMaxComponentWeight(psStats->weight);
 		}
 	}
@@ -2304,12 +2305,12 @@ UDWORD	weaponRadiusHit(WEAPON_STATS *psStats, UBYTE player)
 
 UDWORD	sensorRange(SENSOR_STATS *psStats, UBYTE player)
 {
-	return psStats->range + (psStats->range * asSensorUpgrade[player].range) / 100;
+	return psStats->upgrade[player].range;
 }
 
 UDWORD	ecmRange(ECM_STATS *psStats, UBYTE player)
 {
-	return psStats->range + (psStats->range * asECMUpgrade[player].range) / 100;
+	return psStats->upgrade[player].range;
 }
 
 UDWORD	repairPoints(REPAIR_STATS *psStats, UBYTE player)
@@ -2625,18 +2626,6 @@ void adjustMaxDesignStats(void)
 			if (repairPoints < ((UPGRADE_FUNCTION *)asFunctions[inc])->upgradePoints)
 			{
 				repairPoints = ((UPGRADE_FUNCTION *)asFunctions[inc])->upgradePoints;
-			}
-			break;
-		case DROIDECM_UPGRADE_TYPE:
-			if (ecmRange < ((UPGRADE_FUNCTION *)asFunctions[inc])->upgradePoints)
-			{
-				ecmRange = ((UPGRADE_FUNCTION *)asFunctions[inc])->upgradePoints;
-			}
-			break;
-		case DROIDSENSOR_UPGRADE_TYPE:
-			if (sensorRange < ((DROIDSENSOR_UPGRADE_FUNCTION *)asFunctions[inc])->range)
-			{
-				sensorRange = ((DROIDSENSOR_UPGRADE_FUNCTION *)asFunctions[inc])->range;
 			}
 			break;
 		case DROIDCONST_UPGRADE_TYPE:

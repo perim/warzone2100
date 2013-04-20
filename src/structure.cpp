@@ -1497,10 +1497,6 @@ STRUCTURE* buildStructureDir(STRUCTURE_STATS *pStructureType, UDWORD x, UDWORD y
 
 		alignStructure(psBuilding);
 
-		//set up the sensor stats
-		objSensorCache(psBuilding, psBuilding->pStructureType->pSensor);
-		objEcmCache(psBuilding, psBuilding->pStructureType->pECM);
-
 		/* Store the weapons */
 		memset(psBuilding->asWeaps, 0, sizeof(WEAPON));
 		psBuilding->numWeaps = 0;
@@ -5498,7 +5494,7 @@ void printStructureInfo(STRUCTURE *psStructure)
 		{
 			CONPRINTF(ConsoleString, (ConsoleString, "%s - %d Units assigned - ID %d - sensor range %d - ECM %d",
 					  getStatName(psStructure->pStructureType), countAssignedDroids(psStructure),
-					  psStructure->id, structSensorRange(psStructure), structConcealment(psStructure)));
+					  psStructure->id, structSensorRange(psStructure), structJammerPower(psStructure)));
 		}
 		else
 #endif
@@ -5516,7 +5512,7 @@ void printStructureInfo(STRUCTURE *psStructure)
 			CONPRINTF(ConsoleString, (ConsoleString, "%s - %d Units assigned - ID %d - armour %d|%d - sensor range %d - ECM %d - born %u - depth %.02f",
 				getStatName(psStructure->pStructureType), countAssignedDroids(psStructure),
 				psStructure->id, objArmour(psStructure, WC_KINETIC), objArmour(psStructure, WC_HEAT),
-					structSensorRange(psStructure), structConcealment(psStructure), psStructure->born, psStructure->foundationDepth));
+					structSensorRange(psStructure), structJammerPower(psStructure), psStructure->born, psStructure->foundationDepth));
 		} else
 #endif
 		if (psStructure->pStructureType->pSensor != NULL

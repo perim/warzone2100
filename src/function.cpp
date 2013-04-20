@@ -63,17 +63,9 @@ static FUNCTION_TYPE functionType(const char *pType)
 	{
 		return DROIDREPAIR_UPGRADE_TYPE;
 	}
-	if (!strcmp(pType, "VehicleECM Upgrade"))
-	{
-		return DROIDECM_UPGRADE_TYPE;
-	}
 	if (!strcmp(pType, "VehicleConst Upgrade"))
 	{
 		return DROIDCONST_UPGRADE_TYPE;
-	}
-	if (!strcmp(pType, "VehicleSensor Upgrade"))
-	{
-		return DROIDSENSOR_UPGRADE_TYPE;
 	}
 	ASSERT(false, "Unknown Function Type: %s", pType);
 	return NUMFUNCTIONS;
@@ -130,53 +122,9 @@ static bool loadDroidRepairUpgradeFunction(const char *pData)
 	return loadUpgradeFunction(pData, DROIDREPAIR_UPGRADE_TYPE);
 }
 
-static bool loadDroidECMUpgradeFunction(const char *pData)
-{
-	return loadUpgradeFunction(pData, DROIDECM_UPGRADE_TYPE);
-}
-
 static bool loadDroidConstUpgradeFunction(const char *pData)
 {
 	return loadUpgradeFunction(pData, DROIDCONST_UPGRADE_TYPE);
-}
-
-static bool loadDroidSensorUpgradeFunction(const char *pData)
-{
-	DROIDSENSOR_UPGRADE_FUNCTION *psFunction;
-	char functionName[MAX_STR_LENGTH];
-	UDWORD modifier, range;
-
-	//allocate storage
-	psFunction = (DROIDSENSOR_UPGRADE_FUNCTION *)malloc(sizeof(DROIDSENSOR_UPGRADE_FUNCTION));
-	memset(psFunction, 0, sizeof(DROIDSENSOR_UPGRADE_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = DROIDSENSOR_UPGRADE_TYPE;
-
-	//read the data in
-	functionName[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%d,%d", functionName, &modifier, &range);
-
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
-	if (modifier > UWORD_MAX || range > UWORD_MAX)
-	{
-		ASSERT(false, "One or more modifiers too large");
-		return false;
-	}
-
-	//store the % upgrades
-	psFunction->upgradePoints = (UWORD)modifier;
-	psFunction->range = (UWORD)range;
-
-	return true;
 }
 
 static bool loadWeaponUpgradeFunction(const char *pData)
@@ -306,26 +254,6 @@ static bool loadWallFunction(const char *pData)
 	return true;
 }
 
-void structureSensorUpgrade(STRUCTURE *psBuilding)
-{
-	objSensorCache((BASE_OBJECT *)psBuilding, psBuilding->pStructureType->pSensor);
-}
-
-void structureECMUpgrade(STRUCTURE *psBuilding)
-{
-	objEcmCache((BASE_OBJECT *)psBuilding, psBuilding->pStructureType->pECM);
-}
-
-void droidSensorUpgrade(DROID *psDroid)
-{
-	objSensorCache((BASE_OBJECT *)psDroid, asSensorStats + psDroid->asBits[COMP_SENSOR].nStat);
-}
-
-void droidECMUpgrade(DROID *psDroid)
-{
-	objEcmCache((BASE_OBJECT *)psDroid, asECMStats + psDroid->asBits[COMP_ECM].nStat);
-}
-
 void droidBodyUpgrade(DROID *psDroid)
 {
 	BODY_STATS *psStats = getBodyStats(psDroid);
@@ -391,24 +319,6 @@ void weaponUpgrade(FUNCTION *pFunction, UBYTE player)
 	}
 }
 
-//upgrade the sensor stats
-void sensorUpgrade(FUNCTION *pFunction, UBYTE player)
-{
-	DROIDSENSOR_UPGRADE_FUNCTION		*pUpgrade;
-
-	pUpgrade = (DROIDSENSOR_UPGRADE_FUNCTION *)pFunction;
-
-	//check upgrades increase all values!
-	if (asSensorUpgrade[player].range < pUpgrade->range)
-	{
-		asSensorUpgrade[player].range = pUpgrade->range;
-	}
-	if (asSensorUpgrade[player].power < pUpgrade->upgradePoints)
-	{
-		asSensorUpgrade[player].power = pUpgrade->upgradePoints;
-	}
-}
-
 //upgrade the repair stats
 void repairUpgrade(FUNCTION *pFunction, UBYTE player)
 {
@@ -420,20 +330,6 @@ void repairUpgrade(FUNCTION *pFunction, UBYTE player)
 	if (asRepairUpgrade[player].repairPoints < pUpgrade->upgradePoints)
 	{
 		asRepairUpgrade[player].repairPoints = pUpgrade->upgradePoints;
-	}
-}
-
-//upgrade the repair stats
-void ecmUpgrade(FUNCTION *pFunction, UBYTE player)
-{
-	DROIDECM_UPGRADE_FUNCTION		*pUpgrade;
-
-	pUpgrade = (DROIDECM_UPGRADE_FUNCTION *)pFunction;
-
-	//check upgrades increase all values!
-	if (asECMUpgrade[player].range < pUpgrade->upgradePoints)
-	{
-		asECMUpgrade[player].range = pUpgrade->upgradePoints;
 	}
 }
 
@@ -493,8 +389,6 @@ bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize)
 		loadWeaponUpgradeFunction,
 		loadWallFunction,
 		loadDroidRepairUpgradeFunction,
-		loadDroidECMUpgradeFunction,
-		loadDroidSensorUpgradeFunction,
 		loadDroidConstUpgradeFunction,
 	};
 

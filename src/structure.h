@@ -399,11 +399,6 @@ static inline int structJammerPower(const STRUCTURE* psObj)
 	return objJammerPower((const BASE_OBJECT*)psObj);
 }
 
-static inline int structConcealment(const STRUCTURE* psObj)
-{
-	return objConcealment((const BASE_OBJECT*)psObj);
-}
-
 static inline Rotation structureGetInterpolatedWeaponRotation(STRUCTURE *psStructure, int weaponSlot, uint32_t time)
 {
 	return interpolateRot(psStructure->asWeaps[weaponSlot].prevRot, psStructure->asWeaps[weaponSlot].rot, psStructure->prevTime, psStructure->time, time);

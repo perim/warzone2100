@@ -1601,7 +1601,7 @@ static void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 			CONPRINTF(ConsoleString, (ConsoleString, "(Enemy!) %s - Damage %d%% - ID %d - experience %f, %s - order %s - action %s - sensor range %d - ECM %d - pitch %.0f",
 						droidGetName(psDroid), 	100 - clip(PERCENT(psDroid->body, psDroid->originalBody), 0, 100), psDroid->id,
 						psDroid->experience/65536.f, getDroidLevelName(psDroid), getDroidOrderName(psDroid->order.type), getDroidActionName(psDroid->action),
-						droidSensorRange(psDroid), droidConcealment(psDroid), UNDEG(psDroid->rot.pitch)));
+						droidSensorRange(psDroid), droidJammerPower(psDroid), UNDEG(psDroid->rot.pitch)));
 			FeedbackOrderGiven();
 		}
 #endif
@@ -1750,7 +1750,7 @@ static void dealWithLMBDroid(DROID* psDroid, SELECTION_TYPE selection)
 						droidGetName(psDroid),
 						100 - clip(PERCENT(psDroid->body, psDroid->originalBody), 0, 100), psDroid->id,
 						psDroid->experience/65536.f, getDroidLevelName(psDroid), getDroidOrderName(psDroid->order.type), getDroidActionName(psDroid->action),
-						droidSensorRange(psDroid), droidConcealment(psDroid), UNDEG(psDroid->rot.pitch), psDroid->lastFrustratedTime));
+						droidSensorRange(psDroid), droidJammerPower(psDroid), UNDEG(psDroid->rot.pitch), psDroid->lastFrustratedTime));
 			FeedbackOrderGiven();
 		}
 		else
@@ -2246,7 +2246,7 @@ static void dealWithRMB( void )
 										droidGetName(psDroid),
 										100 - clip(PERCENT(psDroid->body, psDroid->originalBody), 0, 100), psDroid->id,
 										psDroid->experience/65536.f, getDroidLevelName(psDroid), getDroidOrderName(psDroid->order.type), getDroidActionName(psDroid->action),
-										droidSensorRange(psDroid), droidConcealment(psDroid)));
+										droidSensorRange(psDroid), droidJammerPower(psDroid)));
 							FeedbackOrderGiven();
 						}
 						else

@@ -408,19 +408,26 @@ struct PROPULSION_STATS : public COMPONENT_STATS
 
 struct SENSOR_STATS : public COMPONENT_STATS
 {
-	UDWORD		range;			///< Sensor range
-	UDWORD		power;			///< Sensor power (put against ecm power)
 	UDWORD		location;		///< specifies whether the Sensor is default or for the Turret
 	SENSOR_TYPE type;			///< used for combat
 	UDWORD		time;			///< time delay before associated weapon droids 'know' where the attack is from
 	iIMDShape	*pMountGraphic; ///< The turret mount to use
+
+	struct
+	{
+		int range;
+	} upgrade[MAX_PLAYERS], base;
 };
 
 struct ECM_STATS : public COMPONENT_STATS
 {
-	UDWORD		range;			///< ECM range
 	UDWORD		location;		///< specifies whether the ECM is default or for the Turret
 	iIMDShape	*pMountGraphic; ///< The turret mount to use
+
+	struct
+	{
+		int range;
+	} upgrade[MAX_PLAYERS], base;
 };
 
 struct REPAIR_STATS : public COMPONENT_STATS
@@ -566,19 +573,6 @@ struct WEAPON_UPGRADE
 	UWORD	radiusDamage;
 	UWORD	periodicalDamage;
 	UWORD	radiusHit;
-};
-
-/*sensor stats which can be upgraded by research*/
-struct SENSOR_UPGRADE
-{
-	UWORD	power;
-	UWORD	range;
-};
-
-/*ECM stats which can be upgraded by research*/
-struct ECM_UPGRADE
-{
-	UDWORD	range;
 };
 
 /*repair stats which can be upgraded by research*/

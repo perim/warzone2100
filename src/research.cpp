@@ -559,8 +559,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 {
 	RESEARCH *                                      pResearch = &asResearch[researchIndex];
 	UDWORD						type, inc;
-	STRUCTURE					*psCurr;
-	DROID						*psDroid;
 	FUNCTION					*pFunction;
 	UDWORD						compInc;
 	MESSAGE						*pMessage;
@@ -666,86 +664,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 				// for the current player, upgrade the weapon stats
 				weaponUpgrade(pFunction, player);
 				// message/sound for weapon upgrade
-				break;
-			case DROIDSENSOR_UPGRADE_TYPE:
-				// for the current player, upgrade the sensor stats
-				sensorUpgrade(pFunction, player);
-				// for each structure in the player's list, upgrade the sensor stat
-				for (psCurr = apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					structureSensorUpgrade(psCurr);
-					visTilesUpdate(psCurr);
-				}
-				for (psCurr = mission.apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					structureSensorUpgrade(psCurr);
-				}
-				// for each droid in the player's list, upgrade the sensor stat
-				for (psDroid = apsDroidLists[player]; psDroid != NULL; psDroid = psDroid->psNext)
-				{
-					droidSensorUpgrade(psDroid);
-					visTilesUpdate(psDroid);
-					if (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER)
-					{
-						upgradeTransporterDroids(psDroid, droidSensorUpgrade);
-					}
-				}
-				for (psDroid = mission.apsDroidLists[player]; psDroid != NULL; psDroid = psDroid->psNext)
-				{
-					droidSensorUpgrade(psDroid);
-					if (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER)
-					{
-						upgradeTransporterDroids(psDroid, droidSensorUpgrade);
-					}
-				}
-				for (psDroid = apsLimboDroids[player]; psDroid != NULL; psDroid = psDroid->psNext)
-				{
-					droidSensorUpgrade(psDroid);
-					if (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER)
-					{
-						upgradeTransporterDroids(psDroid, droidSensorUpgrade);
-					}
-				}
-				// message/sound for sensor upgrade
-				break;
-			case DROIDECM_UPGRADE_TYPE:
-				// for the current player, upgrade the ecm stats
-				ecmUpgrade(pFunction, player);
-				// for each structure in the player's list, upgrade the ecm stat
-				for (psCurr = apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					structureECMUpgrade(psCurr);
-				}
-				for (psCurr = mission.apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					structureECMUpgrade(psCurr);
-				}
-				// for each droid in the player's list, upgrade the ecm stat
-				for (psDroid = apsDroidLists[player]; psDroid != NULL; psDroid = psDroid->psNext)
-				{
-					droidECMUpgrade(psDroid);
-					if (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER)
-					{
-						upgradeTransporterDroids(psDroid, droidECMUpgrade);
-					}
-				}
-				for (psDroid = mission.apsDroidLists[player]; psDroid != NULL; psDroid = psDroid->psNext)
-				{
-					droidECMUpgrade(psDroid);
-					if (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER)
-					{
-						upgradeTransporterDroids(psDroid, droidECMUpgrade);
-					}
-				}
-				for (psDroid = apsLimboDroids[player]; psDroid != NULL; psDroid = psDroid->psNext)
-				{
-					droidECMUpgrade(psDroid);
-					if (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER)
-					{
-						upgradeTransporterDroids(psDroid, droidECMUpgrade);
-					}
-				}
-				// message/sound for ecm upgrade
 				break;
 			case DROIDREPAIR_UPGRADE_TYPE:
 				// for the current player, upgrade the repair stats
@@ -1534,12 +1452,6 @@ void replaceStructureComponent(STRUCTURE *pList, UDWORD oldType, UDWORD oldCompI
 	{
 		switch (oldType)
 		{
-			case COMP_ECM:
-				objEcmCache((BASE_OBJECT *)psStructure, asECMStats + newCompInc);
-				break;
-			case COMP_SENSOR:
-				objSensorCache((BASE_OBJECT *)psStructure, asSensorStats + newCompInc);
-				break;
 			case COMP_WEAPON:
 				for (inc=0; inc < psStructure->numWeaps; inc++)
 				{
