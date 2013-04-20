@@ -83,14 +83,6 @@ static FUNCTION_TYPE functionType(const char *pType)
 	{
 		return DROIDSENSOR_UPGRADE_TYPE;
 	}
-	if (!strcmp(pType, "ReArm"))
-	{
-		return REARM_TYPE;
-	}
-	if (!strcmp(pType, "ReArm Upgrade"))
-	{
-		return REARM_UPGRADE_TYPE;
-	}
 	ASSERT(false, "Unknown Function Type: %s", pType);
 	return NUMFUNCTIONS;
 }
@@ -99,34 +91,6 @@ static FUNCTION_TYPE functionType(const char *pType)
 static bool storeName(FUNCTION *pFunction, const char *pNameToStore)
 {
 	pFunction->pName = strdup(pNameToStore);
-	return true;
-}
-
-static bool loadReArmFunction(const char *pData)
-{
-	REARM_FUNCTION *psFunction;
-	char functionName[MAX_STR_LENGTH];
-
-	//allocate storage
-	psFunction = (REARM_FUNCTION *)malloc(sizeof(REARM_FUNCTION));
-	memset(psFunction, 0, sizeof(REARM_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = REARM_TYPE;
-
-	//read the data in
-	functionName[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%d", functionName, &psFunction->reArmPoints);
-
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
 	return true;
 }
 
@@ -182,11 +146,6 @@ static bool loadDroidECMUpgradeFunction(const char *pData)
 static bool loadDroidConstUpgradeFunction(const char *pData)
 {
 	return loadUpgradeFunction(pData, DROIDCONST_UPGRADE_TYPE);
-}
-
-static bool loadReArmUpgradeFunction(const char *pData)
-{
-	return loadUpgradeFunction(pData, REARM_UPGRADE_TYPE);
 }
 
 static bool loadDroidSensorUpgradeFunction(const char *pData)
@@ -438,19 +397,6 @@ static bool loadWallFunction(const char *pData)
 	return true;
 }
 
-void reArmUpgrade(FUNCTION *pFunction, UBYTE player)
-{
-	REARM_UPGRADE_FUNCTION		*pUpgrade;
-
-	pUpgrade = (REARM_UPGRADE_FUNCTION *)pFunction;
-
-	//check upgrades increase all values
-	if (asReArmUpgrade[player].modifier < pUpgrade->upgradePoints)
-	{
-		asReArmUpgrade[player].modifier = pUpgrade->upgradePoints;
-	}
-}
-
 void structureBodyUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding)
 {
 	UWORD	increase, prevBaseBody, newBaseBody;
@@ -527,21 +473,6 @@ void structureResistanceUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding)
 		psBuilding->resistance = (UWORD)((psBuilding->resistance * newBaseResistance) /
 		        prevBaseResistance);
 	}
-}
-
-void structureReArmUpgrade(STRUCTURE *psBuilding)
-{
-	REARM_PAD					*pPad = &psBuilding->pFunctionality->rearmPad;
-	REARM_FUNCTION				*pPadFunc;
-
-	//upgrade the reArm points
-	ASSERT(pPad != NULL, "structureReArmUpgrade: invalid ReArm pointer");
-
-	pPadFunc = (REARM_FUNCTION *)psBuilding->pStructureType->asFuncList[0];
-	ASSERT(pPadFunc != NULL, "Invalid function pointer");
-
-	pPad->reArmPoints = pPadFunc->reArmPoints + (pPadFunc->reArmPoints *
-	        asReArmUpgrade[psBuilding->player].modifier) / 100;
 }
 
 void structureSensorUpgrade(STRUCTURE *psBuilding)
@@ -776,8 +707,6 @@ bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize)
 		loadDroidECMUpgradeFunction,
 		loadDroidSensorUpgradeFunction,
 		loadDroidConstUpgradeFunction,
-		loadReArmFunction,
-		loadReArmUpgradeFunction,
 	};
 
 	const unsigned int totalFunctions = numCR(pFunctionData, bufferSize);

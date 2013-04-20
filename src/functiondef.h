@@ -37,8 +37,6 @@ enum FUNCTION_TYPE
 	DROIDECM_UPGRADE_TYPE,
 	DROIDSENSOR_UPGRADE_TYPE,
 	DROIDCONST_UPGRADE_TYPE,
-	REARM_TYPE,
-	REARM_UPGRADE_TYPE,
 
 	/* The number of function types */
 	NUMFUNCTIONS,
@@ -97,7 +95,6 @@ struct RESEARCH_FUNCTION : public FUNCTION
 /*To rearm VTOLs*/
 struct REARM_FUNCTION : public FUNCTION
 {
-	UDWORD			reArmPoints;	/*The number of reArm points added per cycle*/
 };
 
 struct UPGRADE_FUNCTION : public FUNCTION

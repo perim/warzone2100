@@ -336,6 +336,10 @@ function eventResearched(research, structure, player)
 				{
 					Upgrades[player].Building[i].RepairPoints += Stats.Building[i].RepairPoints * s[1] / 100;
 				}
+				else if (Stats.Building[i].RearmPoints > 0 && s[0] === 'RearmPoints')
+				{
+					Upgrades[player].Building[i].RearmPoints += Stats.Building[i].RearmPoints * s[1] / 100;
+				}
 			}
 		}
 	}

@@ -103,11 +103,6 @@
 //used to calculate how often to increase the resistance level of a structure
 #define RESISTANCE_INTERVAL			2000
 
-//used to calculate the time required for rearming
-#define REARM_FACTOR                10
-//used to calculate the time  required for repairing
-#define VTOL_REPAIR_FACTOR          10
-
 //Value is stored for easy access to this structure stat
 UDWORD			factoryModuleStat;
 UDWORD			powerModuleStat;
@@ -125,7 +120,6 @@ WALLDEFENCE_UPGRADE	asWallDefenceUpgrade[MAX_PLAYERS];
 
 //holds the upgrades for the functionality of structures through research
 REPAIR_FACILITY_UPGRADE		asRepairFacUpgrade[MAX_PLAYERS];
-REARM_UPGRADE		asReArmUpgrade[MAX_PLAYERS];
 
 //used to hold the modifiers cross refd by weapon effect and structureStrength
 STRUCTSTRENGTH_MODIFIER		asStructStrengthModifier[WE_NUMEFFECTS][NUM_STRUCT_STRENGTH];
@@ -489,12 +483,14 @@ bool loadStructureStats(QString filename)
 		psStats->base.production = ini.value("productionPoints", 0).toInt();
 		psStats->base.repair = ini.value("repairPoints", 0).toInt();
 		psStats->base.power = ini.value("powerPoints", 0).toInt();
+		psStats->base.rearm = ini.value("rearmPoints", 0).toInt();
 		for (int i = 0; i < MAX_PLAYERS; i++)
 		{
 			psStats->upgrade[i].research = psStats->base.research;
 			psStats->upgrade[i].power = psStats->base.power;
 			psStats->upgrade[i].repair = psStats->base.repair;
 			psStats->upgrade[i].production = psStats->base.production;
+			psStats->upgrade[i].rearm = psStats->base.rearm;
 		}
 	
 		// set structure strength
@@ -611,7 +607,6 @@ bool loadStructureStats(QString filename)
 	memset(asStructureUpgrade, 0, MAX_PLAYERS * sizeof(STRUCTURE_UPGRADE));
 	memset(asWallDefenceUpgrade, 0, MAX_PLAYERS * sizeof(WALLDEFENCE_UPGRADE));
 	memset(asRepairFacUpgrade, 0, MAX_PLAYERS * sizeof(REPAIR_FACILITY_UPGRADE));
-	memset(asReArmUpgrade, 0, MAX_PLAYERS * sizeof(REARM_UPGRADE));
 
 	// Wall Function requires a structure stat so can allocate it now
 	for (int i = 0; i < numFunctions; ++i)
@@ -1951,6 +1946,7 @@ static bool setFunctionality(STRUCTURE	*psBuilding, STRUCTURE_TYPE functionType)
 		}
 		case REF_POWER_GEN:
 		case REF_HQ:
+		case REF_REARM_PAD:
 		{
 			break;
 		}
@@ -1994,12 +1990,6 @@ static bool setFunctionality(STRUCTURE	*psBuilding, STRUCTURE_TYPE functionType)
 			setFlagPositionInc(psBuilding->pFunctionality, psBuilding->player, REPAIR_FLAG);
 			break;
 		}
-		case REF_REARM_PAD:
-		{
-			structureReArmUpgrade(psBuilding); // set rearm points
-			break;
-		}
-
 		// Structure types without a FUNCTIONALITY
 		default:
 			break;
@@ -3369,17 +3359,12 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 
 			//check hasn't died whilst waiting to be rearmed
 			// also clear out any previously repaired droid
-			if ( psDroid->died ||
-					( psDroid->action != DACTION_MOVETOREARMPOINT &&
-					  psDroid->action != DACTION_WAITDURINGREARM ) )
+			if (psDroid->died || (psDroid->action != DACTION_MOVETOREARMPOINT && psDroid->action != DACTION_WAITDURINGREARM))
 			{
 				psReArmPad->psObj = NULL;
 				return;
 			}
-
-			//if waiting to be rearmed
-			if ( psDroid->action == DACTION_WAITDURINGREARM &&
-				psDroid->sMove.Status == MOVEINACTIVE )
+			if (psDroid->action == DACTION_WAITDURINGREARM && psDroid->sMove.Status == MOVEINACTIVE)
 			{
 				if (psReArmPad->timeStarted == ACTION_START_TIME)
 				{
@@ -3387,30 +3372,22 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 					psReArmPad->timeStarted = gameTime;
 					psReArmPad->timeLastUpdated = gameTime;
 				}
-
-				/* do rearming */
-				UDWORD      pointsRequired;
-
-				//amount required is a factor of the droids' weight
-				pointsRequired = psDroid->weight / REARM_FACTOR;
-				//take numWeaps into consideration
-				pointsToAdd = psReArmPad->reArmPoints * (gameTime - psReArmPad->timeStarted) / GAME_TICKS_PER_SEC;
-				pointsAlreadyAdded = psReArmPad->reArmPoints * (psReArmPad->timeLastUpdated - psReArmPad->timeStarted) / GAME_TICKS_PER_SEC;
-				if (pointsToAdd >= pointsRequired)
+				pointsToAdd = getBuildingRearmPoints(psStructure) * (gameTime - psReArmPad->timeStarted) / GAME_TICKS_PER_SEC;
+				pointsAlreadyAdded = getBuildingRearmPoints(psStructure) * (psReArmPad->timeLastUpdated - psReArmPad->timeStarted) / GAME_TICKS_PER_SEC;
+				if (pointsToAdd >= psDroid->weight) // amount required is a factor of the droid weight
 				{
 					// We should be fully loaded by now.
 					for (i = 0; i < psDroid->numWeaps; i++)
 					{
 						// set rearm value to no runs made
 						psDroid->asWeaps[i].usedAmmo = 0;
-						// reset ammo and lastFired
 						psDroid->asWeaps[i].ammo = asWeaponStats[psDroid->asWeaps[i].nStat].numRounds;
 						psDroid->asWeaps[i].lastFired = 0;
 					}
 				}
 				else
 				{
-					for (i = 0; i < psDroid->numWeaps; i++)
+					for (i = 0; i < psDroid->numWeaps; i++)		// rearm one weapon at a time
 					{
 						// Make sure it's a rearmable weapon (and so we don't divide by zero)
 						if (psDroid->asWeaps[i].usedAmmo > 0 && asWeaponStats[psDroid->asWeaps[i].nStat].numRounds > 0)
@@ -3418,8 +3395,8 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 							// Do not "simplify" this formula.
 							// It is written this way to prevent rounding errors.
 							int ammoToAddThisTime =
-								pointsToAdd*getNumAttackRuns(psDroid,i)/pointsRequired -
-								pointsAlreadyAdded*getNumAttackRuns(psDroid,i)/pointsRequired;
+								pointsToAdd * getNumAttackRuns(psDroid, i) / psDroid->weight -
+								pointsAlreadyAdded * getNumAttackRuns(psDroid, i) / psDroid->weight;
 							psDroid->asWeaps[i].usedAmmo -= std::min<unsigned>(ammoToAddThisTime, psDroid->asWeaps[i].usedAmmo);
 							if (ammoToAddThisTime)
 							{
@@ -3431,23 +3408,11 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 						}
 					}
 				}
-				/* do repairing */
-				if (psDroid->body < psDroid->originalBody)
+				if (psDroid->body < psDroid->originalBody) // do repairs
 				{
-					// Do not "simplify" this formula.
-					// It is written this way to prevent rounding errors.
-					pointsToAdd =  VTOL_REPAIR_FACTOR * (100+asReArmUpgrade[psStructure->player].modifier) * (gameTime -
-					               psReArmPad->timeStarted) / (GAME_TICKS_PER_SEC * 100);
-					pointsAlreadyAdded =  VTOL_REPAIR_FACTOR * (100+asReArmUpgrade[psStructure->player].modifier) * (psReArmPad->timeLastUpdated -
-					               psReArmPad->timeStarted) / (GAME_TICKS_PER_SEC * 100);
-
-					if ((pointsToAdd - pointsAlreadyAdded) > 0)
-					{
-						psDroid->body += (pointsToAdd - pointsAlreadyAdded);
-					}
+					psDroid->body += gameTimeAdjustedAverage(getBuildingRepairPoints(psStructure));
 					if (psDroid->body >= psDroid->originalBody)
 					{
-						/* set droid points to max */
 						psDroid->body = psDroid->originalBody;
 					}
 				}

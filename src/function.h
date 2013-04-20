@@ -32,7 +32,6 @@ extern UDWORD numFunctions;
 
 extern bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize);
 
-extern void reArmUpgrade(FUNCTION *pFunction, UBYTE player);
 extern void weaponUpgrade(FUNCTION *pFunction, UBYTE player);
 extern void structureUpgrade(FUNCTION *pFunction, UBYTE player);
 extern void wallDefenceUpgrade(FUNCTION *pFunction, UBYTE player);
@@ -40,7 +39,6 @@ extern void structureBodyUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding);
 extern void structureArmourUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding);
 extern void structureResistanceUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding);
 extern void structureSensorUpgrade(STRUCTURE *psBuilding);
-extern void structureReArmUpgrade(STRUCTURE *psBuilding);
 extern void structureECMUpgrade(STRUCTURE *psBuilding);
 extern void sensorUpgrade(FUNCTION *pFunction, UBYTE player);
 extern void repairUpgrade(FUNCTION *pFunction, UBYTE player);

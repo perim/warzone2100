@@ -662,27 +662,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 
 		switch (pFunction->type)
 		{
-			case REARM_UPGRADE_TYPE:
-				reArmUpgrade(pFunction, player);
-				// search the list of players structures for a ReArm pad
-				for (psCurr = apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					if (psCurr->pStructureType->type == REF_REARM_PAD)
-					{
-						// upgrade the rearm points
-						structureReArmUpgrade(psCurr);
-					}
-				}
-				// and the mission structure
-				for (psCurr = mission.apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					if (psCurr->pStructureType->type == REF_REARM_PAD)
-					{
-						// upgrade the rearm points
-						structureReArmUpgrade(psCurr);
-					}
-				}
-				break;
 			case WEAPON_UPGRADE_TYPE:
 				// for the current player, upgrade the weapon stats
 				weaponUpgrade(pFunction, player);

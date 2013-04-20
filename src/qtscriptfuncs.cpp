@@ -72,6 +72,7 @@
 #define SCRCB_REP (COMP_NUMCOMPONENTS + 1)
 #define SCRCB_POW (COMP_NUMCOMPONENTS + 2)
 #define SCRCB_CON (COMP_NUMCOMPONENTS + 3)
+#define SCRCB_REA (COMP_NUMCOMPONENTS + 4)
 
 // TODO, move this stuff into a script common subsystem
 #include "scriptfuncs.h"
@@ -3895,7 +3896,7 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 				SCRIPT_ASSERT(context, false, "Upgrade component %s not found", name.toUtf8().constData());
 			}
 		}
-		else if (type == SCRCB_RES || type == SCRCB_REP || type == SCRCB_POW || type == SCRCB_CON)
+		else if (type == SCRCB_RES || type == SCRCB_REP || type == SCRCB_POW || type == SCRCB_CON || type == SCRCB_REA)
 		{
 			STRUCTURE_STATS *psStats = asStructureStats + index;
 			switch (type)
@@ -3904,6 +3905,7 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 			case SCRCB_REP: psStats->upgrade[player].repair = value; break;
 			case SCRCB_POW: psStats->upgrade[player].power = value; break;
 			case SCRCB_CON: psStats->upgrade[player].production = value; break;
+			case SCRCB_REA: psStats->upgrade[player].rearm = value; break;
 			}
 		}
 		else
@@ -3968,6 +3970,7 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			strct.setProperty("RepairPoints", psStats->base.repair, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			strct.setProperty("PowerPoints", psStats->base.power, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			strct.setProperty("ProductionPoints", psStats->base.production, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			strct.setProperty("RearmPoints", psStats->base.rearm, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			structbase.setProperty(getStatName(psStats), strct, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
 		stats.setProperty("Building", structbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
@@ -4003,6 +4006,7 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			setStatsFunc(strct, engine, "RepairPoints", i, SCRCB_REP, j, psStats->upgrade[i].repair);
 			setStatsFunc(strct, engine, "PowerPoints", i, SCRCB_POW, j, psStats->upgrade[i].power);
 			setStatsFunc(strct, engine, "ProductionPoints", i, SCRCB_CON, j, psStats->upgrade[i].production);
+			setStatsFunc(strct, engine, "RearmPoints", i, SCRCB_REA, j, psStats->upgrade[i].rearm);
 			structbase.setProperty(getStatName(psStats), strct, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
 		node.setProperty("Building", structbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);

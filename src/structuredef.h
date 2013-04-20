@@ -142,6 +142,7 @@ struct STRUCTURE_STATS : public BASE_STATS
 		short repair;
 		short power;
 		short production;
+		short rearm;
 	} upgrade[MAX_PLAYERS], base;
 };
 
@@ -219,7 +220,6 @@ struct REPAIR_FACILITY
 
 struct REARM_PAD
 {
-	UDWORD                          reArmPoints;            /* rearm points per cycle */
 	UDWORD                          timeStarted;            /* Time reArm started on current object */
 	BASE_OBJECT                     *psObj;                 /* Object being rearmed */
 	UDWORD                          timeLastUpdated;        /* Time rearm was last updated */
