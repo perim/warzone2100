@@ -167,15 +167,6 @@ WallDefence Upgrade,Defense-WallUpgrade09,305,270
 WallDefence Upgrade,Defense-WallUpgrade10,340,300
 WallDefence Upgrade,Defense-WallUpgrade11,375,330
 WallDefence Upgrade,Defense-WallUpgrade12,410,360
-Repair Upgrade,RepairFacility-Upgrade01,10
-Repair Upgrade,RepairFacility-Upgrade02,20
-Repair Upgrade,RepairFacility-Upgrade03,30
-Repair Upgrade,Struc-RprFac-Upgrade01,50
-Repair Upgrade,Struc-RprFac-Upgrade02,100
-Repair Upgrade,Struc-RprFac-Upgrade03,150
-Repair Upgrade,Struc-RprFac-Upgrade04,200
-Repair Upgrade,Struc-RprFac-Upgrade05,250
-Repair Upgrade,Struc-RprFac-Upgrade06,300
 VehicleConst Upgrade,Sys-Engineering-Upgrade01,10
 VehicleConst Upgrade,Sys-Engineering-Upgrade02,30
 VehicleConst Upgrade,Sys-Engineering-Upgrade03,50

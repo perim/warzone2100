@@ -71,7 +71,6 @@ extern STRUCTURE_LIMITS		*asStructLimits[MAX_PLAYERS];
 extern STRUCTURE_UPGRADE	asStructureUpgrade[MAX_PLAYERS];
 extern WALLDEFENCE_UPGRADE	asWallDefenceUpgrade[MAX_PLAYERS];
 //holds the upgrades for the functionality of structures through research
-extern REPAIR_FACILITY_UPGRADE	asRepairFacUpgrade[MAX_PLAYERS];
 extern REARM_UPGRADE		asReArmUpgrade[MAX_PLAYERS];
 
 //used to hold the modifiers cross refd by weapon effect and structureStrength

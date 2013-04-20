@@ -1975,8 +1975,6 @@ static bool setFunctionality(STRUCTURE	*psBuilding, STRUCTURE_TYPE functionType)
 			// Add NULL droid to the group
 			psRepairFac->psGroup->add(NULL);
 
-			structureRepairUpgrade(psBuilding); // set repair power
-
 			// Create an assembly point for repaired droids
 			if (!createFlagPosition(&psRepairFac->psDeliveryPoint, psBuilding->player))
 			{
@@ -3311,9 +3309,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 						}
 					}
 
-					// FIXME: duplicate code, make repairing cost power again
-					/* do repairing */
-					psDroid->body += gameTimeAdjustedAverage(psRepairFac->power);
+					psDroid->body += gameTimeAdjustedAverage(getBuildingRepairPoints(psStructure));
 				}
 
 				if (psDroid->body >= psDroid->originalBody)

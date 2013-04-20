@@ -683,27 +683,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 					}
 				}
 				break;
-			case REPAIR_UPGRADE_TYPE:
-				repairFacUpgrade(pFunction, player);
-				// search the list of players structures for a Power Gens
-				for (psCurr = apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					if (psCurr->pStructureType->type == REF_REPAIR_FACILITY)
-					{
-						// upgrade the repair points
-						structureRepairUpgrade(psCurr);
-					}
-				}
-				// and the mission structure
-				for (psCurr = mission.apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					if (psCurr->pStructureType->type == REF_REPAIR_FACILITY)
-					{
-						// upgrade the repair points
-						structureRepairUpgrade(psCurr);
-					}
-				}
-				break;
 			case WEAPON_UPGRADE_TYPE:
 				// for the current player, upgrade the weapon stats
 				weaponUpgrade(pFunction, player);

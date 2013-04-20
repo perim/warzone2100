@@ -67,10 +67,6 @@ static FUNCTION_TYPE functionType(const char *pType)
 	{
 		return WALLDEFENCE_UPGRADE_TYPE;
 	}
-	if (!strcmp(pType, "Repair Upgrade"))
-	{
-		return REPAIR_UPGRADE_TYPE;
-	}
 	if (!strcmp(pType, "VehicleRepair Upgrade"))
 	{
 		return DROIDREPAIR_UPGRADE_TYPE;
@@ -171,11 +167,6 @@ static bool loadUpgradeFunction(const char *pData, FUNCTION_TYPE type)
 	psFunction->upgradePoints = (UWORD)modifier;
 
 	return true;
-}
-
-static bool loadRepairUpgradeFunction(const char *pData)
-{
-	return loadUpgradeFunction(pData, REPAIR_UPGRADE_TYPE);
 }
 
 static bool loadDroidRepairUpgradeFunction(const char *pData)
@@ -447,19 +438,6 @@ static bool loadWallFunction(const char *pData)
 	return true;
 }
 
-void repairFacUpgrade(FUNCTION *pFunction, UBYTE player)
-{
-	REPAIR_UPGRADE_FUNCTION		*pUpgrade;
-
-	pUpgrade = (REPAIR_UPGRADE_FUNCTION *)pFunction;
-
-	//check upgrades increase all values
-	if (asRepairFacUpgrade[player].modifier < pUpgrade->upgradePoints)
-	{
-		asRepairFacUpgrade[player].modifier = pUpgrade->upgradePoints;
-	}
-}
-
 void reArmUpgrade(FUNCTION *pFunction, UBYTE player)
 {
 	REARM_UPGRADE_FUNCTION		*pUpgrade;
@@ -564,20 +542,6 @@ void structureReArmUpgrade(STRUCTURE *psBuilding)
 
 	pPad->reArmPoints = pPadFunc->reArmPoints + (pPadFunc->reArmPoints *
 	        asReArmUpgrade[psBuilding->player].modifier) / 100;
-}
-
-void structureRepairUpgrade(STRUCTURE *psBuilding)
-{
-	REPAIR_FACILITY			*pRepair = &psBuilding->pFunctionality->repairFacility;
-	REPAIR_DROID_FUNCTION	*pRepairFunc;
-
-	ASSERT(pRepair != NULL, "structureRepairUpgrade: invalid Repair pointer");
-
-	pRepairFunc = (REPAIR_DROID_FUNCTION *)psBuilding->pStructureType->asFuncList[0];
-	ASSERT(pRepairFunc != NULL, "Invalid function pointer");
-
-	pRepair->power = pRepairFunc->repairPoints + (pRepairFunc->repairPoints *
-	        asRepairFacUpgrade[psBuilding->player].modifier) / 100;
 }
 
 void structureSensorUpgrade(STRUCTURE *psBuilding)
@@ -808,7 +772,6 @@ bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize)
 		loadWallFunction,
 		loadStructureUpgradeFunction,
 		loadWallDefenceUpgradeFunction,
-		loadRepairUpgradeFunction,
 		loadDroidRepairUpgradeFunction,
 		loadDroidECMUpgradeFunction,
 		loadDroidSensorUpgradeFunction,

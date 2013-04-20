@@ -209,7 +209,6 @@ class DROID_GROUP;
 
 struct REPAIR_FACILITY
 {
-	UDWORD                          power;                  // Repair rate. Nothing to do with power.
 	BASE_OBJECT                     *psObj;                 /* Object being repaired */
 	FLAG_POSITION                   *psDeliveryPoint;       /* Place for the repaired droids to assemble at */
 

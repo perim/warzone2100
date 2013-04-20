@@ -332,6 +332,10 @@ function eventResearched(research, structure, player)
 				{
 					Upgrades[player].Building[i].PowerPoints += Stats.Building[i].PowerPoints * s[1] / 100;
 				}
+				else if (Stats.Building[i].RepairPoints > 0 && s[0] === 'RepairPoints')
+				{
+					Upgrades[player].Building[i].RepairPoints += Stats.Building[i].RepairPoints * s[1] / 100;
+				}
 			}
 		}
 	}
