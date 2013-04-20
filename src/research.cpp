@@ -662,38 +662,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 
 		switch (pFunction->type)
 		{
-			case PRODUCTION_UPGRADE_TYPE:
-				productionUpgrade(pFunction, player);
-				// search the list of players structures for a Factory
-				for (psCurr = apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					if ((psCurr->pStructureType->type == REF_FACTORY &&
-						((PRODUCTION_UPGRADE_FUNCTION *)pFunction)->factory) ||
-						(psCurr->pStructureType->type == REF_CYBORG_FACTORY &&
-						((PRODUCTION_UPGRADE_FUNCTION *)pFunction)->cyborgFactory) ||
-						(psCurr->pStructureType->type == REF_VTOL_FACTORY &&
-						((PRODUCTION_UPGRADE_FUNCTION *)pFunction)->vtolFactory))
-					{
-						// upgrade the Output for the structure
-						structureProductionUpgrade(psCurr);
-					}
-				}
-				// and the mission structures
-				for (psCurr = mission.apsStructLists[player]; psCurr != NULL; psCurr = psCurr->psNext)
-				{
-					if ((psCurr->pStructureType->type == REF_FACTORY &&
-						((PRODUCTION_UPGRADE_FUNCTION *)pFunction)->factory) ||
-						(psCurr->pStructureType->type == REF_CYBORG_FACTORY &&
-						((PRODUCTION_UPGRADE_FUNCTION *)pFunction)->cyborgFactory) ||
-						(psCurr->pStructureType->type == REF_VTOL_FACTORY &&
-						((PRODUCTION_UPGRADE_FUNCTION *)pFunction)->vtolFactory))
-					{
-						// upgrade the Output for the structure
-						structureProductionUpgrade(psCurr);
-					}
-				}
-			   	// message/sound in here for production boost
-				break;
 			case POWER_UPGRADE_TYPE:
 				powerUpgrade(pFunction, player);
 				// search the list of players structures for a Power Gens

@@ -28,8 +28,6 @@
 
 enum FUNCTION_TYPE
 {
-	PRODUCTION_TYPE,
-	PRODUCTION_UPGRADE_TYPE,
 	POWER_GEN_TYPE,
 	RESOURCE_TYPE,
 	REPAIR_DROID_TYPE,
@@ -90,26 +88,16 @@ struct RESOURCE_FUNCTION : public FUNCTION
 /*To increase a production facilities output*/
 struct PRODUCTION_UPGRADE_FUNCTION : public FUNCTION
 {
-	UBYTE		outputModifier;		/*The amount added to a facility's Output*/
-
-	UBYTE		factory;			/*flag to indicate upgrades standard factories*/
-	UBYTE		cyborgFactory;		/*flag to indicate upgrades cyborg factories*/
-	UBYTE		vtolFactory;		/*flag to indicate upgrades vtol factories*/
-
 };
 
 /*To manufacture droids designed previously*/
 struct PRODUCTION_FUNCTION : public FUNCTION
 {
-	BODY_SIZE capacity;      // The max size of body the factory can produce
-	int productionOutput;	 // Droid Build Points Produced Per Build Cycle
 };
 
 /*To research topics available*/
 struct RESEARCH_FUNCTION : public FUNCTION
 {
-	UDWORD			researchPoints;	/*The number of research points added per
-									  research cycle*/
 };
 
 /*To rearm VTOLs*/

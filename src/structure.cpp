@@ -124,10 +124,8 @@ STRUCTURE_UPGRADE	asStructureUpgrade[MAX_PLAYERS];
 WALLDEFENCE_UPGRADE	asWallDefenceUpgrade[MAX_PLAYERS];
 
 //holds the upgrades for the functionality of structures through research
-RESEARCH_UPGRADE	asResearchUpgrade[MAX_PLAYERS];
 POWER_UPGRADE		asPowerUpgrade[MAX_PLAYERS];
 REPAIR_FACILITY_UPGRADE		asRepairFacUpgrade[MAX_PLAYERS];
-PRODUCTION_UPGRADE	asProductionUpgrade[MAX_PLAYERS][NUM_FACTORY_TYPES];
 REARM_UPGRADE		asReArmUpgrade[MAX_PLAYERS];
 
 //used to hold the modifiers cross refd by weapon effect and structureStrength
@@ -613,10 +611,8 @@ bool loadStructureStats(QString filename)
 	// initialise the structure upgrade arrays
 	memset(asStructureUpgrade, 0, MAX_PLAYERS * sizeof(STRUCTURE_UPGRADE));
 	memset(asWallDefenceUpgrade, 0, MAX_PLAYERS * sizeof(WALLDEFENCE_UPGRADE));
-	memset(asResearchUpgrade, 0, MAX_PLAYERS * sizeof(RESEARCH_UPGRADE));
 	memset(asPowerUpgrade, 0, MAX_PLAYERS * sizeof(POWER_UPGRADE));
 	memset(asRepairFacUpgrade, 0, MAX_PLAYERS * sizeof(REPAIR_FACILITY_UPGRADE));
-	memset(asProductionUpgrade, 0, MAX_PLAYERS * NUM_FACTORY_TYPES * sizeof(PRODUCTION_UPGRADE));
 	memset(asReArmUpgrade, 0, MAX_PLAYERS * sizeof(REARM_UPGRADE));
 
 	// Wall Function requires a structure stat so can allocate it now
@@ -1710,9 +1706,6 @@ STRUCTURE* buildStructureDir(STRUCTURE_STATS *pStructureType, UDWORD x, UDWORD y
 				bUpgraded = true;
 				//put any production on hold
 				holdProduction(psBuilding, ModeImmediate);
-
-				psBuilding->pFunctionality->factory.productionOutput += ((
-					PRODUCTION_FUNCTION*)pStructureType->asFuncList[0])->productionOutput;
 			}
 		}
 
@@ -1957,8 +1950,6 @@ static bool setFunctionality(STRUCTURE	*psBuilding, STRUCTURE_TYPE functionType)
 				default:
 					ASSERT_OR_RETURN(false, false, "Invalid factory type");
 			}
-
-			structureProductionUpgrade(psBuilding); // set production output
 			break;
 		}
 		case REF_POWER_GEN:
@@ -3242,7 +3233,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 
 			if (psFactory->buildPointsRemaining > 0)
 			{
-				int progress = gameTimeAdjustedAverage(psFactory->productionOutput);
+				int progress = gameTimeAdjustedAverage(psStructure->pStructureType->upgrade[psStructure->player].production);
 				if (psFactory->buildPointsRemaining == psFactory->psSubject->buildPoints && progress > 0)
 				{
 					// We're just starting to build, check for power.
@@ -5669,7 +5660,7 @@ void printStructureInfo(STRUCTURE *psStructure)
 		{
 			CONPRINTF(ConsoleString, (ConsoleString, "%s - Damage % 3.2f%% - Unique ID %u - Production Output: %u - BuildPointsRemaining: %u",
 					  getStatName(psStructure->pStructureType), getStructureDamage(psStructure) * (100.f/65536.f), psStructure->id,
-					  psStructure->pFunctionality->factory.productionOutput,
+					  psStructure->pStructureType->upgrade[psStructure->player].production,
 					  psStructure->pFunctionality->factory.buildPointsRemaining));
 		}
 		else

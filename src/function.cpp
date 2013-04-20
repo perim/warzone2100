@@ -47,14 +47,6 @@ typedef bool (*LoadFunction)(const char *pData);
 /*Returns the Function type based on the string - used for reading in data */
 static FUNCTION_TYPE functionType(const char *pType)
 {
-	if (!strcmp(pType, "Production"))
-	{
-		return PRODUCTION_TYPE;
-	}
-	if (!strcmp(pType, "Production Upgrade"))
-	{
-		return PRODUCTION_UPGRADE_TYPE;
-	}
 	if (!strcmp(pType, "Power Generator"))
 	{
 		return POWER_GEN_TYPE;
@@ -123,99 +115,6 @@ static FUNCTION_TYPE functionType(const char *pType)
 static bool storeName(FUNCTION *pFunction, const char *pNameToStore)
 {
 	pFunction->pName = strdup(pNameToStore);
-	return true;
-}
-
-static bool loadProduction(const char *pData)
-{
-	PRODUCTION_FUNCTION *psFunction;
-	char functionName[MAX_STR_LENGTH], bodySize[MAX_STR_LENGTH];
-	int productionOutput;
-
-	psFunction = (PRODUCTION_FUNCTION *)malloc(sizeof(PRODUCTION_FUNCTION));
-	memset(psFunction, 0, sizeof(PRODUCTION_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = PRODUCTION_TYPE;
-
-	//read the data in
-	functionName[0] = '\0';
-	bodySize[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%255[^,'\r\n],%d", functionName, bodySize, &productionOutput);
-
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
-	if (!getBodySize(bodySize, &psFunction->capacity))
-	{
-		ASSERT(false, "loadProduction: unknown body size for %s", psFunction->pName);
-		return false;
-	}
-
-	psFunction->productionOutput = productionOutput;
-
-	return true;
-}
-
-static bool loadProductionUpgradeFunction(const char *pData)
-{
-	PRODUCTION_UPGRADE_FUNCTION *psFunction;
-	char functionName[MAX_STR_LENGTH];
-	UDWORD factory, cyborg, vtol;
-	UDWORD outputModifier;
-
-	//allocate storage
-	psFunction = (PRODUCTION_UPGRADE_FUNCTION *)malloc(sizeof(PRODUCTION_UPGRADE_FUNCTION));
-	memset(psFunction, 0, sizeof(PRODUCTION_UPGRADE_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = PRODUCTION_UPGRADE_TYPE;
-
-	//read the data in
-	functionName[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%d,%d,%d,%d", functionName, &factory, &cyborg, &vtol, &outputModifier);
-
-	psFunction->outputModifier = (UBYTE)outputModifier;
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
-	//set the factory flags
-	if (factory)
-	{
-		psFunction->factory = true;
-	}
-	else
-	{
-		psFunction->factory = false;
-	}
-	if (cyborg)
-	{
-		psFunction->cyborgFactory = true;
-	}
-	else
-	{
-		psFunction->cyborgFactory = false;
-	}
-	if (vtol)
-	{
-		psFunction->vtolFactory = true;
-	}
-	else
-	{
-		psFunction->vtolFactory = false;
-	}
 	return true;
 }
 
@@ -650,36 +549,6 @@ static bool loadWallFunction(const char *pData)
 	return true;
 }
 
-void productionUpgrade(FUNCTION *pFunction, UBYTE player)
-{
-	PRODUCTION_UPGRADE_FUNCTION		*pUpgrade;
-
-	pUpgrade = (PRODUCTION_UPGRADE_FUNCTION *)pFunction;
-
-	//check upgrades increase all values
-	if (pUpgrade->factory)
-	{
-		if (asProductionUpgrade[player][FACTORY_FLAG].modifier < pUpgrade->outputModifier)
-		{
-			asProductionUpgrade[player][FACTORY_FLAG].modifier = pUpgrade->outputModifier;
-		}
-	}
-	if (pUpgrade->cyborgFactory)
-	{
-		if (asProductionUpgrade[player][CYBORG_FLAG].modifier < pUpgrade->outputModifier)
-		{
-			asProductionUpgrade[player][CYBORG_FLAG].modifier = pUpgrade->outputModifier;
-		}
-	}
-	if (pUpgrade->vtolFactory)
-	{
-		if (asProductionUpgrade[player][VTOL_FLAG].modifier < pUpgrade->outputModifier)
-		{
-			asProductionUpgrade[player][VTOL_FLAG].modifier = pUpgrade->outputModifier;
-		}
-	}
-}
-
 void repairFacUpgrade(FUNCTION *pFunction, UBYTE player)
 {
 	REPAIR_UPGRADE_FUNCTION		*pUpgrade;
@@ -795,53 +664,6 @@ void structureResistanceUpgrade(FUNCTION *pFunction, STRUCTURE *psBuilding)
 		psBuilding->resistance = (UWORD)((psBuilding->resistance * newBaseResistance) /
 		        prevBaseResistance);
 	}
-}
-
-void structureProductionUpgrade(STRUCTURE *psBuilding)
-{
-	FACTORY						*pFact;
-	PRODUCTION_FUNCTION			*pFactFunc;
-	int						type, baseOutput, i;
-	STRUCTURE_STATS             *psStat;
-
-	switch (psBuilding->pStructureType->type)
-	{
-	case REF_FACTORY:
-		type = FACTORY_FLAG;
-		break;
-	case REF_CYBORG_FACTORY:
-		type = CYBORG_FLAG;
-		break;
-	case REF_VTOL_FACTORY:
-		type = VTOL_FLAG;
-		break;
-	default:
-		ASSERT(!"invalid or not a factory type", "structureProductionUpgrade: Invalid factory type");
-		return;
-	}
-
-	//upgrade the Output
-	pFact = &psBuilding->pFunctionality->factory;
-	ASSERT(pFact != NULL,
-	       "structureProductionUpgrade: invalid Factory pointer");
-
-	pFactFunc = (PRODUCTION_FUNCTION *)psBuilding->pStructureType->asFuncList[0];
-	ASSERT(pFactFunc != NULL,
-	       "structureProductionUpgrade: invalid Function pointer");
-
-	//current base value depends on whether there are modules attached to the structure
-	baseOutput = pFactFunc->productionOutput;
-	psStat = getModuleStat(psBuilding);
-	if (psStat)
-	{
-		for (i = 0; i < psBuilding->capacity; i++)
-		{
-			baseOutput += ((PRODUCTION_FUNCTION *)psStat->asFuncList[0])->productionOutput;
-		}
-	}
-
-	pFact->productionOutput = (baseOutput + (pFactFunc->productionOutput *
-	        asProductionUpgrade[psBuilding->player][type].modifier) / 100);
 }
 
 void structureReArmUpgrade(STRUCTURE *psBuilding)
@@ -1116,8 +938,6 @@ bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize)
 	//array of functions pointers for each load function
 	static const LoadFunction pLoadFunction[NUMFUNCTIONS] =
 	{
-		loadProduction,
-		loadProductionUpgradeFunction,
 		loadPowerGenFunction,
 		loadResourceFunction,
 		loadRepairDroidFunction,

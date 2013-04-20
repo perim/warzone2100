@@ -293,7 +293,7 @@ function eventDestroyed(victim)
 
 function eventResearched(research, structure, player)
 {
-	//debug("RESEARCH : " + research.fullname + "(" + research.name + ") for " + player + " results=" + research.results);
+	debug("RESEARCH : " + research.fullname + "(" + research.name + ") for " + player + " results=" + research.results);
 	for (var v = 0; v < research.results.length; v++)
 	{
 		var s = research.results[v].split(":");
@@ -307,13 +307,17 @@ function eventResearched(research, structure, player)
 				}
 			}
 		}
-		else if ('ResearchPoints' === s[0])
+		else if (['ResearchPoints', 'ProductionPoints'].indexOf(s[0]) >= 0)
 		{
 			for (var i in Upgrades[player].Building)
 			{
-				if (Stats.Building[i].ResearchPoints > 0)
+				if (Stats.Building[i].ResearchPoints > 0 && s[0] === 'ResearchPoints')
 				{
 					Upgrades[player].Building[i].ResearchPoints += Stats.Building[i].ResearchPoints * s[1] / 100;
+				}
+				else if (Stats.Building[i].ProductionPoints > 0 && s[0] === 'ProductionPoints')
+				{
+					Upgrades[player].Building[i].ProductionPoints += Stats.Building[i].ProductionPoints * s[1] / 100;
 				}
 			}
 		}

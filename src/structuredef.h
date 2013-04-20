@@ -181,8 +181,6 @@ struct FACTORY
 {
 	uint8_t                         productionLoops;        ///< Number of loops to perform. Not synchronised, and only meaningful for selectedPlayer.
 	UBYTE				loopsPerformed;		/* how many times the loop has been performed*/
-	int				productionOutput;	/* Droid Build Points Produced Per
-											   Build Cycle*/
 	DROID_TEMPLATE *                psSubject;              ///< The subject the structure is working on.
 	DROID_TEMPLATE *                psSubjectPending;       ///< The subject the structure is going to working on. (Pending = not yet synchronised.)
 	StatusPending                   statusPending;          ///< Pending = not yet synchronised.
@@ -351,8 +349,6 @@ struct UPGRADE
 	UWORD		modifier;		//% to increase the stat by
 };
 
-typedef UPGRADE		RESEARCH_UPGRADE;
-typedef UPGRADE		PRODUCTION_UPGRADE;
 typedef UPGRADE		REPAIR_FACILITY_UPGRADE;
 typedef UPGRADE		POWER_UPGRADE;
 typedef UPGRADE		REARM_UPGRADE;

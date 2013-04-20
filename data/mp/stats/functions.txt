@@ -1,38 +1,8 @@
-Production,FacProd1,LIGHT,10
-Production,FacMod1,LIGHT,10
-Production,BaBaFacProd,LIGHT,10
 Repair Droid,RepairFacilityFunc,40
 Power Generator,PowGen1,0,55,0,0,0,0
 Power Generator,BaBaPowGen,400,50,0,0,0,0
 Power Generator,PowerModule,0,28,0,0,0,0
 Resource,Resource,12500
-Production Upgrade,Struc-Factory-Upgrade01,1,0,0,30
-Production Upgrade,Struc-Factory-Upgrade02,1,0,0,60
-Production Upgrade,Struc-Factory-Upgrade03,1,0,0,90
-Production Upgrade,Struc-Factory-Upgrade04,1,0,0,120
-Production Upgrade,Struc-Factory-Upgrade05,1,0,0,150
-Production Upgrade,Struc-Factory-Upgrade06,1,0,0,180
-Production Upgrade,Struc-Factory-Cyborg-Upgrade01,0,1,0,30
-Production Upgrade,Struc-Factory-Cyborg-Upgrade02,0,1,0,60
-Production Upgrade,Struc-Factory-Cyborg-Upgrade03,0,1,0,90
-Production Upgrade,Struc-Factory-Cyborg-Upgrade04,0,1,0,120
-Production Upgrade,Struc-Factory-Cyborg-Upgrade05,0,1,0,150
-Production Upgrade,Struc-Factory-Cyborg-Upgrade06,0,1,0,180
-Production Upgrade,Struc-VTOLFactory-Upgrade01,0,0,1,30
-Production Upgrade,Struc-VTOLFactory-Upgrade02,0,0,1,60
-Production Upgrade,Struc-VTOLFactory-Upgrade03,0,0,1,90
-Production Upgrade,Struc-VTOLFactory-Upgrade04,0,0,1,120
-Production Upgrade,Struc-VTOLFactory-Upgrade05,0,0,1,180
-Production Upgrade,Struc-VTOLFactory-Upgrade06,0,0,1,240
-Production Upgrade,Struc-Factory-Upgrade07,1,0,0,210
-Production Upgrade,Struc-Factory-Upgrade08,1,0,0,240
-Production Upgrade,Struc-Factory-Upgrade09,1,0,0,270
-Production Upgrade,Struc-Factory-Cyborg-Upgrade07,0,1,0,210
-Production Upgrade,Struc-Factory-Cyborg-Upgrade08,0,1,0,240
-Production Upgrade,Struc-Factory-Cyborg-Upgrade09,0,1,0,270
-Production Upgrade,Struc-VTOLFactory-Upgrade07,0,0,1,210
-Production Upgrade,Struc-VTOLFactory-Upgrade08,0,0,1,240
-Production Upgrade,Struc-VTOLFactory-Upgrade09,0,0,1,270
 Weapon Upgrade,Wpn-Cannon-Accuracy01,CANNON,0,10,10,0,0,0,0
 Weapon Upgrade,Wpn-Cannon-Damage01,CANNON,0,0,0,25,25,0,0
 Weapon Upgrade,Wpn-Cannon-Damage02,CANNON,0,0,0,50,50,0,0

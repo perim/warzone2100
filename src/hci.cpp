@@ -3199,8 +3199,7 @@ static bool intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected, 
 			case REF_FACTORY:
 			case REF_CYBORG_FACTORY:
 			case REF_VTOL_FACTORY:
-				sBarInit2.size = (UWORD)((FACTORY *)Structure->
-				        pFunctionality)->productionOutput;	// Need to scale?
+				sBarInit2.size = Structure->pStructureType->upgrade[Structure->player].production;	// Need to scale?
 				if (sBarInit2.size > WBAR_SCALE)
 				{
 					sBarInit2.size = WBAR_SCALE;
