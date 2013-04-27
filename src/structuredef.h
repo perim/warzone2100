@@ -126,9 +126,6 @@ struct STRUCTURE_STATS : public BASE_STATS
 
 	struct WEAPON_STATS    *psWeapStat[STRUCT_MAXWEAPS];
 
-	SDWORD		defaultFunc;		/*The default function*/
-	std::vector<struct FUNCTION *> asFuncList;               ///< List of pointers to allowable functions - unalterable
-
 	struct
 	{
 		short research;

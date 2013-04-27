@@ -51,10 +51,6 @@ static FUNCTION_TYPE functionType(const char *pType)
 	{
 		return WEAPON_UPGRADE_TYPE;
 	}
-	if (!strcmp(pType, "Wall Function"))
-	{
-		return WALL_TYPE;
-	}
 	ASSERT(false, "Unknown Function Type: %s", pType);
 	return NUMFUNCTIONS;
 }
@@ -119,47 +115,6 @@ static bool loadWeaponUpgradeFunction(const char *pData)
 	psFunction->radiusDamage = (UWORD)radiusDamage;
 	psFunction->periodicalDamage = (UWORD)periodicalDamage;
 	psFunction->radiusHit = (UWORD)radiusHit;
-
-	return true;
-}
-
-/*loads the corner stat to use for a particular wall stat */
-static bool loadWallFunction(const char *pData)
-{
-	WALL_FUNCTION			*psFunction;
-	char					functionName[MAX_STR_LENGTH];
-	char					structureName[MAX_STR_LENGTH];
-
-	//allocate storage
-	psFunction = (WALL_FUNCTION *)malloc(sizeof(WALL_FUNCTION));
-	memset(psFunction, 0, sizeof(WALL_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = WALL_TYPE;
-
-	//read the data in
-	functionName[0] = '\0';
-	structureName[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%255[^,'\r\n],%*d", functionName, structureName);
-
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
-	//store the structure name - cannot set the stat pointer here because structures
-	//haven't been loaded in yet!
-	psFunction->pStructName = allocateName(structureName);
-	if (!psFunction->pStructName)
-	{
-		debug(LOG_ERROR, "Structure Stats Invalid for function - %s", functionName);
-		return false;
-	}
-	psFunction->pCornerStat = NULL;
 
 	return true;
 }
@@ -252,7 +207,6 @@ bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize)
 	static const LoadFunction pLoadFunction[NUMFUNCTIONS] =
 	{
 		loadWeaponUpgradeFunction,
-		loadWallFunction,
 	};
 
 	const unsigned int totalFunctions = numCR(pFunctionData, bufferSize);

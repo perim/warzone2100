@@ -361,10 +361,6 @@ bool IsStatExpansionModule(STRUCTURE_STATS const *psStats);
 bool structureIsBlueprint(STRUCTURE *psStructure);
 bool isBlueprint(BASE_OBJECT *psObject);
 
-/*checks that the structure stats have loaded up as expected - must be done after
-all StructureStats parts have been loaded*/
-extern bool checkStructureStats(void);
-
 /*returns the power cost to build this structure*/
 extern UDWORD structPowerToBuild(const STRUCTURE* psStruct);
 

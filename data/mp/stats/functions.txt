@@ -134,9 +134,3 @@ Weapon Upgrade,Wpn-Rocket-Damage09,ROCKET,0,0,0,225,225,0,0
 Weapon Upgrade,Wpn-Flamer-Damage07,FLAME,0,0,0,175,0,175,0
 Weapon Upgrade,Wpn-Flamer-Damage08,FLAME,0,0,0,200,0,200,0
 Weapon Upgrade,Wpn-Flamer-Damage09,FLAME,0,0,0,225,0,225,0
-Wall Function,Basic Wall Function,A0BabaCornerWall,31
-Wall Function,Hardcrete Wall1,A0HardcreteMk1CWall,69
-Wall Function,baba Wall Function,A0BabaCornerWall,73
-Wall Function,TankTrapFunc,TankTrapC,187
-Wall Function,Collective Wall1,CollectiveCWall,231
-Wall Function,NEXUS Wall1,NEXUSCWall,232

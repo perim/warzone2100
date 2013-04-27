@@ -493,7 +493,7 @@ bool loadStructureStats(QString filename)
 			psStats->upgrade[i].armour = ini.value("armour", 0).toUInt();
 			psStats->upgrade[i].thermal = ini.value("thermal", 0).toUInt();
 		}
-	
+
 		// set structure strength
 		QString strength = ini.value("strength", "").toString();
 		ASSERT_OR_RETURN(false, structStrength.contains(strength), "Invalid strength '%s' of structure '%s'", strength.toUtf8().constData(), psStats->pName);
@@ -560,18 +560,6 @@ bool loadStructureStats(QString filename)
 			psStats->psWeapStat[j] = pWeap;
 		}
 
-		// set list of functions
-		QStringList functions = ini.value("functions").toStringList();
-		psStats->defaultFunc = functions.size() - 1;
-		for (int j = 0; j < functions.size(); j++)
-		{
-			QString functionID = functions[j].trimmed();
-				
-			FUNCTION *pFunc = findStatsByName(functionID.toUtf8().constData(), asFunctions, numFunctions);
-			ASSERT_OR_RETURN(false, pFunc, "Invalid item '%s' in list of functions of structure '%s' ", functionID.toUtf8().constData(), psStats->pName);
-			psStats->asFuncList.push_back(pFunc);
-		}
-
 		// check used structure turrets
 		int types = 0;
 		types += psStats->numWeaps != 0;
@@ -600,17 +588,6 @@ bool loadStructureStats(QString filename)
 		asStructLimits[player] = (STRUCTURE_LIMITS *)malloc(sizeof(STRUCTURE_LIMITS) * numStructureStats);
 	}
 	initStructLimits();
-
-	// Wall Function requires a structure stat so can allocate it now
-	for (int i = 0; i < numFunctions; ++i)
-	{
-		if (asFunctions[i]->type == WALL_TYPE)
-		{
-			WALL_FUNCTION *wallFunction = (WALL_FUNCTION *)asFunctions[i];
-			wallFunction->pCornerStat = findStatsByName(wallFunction->pStructName, asStructureStats, numStructureStats);
-			ASSERT_OR_RETURN(false, wallFunction->pCornerStat, "Unknown Corner Wall stat for function %s", wallFunction->pName);
-		}
-	}
 
 	return true;
 }
@@ -7107,25 +7084,6 @@ STRUCTURE * giftSingleStructure(STRUCTURE *psStructure, UBYTE attackPlayer, bool
 	intNotifyResearchButton(prevState);
 	return psNewStruct;
 }
-
-
-/*checks that the structure stats have loaded up as expected - must be done after
-all StructureStats parts have been loaded*/
-bool checkStructureStats(void)
-{
-	UDWORD	structInc, inc;
-
-	for (structInc=0; structInc < numStructureStats; structInc++)
-	{
-		for (inc = 0; inc < asStructureStats[structInc].asFuncList.size(); inc++)
-		{
-			ASSERT_OR_RETURN(false, asStructureStats[structInc].asFuncList[inc] != NULL, "Invalid function for structure %s", asStructureStats[structInc].pName);
-
-		}
-	}
-	return true;
-}
-
 
 /*returns the power cost to build this structure*/
 UDWORD structPowerToBuild(const STRUCTURE* psStruct)

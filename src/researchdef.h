@@ -27,6 +27,7 @@
 #include <QStringList>
 #include "lib/framework/frame.h"
 #include "statsdef.h"
+#include "functiondef.h"
 
 /* Research struct type definitions */
 enum TECH_CODE
