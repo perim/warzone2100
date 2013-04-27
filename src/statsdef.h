@@ -432,11 +432,14 @@ struct ECM_STATS : public COMPONENT_STATS
 
 struct REPAIR_STATS : public COMPONENT_STATS
 {
-	UDWORD		repairPoints;	///< How much damage is restored to Body Points and armour each Repair Cycle
-	bool		repairArmour;	///< whether armour can be repaired or not
 	UDWORD		location;		///< specifies whether the Repair is default or for the Turret
 	UDWORD		time;			///< time delay for repair cycle
 	iIMDShape	*pMountGraphic; ///< The turret mount to use
+
+	struct
+	{
+		short repairPoints;		///< The number of points contributed each cycle
+	} upgrade[MAX_PLAYERS], base;
 };
 
 struct WEAPON_STATS : public COMPONENT_STATS
@@ -500,8 +503,12 @@ struct WEAPON_STATS : public COMPONENT_STATS
 
 struct CONSTRUCT_STATS : public COMPONENT_STATS
 {
-	UDWORD		constructPoints;	///< The number of points contributed each cycle
 	iIMDShape	*pMountGraphic;		///< The turret mount to use
+
+	struct
+	{
+		short constructPoints;		///< The number of points contributed each cycle
+	} upgrade[MAX_PLAYERS], base;
 };
 
 struct BRAIN_STATS : public COMPONENT_STATS
@@ -573,18 +580,6 @@ struct WEAPON_UPGRADE
 	UWORD	radiusDamage;
 	UWORD	periodicalDamage;
 	UWORD	radiusHit;
-};
-
-/*repair stats which can be upgraded by research*/
-struct REPAIR_UPGRADE
-{
-	UWORD	repairPoints;
-};
-
-/*constructor stats which can be upgraded by research*/
-struct CONSTRUCTOR_UPGRADE
-{
-	UWORD	constructPoints;
 };
 
 #endif // __INCLUDED_STATSDEF_H__

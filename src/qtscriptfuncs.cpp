@@ -3868,6 +3868,8 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 			BODY_STATS *psStats = asBodyStats + index;
 			if (name == "HitPoints")
 			{
+				// Update body points for all droids, to avoid making them damaged
+				// FIXME -- this is _really_ slow! we could be updating dozens of bodies!
 				psStats->upgrade[player].body = value;
 				for (DROID *psDroid = apsDroidLists[player]; psDroid != NULL; psDroid = psDroid->psNext)
 				{
@@ -3923,13 +3925,29 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 			case SCRCB_CON: psStats->upgrade[player].production = value; break;
 			case SCRCB_REA: psStats->upgrade[player].rearm = value; break;
 			case SCRCB_ELW: psStats->upgrade[player].resistance = value; break;
-			case SCRCB_HIT: psStats->upgrade[player].hitpoints = value; break;
 			case SCRCB_HEA: psStats->upgrade[player].thermal = value; break;
 			case SCRCB_ARM: psStats->upgrade[player].armour = value; break;
+			case SCRCB_HIT:
+				// Update body points for all structures, to avoid making them damaged
+				// FIXME - this is _really_ slow! we could be doing this for 
+				// dozens of buildings one at a time!
+				for (STRUCTURE *psCurr = apsStructLists[player]; psCurr; psCurr = psCurr->psNext)
+				{
+					if (psStats->upgrade[player].hitpoints < value)
+					{
+						psCurr->body = (psCurr->body * value) / psStats->upgrade[player].hitpoints;
+					}
+				}
+				for (STRUCTURE *psCurr = mission.apsStructLists[player]; psCurr; psCurr = psCurr->psNext)
+				{
+					if (psStats->upgrade[player].hitpoints < value)
+					{
+						psCurr->body = (psCurr->body * value) / psStats->upgrade[player].hitpoints;
+					}
+				}
+				psStats->upgrade[player].hitpoints = value;
+				break;
 			}
-			// FIXME - this is _really_ slow! we could be doing this for dozens of buildings one at a time!
-			// TBD - iterate over all structures, set hp to 100% again if current + value would make it so,
-			// leave damaged units more %-wise damaged instead
 		}
 		else
 		{
@@ -4012,6 +4030,36 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			ecmbase.setProperty(getStatName(psStats), ecm, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
 		stats.setProperty("ECM", ecmbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// Repair
+		QScriptValue repairbase = engine->newObject();
+		for (int j = 0; j < numRepairStats; j++)
+		{
+			REPAIR_STATS *psStats = asRepairStats + j;
+			QScriptValue repair = engine->newObject();
+			repair.setProperty("Id", psStats->pName, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			repair.setProperty("Weight", psStats->weight, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			repair.setProperty("BuildPower", psStats->buildPower, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			repair.setProperty("BuildTime", psStats->buildPoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			repair.setProperty("HitPoints", psStats->body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			repair.setProperty("RepairPoints", psStats->base.repairPoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			repairbase.setProperty(getStatName(psStats), repair, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		stats.setProperty("Repair", repairbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// Constructor
+		QScriptValue conbase = engine->newObject();
+		for (int j = 0; j < numConstructStats; j++)
+		{
+			CONSTRUCT_STATS *psStats = asConstructStats + j;
+			QScriptValue con = engine->newObject();
+			con.setProperty("Id", psStats->pName, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			con.setProperty("Weight", psStats->weight, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			con.setProperty("BuildPower", psStats->buildPower, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			con.setProperty("BuildTime", psStats->buildPoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			con.setProperty("HitPoints", psStats->body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			con.setProperty("ConstructPoints", psStats->base.constructPoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			conbase.setProperty(getStatName(psStats), con, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		stats.setProperty("Constructor", conbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		// Buildings
 		QScriptValue structbase = engine->newObject();
 		for (int j = 0; j < numStructureStats; j++)
@@ -4086,6 +4134,26 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			ecmbase.setProperty(getStatName(psStats), ecm, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
 		node.setProperty("ECM", ecmbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// Repair
+		QScriptValue repairbase = engine->newObject();
+		for (int j = 0; j < numRepairStats; j++)
+		{
+			REPAIR_STATS *psStats = asRepairStats + j;
+			QScriptValue repair = engine->newObject();
+			setStatsFunc(repair, engine, "RepairPoints", i, COMP_REPAIRUNIT, j, psStats->upgrade[i].repairPoints);
+			repairbase.setProperty(getStatName(psStats), repair, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		node.setProperty("Repair", repairbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// Construction
+		QScriptValue conbase = engine->newObject();
+		for (int j = 0; j < numConstructStats; j++)
+		{
+			CONSTRUCT_STATS *psStats = asConstructStats + j;
+			QScriptValue con = engine->newObject();
+			setStatsFunc(con, engine, "ConstructPoints", i, COMP_CONSTRUCT, j, psStats->upgrade[i].constructPoints);
+			conbase.setProperty(getStatName(psStats), con, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		node.setProperty("Constructor", conbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		// Buildings
 		QScriptValue structbase = engine->newObject();
 		for (int j = 0; j < numStructureStats; j++)

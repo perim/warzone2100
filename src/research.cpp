@@ -665,16 +665,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 				weaponUpgrade(pFunction, player);
 				// message/sound for weapon upgrade
 				break;
-			case DROIDREPAIR_UPGRADE_TYPE:
-				// for the current player, upgrade the repair stats
-				repairUpgrade(pFunction, player);
-				// message/sound for repair upgrade
-				break;
-			case DROIDCONST_UPGRADE_TYPE:
-				// for the current player, upgrade the constructor stats
-				constructorUpgrade(pFunction, player);
-				// message/sound for constructor upgrade
-				break;
 			default:
 				ASSERT(false, "Invalid function type");
 				break;

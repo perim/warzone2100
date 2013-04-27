@@ -312,17 +312,19 @@ function eventResearched(research, structure, player)
 			{
 				if (Stats.Body[i].BodyClass === s[0]) // if match against hint in ini file, change it
 				{
-					Upgrades[player].Body[i][s[1]] += s[2]; // eg Upgrades[0].Body['Tiger']['Armour']
+					Upgrades[player].Body[i][s[1]] += parseInt(s[2]); // eg Upgrades[0].Body['Tiger']['Armour']
+debug("  upgraded " + i + " to " + Upgrades[player].Body[i][s[1]] + " by " + s[2]);
 				}
 			}
 		}
-		else if (['ResearchPoints', 'ProductionPoints', 'PowerPoints', 'Wall', 'Structure'].indexOf(s[0]) >= 0)
+		else if (['ResearchPoints', 'ProductionPoints', 'PowerPoints', 'RepairPoints'].indexOf(s[0]) >= 0)
 		{
 			for (var i in Upgrades[player].Building)
 			{
 				if (Stats.Building[i][s[0]] > 0) // only applies if building has this stat already
 				{
 					Upgrades[player].Building[i][s[0]] += Stats.Building[i][s[0]] * s[1] / 100;
+debug("  upgraded " + i + " to " + Upgrades[player].Building[i][s[0]] + " by " + Stats.Building[i][s[0]] * s[1] / 100);
 				}
 			}
 		}
@@ -333,15 +335,17 @@ function eventResearched(research, structure, player)
 				if (Stats.Building[i].Type === s[0]) // applies to specific building type
 				{
 					Upgrades[player].Building[i][s[1]] += Stats.Building[i][s[1]] * s[2] / 100;
+debug("  upgraded " + i + " to " + Upgrades[player].Building[i][s[1]] + " by " + Stats.Building[i][s[1]] * s[2] / 100);
 				}
 			}
 		}
-		else if (['ECM', 'Sensor'].indexOf(s[0]) >= 0)
+		else if (['ECM', 'Sensor', 'Repair', 'Construct'].indexOf(s[0]) >= 0)
 		{
 			for (var i in Upgrades[player][s[0]])
 			{
 				// Upgrades.player.type.buildingName.parameter ... hard to read but short and flexible
 				Upgrades[player][s[0]][i][s[1]] += Stats[s[0]][i][s[1]] * s[2] / 100;
+debug("  upgraded " + i + " to " + Upgrades[player][s[0]][i][s[1]] + " by " + Stats[s[0]][i][s[1]] * s[2] / 100);
 			}
 		}
 	}

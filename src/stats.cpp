@@ -59,8 +59,6 @@ WEAPON_MODIFIER		asWeaponModifierBody[WE_NUMEFFECTS][SIZE_NUM];
 
 //used to hold the current upgrade level per player per weapon subclass
 WEAPON_UPGRADE		asWeaponUpgrade[MAX_PLAYERS][WSC_NUM_WEAPON_SUBCLASSES];
-REPAIR_UPGRADE		asRepairUpgrade[MAX_PLAYERS];
-CONSTRUCTOR_UPGRADE	asConstUpgrade[MAX_PLAYERS];
 
 /* The number of different stats stored */
 UDWORD		numBodyStats;
@@ -417,8 +415,6 @@ void statsInitVars(void)
 
 	//initialise the upgrade structures
 	memset(asWeaponUpgrade, 0, sizeof(asWeaponUpgrade));
-	memset(asRepairUpgrade, 0, sizeof(asRepairUpgrade));
-	memset(asConstUpgrade, 0, sizeof(asConstUpgrade));
 
 	// init the max values
 	maxComponentWeight = maxBodyArmour = maxBodyPower =
@@ -1272,8 +1268,11 @@ bool loadRepairStats(const char *pFileName)
 		psStats->buildPower = ini.value("buildPower", 0).toInt();
 		psStats->buildPoints = ini.value("buildPoints", 0).toInt();
 		psStats->weight = ini.value("weight", 0).toInt();
-		psStats->repairArmour = ini.value("repairArmour").toBool();
-		psStats->repairPoints = ini.value("repairPoints").toInt();
+		psStats->base.repairPoints = ini.value("repairPoints").toInt();
+		for (int j = 0; j < MAX_PLAYERS; j++)
+		{
+			psStats->upgrade[j].repairPoints = psStats->base.repairPoints;
+		}
 		psStats->time = ini.value("time", 0).toInt() * WEAPON_TIME;
 		psStats->designable = ini.value("designable", false).toBool();
 
@@ -1308,7 +1307,7 @@ bool loadRepairStats(const char *pFileName)
 		//set the max stat values for the design screen
 		if (psStats->designable)
 		{
-			setMaxRepairPoints(psStats->repairPoints);
+			setMaxRepairPoints(psStats->base.repairPoints);
 			setMaxComponentWeight(psStats->weight);
 		}
 
@@ -1342,7 +1341,11 @@ bool loadConstructStats(const char *pFileName)
 		psStats->buildPoints = ini.value("buildPoints", 0).toInt();
 		psStats->weight = ini.value("weight", 0).toInt();
 		psStats->body = ini.value("bodyPoints", 0).toInt();
-		psStats->constructPoints = ini.value("constructPoints").toInt();
+		psStats->base.constructPoints = ini.value("constructPoints").toInt();
+		for (int j = 0; j < MAX_PLAYERS; j++)
+		{
+			psStats->upgrade[j].constructPoints = psStats->base.constructPoints;
+		}
 		psStats->designable = ini.value("designable", false).toBool();
 
 		allocateStatName((BASE_STATS *)psStats, list[i].toUtf8().constData());
@@ -1359,7 +1362,7 @@ bool loadConstructStats(const char *pFileName)
 		// Set the max stat values for the design screen
 		if (psStats->designable)
 		{
-			setMaxConstPoints(psStats->constructPoints);
+			setMaxConstPoints(psStats->base.constructPoints);
 			setMaxComponentWeight(psStats->weight);
 		}
 	}
@@ -2315,12 +2318,12 @@ UDWORD	ecmRange(ECM_STATS *psStats, UBYTE player)
 
 UDWORD	repairPoints(REPAIR_STATS *psStats, UBYTE player)
 {
-	return (psStats->repairPoints + (psStats->repairPoints * asRepairUpgrade[player].repairPoints) / 100);
+	return psStats->upgrade[player].repairPoints;
 }
 
 UDWORD	constructorPoints(CONSTRUCT_STATS *psStats, UBYTE player)
 {
-	return (psStats->constructPoints + (psStats->constructPoints * asConstUpgrade[player].constructPoints) / 100);
+	return psStats->upgrade[player].constructPoints;
 }
 
 UDWORD	bodyPower(BODY_STATS *psStats, UBYTE player)
@@ -2614,26 +2617,16 @@ void adjustMaxDesignStats(void)
 	{
 		BODY_STATS *psStats = asBodyStats + j;
 		bodyPoints = MAX(bodyPoints, psStats->upgrade[selectedPlayer].body);
-		bodyArmour = MAX(bodyPoints, psStats->upgrade[selectedPlayer].armour);
-		bodyPower = MAX(bodyPoints, psStats->upgrade[selectedPlayer].power);
+		bodyArmour = MAX(bodyArmour, psStats->upgrade[selectedPlayer].armour);
+		bodyPower = MAX(bodyPower, psStats->upgrade[selectedPlayer].power);
 	}
+
+	// TBD FIXME for all others
 
 	for (inc = 0; inc < numFunctions; inc++)
 	{
 		switch (asFunctions[inc]->type)
 		{
-		case DROIDREPAIR_UPGRADE_TYPE:
-			if (repairPoints < ((UPGRADE_FUNCTION *)asFunctions[inc])->upgradePoints)
-			{
-				repairPoints = ((UPGRADE_FUNCTION *)asFunctions[inc])->upgradePoints;
-			}
-			break;
-		case DROIDCONST_UPGRADE_TYPE:
-			if (constPoints < ((UPGRADE_FUNCTION *)asFunctions[inc])->upgradePoints)
-			{
-				constPoints = ((UPGRADE_FUNCTION *)asFunctions[inc])->upgradePoints;
-			}
-			break;
 		case WEAPON_UPGRADE_TYPE:
 			if (weaponDamage < ((WEAPON_UPGRADE_FUNCTION *)asFunctions[inc])->damage)
 			{

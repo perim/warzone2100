@@ -28,11 +28,8 @@
 
 enum FUNCTION_TYPE
 {
-	REPAIR_DROID_TYPE,
 	WEAPON_UPGRADE_TYPE,
 	WALL_TYPE,
-	DROIDREPAIR_UPGRADE_TYPE,
-	DROIDCONST_UPGRADE_TYPE,
 
 	/* The number of function types */
 	NUMFUNCTIONS,
@@ -50,9 +47,6 @@ struct FUNCTION : public BASE_STATS
 /*To repair droids that enter the repair facility*/
 struct REPAIR_DROID_FUNCTION : public FUNCTION
 {
-	UDWORD			repairPoints;	/*The number of repair points used to reduce
-									  damage to the droid. These repair points can
-									  restore even destroyed droid components*/
 };
 
 /*To generate and supply power to other structures*/

@@ -47,10 +47,6 @@ typedef bool (*LoadFunction)(const char *pData);
 /*Returns the Function type based on the string - used for reading in data */
 static FUNCTION_TYPE functionType(const char *pType)
 {
-	if (!strcmp(pType, "Repair Droid"))
-	{
-		return REPAIR_DROID_TYPE;
-	}
 	if (!strcmp(pType, "Weapon Upgrade"))
 	{
 		return WEAPON_UPGRADE_TYPE;
@@ -58,14 +54,6 @@ static FUNCTION_TYPE functionType(const char *pType)
 	if (!strcmp(pType, "Wall Function"))
 	{
 		return WALL_TYPE;
-	}
-	if (!strcmp(pType, "VehicleRepair Upgrade"))
-	{
-		return DROIDREPAIR_UPGRADE_TYPE;
-	}
-	if (!strcmp(pType, "VehicleConst Upgrade"))
-	{
-		return DROIDCONST_UPGRADE_TYPE;
 	}
 	ASSERT(false, "Unknown Function Type: %s", pType);
 	return NUMFUNCTIONS;
@@ -76,55 +64,6 @@ static bool storeName(FUNCTION *pFunction, const char *pNameToStore)
 {
 	pFunction->pName = strdup(pNameToStore);
 	return true;
-}
-
-//generic load function for upgrade type
-static bool loadUpgradeFunction(const char *pData, FUNCTION_TYPE type)
-{
-	char functionName[MAX_STR_LENGTH];
-	UDWORD modifier;
-	UPGRADE_FUNCTION *psFunction;
-
-	//allocate storage
-	psFunction = (UPGRADE_FUNCTION *)malloc(sizeof(UPGRADE_FUNCTION));
-	memset(psFunction, 0, sizeof(UPGRADE_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = type;
-
-	//read the data in
-	functionName[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%d", functionName, &modifier);
-
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
-	if (modifier > UWORD_MAX)
-	{
-		ASSERT(false, "Modifier too great for %s", functionName);
-		return false;
-	}
-
-	//store the % upgrade
-	psFunction->upgradePoints = (UWORD)modifier;
-
-	return true;
-}
-
-static bool loadDroidRepairUpgradeFunction(const char *pData)
-{
-	return loadUpgradeFunction(pData, DROIDREPAIR_UPGRADE_TYPE);
-}
-
-static bool loadDroidConstUpgradeFunction(const char *pData)
-{
-	return loadUpgradeFunction(pData, DROIDCONST_UPGRADE_TYPE);
 }
 
 static bool loadWeaponUpgradeFunction(const char *pData)
@@ -183,35 +122,6 @@ static bool loadWeaponUpgradeFunction(const char *pData)
 
 	return true;
 }
-
-static bool loadRepairDroidFunction(const char *pData)
-{
-	REPAIR_DROID_FUNCTION		*psFunction;
-	char						functionName[MAX_STR_LENGTH];
-
-	//allocate storage
-	psFunction = (REPAIR_DROID_FUNCTION *)malloc(sizeof(REPAIR_DROID_FUNCTION));
-	memset(psFunction, 0, sizeof(REPAIR_DROID_FUNCTION));
-
-	//store the pointer in the Function Array
-	*asFunctions = (FUNCTION *)psFunction;
-	psFunction->ref = REF_FUNCTION_START + numFunctions;
-	numFunctions++;
-	asFunctions++;
-
-	//set the type of function
-	psFunction->type = REPAIR_DROID_TYPE;
-
-	//read the data in
-	functionName[0] = '\0';
-	sscanf(pData, "%255[^,'\r\n],%d", functionName, &psFunction->repairPoints);
-
-	//allocate storage for the name
-	storeName((FUNCTION *)psFunction, functionName);
-
-	return true;
-}
-
 
 /*loads the corner stat to use for a particular wall stat */
 static bool loadWallFunction(const char *pData)
@@ -319,50 +229,6 @@ void weaponUpgrade(FUNCTION *pFunction, UBYTE player)
 	}
 }
 
-//upgrade the repair stats
-void repairUpgrade(FUNCTION *pFunction, UBYTE player)
-{
-	DROIDREPAIR_UPGRADE_FUNCTION		*pUpgrade;
-
-	pUpgrade = (DROIDREPAIR_UPGRADE_FUNCTION *)pFunction;
-
-	//check upgrades increase all values!
-	if (asRepairUpgrade[player].repairPoints < pUpgrade->upgradePoints)
-	{
-		asRepairUpgrade[player].repairPoints = pUpgrade->upgradePoints;
-	}
-}
-
-//upgrade the repair stats
-void constructorUpgrade(FUNCTION *pFunction, UBYTE player)
-{
-	DROIDCONSTR_UPGRADE_FUNCTION		*pUpgrade;
-
-	pUpgrade = (DROIDCONSTR_UPGRADE_FUNCTION *)pFunction;
-
-	//check upgrades increase all values!
-	if (asConstUpgrade[player].constructPoints < pUpgrade->upgradePoints)
-	{
-		asConstUpgrade[player].constructPoints = pUpgrade->upgradePoints;
-	}
-}
-
-/*upgrades the droids inside a Transporter uwith the appropriate upgrade function*/
-void upgradeTransporterDroids(DROID *psTransporter, void(*pUpgradeFunction)(DROID *psDroid))
-{
-	ASSERT(psTransporter->droidType == DROID_TRANSPORTER || psTransporter->droidType == DROID_SUPERTRANSPORTER, "upgradeTransporterUnits: invalid unit type");
-
-	//loop thru' each unit in the Transporter
-	for (DROID *psCurr = psTransporter->psGroup->psList; psCurr != NULL; psCurr = psCurr->psGrpNext)
-	{
-		if (psCurr != psTransporter)
-		{
-			//apply upgrade if not the transporter itself
-			pUpgradeFunction(psCurr);
-		}
-	}
-}
-
 bool FunctionShutDown(void)
 {
 	UDWORD		inc;
@@ -385,11 +251,8 @@ bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize)
 	//array of functions pointers for each load function
 	static const LoadFunction pLoadFunction[NUMFUNCTIONS] =
 	{
-		loadRepairDroidFunction,
 		loadWeaponUpgradeFunction,
 		loadWallFunction,
-		loadDroidRepairUpgradeFunction,
-		loadDroidConstUpgradeFunction,
 	};
 
 	const unsigned int totalFunctions = numCR(pFunctionData, bufferSize);

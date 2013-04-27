@@ -33,10 +33,7 @@ extern UDWORD numFunctions;
 extern bool loadFunctionStats(const char *pFunctionData, UDWORD bufferSize);
 
 extern void weaponUpgrade(FUNCTION *pFunction, UBYTE player);
-extern void repairUpgrade(FUNCTION *pFunction, UBYTE player);
-extern void constructorUpgrade(FUNCTION *pFunction, UBYTE player);
 extern void droidBodyUpgrade(DROID *psDroid);
-extern void upgradeTransporterDroids(DROID *psTransporter, void(*pUpgradeFunction)(DROID *psDroid));
 
 extern bool FunctionShutDown(void);
 
