@@ -2621,8 +2621,31 @@ void adjustMaxDesignStats(void)
 		bodyArmour = MAX(bodyArmour, psStats->upgrade[selectedPlayer].armour);
 		bodyPower = MAX(bodyPower, psStats->upgrade[selectedPlayer].power);
 	}
-
-	// TBD FIXME for all others
+	for (int j = 0; j < numSensorStats; j++)
+	{
+		SENSOR_STATS *psStats = asSensorStats + j;
+		sensorRange = MAX(sensorRange, psStats->upgrade[selectedPlayer].range);
+	}
+	for (int j = 0; j < numECMStats; j++)
+	{
+		ECM_STATS *psStats = asECMStats + j;
+		ecmRange = MAX(ecmRange, psStats->upgrade[selectedPlayer].range);
+	}
+	for (int j = 0; j < numRepairStats; j++)
+	{
+		REPAIR_STATS *psStats = asRepairStats + j;
+		repairPoints = MAX(repairPoints, psStats->upgrade[selectedPlayer].repairPoints);
+	}
+	for (int j = 0; j < numConstructStats; j++)
+	{
+		CONSTRUCT_STATS *psStats = asConstructStats + j;
+		constPoints = MAX(constPoints, psStats->upgrade[selectedPlayer].constructPoints);
+	}
+	for (int j = 0; j < numWeaponStats; j++)
+	{
+		WEAPON_STATS *psStats = asWeaponStats + j;
+		weaponDamage = MAX(weaponDamage, psStats->upgrade[selectedPlayer].damage);
+	}
 
 	//determine the effect on the max values for the stats
 	updateMaxWeaponStats(weaponDamage);
