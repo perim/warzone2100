@@ -62,7 +62,6 @@
 #include "edit3d.h"
 #include "structure.h"
 #include "research.h"
-#include "function.h"
 #include "hci.h"
 #include "stats.h"
 #include "game.h"

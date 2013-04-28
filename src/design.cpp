@@ -47,7 +47,6 @@
 #include "edit3d.h"
 #include "structure.h"
 #include "research.h"
-#include "function.h"
 #include "lib/gamelib/gtime.h"
 #include "hci.h"
 #include "stats.h"
@@ -2323,7 +2322,7 @@ static void intSetWeaponStats(WEAPON_STATS *psStats)
 	                 (psStats->ref < REF_WEAPON_START + REF_RANGE), "stats ref is out of range");
 
 	/* range */
-	widgSetBarSize(psWScreen, IDDES_WEAPRANGE, proj_GetLongRange(psStats));
+	widgSetBarSize(psWScreen, IDDES_WEAPRANGE, proj_GetLongRange(psStats, selectedPlayer));
 	/* rate of fire */
 	widgSetBarSize(psWScreen, IDDES_WEAPROF, weaponROF(psStats, (SBYTE)selectedPlayer));
 	/* damage */
@@ -2344,7 +2343,7 @@ static void intSetWeaponShadowStats(WEAPON_STATS *psStats)
 	if (psStats)
 	{
 		/* range */
-		widgSetMinorBarSize(psWScreen, IDDES_WEAPRANGE, proj_GetLongRange(psStats));
+		widgSetMinorBarSize(psWScreen, IDDES_WEAPRANGE, proj_GetLongRange(psStats, selectedPlayer));
 		/* rate of fire */
 		widgSetMinorBarSize(psWScreen, IDDES_WEAPROF, weaponROF(psStats, (SBYTE)selectedPlayer));
 		/* damage */

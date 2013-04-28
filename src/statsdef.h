@@ -444,22 +444,22 @@ struct REPAIR_STATS : public COMPONENT_STATS
 
 struct WEAPON_STATS : public COMPONENT_STATS
 {
-	UDWORD			longRange;				///< Max distance to target for	long range shot
-	UDWORD			minRange;				///< Min distance to target for	shot
-	UDWORD			shortHit;				///< Chance to hit at short range
-	UDWORD			longHit;				///< Chance to hit at long range
-	UDWORD			firePause;				///< Time between each weapon fire
-	UDWORD			numExplosions;			///< The number of explosions per shot
-	UBYTE			numRounds;				///< The number of rounds	per salvo(magazine)
-	UDWORD			reloadTime;				///< Time to reload	the round of ammo	(salvo fire)
-	UDWORD			damage;					///< How much	damage the weapon	causes
-	UDWORD			radius;					///< Basic blast radius of weapon
-	UDWORD			radiusHit;				///< Chance to hit in the	blast	radius
-	UDWORD			radiusDamage;			///< Damage done in	the blast radius
+	struct
+	{
+		short maxRange;
+		short minRange;
+		short hitChance;
+		short firePause;     ///< Pause between each shot
+		short numRounds;     ///< The number of rounds per salvo
+		short reloadTime;    ///< Time to reload the round of ammo
+		short damage;
+		short radius;        ///< Basic blast radius of weapon
+		short radiusDamage;  ///< "Splash damage"
+		short periodicalDamage; ///< Repeat damage each second after hit
+		short periodicalDamageRadius; ///< Repeat damage radius
+		short periodicalDamageTime; ///< How long the round keeps damaging
+	} base, upgrade[MAX_PLAYERS];
 
-	UDWORD			periodicalDamageTime;			///< How long the round damages
-	UDWORD			periodicalDamage;				///< Damage done each time cycle (each second)
-	UDWORD			periodicalDamageRadius;			///< Radius of	the round
 	WEAPON_CLASS	periodicalDamageWeaponClass;	///< Periodical damage weapon class by damage type (KINETIC, HEAT)
 	WEAPON_SUBCLASS	periodicalDamageWeaponSubClass;	///< Periodical damage weapon subclass (research class)
 	WEAPON_EFFECT	periodicalDamageWeaponEffect;	///< Periodical damage weapon effect (propulsion/body damage modifier)
@@ -486,6 +486,7 @@ struct WEAPON_STATS : public COMPONENT_STATS
 
 	/* Graphics control stats */
 	UDWORD			radiusLife;				///< How long a blast radius is visible
+	UDWORD			numExplosions;			///< The number of explosions per shot
 
 	/* Graphics used for the weapon */
 	iIMDShape		*pMountGraphic;			///< The turret mount to use

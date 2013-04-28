@@ -1493,7 +1493,7 @@ STRUCTURE* buildStructureDir(STRUCTURE_STATS *pStructureType, UDWORD x, UDWORD y
 						psBuilding->asWeaps[0].lastFired = gameTime;
 					}
 					psBuilding->asWeaps[weapon].nStat =	pStructureType->psWeapStat[weapon] - asWeaponStats;
-					psBuilding->asWeaps[weapon].ammo = (asWeaponStats + psBuilding->asWeaps[weapon].nStat)->numRounds;
+					psBuilding->asWeaps[weapon].ammo = (asWeaponStats + psBuilding->asWeaps[weapon].nStat)->upgrade[psBuilding->player].numRounds;
 					psBuilding->numWeaps++;
 				}
 			}
@@ -1510,7 +1510,7 @@ STRUCTURE* buildStructureDir(STRUCTURE_STATS *pStructureType, UDWORD x, UDWORD y
 					psBuilding->asWeaps[0].lastFired = gameTime;
 				}
 				psBuilding->asWeaps[0].nStat =	pStructureType->psWeapStat[0] - asWeaponStats;
-				psBuilding->asWeaps[0].ammo = (asWeaponStats + psBuilding->asWeaps[0].nStat)->numRounds;
+				psBuilding->asWeaps[0].ammo = (asWeaponStats + psBuilding->asWeaps[0].nStat)->upgrade[psBuilding->player].numRounds;
 			}
 		}
 
@@ -3340,7 +3340,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 					{
 						// set rearm value to no runs made
 						psDroid->asWeaps[i].usedAmmo = 0;
-						psDroid->asWeaps[i].ammo = asWeaponStats[psDroid->asWeaps[i].nStat].numRounds;
+						psDroid->asWeaps[i].ammo = asWeaponStats[psDroid->asWeaps[i].nStat].upgrade[psDroid->player].numRounds;
 						psDroid->asWeaps[i].lastFired = 0;
 					}
 				}
@@ -3349,7 +3349,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 					for (i = 0; i < psDroid->numWeaps; i++)		// rearm one weapon at a time
 					{
 						// Make sure it's a rearmable weapon (and so we don't divide by zero)
-						if (psDroid->asWeaps[i].usedAmmo > 0 && asWeaponStats[psDroid->asWeaps[i].nStat].numRounds > 0)
+						if (psDroid->asWeaps[i].usedAmmo > 0 && asWeaponStats[psDroid->asWeaps[i].nStat].upgrade[psDroid->player].numRounds > 0)
 						{
 							// Do not "simplify" this formula.
 							// It is written this way to prevent rounding errors.
@@ -3360,7 +3360,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 							if (ammoToAddThisTime)
 							{
 								// reset ammo and lastFired
-								psDroid->asWeaps[i].ammo = asWeaponStats[psDroid->asWeaps[i].nStat].numRounds;
+								psDroid->asWeaps[i].ammo = asWeaponStats[psDroid->asWeaps[i].nStat].upgrade[psDroid->player].numRounds;
 								psDroid->asWeaps[i].lastFired = 0;
 								break;
 							}

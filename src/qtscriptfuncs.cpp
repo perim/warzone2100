@@ -354,7 +354,7 @@ QScriptValue convStructure(STRUCTURE *psStruct, QScriptEngine *engine)
 			aa = aa || psWeap->surfaceToAir & SHOOT_IN_AIR;
 			ga = ga || psWeap->surfaceToAir & SHOOT_ON_GROUND;
 			indirect = indirect || psWeap->movementModel == MM_INDIRECT || psWeap->movementModel == MM_HOMINGINDIRECT;
-			range = MAX((int)psWeap->longRange, range);
+			range = MAX((int)psWeap->upgrade[psStruct->player].maxRange, range);
 		}
 	}
 	QScriptValue value = convObj(psStruct, engine);
@@ -510,7 +510,7 @@ QScriptValue convDroid(DROID *psDroid, QScriptEngine *engine)
 			aa = aa || psWeap->surfaceToAir & SHOOT_IN_AIR;
 			ga = ga || psWeap->surfaceToAir & SHOOT_ON_GROUND;
 			indirect = indirect || psWeap->movementModel == MM_INDIRECT || psWeap->movementModel == MM_HOMINGINDIRECT;
-			range = MAX((int)psWeap->longRange, range);
+			range = MAX((int)psWeap->upgrade[psDroid->player].maxRange, range);
 		}
 	}
 	DROID_TYPE type = psDroid->droidType;
@@ -864,8 +864,8 @@ static QScriptValue js_getWeaponInfo(QScriptContext *context, QScriptEngine *eng
 	info.setProperty("id", id);
 	info.setProperty("name", getStatName(psStats));
 	info.setProperty("impactClass", psStats->weaponClass == WC_KINETIC ? "KINETIC" : "HEAT");
-	info.setProperty("damage", psStats->damage);
-	info.setProperty("firePause", psStats->firePause);
+	info.setProperty("damage", psStats->base.damage);
+	info.setProperty("firePause", psStats->base.firePause);
 	info.setProperty("fireOnMove", psStats->fireOnMove);
 	return QScriptValue(info);
 }
@@ -3852,6 +3852,32 @@ void prepareLabels()
 	updateLabelModel();
 }
 
+static void droidBodyUpgrade(DROID *psDroid)
+{
+	BODY_STATS *psStats = getBodyStats(psDroid);
+	int increase = psStats->upgrade[psDroid->player].body;
+	int prevBaseBody = psDroid->originalBody;
+	int base = calcDroidBaseBody(psDroid);
+	int newBaseBody =  base + (base * increase) / 100;
+
+	if (newBaseBody > prevBaseBody)
+	{
+		psDroid->body = (psDroid->body * newBaseBody) / prevBaseBody;
+		psDroid->originalBody = newBaseBody;
+	}
+	//if a transporter droid then need to upgrade the contents
+	if (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER)
+	{
+		for (DROID *psCurr = psDroid->psGroup->psList; psCurr != NULL; psCurr = psCurr->psGrpNext)
+		{
+			if (psCurr != psDroid)
+			{
+				droidBodyUpgrade(psCurr);
+			}
+		}
+	}
+}
+
 QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 {
 	QScriptValue callee = context->callee();
@@ -3913,6 +3939,23 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 			SCRIPT_ASSERT(context, name == "Range", "Invalid ECM parameter");
 			psStats->upgrade[player].range = value;
 		}
+		else if (type == COMP_WEAPON)
+		{
+			WEAPON_STATS *psStats = asWeaponStats + index;
+			if (name == "MaxRange") psStats->upgrade[player].maxRange = value;
+			else if (name == "MinRange") psStats->upgrade[player].minRange = value;
+			else if (name == "HitChance") psStats->upgrade[player].hitChance = value;
+			else if (name == "FirePause") psStats->upgrade[player].firePause = value;
+			else if (name == "Rounds") psStats->upgrade[player].numRounds = value;
+			else if (name == "ReloadTime") psStats->upgrade[player].reloadTime = value;
+			else if (name == "Damage") psStats->upgrade[player].damage = value;
+			else if (name == "Radius") psStats->upgrade[player].radius = value;
+			else if (name == "RadiusDamage") psStats->upgrade[player].radiusDamage = value;
+			else if (name == "") psStats->upgrade[player].periodicalDamage = value;
+			else if (name == "") psStats->upgrade[player].periodicalDamageTime = value;
+			else if (name == "") psStats->upgrade[player].periodicalDamageRadius = value;
+			else SCRIPT_ASSERT(context, false, "Invalid weapon method");
+		}
 		else if (type == SCRCB_RES || type == SCRCB_REP || type == SCRCB_POW || type == SCRCB_CON || type == SCRCB_REA
 		         || type == SCRCB_HIT || type == SCRCB_ELW || type == SCRCB_ARM || type == SCRCB_HEA)
 		{
@@ -3954,6 +3997,7 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 			SCRIPT_ASSERT(context, false, "Component type not found for upgrade");
 		}
 	}
+	// FIXME -- not valid outside rules.js!!
 	return callee.property("value");
 }
 
@@ -4060,6 +4104,46 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			conbase.setProperty(getStatName(psStats), con, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
 		stats.setProperty("Constructor", conbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// Weapon
+		QScriptValue wbase = engine->newObject();
+		for (int j = 0; j < numWeaponStats; j++)
+		{
+			WEAPON_STATS *psStats = asWeaponStats + j;
+			QScriptValue weap = engine->newObject();
+			weap.setProperty("Id", psStats->pName, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("Weight", psStats->weight, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("BuildPower", psStats->buildPower, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("BuildTime", psStats->buildPoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("MaxRange", psStats->base.maxRange, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("MinRange", psStats->base.minRange, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("HitChance", psStats->base.hitChance, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("FirePause", psStats->base.firePause, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("ReloadTime", psStats->base.reloadTime, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("Rounds", psStats->base.numRounds, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("Damage", psStats->base.damage, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("RadiusDamage", psStats->base.radiusDamage, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("RepeatDamage", psStats->base.periodicalDamage, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("RepeatRadius", psStats->base.periodicalDamageRadius, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("RepeatTime", psStats->base.periodicalDamageTime, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("Radius", psStats->base.radius, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("ImpactType", psStats->weaponClass == WC_KINETIC ? "KINETIC" : "HEAT", 
+			                 QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("RepeatType", psStats->periodicalDamageWeaponClass == WC_KINETIC ? "KINETIC" : "HEAT", 
+			                 QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("ImpactClass", getWeaponSubClass(psStats->weaponSubClass), 
+			                 QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("RepeatClass", getWeaponSubClass(psStats->periodicalDamageWeaponSubClass), 
+			                 QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			weap.setProperty("FireOnMove", psStats->fireOnMove, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			wbase.setProperty(getStatName(psStats), weap, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		stats.setProperty("Weapon", wbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		QScriptValue weaptypes = engine->newArray(WSC_NUM_WEAPON_SUBCLASSES);
+		for (int j = 0; j < WSC_NUM_WEAPON_SUBCLASSES; j++)
+		{
+			weaptypes.setProperty(j, getWeaponSubClass((WEAPON_SUBCLASS)j), QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		stats.setProperty("WeaponClass", weaptypes, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		// Buildings
 		QScriptValue structbase = engine->newObject();
 		for (int j = 0; j < numStructureStats; j++)
@@ -4154,6 +4238,27 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			conbase.setProperty(getStatName(psStats), con, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
 		node.setProperty("Constructor", conbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		// Weapons
+		QScriptValue wbase = engine->newObject();
+		for (int j = 0; j < numWeaponStats; j++)
+		{
+			WEAPON_STATS *psStats = asWeaponStats + j;
+			QScriptValue weap = engine->newObject();
+			setStatsFunc(weap, engine, "MaxRange", i, COMP_WEAPON, j, psStats->upgrade[i].maxRange);
+			setStatsFunc(weap, engine, "MinRange", i, COMP_WEAPON, j, psStats->upgrade[i].minRange);
+			setStatsFunc(weap, engine, "HitChance", i, COMP_WEAPON, j, psStats->upgrade[i].hitChance);
+			setStatsFunc(weap, engine, "FirePause", i, COMP_WEAPON, j, psStats->upgrade[i].firePause);
+			setStatsFunc(weap, engine, "ReloadTime", i, COMP_WEAPON, j, psStats->upgrade[i].reloadTime);
+			setStatsFunc(weap, engine, "Rounds", i, COMP_WEAPON, j, psStats->upgrade[i].numRounds);
+			setStatsFunc(weap, engine, "Radius", i, COMP_WEAPON, j, psStats->upgrade[i].radius);
+			setStatsFunc(weap, engine, "Damage", i, COMP_WEAPON, j, psStats->upgrade[i].damage);
+			setStatsFunc(weap, engine, "RadiusDamage", i, COMP_WEAPON, j, psStats->upgrade[i].radiusDamage);
+			setStatsFunc(weap, engine, "RepeatDamage", i, COMP_WEAPON, j, psStats->upgrade[i].periodicalDamage);
+			setStatsFunc(weap, engine, "RepeatTime", i, COMP_WEAPON, j, psStats->upgrade[i].periodicalDamageTime);
+			setStatsFunc(weap, engine, "RepeatRadius", i, COMP_WEAPON, j, psStats->upgrade[i].periodicalDamageRadius);
+			wbase.setProperty(getStatName(psStats), weap, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		}
+		node.setProperty("Weapon", wbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		// Buildings
 		QScriptValue structbase = engine->newObject();
 		for (int j = 0; j < numStructureStats; j++)

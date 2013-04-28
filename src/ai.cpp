@@ -92,7 +92,7 @@ static int aiDroidRange(DROID *psDroid, int weapon_slot)
 	else
 	{
 		WEAPON_STATS *psWStats = psDroid->asWeaps[weapon_slot].nStat + asWeaponStats;
-		longRange = proj_GetLongRange(psWStats);
+		longRange = proj_GetLongRange(psWStats, psDroid->player);
 	}
 
 	return longRange;
@@ -109,7 +109,7 @@ static bool aiStructHasRange(STRUCTURE *psStruct, BASE_OBJECT *psTarget, int wea
 
 	WEAPON_STATS *psWStats = psStruct->asWeaps[weapon_slot].nStat + asWeaponStats;
 
-	int longRange = proj_GetLongRange(psWStats);
+	int longRange = proj_GetLongRange(psWStats, psStruct->player);
 	return objPosDiffSq(psStruct, psTarget) < longRange*longRange && lineOfFire(psStruct, psTarget, weapon_slot, true);
 }
 
@@ -163,10 +163,10 @@ bool aiShutdown(void)
 /** Search the global list of sensors for a possible target for psObj. */
 static BASE_OBJECT *aiSearchSensorTargets(BASE_OBJECT *psObj, int weapon_slot, WEAPON_STATS *psWStats, UWORD *targetOrigin)
 {
-	int		longRange = proj_GetLongRange(psWStats);
+	int		longRange = proj_GetLongRange(psWStats, psObj->player);
 	int		tarDist = longRange * longRange;
 	bool		foundCB = false;
-	int		minDist = psWStats->minRange * psWStats->minRange;
+	int		minDist = psWStats->upgrade[psObj->player].minRange * psWStats->upgrade[psObj->player].minRange;
 	BASE_OBJECT	*psSensor, *psTarget = NULL;
 
 	if (targetOrigin)
@@ -330,7 +330,7 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 	bEmpWeap = (attackerWeapon->weaponSubClass == WSC_EMP);
 
 	int dist = iHypot(removeZ(psAttacker->pos - psTarget->pos));
-	bool tooClose = dist <= attackerWeapon->minRange;
+	bool tooClose = dist <= attackerWeapon->upgrade[psAttacker->player].minRange;
 	if (tooClose)
 	{
 		dist = objSensorRange(psAttacker);  // If object is too close to fire at, consider it to be at maximum range.
@@ -839,7 +839,7 @@ bool aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 		ASSERT(((STRUCTURE *)psObj)->asWeaps[weapon_slot].nStat > 0, "no weapons on structure");
 
 		psWStats = ((STRUCTURE *)psObj)->asWeaps[weapon_slot].nStat + asWeaponStats;
-		int longRange = proj_GetLongRange(psWStats);
+		int longRange = proj_GetLongRange(psWStats, psObj->player);
 
 		// see if there is a target from the command droids
 		psTarget = NULL;

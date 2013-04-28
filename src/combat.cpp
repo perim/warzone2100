@@ -72,7 +72,7 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	unsigned fireTime = gameTime - deltaGameTime + 1;  // Can fire earliest at the start of the tick.
 
 	// See if reloadable weapon.
-	if (psStats->reloadTime)
+	if (psStats->upgrade[psAttacker->player].reloadTime)
 	{
 		unsigned reloadTime = psWeap->lastFired + weaponReloadTime(psStats, psAttacker->player);
 		if (psWeap->ammo == 0)  // Out of ammo?
@@ -87,7 +87,7 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 		if (reloadTime <= fireTime)
 		{
 			//reset the ammo level
-			psWeap->ammo = psStats->numRounds;
+			psWeap->ammo = psStats->upgrade[psAttacker->player].numRounds;
 		}
 	}
 
@@ -135,7 +135,7 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 
 	/* Now see if the target is in range  - also check not too near */
 	int dist = iHypot(removeZ(deltaPos));
-	longRange = proj_GetLongRange(psStats);
+	longRange = proj_GetLongRange(psStats, psAttacker->player);
 
 	int min_angle = 0;
 	// Calculate angle for indirect shots
@@ -158,7 +158,7 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	}
 
 	int baseHitChance = 0;
-	if (dist <= longRange && dist >= psStats->minRange)
+	if (dist <= longRange && dist >= psStats->upgrade[psAttacker->player].minRange)
 	{
 		// get weapon chance to hit in the long range
 		baseHitChance = weaponLongHit(psStats,psAttacker->player);
@@ -210,7 +210,7 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	psWeap->lastFired = fireTime;
 
 	/* reduce ammo if salvo */
-	if (psStats->reloadTime)
+	if (psStats->upgrade[psAttacker->player].reloadTime)
 	{
 		psWeap->ammo--;
 	}
@@ -227,7 +227,7 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 		DROID *psDroid = castDroid(psTarget);
 
 		int32_t flightTime;
-		if (proj_Direct(psStats) || dist <= psStats->minRange)
+		if (proj_Direct(psStats) || dist <= psStats->upgrade[psAttacker->player].minRange)
 		{
 			flightTime = dist * GAME_TICKS_PER_SEC / psStats->flightSpeed;
 		}

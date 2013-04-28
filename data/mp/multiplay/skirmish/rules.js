@@ -348,6 +348,18 @@ debug("  upgraded " + i + " to " + Upgrades[player].Building[i][s[1]] + " by " +
 debug("  upgraded " + i + " to " + Upgrades[player][s[0]][i][s[1]] + " by " + Stats[s[0]][i][s[1]] * s[2] / 100);
 			}
 		}
+		else if (Stats.WeaponClass.indexOf(s[0]) >= 0) // if first field is a weapon class
+		{
+debug("  got " + s[0]);
+			for (var i in Upgrades[player].Weapon)
+			{
+				if (Stats.Weapon[i][s[1]] > 0 && Stats.Weapon[i].ImpactClass === s[0])
+				{
+					Upgrades[player].Weapon[i][s[1]] += Stats.Weapon[i][s[1]] * s[2] / 100;
+debug("  upgraded " + i + " to " + Upgrades[player].Weapon[i][s[1]] + " by " + Stats.Weapon[i][s[1]] * s[2] / 100);
+				}
+			}
+		}
 	}
 }
 

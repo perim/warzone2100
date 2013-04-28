@@ -136,20 +136,6 @@ BASE_STATS* get_any_component_from_ID(QString name)
 	return NULL;
 }
 
-//searches for function with given name
-//returns NULL if not found
-FUNCTION* find_function_by_ID(QString FunctionName)
-{
-	for (unsigned int incF = 0; incF < numFunctions; incF++)
-	{
-		if (FunctionName.compare(asFunctions[incF]->pName, Qt::CaseInsensitive) == 0)
-		{
-			return asFunctions[incF];
-		}
-	}
-	return NULL;
-}
-
 /** Load the research stats */
 bool loadResearch(QString filename)
 {
@@ -390,19 +376,6 @@ bool loadResearch(QString filename)
 			}
 		}
 
-		//set result functions
-		QStringList resFunc = ini.value("resultFunctions").toStringList();
-		for (int j = 0; j < resFunc.size(); j++)
-		{
-			QString funcID = resFunc[j].trimmed();
-			FUNCTION *pFunc = find_function_by_ID(funcID);
-			ASSERT(pFunc != NULL, "Invalid item '%s' in list of result functions of research '%s' ", funcID.toUtf8().constData(), getResearchName(&research));
-			if (pFunc != NULL)
-			{
-				research.pFunctionList.push_back(pFunc);
-			}
-		}
-
 		asResearch.push_back(research);
 		ini.endGroup();
 	}
@@ -559,7 +532,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 {
 	RESEARCH *                                      pResearch = &asResearch[researchIndex];
 	UDWORD						type, inc;
-	FUNCTION					*pFunction;
 	UDWORD						compInc;
 	MESSAGE						*pMessage;
 	//the message gets sent to console
@@ -652,24 +624,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 		// set the component state to REDUNDANT
 		apCompLists[player][type][pResearch->pRedArtefacts[inc]->ref - statRefStart(type)] = REDUNDANT;
 	}
-
-	//check for technology effects
-	for (inc = 0; inc < pResearch->pFunctionList.size(); inc++)
-	{
-		pFunction = pResearch->pFunctionList[inc];
-
-		switch (pFunction->type)
-		{
-			case WEAPON_UPGRADE_TYPE:
-				// for the current player, upgrade the weapon stats
-				weaponUpgrade(pFunction, player);
-				// message/sound for weapon upgrade
-				break;
-			default:
-				ASSERT(false, "Invalid function type");
-				break;
-		}//end of switch
-	}//end of function loop
 
 	//Add message to player's list if Major Topic
 	if ((pResearch->techCode == TC_MAJOR) && bDisplay)
@@ -1325,11 +1279,6 @@ bool checkResearchStats(void)
 		for (inc = 0; inc < asResearch[resInc].pStructList.size(); inc++)
 		{
 			ASSERT(asResearch[resInc].pStructList[inc] <= numStructureStats, "Invalid Structure for topic %s", asResearch[resInc].pName);
-		}
-		for (inc = 0; inc < asResearch[resInc].pFunctionList.size(); inc++)
-		{
-			ASSERT(asResearch[resInc].pFunctionList[inc]->ref - REF_FUNCTION_START <= numFunctions,
-			       "Invalid function for %s", asResearch[resInc].pName);
 		}
 		for (inc = 0; inc < asResearch[resInc].pRedStructs.size(); inc++)
 		{

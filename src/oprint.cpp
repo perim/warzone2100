@@ -164,15 +164,14 @@ static void printWeaponInfo(const WEAPON_STATS* psStats)
 	printComponentInfo((COMPONENT_STATS *)psStats);
 	CONPRINTF(ConsoleString,(ConsoleString,"   lRng %d mRng %d %s\n"
 			  "   lHt %d pause %d dam %d\n",
-				proj_GetLongRange(psStats), psStats->minRange,
+				proj_GetLongRange(psStats, selectedPlayer), psStats->upgrade[selectedPlayer].minRange,
 				proj_Direct(psStats) ? "direct" : "indirect",
-				weaponLongHit(psStats,
-				(UBYTE)selectedPlayer), weaponFirePause(psStats,(UBYTE)selectedPlayer),
-				weaponDamage(psStats, (UBYTE)selectedPlayer)));
-	CONPRINTF(ConsoleString,(ConsoleString,"   rad %d radHt %d radDam %d\n"
+				weaponLongHit(psStats, selectedPlayer), weaponFirePause(psStats, selectedPlayer),
+				weaponDamage(psStats, selectedPlayer)));
+	CONPRINTF(ConsoleString,(ConsoleString,"   rad %d radDam %d\n"
 			  "   inTime %d inDam %d inRad %d\n",
-				psStats->radius, psStats->radiusHit, psStats->radiusDamage,
-				psStats->periodicalDamageTime, psStats->periodicalDamage, psStats->periodicalDamageRadius));
+				psStats->upgrade[selectedPlayer].radius, psStats->upgrade[selectedPlayer].radiusDamage,
+				psStats->upgrade[selectedPlayer].periodicalDamageTime, psStats->upgrade[selectedPlayer].periodicalDamage, psStats->upgrade[selectedPlayer].periodicalDamageRadius));
 	CONPRINTF(ConsoleString,(ConsoleString,"   flSpd %d %s\n",
 				psStats->flightSpeed, psStats->fireOnMove ? "fireOnMove" : "not fireOnMove"));
 	CONPRINTF(ConsoleString,(ConsoleString,"   %s %s %s\n", pWC, pWSC, pMM));

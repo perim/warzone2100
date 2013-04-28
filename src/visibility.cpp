@@ -769,7 +769,7 @@ bool lineOfFire(const SIMPLE_OBJECT* psViewer, const BASE_OBJECT* psTarget, int 
 	}
 	// 2d distance
 	int distance = iHypot(removeZ(psTarget->pos - psViewer->pos));
-	int range = proj_GetLongRange(psStats);
+	int range = proj_GetLongRange(psStats, psViewer->player);
 	if (proj_Direct(psStats))
 	{
 		/** direct shots could collide with ground **/

@@ -57,9 +57,6 @@ static TERRAIN_TABLE	*asTerrainTable;
 WEAPON_MODIFIER		asWeaponModifier[WE_NUMEFFECTS][PROPULSION_TYPE_NUM];
 WEAPON_MODIFIER		asWeaponModifierBody[WE_NUMEFFECTS][SIZE_NUM];
 
-//used to hold the current upgrade level per player per weapon subclass
-WEAPON_UPGRADE		asWeaponUpgrade[MAX_PLAYERS][WSC_NUM_WEAPON_SUBCLASSES];
-
 /* The number of different stats stored */
 UDWORD		numBodyStats;
 UDWORD		numBrainStats;
@@ -413,9 +410,6 @@ void statsInitVars(void)
 	numWeaponStats = 0;
 	numConstructStats = 0;
 
-	//initialise the upgrade structures
-	memset(asWeaponUpgrade, 0, sizeof(asWeaponUpgrade));
-
 	// init the max values
 	maxComponentWeight = maxBodyArmour = maxBodyPower =
 	        maxBodyPoints = maxSensorRange = maxECMRange =
@@ -632,26 +626,37 @@ bool loadWeaponStats(const char *pFileName)
 		psStats->buildPoints = ini.value("buildPoints", 0).toUInt();
 		psStats->weight = ini.value("weight", 0).toUInt();
 		psStats->body = ini.value("body", 0).toUInt();
-		psStats->longRange = ini.value("longRange").toUInt();
-		psStats->longHit = ini.value("longHit").toUInt();
-		psStats->firePause = ini.value("firePause").toUInt();
-		psStats->numExplosions = ini.value("numExplosions").toUInt();
-		psStats->numRounds = ini.value("numRounds").toUInt();
-		psStats->reloadTime = ini.value("reloadTime").toUInt();
-		psStats->damage = ini.value("damage").toUInt();
-		psStats->radius = ini.value("radius").toUInt();
-		psStats->radiusHit = ini.value("radiusHit").toUInt();
-		psStats->radiusDamage = ini.value("radiusDamage").toUInt();
-		psStats->periodicalDamageTime = ini.value("periodicalDamageTime", 0).toUInt();
-		psStats->periodicalDamage = ini.value("periodicalDamage", 0).toUInt();
-		psStats->periodicalDamageRadius = ini.value("periodicalDamageRadius", 0).toUInt();
 		psStats->radiusLife = ini.value("radiusLife").toUInt();
+
+		psStats->base.maxRange = ini.value("longRange").toUInt();
+		psStats->base.minRange = ini.value("minRange", 0).toUInt();
+		psStats->base.hitChance = ini.value("longHit").toUInt();
+		psStats->base.firePause = ini.value("firePause").toUInt();
+		psStats->base.numRounds = ini.value("numRounds").toUInt();
+		psStats->base.reloadTime = ini.value("reloadTime").toUInt();
+		psStats->base.damage = ini.value("damage").toUInt();
+		psStats->base.radius = ini.value("radius").toUInt();
+		psStats->base.radiusDamage = ini.value("radiusDamage").toUInt();
+		psStats->base.periodicalDamageTime = ini.value("periodicalDamageTime", 0).toUInt();
+		psStats->base.periodicalDamage = ini.value("periodicalDamage", 0).toUInt();
+		psStats->base.periodicalDamageRadius = ini.value("periodicalDamageRadius", 0).toUInt();
+		// multiply time stats
+		psStats->base.firePause *= WEAPON_TIME;
+		psStats->base.periodicalDamageTime *= WEAPON_TIME;
+		psStats->radiusLife *= WEAPON_TIME;
+		psStats->base.reloadTime *= WEAPON_TIME;
+		// copy for upgrades
+		for (int j = 0; j < MAX_PLAYERS; j++)
+		{
+			psStats->upgrade[j] = psStats->base;
+		}
+
+		psStats->numExplosions = ini.value("numExplosions").toUInt();
 		psStats->flightSpeed = ini.value("flightSpeed", 1).toUInt();
 		psStats->rotate = ini.value("rotate").toUInt();
 		psStats->minElevation = ini.value("minElevation").toInt();
 		psStats->maxElevation = ini.value("maxElevation").toInt();
 		psStats->recoilValue = ini.value("recoilValue").toUInt();
-		psStats->minRange = ini.value("minRange", 0).toUInt();
 		psStats->effectSize = ini.value("effectSize").toUInt();
 		surfaceToAir = ini.value("surfaceToAir", 0).toUInt();
 		psStats->vtolAttackRuns = ini.value("numAttackRuns", 0).toUInt();
@@ -666,12 +671,6 @@ bool loadWeaponStats(const char *pFileName)
 
 		allocateStatName((BASE_STATS *)psStats, list[i].toUtf8().constData());
 		psStats->ref = REF_WEAPON_START + i;
-
-		//multiply time stats
-		psStats->firePause *= WEAPON_TIME;
-		psStats->periodicalDamageTime *= WEAPON_TIME;
-		psStats->radiusLife *= WEAPON_TIME;
-		psStats->reloadTime *= WEAPON_TIME;
 
 		//get the IMD for the component
 		psStats->pIMD = statsGetIMD(ini, psStats, "model");
@@ -805,9 +804,9 @@ bool loadWeaponStats(const char *pFileName)
 		// Set the max stat values for the design screen
 		if (psStats->designable)
 		{
-			setMaxWeaponRange(psStats->longRange);
-			setMaxWeaponDamage(psStats->damage);
-			setMaxWeaponROF(weaponROF(psStats, -1));
+			setMaxWeaponRange(psStats->base.maxRange);
+			setMaxWeaponDamage(psStats->base.damage);
+			setMaxWeaponROF(weaponROF(psStats, 0));
 			setMaxComponentWeight(psStats->weight);
 		}
 
@@ -2138,6 +2137,34 @@ bool getWeaponSubClass(const char *subClass, WEAPON_SUBCLASS *wclass)
 	return true;
 }
 
+/*returns the weapon sub class based on the string name passed in */
+const char *getWeaponSubClass(WEAPON_SUBCLASS wclass)
+{
+	switch (wclass)
+	{
+	case WSC_CANNON: return "CANNON";
+	case WSC_MORTARS: return "MORTARS";
+	case WSC_MISSILE: return "MISSILE";
+	case WSC_ROCKET: return "ROCKET";
+	case WSC_ENERGY: return "ENERGY";
+	case WSC_GAUSS: return "GAUSS";
+	case WSC_FLAME: return "FLAME";
+	case WSC_HOWITZERS: return "HOWITZERS";
+	case WSC_MGUN: return "MACHINE GUN";
+	case WSC_ELECTRONIC: return "ELECTRONIC";
+	case WSC_AAGUN: return "A-A GUN";
+	case WSC_SLOWMISSILE: return "SLOW MISSILE";
+	case WSC_SLOWROCKET: return "SLOW ROCKET";
+	case WSC_LAS_SAT: return "LAS_SAT";
+	case WSC_BOMB: return "BOMB";
+	case WSC_COMMAND: return "COMMAND";
+	case WSC_EMP: return "EMP";
+	case WSC_NUM_WEAPON_SUBCLASSES: break;
+	}
+	ASSERT(false, "No such weapon subclass");
+	return "Bad weapon subclass";
+}
+
 /*returns the movement model based on the string name passed in */
 bool getMovementModel(const char *movementModel, MOVEMENT_MODEL *model)
 {
@@ -2220,22 +2247,13 @@ bool getWeaponClass(QString weaponClassStr, WEAPON_CLASS *weaponClass)
 	{
 		*weaponClass = WC_KINETIC;
 	}
-	else if (weaponClassStr.compare("EXPLOSIVE") == 0)
-	{
-		//psStats->weaponClass = WC_EXPLOSIVE;
-		*weaponClass = WC_KINETIC; 	// explosives were removed from release version of Warzone
-	}
 	else if (weaponClassStr.compare("HEAT") == 0)
 	{
 		*weaponClass = WC_HEAT;
 	}
-	else if (weaponClassStr.compare("MISC") == 0)
-	{
-		//psStats->weaponClass = WC_MISC;
-		*weaponClass = WC_HEAT;		// removed from release version of Warzone
-	}
 	else
 	{
+		ASSERT(false, "Bad weapon class %s", weaponClassStr.toUtf8().constData());
 		return false;
 	};
 	return true;
@@ -2261,77 +2279,63 @@ char *allocateName(const char *name)
 
 
 /*Access functions for the upgradeable stats of a weapon*/
-UDWORD	weaponFirePause(const WEAPON_STATS *psStats, UBYTE player)
+int weaponFirePause(const WEAPON_STATS *psStats, int player)
 {
-	if (psStats->reloadTime == 0)
-	{
-		return (psStats->firePause - (psStats->firePause * asWeaponUpgrade[player][
-		        psStats->weaponSubClass].firePause) / 100);
-	}
-	else
-	{
-		return psStats->firePause;	//fire pause is neglectable for weapons with reload time
-	}
+	return psStats->upgrade[player].firePause;
 }
 
 /* Reload time is reduced for weapons with salvo fire */
-UDWORD	weaponReloadTime(WEAPON_STATS *psStats, UBYTE player)
+int weaponReloadTime(const WEAPON_STATS *psStats, int player)
 {
-	return (psStats->reloadTime - (psStats->reloadTime * asWeaponUpgrade[player][psStats->weaponSubClass].firePause) / 100);
+	return psStats->upgrade[player].reloadTime;
 }
 
-UDWORD	weaponLongHit(const WEAPON_STATS *psStats, UBYTE player)
+int weaponLongHit(const WEAPON_STATS *psStats, int player)
 {
-	return (psStats->longHit + (psStats->longHit * asWeaponUpgrade[player][psStats->weaponSubClass].longHit) / 100);
+	return psStats->upgrade[player].hitChance;
 }
 
-UDWORD	weaponDamage(const WEAPON_STATS *psStats, UBYTE player)
+int weaponDamage(const WEAPON_STATS *psStats, int player)
 {
-	return (psStats->damage + (psStats->damage * asWeaponUpgrade[player][psStats->weaponSubClass].damage) / 100);
+	return psStats->upgrade[player].damage;
 }
 
-UDWORD	weaponRadDamage(WEAPON_STATS *psStats, UBYTE player)
+int weaponRadDamage(const WEAPON_STATS *psStats, int player)
 {
-	return (psStats->radiusDamage + (psStats->radiusDamage * asWeaponUpgrade[player][psStats->weaponSubClass].radiusDamage) / 100);
+	return psStats->upgrade[player].radiusDamage;
 }
 
-UDWORD	weaponPeriodicalDamage(WEAPON_STATS *psStats, UBYTE player)
+int weaponPeriodicalDamage(const WEAPON_STATS *psStats, int player)
 {
-	return (psStats->periodicalDamage + (psStats->periodicalDamage
-	        * asWeaponUpgrade[player][psStats->periodicalDamageWeaponSubClass].periodicalDamage) / 100);
+	return psStats->upgrade[player].periodicalDamage;
 }
 
-UDWORD	weaponRadiusHit(WEAPON_STATS *psStats, UBYTE player)
-{
-	return (psStats->radiusHit + (psStats->radiusHit * asWeaponUpgrade[player][psStats->weaponSubClass].radiusHit) / 100);
-}
-
-UDWORD	sensorRange(SENSOR_STATS *psStats, UBYTE player)
+int sensorRange(const SENSOR_STATS *psStats, int player)
 {
 	return psStats->upgrade[player].range;
 }
 
-UDWORD	ecmRange(ECM_STATS *psStats, UBYTE player)
+int ecmRange(const ECM_STATS *psStats, int player)
 {
 	return psStats->upgrade[player].range;
 }
 
-UDWORD	repairPoints(REPAIR_STATS *psStats, UBYTE player)
+int repairPoints(const REPAIR_STATS *psStats, int player)
 {
 	return psStats->upgrade[player].repairPoints;
 }
 
-UDWORD	constructorPoints(CONSTRUCT_STATS *psStats, UBYTE player)
+int constructorPoints(const CONSTRUCT_STATS *psStats, int player)
 {
 	return psStats->upgrade[player].constructPoints;
 }
 
-UDWORD	bodyPower(BODY_STATS *psStats, UBYTE player)
+int bodyPower(const BODY_STATS *psStats, int player)
 {
 	return psStats->powerOutput + psStats->powerOutput * psStats->upgrade[player].power / 100;
 }
 
-UDWORD bodyArmour(BODY_STATS *psStats, UBYTE player, WEAPON_CLASS weaponClass)
+int bodyArmour(const BODY_STATS *psStats, int player, WEAPON_CLASS weaponClass)
 {
 	switch (weaponClass)
 	{
@@ -2347,23 +2351,22 @@ UDWORD bodyArmour(BODY_STATS *psStats, UBYTE player, WEAPON_CLASS weaponClass)
 }
 
 //calculates the weapons ROF based on the fire pause and the salvos
-UWORD weaponROF(WEAPON_STATS *psStat, SBYTE player)
+int weaponROF(const WEAPON_STATS *psStat, int player)
 {
-	UWORD rof = 0;
+	int rof = 0;
 
-	//if there are salvos
-	if (psStat->numRounds)
+	if (psStat->upgrade[player].numRounds)	// if there are salvos
 	{
-		if (psStat->reloadTime != 0)
+		if (psStat->upgrade[player].reloadTime != 0)
 		{
 			// Rounds per salvo multiplied with the number of salvos per minute
-			rof = (UWORD)(psStat->numRounds * 60 * GAME_TICKS_PER_SEC  /
-			        (player >= 0 ? weaponReloadTime(psStat, player) : psStat->reloadTime));
+			rof = psStat->upgrade[player].numRounds * 60 * GAME_TICKS_PER_SEC  /
+			        (player >= 0 ? weaponReloadTime(psStat, player) : psStat->upgrade[player].reloadTime);
 		}
 	}
 	if (rof == 0)
 	{
-		rof = (UWORD)weaponFirePause(psStat, (UBYTE)selectedPlayer);
+		rof = weaponFirePause(psStat, selectedPlayer);
 		if (rof != 0)
 		{
 			rof = (UWORD)(60 * GAME_TICKS_PER_SEC / rof);
@@ -2606,7 +2609,7 @@ void updateMaxConstStats(UWORD maxValue)
 void adjustMaxDesignStats(void)
 {
 	UWORD       weaponDamage, sensorRange, repairPoints,
-	            ecmRange, constPoints, bodyPoints, bodyPower, bodyArmour, inc;
+	            ecmRange, constPoints, bodyPoints, bodyPower, bodyArmour;
 
 	// init all the values
 	weaponDamage = sensorRange = repairPoints = ecmRange = constPoints = bodyPoints = bodyPower = bodyArmour = 0;
@@ -2623,22 +2626,6 @@ void adjustMaxDesignStats(void)
 
 	// TBD FIXME for all others
 
-	for (inc = 0; inc < numFunctions; inc++)
-	{
-		switch (asFunctions[inc]->type)
-		{
-		case WEAPON_UPGRADE_TYPE:
-			if (weaponDamage < ((WEAPON_UPGRADE_FUNCTION *)asFunctions[inc])->damage)
-			{
-				weaponDamage = ((WEAPON_UPGRADE_FUNCTION *)asFunctions[inc])->damage;
-			}
-			break;
-		default:
-			//not interested in other function types
-			break;
-		}
-	}
-
 	//determine the effect on the max values for the stats
 	updateMaxWeaponStats(weaponDamage);
 	updateMaxSensorStats(sensorRange);
@@ -2651,7 +2638,6 @@ void adjustMaxDesignStats(void)
 /* Check if an object has a weapon */
 bool objHasWeapon(const BASE_OBJECT *psObj)
 {
-
 	//check if valid type
 	if (psObj->type == OBJ_DROID)
 	{

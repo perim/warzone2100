@@ -27,7 +27,6 @@
 #include <QStringList>
 #include "lib/framework/frame.h"
 #include "statsdef.h"
-#include "functiondef.h"
 
 /* Research struct type definitions */
 enum TECH_CODE
@@ -54,7 +53,6 @@ struct RESEARCH : public BASE_STATS
 										   this topic must be explicitly enabled*/
 	std::vector<UWORD>	pPRList;		///< List of research pre-requisites
 	std::vector<UWORD>	pStructList;		///< List of structures that when built would enable this research
-	std::vector<FUNCTION *> pFunctionList;          ///< List of functions that can be performed on completion of research
 	std::vector<UWORD>	pRedStructs;		///< List of Structures that become redundant
 	std::vector<COMPONENT_STATS *> pRedArtefacts;	///< List of Artefacts that become redundant
 	std::vector<UWORD>	pStructureResults;	///< List of Structures that are possible after this research

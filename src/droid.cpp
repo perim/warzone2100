@@ -58,7 +58,6 @@
 #include "display.h"
 #include "console.h"
 #include "component.h"
-#include "function.h"
 #include "lighting.h"
 #include "multiplay.h"
 #include "warcam.h"
@@ -156,8 +155,10 @@ int droidReloadBar(BASE_OBJECT *psObj, WEAPON *psWeap, int weapon_slot)
 	psStats = asWeaponStats + psWeap->nStat;
 
 	/* Justifiable only when greater than a one second reload or intra salvo time  */
-	bSalvo = (psStats->numRounds > 1);
-	if ((bSalvo && psStats->reloadTime > GAME_TICKS_PER_SEC) || psStats->firePause > GAME_TICKS_PER_SEC || (psObj->type == OBJ_DROID && isVtolDroid((DROID *)psObj)))
+	bSalvo = (psStats->upgrade[psObj->player].numRounds > 1);
+	if ((bSalvo && psStats->upgrade[psObj->player].reloadTime > GAME_TICKS_PER_SEC)
+	    || psStats->upgrade[psObj->player].firePause > GAME_TICKS_PER_SEC
+	    || (psObj->type == OBJ_DROID && isVtolDroid((DROID *)psObj)))
 	{
 		if (psObj->type == OBJ_DROID && isVtolDroid((DROID *)psObj))
 		{
@@ -1985,7 +1986,7 @@ void droidSetBits(DROID_TEMPLATE *pTemplate,DROID *psDroid)
 		if (inc < pTemplate->numWeaps)
 		{
 			psDroid->asWeaps[inc].nStat = pTemplate->asWeaps[inc];
-			psDroid->asWeaps[inc].ammo = (asWeaponStats + psDroid->asWeaps[inc].nStat)->numRounds;
+			psDroid->asWeaps[inc].ammo = (asWeaponStats + psDroid->asWeaps[inc].nStat)->upgrade[psDroid->player].numRounds;
 		}
 		psDroid->asWeaps[inc].usedAmmo = 0;
 	}
@@ -3086,26 +3087,16 @@ bool allVtolsRearmed(DROID *psDroid)
 
 
 /*returns a count of the base number of attack runs for the weapon attached to the droid*/
-//adds int weapon_slot
 UWORD   getNumAttackRuns(DROID *psDroid, int weapon_slot)
 {
-	UWORD   numAttackRuns;
-
 	ASSERT_OR_RETURN(0, isVtolDroid(psDroid), "not a VTOL Droid");
-
-	/*if weapon attached to the droid is a salvo weapon, then number of shots that
-	can be fired = vtolAttackRuns*numRounds */
-	if (asWeaponStats[psDroid->asWeaps[weapon_slot].nStat].reloadTime)
+	// if weapon is a salvo weapon, then number of shots that can be fired = vtolAttackRuns * numRounds
+	if (asWeaponStats[psDroid->asWeaps[weapon_slot].nStat].upgrade[psDroid->player].reloadTime)
 	{
-		numAttackRuns = (UWORD)(asWeaponStats[psDroid->asWeaps[weapon_slot].nStat].numRounds *
-			asWeaponStats[psDroid->asWeaps[weapon_slot].nStat].vtolAttackRuns);
+		return asWeaponStats[psDroid->asWeaps[weapon_slot].nStat].upgrade[psDroid->player].numRounds
+		       * asWeaponStats[psDroid->asWeaps[weapon_slot].nStat].vtolAttackRuns;
 	}
-	else
-	{
-		numAttackRuns = asWeaponStats[psDroid->asWeaps[weapon_slot].nStat].vtolAttackRuns;
-	}
-
-	return numAttackRuns;
+	return asWeaponStats[psDroid->asWeaps[weapon_slot].nStat].vtolAttackRuns;
 }
 
 /*Checks a vtol for being fully armed and fully repaired to see if ready to
