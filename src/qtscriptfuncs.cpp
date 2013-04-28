@@ -3951,9 +3951,9 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 			else if (name == "Damage") psStats->upgrade[player].damage = value;
 			else if (name == "Radius") psStats->upgrade[player].radius = value;
 			else if (name == "RadiusDamage") psStats->upgrade[player].radiusDamage = value;
-			else if (name == "") psStats->upgrade[player].periodicalDamage = value;
-			else if (name == "") psStats->upgrade[player].periodicalDamageTime = value;
-			else if (name == "") psStats->upgrade[player].periodicalDamageRadius = value;
+			else if (name == "RepeatDamage") psStats->upgrade[player].periodicalDamage = value;
+			else if (name == "RepeatTime") psStats->upgrade[player].periodicalDamageTime = value;
+			else if (name == "RepeatRadius") psStats->upgrade[player].periodicalDamageRadius = value;
 			else SCRIPT_ASSERT(context, false, "Invalid weapon method");
 		}
 		else if (type == SCRCB_RES || type == SCRCB_REP || type == SCRCB_POW || type == SCRCB_CON || type == SCRCB_REA
