@@ -679,9 +679,8 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 		psCBLastResStructure = NULL;
 		CBResFacilityOwner = -1;
 		psCBLastResearch = NULL;
-
-		triggerEventResearched(pResearch, psResearchFacility, player);
 	}
+	triggerEventResearched(pResearch, psResearchFacility, player, bTrigger);
 }
 
 /*This function is called when the research files are reloaded*/

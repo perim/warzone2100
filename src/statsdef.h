@@ -531,11 +531,9 @@ struct BODY_STATS : public COMPONENT_STATS
 {
 	BODY_SIZE	size;			///< How big the body is - affects how hit
 	UDWORD		weaponSlots;	///< The number of weapon slots on the body
-	UDWORD		armourValue[WC_NUM_WEAPON_CLASSES];	///< A measure of how much protection the armour provides. Cross referenced with the weapon types.
 	DROID_TYPE	droidTypeOverride; // if not DROID_ANY, sets droid type
 
 	// A measure of how much energy the power plant outputs
-	UDWORD		powerOutput;	///< this is the engine output of the body
 	iIMDShape	**ppIMDList;	///< list of IMDs to use for propulsion unit - up to numPropulsionStats
 	iIMDShape	*pFlameIMD;		///< pointer to which flame graphic to use - for VTOLs only at the moment
 	char		bodyClass[40]; // TBD make into QString once this struct is class-safe
@@ -546,7 +544,7 @@ struct BODY_STATS : public COMPONENT_STATS
 		int body;
 		int armour;
 		int thermal;
-	} upgrade[MAX_PLAYERS];
+	} upgrade[MAX_PLAYERS], base;
 };
 
 /************************************************************************************

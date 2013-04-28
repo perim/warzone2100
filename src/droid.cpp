@@ -1678,8 +1678,8 @@ UDWORD calcDroidBaseSpeed(DROID_TEMPLATE *psTemplate, UDWORD weight, UBYTE playe
 		}
 	}
 
-	// Wateremelon:applies the engine output bonus if output > weight
-	if ( (asBodyStats + psTemplate->asParts[COMP_BODY])->powerOutput > weight )
+	// applies the engine output bonus if output > weight
+	if ((asBodyStats + psTemplate->asParts[COMP_BODY])->base.power > weight)
 	{
 		speed = speed * 3 / 2;
 	}

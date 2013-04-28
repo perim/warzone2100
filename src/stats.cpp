@@ -839,17 +839,15 @@ bool loadBodyStats(const char *pFileName)
 		psStats->buildPoints = ini.value("buildPoints", 0).toInt();
 		psStats->body = ini.value("hitpoints").toInt();
 		psStats->weaponSlots = ini.value("weaponSlots").toInt();
-		psStats->powerOutput = ini.value("powerOutput").toInt();
-		psStats->armourValue[WC_KINETIC] = ini.value("armourKinetic").toInt();
-		psStats->armourValue[WC_HEAT] = ini.value("armourHeat").toInt();
 		psStats->designable = ini.value("designable", false).toBool();
 		sstrcpy(psStats->bodyClass, ini.value("class").toString().toUtf8().constData());
+		psStats->base.thermal = ini.value("armourHeat").toInt();
+		psStats->base.armour = ini.value("armourKinetic").toInt();
+		psStats->base.power = ini.value("powerOutput").toInt();
+		psStats->base.body = psStats->body; // special exception hack
 		for (int j = 0; j < MAX_PLAYERS; j++)
 		{
-			psStats->upgrade[j].body = 0;
-			psStats->upgrade[j].thermal = 0;
-			psStats->upgrade[j].armour = 0;
-			psStats->upgrade[j].power = 0;
+			psStats->upgrade[j] = psStats->base;
 		}
 		QString dtype = ini.value("droidType", "DROID").toString();
 		psStats->droidTypeOverride = DROID_DEFAULT;
@@ -894,9 +892,9 @@ bool loadBodyStats(const char *pFileName)
 		//set the max stat values for the design screen
 		if (psStats->designable)
 		{
-			setMaxBodyArmour(psStats->armourValue[WC_KINETIC]);
-			setMaxBodyArmour(psStats->armourValue[WC_HEAT]);
-			setMaxBodyPower(psStats->powerOutput);
+			setMaxBodyArmour(psStats->base.armour);
+			setMaxBodyArmour(psStats->base.thermal);
+			setMaxBodyPower(psStats->base.power);
 			setMaxBodyPoints(psStats->body);
 			setMaxComponentWeight(psStats->weight);
 		}
@@ -2332,7 +2330,7 @@ int constructorPoints(const CONSTRUCT_STATS *psStats, int player)
 
 int bodyPower(const BODY_STATS *psStats, int player)
 {
-	return psStats->powerOutput + psStats->powerOutput * psStats->upgrade[player].power / 100;
+	return psStats->upgrade[player].power;
 }
 
 int bodyArmour(const BODY_STATS *psStats, int player, WEAPON_CLASS weaponClass)
@@ -2340,9 +2338,9 @@ int bodyArmour(const BODY_STATS *psStats, int player, WEAPON_CLASS weaponClass)
 	switch (weaponClass)
 	{
 	case WC_KINETIC:
-		return psStats->armourValue[WC_KINETIC] + (psStats->armourValue[WC_KINETIC] * psStats->upgrade[player].armour / 100);
+		return psStats->upgrade[player].armour;
 	case WC_HEAT:
-		return psStats->armourValue[WC_KINETIC] + (psStats->armourValue[WC_KINETIC] * psStats->upgrade[player].thermal / 100);
+		return psStats->upgrade[player].thermal;
 	case WC_NUM_WEAPON_CLASSES:
 		break;
 	}

@@ -302,7 +302,7 @@ function eventDestroyed(victim)
 
 function eventResearched(research, structure, player)
 {
-	debug("RESEARCH : " + research.fullname + "(" + research.name + ") for " + player + " results=" + research.results);
+	//debug("RESEARCH : " + research.fullname + "(" + research.name + ") for " + player + " results=" + research.results);
 	for (var v = 0; v < research.results.length; v++)
 	{
 		var s = research.results[v].split(":");
@@ -312,8 +312,9 @@ function eventResearched(research, structure, player)
 			{
 				if (Stats.Body[i].BodyClass === s[0]) // if match against hint in ini file, change it
 				{
-					Upgrades[player].Body[i][s[1]] += parseInt(s[2]); // eg Upgrades[0].Body['Tiger']['Armour']
-debug("  upgraded " + i + " to " + Upgrades[player].Body[i][s[1]] + " by " + s[2]);
+					// eg Upgrades[0].Body['Tiger']['Armour']
+					Upgrades[player].Body[i][s[1]] += Math.ceil(Stats.Body[i][s[1]] * s[2] / 100);
+					//debug("  upgraded " + i + " to " + Upgrades[player].Body[i][s[1]] + " by " + Math.ceil(Stats.Body[i][s[1]] * s[2] / 100));
 				}
 			}
 		}
@@ -323,8 +324,8 @@ debug("  upgraded " + i + " to " + Upgrades[player].Body[i][s[1]] + " by " + s[2
 			{
 				if (Stats.Building[i][s[0]] > 0) // only applies if building has this stat already
 				{
-					Upgrades[player].Building[i][s[0]] += Stats.Building[i][s[0]] * s[1] / 100;
-debug("  upgraded " + i + " to " + Upgrades[player].Building[i][s[0]] + " by " + Stats.Building[i][s[0]] * s[1] / 100);
+					Upgrades[player].Building[i][s[0]] += Math.ceil(Stats.Building[i][s[0]] * s[1] / 100);
+					//debug("  upgraded " + i + " to " + Upgrades[player].Building[i][s[0]] + " by " + Math.ceil(Stats.Building[i][s[0]] * s[1] / 100));
 				}
 			}
 		}
@@ -334,8 +335,8 @@ debug("  upgraded " + i + " to " + Upgrades[player].Building[i][s[0]] + " by " +
 			{
 				if (Stats.Building[i].Type === s[0]) // applies to specific building type
 				{
-					Upgrades[player].Building[i][s[1]] += Stats.Building[i][s[1]] * s[2] / 100;
-debug("  upgraded " + i + " to " + Upgrades[player].Building[i][s[1]] + " by " + Stats.Building[i][s[1]] * s[2] / 100);
+					Upgrades[player].Building[i][s[1]] += Math.ceil(Stats.Building[i][s[1]] * s[2] / 100);
+					//debug("  upgraded " + i + " to " + Upgrades[player].Building[i][s[1]] + " by " + Math.ceil(Stats.Building[i][s[1]] * s[2] / 100));
 				}
 			}
 		}
@@ -344,21 +345,24 @@ debug("  upgraded " + i + " to " + Upgrades[player].Building[i][s[1]] + " by " +
 			for (var i in Upgrades[player][s[0]])
 			{
 				// Upgrades.player.type.buildingName.parameter ... hard to read but short and flexible
-				Upgrades[player][s[0]][i][s[1]] += Stats[s[0]][i][s[1]] * s[2] / 100;
-debug("  upgraded " + i + " to " + Upgrades[player][s[0]][i][s[1]] + " by " + Stats[s[0]][i][s[1]] * s[2] / 100);
+				Upgrades[player][s[0]][i][s[1]] += Math.ceil(Stats[s[0]][i][s[1]] * s[2] / 100);
+				//debug("  upgraded " + i + " to " + Upgrades[player][s[0]][i][s[1]] + " by " + Math.ceil(Stats[s[0]][i][s[1]] * s[2] / 100));
 			}
 		}
 		else if (Stats.WeaponClass.indexOf(s[0]) >= 0) // if first field is a weapon class
 		{
-debug("  got " + s[0]);
 			for (var i in Upgrades[player].Weapon)
 			{
 				if (Stats.Weapon[i][s[1]] > 0 && Stats.Weapon[i].ImpactClass === s[0])
 				{
-					Upgrades[player].Weapon[i][s[1]] += Stats.Weapon[i][s[1]] * s[2] / 100;
-debug("  upgraded " + i + " to " + Upgrades[player].Weapon[i][s[1]] + " by " + Stats.Weapon[i][s[1]] * s[2] / 100);
+					Upgrades[player].Weapon[i][s[1]] += Math.ceil(Stats.Weapon[i][s[1]] * s[2] / 100);
+					//debug("  upgraded " + i + " to " + Upgrades[player].Weapon[i][s[1]] + " by " + Math.ceil(Stats.Weapon[i][s[1]] * s[2] / 100));
 				}
 			}
+		}
+		else
+		{
+			debug("(error) Unrecognized research hint=" + s[0]);
 		}
 	}
 }

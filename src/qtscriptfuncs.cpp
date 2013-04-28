@@ -3939,6 +3939,12 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 			SCRIPT_ASSERT(context, name == "Range", "Invalid ECM parameter");
 			psStats->upgrade[player].range = value;
 		}
+		else if (type == COMP_CONSTRUCT)
+		{
+			CONSTRUCT_STATS *psStats = asConstructStats + index;
+			SCRIPT_ASSERT(context, name == "ConstructorPoints", "Invalid constructor parameter");
+			psStats->upgrade[player].constructPoints = value;
+		}
 		else if (type == COMP_WEAPON)
 		{
 			WEAPON_STATS *psStats = asWeaponStats + index;
@@ -4035,9 +4041,9 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			body.setProperty("BuildPower", psStats->buildPower, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			body.setProperty("BuildTime", psStats->buildPoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			body.setProperty("HitPoints", psStats->body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
-			body.setProperty("Power", psStats->powerOutput, QScriptValue::ReadOnly | QScriptValue::Undeletable);
-			body.setProperty("Armour", psStats->armourValue[WC_KINETIC], QScriptValue::ReadOnly | QScriptValue::Undeletable);
-			body.setProperty("Thermal", psStats->armourValue[WC_HEAT], QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("Power", psStats->base.power, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("Armour", psStats->base.armour, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("Thermal", psStats->base.thermal, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			body.setProperty("Size", psStats->size, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			body.setProperty("WeaponSlots", psStats->weaponSlots, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			body.setProperty("BodyClass", psStats->bodyClass, QScriptValue::ReadOnly | QScriptValue::Undeletable);
@@ -4100,10 +4106,10 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			con.setProperty("BuildPower", psStats->buildPower, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			con.setProperty("BuildTime", psStats->buildPoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			con.setProperty("HitPoints", psStats->body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
-			con.setProperty("ConstructPoints", psStats->base.constructPoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			con.setProperty("ConstructorPoints", psStats->base.constructPoints, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			conbase.setProperty(getStatName(psStats), con, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
-		stats.setProperty("Constructor", conbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		stats.setProperty("Construct", conbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		// Weapon
 		QScriptValue wbase = engine->newObject();
 		for (int j = 0; j < numWeaponStats; j++)
@@ -4234,10 +4240,10 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 		{
 			CONSTRUCT_STATS *psStats = asConstructStats + j;
 			QScriptValue con = engine->newObject();
-			setStatsFunc(con, engine, "ConstructPoints", i, COMP_CONSTRUCT, j, psStats->upgrade[i].constructPoints);
+			setStatsFunc(con, engine, "ConstructorPoints", i, COMP_CONSTRUCT, j, psStats->upgrade[i].constructPoints);
 			conbase.setProperty(getStatName(psStats), con, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
-		node.setProperty("Constructor", conbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		node.setProperty("Construct", conbase, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		// Weapons
 		QScriptValue wbase = engine->newObject();
 		for (int j = 0; j < numWeaponStats; j++)

@@ -2381,7 +2381,6 @@ static void intSetBodyStats(BODY_STATS *psStats)
 	//do heat armour
 	widgSetBarSize(psWScreen, IDDES_BODYARMOUR_H, bodyArmour(psStats, selectedPlayer, WC_HEAT));
 	/* power */
-	//widgSetBarSize(psWScreen, IDDES_BODYPOWER, psStats->powerOutput);
 	widgSetBarSize(psWScreen, IDDES_BODYPOWER, bodyPower(psStats, selectedPlayer));
 	/* weight */
 	widgSetBarSize(psWScreen, IDDES_BODYWEIGHT, psStats->weight);
