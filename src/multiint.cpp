@@ -3764,7 +3764,7 @@ bool startMultiOptions(bool bReenter)
 		game.alliance = ALLIANCES_TEAMS;
 		netPlayersUpdated = true;
 		mapDownloadProgress = 100;
-		game.power = ini.value("PowerLevel", game.power).toInt();
+		game.power = ini.value("powerLevel", game.power).toInt();
 		game.base = ini.value("Bases", game.base + 1).toInt() - 1;		// count from 1 like the humans do
 		sstrcpy(game.name, ini.value("name").toString().toUtf8().constData());
 		locked.position = ini.value("AllowPositionChange", locked.position).toBool();
