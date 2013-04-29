@@ -3982,14 +3982,14 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 				// dozens of buildings one at a time!
 				for (STRUCTURE *psCurr = apsStructLists[player]; psCurr; psCurr = psCurr->psNext)
 				{
-					if (psStats->upgrade[player].hitpoints < value)
+					if (psStats == psCurr->pStructureType && psStats->upgrade[player].hitpoints < value)
 					{
 						psCurr->body = (psCurr->body * value) / psStats->upgrade[player].hitpoints;
 					}
 				}
 				for (STRUCTURE *psCurr = mission.apsStructLists[player]; psCurr; psCurr = psCurr->psNext)
 				{
-					if (psStats->upgrade[player].hitpoints < value)
+					if (psStats == psCurr->pStructureType && psStats->upgrade[player].hitpoints < value)
 					{
 						psCurr->body = (psCurr->body * value) / psStats->upgrade[player].hitpoints;
 					}
