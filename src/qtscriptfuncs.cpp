@@ -3881,14 +3881,13 @@ static void droidBodyUpgrade(DROID *psDroid)
 QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 {
 	QScriptValue callee = context->callee();
+	int type = callee.property("type").toInt32();
+	int player = callee.property("player").toInt32();
+	int index = callee.property("index").toInt32();
+	QString name = callee.property("name").toString();
 	if (context->argumentCount() == 1) // setter
 	{
 		int value = context->argument(0).toInt32();
-		callee.setProperty("value", value);
-		int type = callee.property("type").toInt32();
-		int player = callee.property("player").toInt32();
-		int index = callee.property("index").toInt32();
-		QString name = callee.property("name").toString();
 		if (type == COMP_BODY)
 		{
 			BODY_STATS *psStats = asBodyStats + index;
@@ -4003,8 +4002,70 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 			SCRIPT_ASSERT(context, false, "Component type not found for upgrade");
 		}
 	}
-	// FIXME -- not valid outside rules.js!!
-	return callee.property("value");
+	// Now read value and return it
+	if (type == COMP_BODY)
+	{
+		BODY_STATS *psStats = asBodyStats + index;
+		if (name == "HitPoints") return psStats->upgrade[player].body;
+		else if (name == "Armour") return psStats->upgrade[player].armour;
+		else if (name == "Thermal") return psStats->upgrade[player].thermal;
+		else if (name == "Power") return psStats->upgrade[player].power;
+		else SCRIPT_ASSERT(context, false, "Upgrade component %s not found", name.toUtf8().constData());
+	}
+	else if (type == COMP_SENSOR)
+	{
+		SENSOR_STATS *psStats = asSensorStats + index;
+		SCRIPT_ASSERT(context, name == "Range", "Invalid sensor parameter");
+		return psStats->upgrade[player].range;
+	}
+	else if (type == COMP_ECM)
+	{
+		ECM_STATS *psStats = asECMStats + index;
+		SCRIPT_ASSERT(context, name == "Range", "Invalid ECM parameter");
+		return psStats->upgrade[player].range;
+	}
+	else if (type == COMP_CONSTRUCT)
+	{
+		CONSTRUCT_STATS *psStats = asConstructStats + index;
+		SCRIPT_ASSERT(context, name == "ConstructorPoints", "Invalid constructor parameter");
+		return psStats->upgrade[player].constructPoints;
+		}
+	else if (type == COMP_WEAPON)
+	{
+		WEAPON_STATS *psStats = asWeaponStats + index;
+		if (name == "MaxRange") return psStats->upgrade[player].maxRange;
+		else if (name == "MinRange") return psStats->upgrade[player].minRange;
+		else if (name == "HitChance") return psStats->upgrade[player].hitChance;
+		else if (name == "FirePause") return psStats->upgrade[player].firePause;
+		else if (name == "Rounds") return psStats->upgrade[player].numRounds;
+		else if (name == "ReloadTime") return psStats->upgrade[player].reloadTime;
+		else if (name == "Damage") return psStats->upgrade[player].damage;
+		else if (name == "Radius") return psStats->upgrade[player].radius;
+		else if (name == "RadiusDamage") return psStats->upgrade[player].radiusDamage;
+		else if (name == "RepeatDamage") return psStats->upgrade[player].periodicalDamage;
+		else if (name == "RepeatTime") return psStats->upgrade[player].periodicalDamageTime;
+		else if (name == "RepeatRadius") return psStats->upgrade[player].periodicalDamageRadius;
+		else SCRIPT_ASSERT(context, false, "Invalid weapon method");
+	}
+	else if (type == SCRCB_RES || type == SCRCB_REP || type == SCRCB_POW || type == SCRCB_CON || type == SCRCB_REA
+	         || type == SCRCB_HIT || type == SCRCB_ELW || type == SCRCB_ARM || type == SCRCB_HEA)
+	{
+		STRUCTURE_STATS *psStats = asStructureStats + index;
+		switch (type)
+		{
+		case SCRCB_RES: return psStats->upgrade[player].research; break;
+		case SCRCB_REP: return psStats->upgrade[player].repair; break;
+		case SCRCB_POW: return psStats->upgrade[player].power; break;
+		case SCRCB_CON: return psStats->upgrade[player].production; break;
+		case SCRCB_REA: return psStats->upgrade[player].rearm; break;
+		case SCRCB_ELW: return psStats->upgrade[player].resistance; break;
+		case SCRCB_HEA: return psStats->upgrade[player].thermal; break;
+		case SCRCB_ARM: return psStats->upgrade[player].armour; break;
+		case SCRCB_HIT: return psStats->upgrade[player].hitpoints;
+		default: SCRIPT_ASSERT(context, false, "Component type not found for upgrade"); break;
+		}
+	}
+	return QScriptValue::NullValue;
 }
 
 static void setStatsFunc(QScriptValue &base, QScriptEngine *engine, QString name, int player, int type, int index, int value)
@@ -4014,7 +4075,6 @@ static void setStatsFunc(QScriptValue &base, QScriptEngine *engine, QString name
 	v.setProperty("player", player, QScriptValue::SkipInEnumeration | QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	v.setProperty("type", type, QScriptValue::SkipInEnumeration | QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	v.setProperty("index", index, QScriptValue::SkipInEnumeration | QScriptValue::ReadOnly | QScriptValue::Undeletable);
-	v.setProperty("value", value, QScriptValue::SkipInEnumeration | QScriptValue::Undeletable);
 	v.setProperty("name", name, QScriptValue::SkipInEnumeration | QScriptValue::ReadOnly | QScriptValue::Undeletable);
 }
 
