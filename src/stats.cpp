@@ -845,6 +845,7 @@ bool loadBodyStats(const char *pFileName)
 		psStats->base.armour = ini.value("armourKinetic").toInt();
 		psStats->base.power = ini.value("powerOutput").toInt();
 		psStats->base.body = psStats->body; // special exception hack
+		psStats->base.resistance = ini.value("resistance", 30).toInt();
 		for (int j = 0; j < MAX_PLAYERS; j++)
 		{
 			psStats->upgrade[j] = psStats->base;

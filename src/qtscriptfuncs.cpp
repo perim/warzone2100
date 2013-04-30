@@ -3921,6 +3921,10 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 			{
 				psStats->upgrade[player].power = value;
 			}
+			else if (name == "Resistance")
+			{
+				psStats->upgrade[player].resistance = value;
+			}
 			else
 			{
 				SCRIPT_ASSERT(context, false, "Upgrade component %s not found", name.toUtf8().constData());
@@ -4010,6 +4014,7 @@ QScriptValue js_stats(QScriptContext *context, QScriptEngine *engine)
 		else if (name == "Armour") return psStats->upgrade[player].armour;
 		else if (name == "Thermal") return psStats->upgrade[player].thermal;
 		else if (name == "Power") return psStats->upgrade[player].power;
+		else if (name == "Resistance") return psStats->upgrade[player].resistance;
 		else SCRIPT_ASSERT(context, false, "Upgrade component %s not found", name.toUtf8().constData());
 	}
 	else if (type == COMP_SENSOR)
@@ -4108,6 +4113,7 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			body.setProperty("Power", psStats->base.power, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			body.setProperty("Armour", psStats->base.armour, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			body.setProperty("Thermal", psStats->base.thermal, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+			body.setProperty("Resistance", psStats->base.resistance, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			body.setProperty("Size", psStats->size, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			body.setProperty("WeaponSlots", psStats->weaponSlots, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 			body.setProperty("BodyClass", psStats->bodyClass, QScriptValue::ReadOnly | QScriptValue::Undeletable);
@@ -4270,6 +4276,7 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 			setStatsFunc(body, engine, "Power", i, COMP_BODY, j, psStats->upgrade[i].power);
 			setStatsFunc(body, engine, "Armour", i, COMP_BODY, j, psStats->upgrade[i].armour);
 			setStatsFunc(body, engine, "Thermal", i, COMP_BODY, j, psStats->upgrade[i].thermal);
+			setStatsFunc(body, engine, "Resistance", i, COMP_BODY, j, psStats->upgrade[i].resistance);
 			bodybase.setProperty(getStatName(psStats), body, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		}
 		node.setProperty("Body", bodybase, QScriptValue::ReadOnly | QScriptValue::Undeletable);

@@ -3351,22 +3351,11 @@ DROID *giftSingleDroid(DROID *psD, UDWORD to)
 /*calculates the electronic resistance of a droid based on its experience level*/
 SWORD   droidResistance(DROID *psDroid)
 {
-	unsigned resistance;
-
 	CHECK_DROID(psDroid);
-
-	resistance = psDroid->experience / (65536/DROID_RESISTANCE_FACTOR);
-
-	//ensure base minimum in MP before the upgrade effect
-	if (bMultiPlayer)
-	{
-		//ensure resistance is a base minimum
-		resistance = MAX(resistance, DROID_RESISTANCE_FACTOR);
-	}
-
-	//ensure resistance is a base minimum
-	resistance = MAX(resistance, DROID_RESISTANCE_FACTOR);
-
+	BODY_STATS *psStats = asBodyStats + psDroid->asBits[COMP_BODY].nStat;
+	int resistance = psDroid->experience / (65536 / MAX(1, psStats->upgrade[psDroid->player].resistance));
+	// ensure resistance is a base minimum
+	resistance = MAX(resistance, psStats->upgrade[psDroid->player].resistance);
 	return MIN(resistance, INT16_MAX);
 }
 

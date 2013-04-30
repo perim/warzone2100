@@ -544,6 +544,7 @@ struct BODY_STATS : public COMPONENT_STATS
 		int body;
 		int armour;
 		int thermal;
+		int resistance;
 	} upgrade[MAX_PLAYERS], base;
 };
 
