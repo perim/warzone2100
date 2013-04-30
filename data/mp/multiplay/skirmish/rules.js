@@ -318,7 +318,7 @@ function eventResearched(research, structure, player)
 				}
 			}
 		}
-		else if (['ResearchPoints', 'ProductionPoints', 'PowerPoints', 'RepairPoints'].indexOf(s[0]) >= 0)
+		else if (['ResearchPoints', 'ProductionPoints', 'PowerPoints', 'RepairPoints', 'RearmPoints'].indexOf(s[0]) >= 0)
 		{
 			for (var i in Upgrades[player].Building)
 			{
