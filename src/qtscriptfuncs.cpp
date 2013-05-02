@@ -2911,8 +2911,21 @@ static QScriptValue js_hackGetObj(QScriptContext *context, QScriptEngine *engine
 static QScriptValue js_hackChangeMe(QScriptContext *context, QScriptEngine *engine)
 {
 	int me = context->argument(0).toInt32();
+	SCRIPT_ASSERT_PLAYER(context, me);
 	engine->globalObject().setProperty("me", me);
 	return QScriptValue();
+}
+
+//-- \subsection{receiveAllEvents(bool)}
+//-- Make the current script receive all events, even those not meant for 'me'.
+static QScriptValue js_receiveAllEvents(QScriptContext *context, QScriptEngine *engine)
+{
+	if (context->argumentCount() > 0)
+	{
+		bool value = context->argument(0).toBool();
+		engine->globalObject().setProperty("isReceivingAllEvents", value, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+	}
+	return engine->globalObject().property("isReceivingAllEvents");
 }
 
 //-- \subsection{hackAssert(condition, message...)}
@@ -4399,6 +4412,7 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 	engine->globalObject().setProperty("hackChangeMe", engine->newFunction(js_hackChangeMe));
 	engine->globalObject().setProperty("hackAssert", engine->newFunction(js_hackAssert));
 	engine->globalObject().setProperty("hackMarkTiles", engine->newFunction(js_hackMarkTiles));
+	engine->globalObject().setProperty("receiveAllEvents", engine->newFunction(js_receiveAllEvents));
 
 	// General functions -- geared for use in AI scripts
 	engine->globalObject().setProperty("debug", engine->newFunction(js_debug));

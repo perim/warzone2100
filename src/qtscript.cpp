@@ -552,6 +552,8 @@ QScriptEngine *loadPlayerScript(QString path, int player, int difficulty)
 	engine->globalObject().setProperty("scavengerPlayer", scavengerPlayer(), QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	//== \item[isMultiplayer] If the current game is a online multiplayer game or not. (3.2+ only)
 	engine->globalObject().setProperty("isMultiplayer", NetPlay.bComms, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+	// un-documented placeholder variable
+	engine->globalObject().setProperty("isReceivingAllEvents", false, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 
 	// Regular functions
 	QFileInfo basename(path);
@@ -902,7 +904,8 @@ bool triggerEvent(SCRIPT_TRIGGER_TYPE trigger, BASE_OBJECT *psObj)
 		if (psObj)
 		{
 			int player = engine->globalObject().property("me").toInt32();
-			if (player != psObj->player && player != -1)
+			bool receiveAll = engine->globalObject().property("isReceivingAllEvents").toBool();
+			if (player != psObj->player && !receiveAll)
 			{
 				continue;
 			}
@@ -1013,7 +1016,8 @@ bool triggerEventDroidBuilt(DROID *psDroid, STRUCTURE *psFactory)
 	{
 		QScriptEngine *engine = scripts.at(i);
 		int player = engine->globalObject().property("me").toInt32();
-		if (player == psDroid->player || player == -1)
+		bool receiveAll = engine->globalObject().property("isReceivingAllEvents").toBool();
+		if (player == psDroid->player || receiveAll)
 		{
 			QScriptValueList args;
 			args += convDroid(psDroid, engine);
@@ -1037,7 +1041,8 @@ bool triggerEventStructBuilt(STRUCTURE *psStruct, DROID *psDroid)
 	{
 		QScriptEngine *engine = scripts.at(i);
 		int player = engine->globalObject().property("me").toInt32();
-		if (player == psStruct->player || player == -1)
+		bool receiveAll = engine->globalObject().property("isReceivingAllEvents").toBool();
+		if (player == psStruct->player || receiveAll)
 		{
 			QScriptValueList args;
 			args += convStructure(psStruct, engine);
@@ -1061,7 +1066,8 @@ bool triggerEventStructureReady(STRUCTURE *psStruct)
 	{
 		QScriptEngine *engine = scripts.at(i);
 		int player = engine->globalObject().property("me").toInt32();
-		if (player == psStruct->player || player == -1)
+		bool receiveAll = engine->globalObject().property("isReceivingAllEvents").toBool();
+		if (player == psStruct->player || receiveAll)
 		{
 			QScriptValueList args;
 			args += convStructure(psStruct, engine);
@@ -1114,7 +1120,8 @@ bool triggerEventResearched(RESEARCH *psResearch, STRUCTURE *psStruct, int playe
 	{
 		QScriptEngine *engine = scripts.at(i);
 		int me = engine->globalObject().property("me").toInt32();
-		if ((me == player && trigger) || me == -1)
+		bool receiveAll = engine->globalObject().property("isReceivingAllEvents").toBool();
+		if ((me == player && trigger) || receiveAll)
 		{
 			QScriptValueList args;
 			args += convResearch(psResearch, engine, player);
@@ -1175,7 +1182,8 @@ bool triggerEventSeen(BASE_OBJECT *psViewer, BASE_OBJECT *psSeen)
 	{
 		QScriptEngine *engine = scripts.at(i);
 		int me = engine->globalObject().property("me").toInt32();
-		if (me == psViewer->player || me == -1)
+		bool receiveAll = engine->globalObject().property("isReceivingAllEvents").toBool();
+		if (me == psViewer->player || receiveAll)
 		{
 			QScriptValueList args;
 			args += convMax(psViewer, engine);
@@ -1197,7 +1205,8 @@ bool triggerEventObjectTransfer(BASE_OBJECT *psObj, int from)
 	{
 		QScriptEngine *engine = scripts.at(i);
 		int me = engine->globalObject().property("me").toInt32();
-		if (me == psObj->player || me == from || me == -1)
+		bool receiveAll = engine->globalObject().property("isReceivingAllEvents").toBool();
+		if (me == psObj->player || me == from || receiveAll)
 		{
 			QScriptValueList args;
 			args += convMax(psObj, engine);
@@ -1218,7 +1227,8 @@ bool triggerEventChat(int from, int to, const char *message)
 	{
 		QScriptEngine *engine = scripts.at(i);
 		int me = engine->globalObject().property("me").toInt32();
-		if (me == to || (me == -1 && to == from))
+		bool receiveAll = engine->globalObject().property("isReceivingAllEvents").toBool();
+		if (me == to || (receiveAll && to == from))
 		{
 			QScriptValueList args;
 			args += QScriptValue(from);
@@ -1241,7 +1251,8 @@ bool triggerEventBeacon(int from, int to, const char *message, int x, int y)
 	{
 		QScriptEngine *engine = scripts.at(i);
 		int me = engine->globalObject().property("me").toInt32();
-		if (me == to || me == -1)
+		bool receiveAll = engine->globalObject().property("isReceivingAllEvents").toBool();
+		if (me == to || receiveAll)
 		{
 			QScriptValueList args;
 			args += QScriptValue(map_coord(x));
@@ -1267,7 +1278,8 @@ bool triggerEventBeaconRemoved(int from, int to)
 	{
 		QScriptEngine *engine = scripts.at(i);
 		int me = engine->globalObject().property("me").toInt32();
-		if (me == to || me == -1)
+		bool receiveAll = engine->globalObject().property("isReceivingAllEvents").toBool();
+		if (me == to || receiveAll)
 		{
 			QScriptValueList args;
 			args += QScriptValue(from);

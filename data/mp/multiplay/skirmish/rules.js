@@ -11,7 +11,7 @@ var cheatmode = false;
 
 function eventGameInit()
 {
-	hackChangeMe(-1); // TODO, find a better way to do this
+	receiveAllEvents(true);
 
 	if (tilesetType != "ARIZONA")
 	{
