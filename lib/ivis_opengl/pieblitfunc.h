@@ -34,6 +34,7 @@
 #include "lib/framework/frame.h"
 #include "lib/framework/string_ext.h"
 #include "piedef.h"
+#include "piepalette.h"
 
 /***************************************************************************/
 /*
@@ -57,6 +58,8 @@ enum GFXTYPE
 {
 	GFX_TEXTURE,
 	GFX_COLOUR,
+	GFX_COLOUR_BLEND,
+	GFX_TEXTURE_PERSISTENT, // texture handled by tex.cpp
 	GFX_COUNT
 };
 
@@ -80,6 +83,10 @@ public:
 	/// Upload given memory buffer to already allocated texture space on the GPU
 	void updateTexture(const GLvoid *image, int width = -1, int height = -1);
 
+	/// Associate a texture in the global texture table to this graphics object. This can only
+	/// be used by GFX_TEXTURE_PERSISTENT type objects.
+	void associateTexture(int i);
+
 	/// Upload vertex and texture buffer data to the GPU
 	void buffers(int vertices, const GLvoid *vertBuf, const GLvoid *texBuf);
 
@@ -96,6 +103,44 @@ private:
 	GLuint mBuffers[VBO_COUNT];
 	GLuint mTexture;
 	int mSize;
+};
+
+struct GFXJob
+{
+	GFXJob() : vertices(0), texPage(-1), texColour(WZCOL_WHITE), task(NULL) {}
+
+	GFXTYPE type;
+	GLenum drawType;
+	int coordsPerVertex;
+	int vertices;
+	QVector<GLfloat> verts;
+	QVector<GLfloat> texcoords;
+	QVector<UBYTE> colours;
+	int texPage;
+	PIELIGHT texColour;
+	GFX *task;
+};
+
+class GFXQueue
+{
+public:
+	~GFXQueue();
+	//void merge(GFXQueue &other);
+	void draw(); // draw all
+	void clear();
+
+	void line(float x0, float y0, float x1, float y1, PIELIGHT colour);
+	void rect(float x0, float y0, float x1, float y1, PIELIGHT colour, GFXTYPE type = GFX_COLOUR);
+	void shadowBox(float x0, float y0, float x1, float y1, float pad, PIELIGHT first, PIELIGHT second, PIELIGHT fill);
+	void box(float x0, float y0, float x1, float y1, PIELIGHT first, PIELIGHT second);
+	void transBoxFill(float x0, float y0, float x1, float y1, PIELIGHT colour = WZCOL_TRANSPARENT_BOX);
+	void imageFile(IMAGEFILE *imageFile, int id, float x, float y, PIELIGHT colour = WZCOL_WHITE);
+	void imageFile(QString filename, float x, float y, float width = -0.0f, float height = -0.0f);
+	void imageFileTc(Image image, Image imageTc, int x, int y, PIELIGHT colour);
+
+private:
+	QList<GFXJob> jobs; // queued up jobs, sort and merge into tasks on demand
+	GFXJob &findJob(GFXTYPE type, GLenum drawType, int coordsPerVertex, int texPage = -1, PIELIGHT texColour = WZCOL_WHITE);
 };
 
 /***************************************************************************/

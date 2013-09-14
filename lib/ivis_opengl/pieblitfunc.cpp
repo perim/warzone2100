@@ -79,6 +79,13 @@ GFX::GFX(GFXTYPE type, GLenum drawType, int coordsPerVertex) : mType(type), mdra
 	}
 }
 
+void GFX::associateTexture(int i) // refers to texture in tex.cpp table
+{
+	ASSERT(mType == GFX_TEXTURE_PERSISTENT, "Wrong GFX type");
+	ASSERT(i >= 0 && i < pie_NumberOfPages(), "Bad page number: %d", i);
+	mTexture = i;
+}
+
 void GFX::loadTexture(const char *filename, GLenum filter)
 {
 	ASSERT(mType == GFX_TEXTURE, "Wrong GFX type");
@@ -125,12 +132,12 @@ void GFX::buffers(int vertices, const GLvoid *vertBuf, const GLvoid *auxBuf)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_VERTEX]);
 	glBufferData(GL_ARRAY_BUFFER, vertices * mCoordsPerVertex * sizeof(GLfloat), vertBuf, GL_STATIC_DRAW);
-	if (mType == GFX_TEXTURE)
+	if (mType == GFX_TEXTURE || mType == GFX_TEXTURE_PERSISTENT)
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_TEXCOORD]);
 		glBufferData(GL_ARRAY_BUFFER, vertices * 2 * sizeof(GLfloat), auxBuf, GL_STATIC_DRAW);
 	}
-	else if (mType == GFX_COLOUR)
+	else if (mType == GFX_COLOUR || mType == GFX_COLOUR_BLEND)
 	{
 		// reusing texture buffer for colours for now
 		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_TEXCOORD]);
@@ -142,15 +149,32 @@ void GFX::buffers(int vertices, const GLvoid *vertBuf, const GLvoid *auxBuf)
 
 void GFX::draw()
 {
-	if (mType == GFX_TEXTURE)
+	if (mType == GFX_TEXTURE_PERSISTENT)
 	{
+		pie_SetRendMode(REND_ALPHA); // used for GUI stuff
+		pie_SetTexturePage(mTexture);
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_TEXCOORD]); glTexCoordPointer(2, GL_FLOAT, 0, NULL);
+	}
+	else if (mType == GFX_TEXTURE)
+	{
+		pie_SetRendMode(REND_OPAQUE);
 		pie_SetTexturePage(TEXPAGE_EXTERN);
 		glBindTexture(GL_TEXTURE_2D, mTexture);
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_TEXCOORD]); glTexCoordPointer(2, GL_FLOAT, 0, NULL);
 	}
-	else if (mType == GFX_COLOUR)
+	else if (mType == GFX_COLOUR || mType == GFX_COLOUR_BLEND)
 	{
+		if (mType == GFX_COLOUR)
+		{
+			// breaks the radar frustum window
+			//pie_SetRendMode(REND_OPAQUE);
+		}
+		else
+		{
+			pie_SetRendMode(REND_ALPHA);
+		}
 		pie_SetTexturePage(TEXPAGE_NONE);
 		glEnableClientState(GL_COLOR_ARRAY);
 		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_TEXCOORD]); glColorPointer(4, GL_UNSIGNED_BYTE, 0, NULL);
@@ -159,11 +183,11 @@ void GFX::draw()
 	glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_VERTEX]); glVertexPointer(mCoordsPerVertex, GL_FLOAT, 0, NULL);
 	glDrawArrays(mdrawType, 0, mSize);
 	glDisableClientState(GL_VERTEX_ARRAY);
-	if (mType == GFX_TEXTURE)
+	if (mType == GFX_TEXTURE || mType == GFX_TEXTURE_PERSISTENT)
 	{
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	}
-	else if (mType == GFX_COLOUR)
+	else if (mType == GFX_COLOUR || mType == GFX_COLOUR_BLEND)
 	{
 		glDisableClientState(GL_COLOR_ARRAY);
 	}
@@ -178,6 +202,172 @@ GFX::~GFX()
 		glDeleteTextures(1, &mTexture);
 	}
 }
+
+/***************************************************************************/
+
+GFXQueue::~GFXQueue()
+{
+	clear();
+}
+
+void GFXQueue::clear()
+{
+	for (int i = 0; i < jobs.size(); i++)
+	{
+		delete jobs[i].task;
+	}
+	jobs.clear();
+}
+
+GFXJob &GFXQueue::findJob(GFXTYPE type, GLenum drawType, int coordsPerVertex, int texPage, PIELIGHT texColour)
+{
+	(void)texPage; // when we start reusing texture buffers, this will be handy
+	// Try to reuse existing entry. For now, do not try to combine texture tasks or
+	// strip draw types. TODO: Allow more reuse if we can use the primitive restart extension
+	// (a core feature of OpenGL 3.1+ and OpenGL ES 3.0).
+	if ((type == GFX_COLOUR || type == GFX_COLOUR_BLEND) && (drawType == GL_POINTS || drawType == GL_LINES || drawType == GL_TRIANGLES))
+	{
+		for (int i = 0; i < jobs.size(); i++)
+		{
+			if (jobs[i].type == type && jobs[i].drawType == drawType && jobs[i].coordsPerVertex == coordsPerVertex)
+			{
+				return jobs[i];
+			}
+		}
+	}
+	if (type == GFX_TEXTURE || type == GFX_TEXTURE_PERSISTENT)
+	{
+		ASSERT(texPage >= 0 && texPage < pie_NumberOfPages(), "Bad page number: %d", texPage);
+	}
+	// no applicable entry found, make a new entry for this type of draw
+	GFXJob job;
+	job.type = type;
+	job.texColour = texColour;
+	job.drawType = drawType;
+	job.coordsPerVertex = coordsPerVertex;
+	jobs.append(job);
+	return jobs[jobs.size() - 1];
+}
+
+void GFXQueue::draw()
+{
+	for (int i = 0; i < jobs.size(); i++)
+	{
+		if (!jobs[i].task) // create actual GPU data on first draw call
+		{
+			GFXJob &job = jobs[i];
+			GFX *task = new GFX(job.type, job.drawType, job.coordsPerVertex);
+			if (job.type == GFX_TEXTURE_PERSISTENT)
+			{
+				ASSERT(job.texPage >= 0 && job.texPage < pie_NumberOfPages(), "Bad page number: %d", job.texPage);
+				task->associateTexture(job.texPage);
+			}
+			if (job.type == GFX_TEXTURE || job.type == GFX_TEXTURE_PERSISTENT)
+			{
+				task->buffers(job.vertices, job.verts.data(), job.texcoords.data());
+			}
+			else
+			{
+				task->buffers(job.vertices, job.verts.data(), job.colours.data());
+			}
+			job.verts.clear();
+			job.texcoords.clear();
+			job.colours.clear();
+			jobs[i].task = task;
+		}
+		glColor4ubv(jobs[i].texColour.vector); // hack until we have got rid of global colour...
+		jobs[i].task->draw();
+	}
+}
+
+void GFXQueue::line(float x0, float y0, float x1, float y1, PIELIGHT colour)
+{
+	const int vertices = 2;
+	GFXJob &job = findJob(GFX_COLOUR, GL_LINES, 2);
+	job.verts += { x0, y0, x1, y1 };
+	job.vertices += vertices;
+	for (int i = vertices; i-- > 0;) job.colours += { colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a };
+}
+
+void GFXQueue::rect(float x0, float y0, float x1, float y1, PIELIGHT colour, GFXTYPE type) // colour filled rectangle
+{
+	const int vertices = 4;
+	GFXJob &job = findJob(type, GL_TRIANGLE_STRIP, 2);
+	job.verts += { x0, y0, x1, y0, x0, y1, x1, y1 };
+	job.vertices += vertices;
+	for (int i = vertices; i-- > 0;) job.colours += { colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a };
+}
+
+void GFXQueue::shadowBox(float x0, float y0, float x1, float y1, float pad, PIELIGHT first, PIELIGHT second, PIELIGHT fill)
+{
+	rect(x0 + pad, y0 + pad, x1 - pad, y1 - pad, fill, GFX_COLOUR);
+	box(x0, y0, x1, y1, first, second);
+}
+
+void GFXQueue::box(float x0, float y0, float x1, float y1, PIELIGHT first, PIELIGHT second)
+{
+	const int vertices = 8;
+	GFXJob &job = findJob(GFX_COLOUR, GL_LINES, 2);
+	job.verts += { x0, y1, x0, y0, x0, y0, x1, y0, x1, y0, x1, y1, x0, y1, x1, y1 };
+	job.vertices += vertices;
+	for (int i = (vertices + 1) / 2; i-- > 0;) job.colours += { first.byte.r, first.byte.g, first.byte.b, first.byte.a };
+	for (int i = vertices / 2; i-- > 0;) job.colours += { second.byte.r, second.byte.g, second.byte.b, second.byte.a };
+}
+
+void GFXQueue::transBoxFill(float x0, float y0, float x1, float y1, PIELIGHT colour)
+{
+	rect(x0, y0, x1, y1, colour, GFX_COLOUR_BLEND);
+}
+
+void GFXQueue::imageFile(IMAGEFILE *imageFile, int id, float x, float y, PIELIGHT colour)
+{
+	const int vertices = 4;
+	if (!assertValidImage(imageFile, id))
+	{
+		return;
+	}
+	PIERECT dest;
+	const Vector2i size = makePieImage(imageFile, id, &dest, x, y);
+	const ImageDef &image2 = imageFile->imageDefs[id];
+	const GLuint texPage = imageFile->pages[image2.TPageID].id;
+	const GLfloat invTextureSize = 1.f / imageFile->pages[image2.TPageID].size;
+	const int tu = image2.Tu;
+	const int tv = image2.Tv;
+	GFXJob &job = findJob(GFX_TEXTURE_PERSISTENT, GL_TRIANGLE_STRIP, 2, texPage, colour);
+	job.texPage = texPage;
+	job.verts += { dest.x, dest.y, dest.x + dest.w, dest.y, dest.x, dest.y + dest.h, dest.x + dest.w, dest.y + dest.h };
+	job.texcoords += { tu * invTextureSize, tv * invTextureSize, (tu + size.x) * invTextureSize, tv * invTextureSize,
+			   tu * invTextureSize, (tv + size.y) * invTextureSize, (tu + size.x) * invTextureSize, (tv + size.y) * invTextureSize };
+	job.vertices += vertices;
+}
+
+void GFXQueue::imageFile(QString filename, float x, float y, float width, float height)
+{
+	const int vertices = 4;
+	const ImageDef *image = iV_GetImage(filename, x, y);
+	const GLfloat invTextureSize = image->invTextureSize;
+	const GLfloat tu = image->Tu;
+	const GLfloat tv = image->Tv;
+	const GLfloat w = width > 0 ? width : image->Width;
+	const GLfloat h = height > 0 ? height : image->Height;
+	GFXJob &job = findJob(GFX_TEXTURE_PERSISTENT, GL_TRIANGLE_STRIP, 2, image->textureId);
+	x += image->XOffset;
+	y += image->YOffset;
+	job.texPage = image->textureId;
+	job.verts += { x, y, x + w, y, x, y + h, x + w, y + h };
+	job.texcoords += { tu * image->invTextureSize, tv * invTextureSize, (tu + image->Width) * invTextureSize, tv * invTextureSize,
+			   tu * invTextureSize, (tv + image->Height) * invTextureSize, (tu + image->Width) * invTextureSize, (tv + image->Height) * invTextureSize };
+	job.vertices += vertices;
+}
+
+void GFXQueue::imageFileTc(Image image, Image imageTc, int x, int y, PIELIGHT colour)
+{
+	// I hope this works...
+	imageFile(image.images, image.id, x, y);
+	imageFile(imageTc.images, imageTc.id, x, y, colour);
+}
+
+/***************************************************************************/
 
 void iV_Line(int x0, int y0, int x1, int y1, PIELIGHT colour)
 {
@@ -208,7 +398,7 @@ void iV_ShadowBox(int x0, int y0, int x1, int y1, int pad, PIELIGHT first, PIELI
 {
 	pie_SetRendMode(REND_OPAQUE);
 	pie_SetTexturePage(TEXPAGE_NONE);
-	pie_DrawRect(x0 + pad, y0 + pad, x1 - pad, y1 - pad, fill); // necessary side-effect: sets alpha test off
+	pie_DrawRect(x0 + pad, y0 + pad, x1 - pad, y1 - pad, fill);
 	iV_Box2(x0, y0, x1, y1, first, second);
 }
 
