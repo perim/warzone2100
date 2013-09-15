@@ -98,44 +98,6 @@ void widgSetSliderPos(W_SCREEN *psScreen, UDWORD id, UWORD pos)
 	}
 }
 
-/* Return the current position of the slider bar on the widget */
-static void sliderGetBarBox(W_SLIDER *psSlider, int *pX, int *pY, int *pWidth, int *pHeight)
-{
-	switch (psSlider->orientation)
-	{
-	case WSLD_LEFT:
-		*pX = (psSlider->width() - psSlider->barSize)
-		        * psSlider->pos / psSlider->numStops;
-		*pY = 0;
-		*pWidth = psSlider->barSize;
-		*pHeight = psSlider->height();
-		break;
-	case WSLD_RIGHT:
-		*pX = psSlider->width() - psSlider->barSize
-		        - (psSlider->width() - psSlider->barSize)
-		        * psSlider->pos / psSlider->numStops;
-		*pY = 0;
-		*pWidth = psSlider->barSize;
-		*pHeight = psSlider->height();
-		break;
-	case WSLD_TOP:
-		*pX = 0;
-		*pY = (psSlider->height() - psSlider->barSize)
-		        * psSlider->pos / psSlider->numStops;
-		*pWidth = psSlider->width();
-		*pHeight = psSlider->barSize;
-		break;
-	case WSLD_BOTTOM:
-		*pX = 0;
-		*pY = psSlider->height() - psSlider->barSize
-		        - (psSlider->height() - psSlider->barSize)
-		        * psSlider->pos / psSlider->numStops;
-		*pWidth = psSlider->width();
-		*pHeight = psSlider->barSize;
-		break;
-	}
-}
-
 /* Run a slider widget */
 void W_SLIDER::run(W_CONTEXT *psContext)
 {
@@ -251,7 +213,6 @@ void W_SLIDER::highlight(W_CONTEXT *)
 	state |= SLD_HILITE;
 }
 
-
 /* Respond to the mouse moving off a slider */
 void W_SLIDER::highlightLost()
 {
@@ -261,70 +222,13 @@ void W_SLIDER::highlightLost()
 
 void W_SLIDER::display(int xOffset, int yOffset)
 {
-	if (!dirty)
-	{
-		gqueue.draw();
-		return;
-	}
-	if (displayFunction != NULL)
+	ASSERT(displayFunction != NULL, "No default implementation exists for this widget");
+	if (dirty)
 	{
 		gqueue.clear();
 		displayFunction(this, xOffset, yOffset);
-		gqueue.draw();
-		return;
-	}
-
-	int x0, y0, x1, y1, bbwidth = 0, bbheight = 0;
-	gqueue.clear();
-
-	switch (orientation)
-	{
-	case WSLD_LEFT:
-	case WSLD_RIGHT:
-		/* Draw the line */
-		x0 = x() + xOffset + barSize / 2;
-		y0 = y() + yOffset + height() / 2;
-		x1 = x0 + width() - barSize;
-		gqueue.line(x0, y0, x1, y0, WZCOL_FORM_DARK);
-		gqueue.line(x0, y0 + 1, x1, y0 + 1, WZCOL_FORM_LIGHT);
-
-		/* Now Draw the bar */
-		sliderGetBarBox(this, &x0, &y0, &bbwidth, &bbheight);
-		x0 = x0 + x() + xOffset;
-		y0 = y0 + y() + yOffset;
-		x1 = x0 + bbwidth;
-		y1 = y0 + bbheight;
-		gqueue.shadowBox(x0, y0, x1, y1, 0, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, WZCOL_FORM_BACKGROUND);
-		break;
-	case WSLD_TOP:
-	case WSLD_BOTTOM:
-		/* Draw the line */
-		x0 = x() + xOffset + width() / 2;
-		y0 = y() + yOffset + barSize / 2;
-		y1 = y0 + height() - barSize;
-		gqueue.line(x0, y0, x0, y1, WZCOL_FORM_DARK);
-		gqueue.line(x0 + 1, y0, x0 + 1, y1, WZCOL_FORM_LIGHT);
-
-		/* Now Draw the bar */
-		sliderGetBarBox(this, &x0, &y0, &bbwidth, &bbheight);
-		x0 = x0 + x() + xOffset;
-		y0 = y0 + y() + yOffset;
-		x1 = x0 + bbwidth;
-		y1 = y0 + bbheight;
-		gqueue.shadowBox(x0, y0, x1, y1, 0, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, WZCOL_FORM_BACKGROUND);
-		break;
-	}
-
-	if ((state & SLD_HILITE) != 0)
-	{
-		x0 = x() + xOffset - 2;
-		y0 = y() + yOffset - 2;
-		x1 = x0 + width() + 4;
-		y1 = y0 + height() + 4;
-		gqueue.box(x0, y0, x1, y1, WZCOL_FORM_HILITE, WZCOL_FORM_HILITE);
 	}
 	gqueue.draw();
-	dirty = false;
 }
 
 void W_SLIDER::setTip(QString string)

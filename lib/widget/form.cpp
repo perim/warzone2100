@@ -209,37 +209,13 @@ void W_FORM::display(int xOffset, int yOffset)
 
 void W_CLICKFORM::display(int xOffset, int yOffset)
 {
-	if (!dirty)
-	{
-		gqueue.draw();
-		return;
-	}
-	if (displayFunction != NULL)
+	ASSERT(displayFunction != NULL, "No default implementation exists for this widget");
+	if (dirty)
 	{
 		gqueue.clear();
 		displayFunction(this, xOffset, yOffset);
-		gqueue.draw();
-		return;
 	}
-
-	int x0 = x() + xOffset;
-	int y0 = y() + yOffset;
-	int x1 = x0 + width();
-	int y1 = y0 + height();
-
-	/* Display the border */
-	gqueue.clear();
-	if ((state & (WBUT_DOWN | WBUT_LOCK | WBUT_CLICKLOCK)) != 0)
-	{
-		gqueue.shadowBox(x0, y0, x1, y1, 1, WZCOL_FORM_DARK, WZCOL_FORM_LIGHT, WZCOL_FORM_BACKGROUND);
-	}
-	else
-	{
-		gqueue.shadowBox(x0, y0, x1, y1, 1, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, WZCOL_FORM_BACKGROUND);
-	}
-	dirty = false;
-	gqueue.draw();
-}
+	gqueue.draw();}
 
 void W_CLICKFORM::setTip(QString string)
 {

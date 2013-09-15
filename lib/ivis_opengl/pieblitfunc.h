@@ -137,6 +137,8 @@ public:
 	void imageFile(IMAGEFILE *imageFile, int id, float x, float y, PIELIGHT colour = WZCOL_WHITE);
 	void imageFile(QString filename, float x, float y, float width = -0.0f, float height = -0.0f);
 	void imageFileTc(Image image, Image imageTc, int x, int y, PIELIGHT colour);
+	void imageFile(Image image, float x, float y) { imageFile(image.images, image.id, x, y); }
+	void drawBlueBox(float x, float y, float w, float h) { rect(x - 1, y - 1, x + w + 1, y + h + 1, WZCOL_MENU_BORDER); rect(x, y , x + w, y + h, WZCOL_MENU_BACKGROUND); }
 
 private:
 	QList<GFXJob> jobs; // queued up jobs, sort and merge into tasks on demand

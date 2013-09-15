@@ -130,8 +130,6 @@
 #define WZCOL_TERC3_GROUND_LOW  pal_Colour(0x00, 0x1C, 0x0E)
 #define WZCOL_TERC3_GROUND_HIGH WZCOL_TERC3_CLIFF_HIGH
 
-static const unsigned gnImage[] = {IMAGE_GN_0, IMAGE_GN_1, IMAGE_GN_2, IMAGE_GN_3, IMAGE_GN_4, IMAGE_GN_5, IMAGE_GN_6, IMAGE_GN_7, IMAGE_GN_8, IMAGE_GN_9, IMAGE_GN_10, IMAGE_GN_11, IMAGE_GN_12, IMAGE_GN_13, IMAGE_GN_14, IMAGE_GN_15};
-
 // ////////////////////////////////////////////////////////////////////////////
 // vars
 extern char	MultiCustomMapsPath[PATH_MAX];
@@ -3966,12 +3964,13 @@ void displayTeamChooser(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 
 	ASSERT(i < MAX_PLAYERS && NetPlay.players[i].team >= 0 && NetPlay.players[i].team < MAX_PLAYERS, "Team index out of bounds" );
 
-	drawBlueBox(x, y, psWidget->width(), psWidget->height());
+	psWidget->gqueue.drawBlueBox(x, y, psWidget->width(), psWidget->height());
 
 	if (game.skDiff[i])
 	{
-		iV_DrawImage(FrontImages, IMAGE_TEAM0 + NetPlay.players[i].team, x + 2, y + 8);
+		psWidget->gqueue.imageFile(FrontImages, IMAGE_TEAM0 + NetPlay.players[i].team, x + 2, y + 8);
 	}
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 void displayPosition(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
@@ -4249,12 +4248,8 @@ void displayColour(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 // Display blue box
 void intDisplayFeBox(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 {
-	int x = xOffset + psWidget->x();
-	int y = yOffset + psWidget->y();
-	int w = psWidget->width();
-	int h = psWidget->height();
-
-	drawBlueBox(x,y,w,h);
+	psWidget->gqueue.drawBlueBox(xOffset + psWidget->x(), yOffset + psWidget->y(), psWidget->width(), psWidget->height());
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 // ////////////////////////////////////////////////////////////////////////////
