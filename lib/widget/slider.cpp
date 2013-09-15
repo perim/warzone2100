@@ -27,7 +27,6 @@
 #if defined(WZ_CC_MSVC)
 #include "slider_moc.h"		// this is generated on the pre-build event.
 #endif
-// FIXME Direct iVis implementation include!
 #include "lib/ivis_opengl/pieblitfunc.h"
 
 static bool DragEnabled = true;
@@ -70,13 +69,11 @@ UDWORD widgGetSliderPos(W_SCREEN *psScreen, UDWORD id)
 	WIDGET	*psWidget;
 
 	psWidget = widgGetFromID(psScreen, id);
-	ASSERT(psWidget != NULL,
-	       "widgGetSliderPos: couldn't find widget from id");
+	ASSERT(psWidget != NULL, "Could not find widget from id %u", id);
 	if (psWidget)
 	{
 		return ((W_SLIDER *)psWidget)->pos;
 	}
-
 	return 0;
 }
 
@@ -86,10 +83,10 @@ void widgSetSliderPos(W_SCREEN *psScreen, UDWORD id, UWORD pos)
 	WIDGET	*psWidget;
 
 	psWidget = widgGetFromID(psScreen, id);
-	ASSERT(psWidget != NULL,
-	       "widgGetSliderPos: couldn't find widget from id");
-	if (psWidget)
+	ASSERT(psWidget != NULL, "Could not find widget from id %u", id);
+	if (psWidget && pos != ((W_SLIDER *)psWidget)->pos)
 	{
+		psWidget->dirty = true;
 		if (pos > ((W_SLIDER *)psWidget)->numStops)
 		{
 			((W_SLIDER *)psWidget)->pos = ((W_SLIDER *)psWidget)->numStops;
@@ -139,12 +136,12 @@ static void sliderGetBarBox(W_SLIDER *psSlider, int *pX, int *pY, int *pWidth, i
 	}
 }
 
-
 /* Run a slider widget */
 void W_SLIDER::run(W_CONTEXT *psContext)
 {
 	if ((state & SLD_DRAG) && !mouseDown(MOUSE_LMB))
 	{
+		dirty = true;
 		state &= ~SLD_DRAG;
 		screenPointer->setReturn(this);
 	}
@@ -154,6 +151,7 @@ void W_SLIDER::run(W_CONTEXT *psContext)
 	}
 	if (state & SLD_DRAG)
 	{
+		dirty = true;
 		/* Figure out where the drag box should be */
 		int mx = psContext->mx - x();
 		int my = psContext->my - y();
@@ -242,12 +240,14 @@ void W_SLIDER::clicked(W_CONTEXT *psContext, WIDGET_KEY)
 {
 	if (DragEnabled && geometry().contains(psContext->mx, psContext->my))
 	{
+		dirty = true;
 		state |= SLD_DRAG;
 	}
 }
 
 void W_SLIDER::highlight(W_CONTEXT *)
 {
+	dirty = true;
 	state |= SLD_HILITE;
 }
 
@@ -255,18 +255,27 @@ void W_SLIDER::highlight(W_CONTEXT *)
 /* Respond to the mouse moving off a slider */
 void W_SLIDER::highlightLost()
 {
+	dirty = true;
 	state &= ~SLD_HILITE;
 }
 
 void W_SLIDER::display(int xOffset, int yOffset)
 {
+	if (!dirty)
+	{
+		gqueue.draw();
+		return;
+	}
 	if (displayFunction != NULL)
 	{
+		gqueue.clear();
 		displayFunction(this, xOffset, yOffset);
+		gqueue.draw();
 		return;
 	}
 
 	int x0, y0, x1, y1, bbwidth = 0, bbheight = 0;
+	gqueue.clear();
 
 	switch (orientation)
 	{
@@ -276,8 +285,8 @@ void W_SLIDER::display(int xOffset, int yOffset)
 		x0 = x() + xOffset + barSize / 2;
 		y0 = y() + yOffset + height() / 2;
 		x1 = x0 + width() - barSize;
-		iV_Line(x0, y0, x1, y0, WZCOL_FORM_DARK);
-		iV_Line(x0, y0 + 1, x1, y0 + 1, WZCOL_FORM_LIGHT);
+		gqueue.line(x0, y0, x1, y0, WZCOL_FORM_DARK);
+		gqueue.line(x0, y0 + 1, x1, y0 + 1, WZCOL_FORM_LIGHT);
 
 		/* Now Draw the bar */
 		sliderGetBarBox(this, &x0, &y0, &bbwidth, &bbheight);
@@ -285,7 +294,7 @@ void W_SLIDER::display(int xOffset, int yOffset)
 		y0 = y0 + y() + yOffset;
 		x1 = x0 + bbwidth;
 		y1 = y0 + bbheight;
-		iV_ShadowBox(x0, y0, x1, y1, 0, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, WZCOL_FORM_BACKGROUND);
+		gqueue.shadowBox(x0, y0, x1, y1, 0, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, WZCOL_FORM_BACKGROUND);
 		break;
 	case WSLD_TOP:
 	case WSLD_BOTTOM:
@@ -293,8 +302,8 @@ void W_SLIDER::display(int xOffset, int yOffset)
 		x0 = x() + xOffset + width() / 2;
 		y0 = y() + yOffset + barSize / 2;
 		y1 = y0 + height() - barSize;
-		iV_Line(x0, y0, x0, y1, WZCOL_FORM_DARK);
-		iV_Line(x0 + 1, y0, x0 + 1, y1, WZCOL_FORM_LIGHT);
+		gqueue.line(x0, y0, x0, y1, WZCOL_FORM_DARK);
+		gqueue.line(x0 + 1, y0, x0 + 1, y1, WZCOL_FORM_LIGHT);
 
 		/* Now Draw the bar */
 		sliderGetBarBox(this, &x0, &y0, &bbwidth, &bbheight);
@@ -302,7 +311,7 @@ void W_SLIDER::display(int xOffset, int yOffset)
 		y0 = y0 + y() + yOffset;
 		x1 = x0 + bbwidth;
 		y1 = y0 + bbheight;
-		iV_ShadowBox(x0, y0, x1, y1, 0, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, WZCOL_FORM_BACKGROUND);
+		gqueue.shadowBox(x0, y0, x1, y1, 0, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, WZCOL_FORM_BACKGROUND);
 		break;
 	}
 
@@ -312,8 +321,10 @@ void W_SLIDER::display(int xOffset, int yOffset)
 		y0 = y() + yOffset - 2;
 		x1 = x0 + width() + 4;
 		y1 = y0 + height() + 4;
-		iV_Box(x0, y0, x1, y1, WZCOL_FORM_HILITE);
+		gqueue.box(x0, y0, x1, y1, WZCOL_FORM_HILITE, WZCOL_FORM_HILITE);
 	}
+	gqueue.draw();
+	dirty = false;
 }
 
 void W_SLIDER::setTip(QString string)

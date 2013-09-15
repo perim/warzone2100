@@ -1595,9 +1595,9 @@ static void displayTitleBitmap(WZ_DECL_UNUSED WIDGET *psWidget, WZ_DECL_UNUSED U
 // show warzone logo
 static void displayLogo(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 {
-	iV_DrawImage2("image_fe_logo.png", xOffset + psWidget->x(), yOffset + psWidget->y(), psWidget->width(), psWidget->height());
+	psWidget->gqueue.imageFile("image_fe_logo.png", xOffset + psWidget->x(), yOffset + psWidget->y(), psWidget->width(), psWidget->height());
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
-
 
 // ////////////////////////////////////////////////////////////////////////////
 // show, well have a guess..
@@ -1607,10 +1607,11 @@ static void displayBigSlider(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	int x = xOffset + psWidget->x();
 	int y = yOffset + psWidget->y();
 
-	iV_DrawImage(IntImages,IMAGE_SLIDER_BIG,x+STAT_SLD_OX,y+STAT_SLD_OY);			// draw bdrop
+	Slider->gqueue.imageFile(IntImages, IMAGE_SLIDER_BIG, x + STAT_SLD_OX, y + STAT_SLD_OY);	// draw bdrop
 
 	int sx = (Slider->width() - 3 - Slider->barSize) * Slider->pos / Slider->numStops;  // determine pos.
-	iV_DrawImage(IntImages,IMAGE_SLIDER_BIGBUT,x+3+sx,y+3);								//draw amount
+	Slider->gqueue.imageFile(IntImages, IMAGE_SLIDER_BIGBUT, x + 3 + sx, y + 3);		//draw amount
+	Slider->dirty = false;
 }
 
 // ////////////////////////////////////////////////////////////////////////////

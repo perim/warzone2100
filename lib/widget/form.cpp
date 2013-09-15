@@ -31,7 +31,6 @@
 #include "form_moc.h"		// this is generated on the pre-build event.
 #endif
 #include "tip.h"
-// FIXME Direct iVis implementation include!
 #include "lib/ivis_opengl/pieblitfunc.h"
 #include "lib/ivis_opengl/piepalette.h"
 
@@ -82,6 +81,7 @@ void W_CLICKFORM::setState(unsigned newState)
 
 	unsigned mask = WBUT_DISABLE | WBUT_LOCK | WBUT_CLICKLOCK;
 	state = (state & ~mask) | (newState & mask);
+	dirty = true;
 }
 
 void W_CLICKFORM::setFlash(bool enable)
@@ -94,12 +94,14 @@ void W_CLICKFORM::setFlash(bool enable)
 	{
 		state &= ~WBUT_FLASH;
 	}
+	dirty = true;
 }
 
 void W_FORM::clicked(W_CONTEXT *, WIDGET_KEY)
 {
 	// Stop the tip if there is one.
 	tipStop(this);
+	dirty = true;
 }
 
 /* Respond to a mouse click */
@@ -116,6 +118,7 @@ void W_CLICKFORM::clicked(W_CONTEXT *psContext, WIDGET_KEY key)
 		{
 			state &= ~WBUT_FLASH;  // Stop it flashing
 			state |= WBUT_DOWN;
+			dirty = true;
 
 			if (AudioCallback != NULL)
 			{
@@ -135,6 +138,7 @@ void W_CLICKFORM::released(W_CONTEXT *, WIDGET_KEY key)
 		{
 			screenPointer->setReturn(this);
 			state &= ~WBUT_DOWN;
+			dirty = true;
 		}
 	}
 }
@@ -163,6 +167,7 @@ void W_FORM::highlightLost()
 {
 	// Clear the tool tip if there is one.
 	tipStop(this);
+	dirty = true;
 }
 
 void W_CLICKFORM::highlightLost()
@@ -170,16 +175,25 @@ void W_CLICKFORM::highlightLost()
 	W_FORM::highlightLost();
 
 	state &= ~(WBUT_DOWN | WBUT_HIGHLIGHT);
+	dirty = true;
 }
 
 void W_FORM::display(int xOffset, int yOffset)
 {
+	if (!dirty)
+	{
+		gqueue.draw();
+		return;
+	}
 	if (displayFunction != NULL)
 	{
+		gqueue.clear();
 		displayFunction(this, xOffset, yOffset);
+		gqueue.draw();
 		return;
 	}
 
+	gqueue.clear();
 	if ((style & WFORM_INVISIBLE) == 0)
 	{
 		int x0 = x() + xOffset;
@@ -187,15 +201,24 @@ void W_FORM::display(int xOffset, int yOffset)
 		int x1 = x0 + width();
 		int y1 = y0 + height();
 
-		iV_ShadowBox(x0, y0, x1, y1, 1, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, WZCOL_FORM_BACKGROUND);
+		gqueue.shadowBox(x0, y0, x1, y1, 1, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, WZCOL_FORM_BACKGROUND);
 	}
+	dirty = false;
+	gqueue.draw();
 }
 
 void W_CLICKFORM::display(int xOffset, int yOffset)
 {
+	if (!dirty)
+	{
+		gqueue.draw();
+		return;
+	}
 	if (displayFunction != NULL)
 	{
+		gqueue.clear();
 		displayFunction(this, xOffset, yOffset);
+		gqueue.draw();
 		return;
 	}
 
@@ -205,14 +228,17 @@ void W_CLICKFORM::display(int xOffset, int yOffset)
 	int y1 = y0 + height();
 
 	/* Display the border */
+	gqueue.clear();
 	if ((state & (WBUT_DOWN | WBUT_LOCK | WBUT_CLICKLOCK)) != 0)
 	{
-		iV_ShadowBox(x0, y0, x1, y1, 1, WZCOL_FORM_DARK, WZCOL_FORM_LIGHT, WZCOL_FORM_BACKGROUND);
+		gqueue.shadowBox(x0, y0, x1, y1, 1, WZCOL_FORM_DARK, WZCOL_FORM_LIGHT, WZCOL_FORM_BACKGROUND);
 	}
 	else
 	{
-		iV_ShadowBox(x0, y0, x1, y1, 1, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, WZCOL_FORM_BACKGROUND);
+		gqueue.shadowBox(x0, y0, x1, y1, 1, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, WZCOL_FORM_BACKGROUND);
 	}
+	dirty = false;
+	gqueue.draw();
 }
 
 void W_CLICKFORM::setTip(QString string)
