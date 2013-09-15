@@ -27,6 +27,7 @@
 #include "lib/framework/frame.h"
 #include "lib/ivis_opengl/piedef.h"
 #include "lib/ivis_opengl/textdraw.h"
+#include "lib/ivis_opengl/pieblitfunc.h"
 #include <QtCore/QRect>
 #include <QtCore/QObject>
 
@@ -162,6 +163,9 @@ private:
 	WIDGET(WIDGET const &);  // Non-copyable.
 	WIDGET &operator =(WIDGET const &);  // Non-copyable.
 #endif
+public:
+	GFXQueue                gqueue;                 ///< Graphics task queue. Public due to callbacks.
+	bool dirty;
 };
 
 

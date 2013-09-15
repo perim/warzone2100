@@ -27,7 +27,6 @@
 #include "widget.h"
 #include "widgint.h"
 #include "tip.h"
-// FIXME Direct iVis implementation include!
 #include "lib/ivis_opengl/pieblitfunc.h"
 #include <QtCore/QStringList>
 
@@ -50,7 +49,8 @@ static enum _tip_state
 	TIP_ACTIVE,			// A tip is being displayed
 } tipState;
 
-
+static GFXQueue         gqueue;                 ///< Graphics task queue
+static bool             dirty = true;
 static SDWORD		startTime;			// When the tip was created
 static SDWORD		mx, my;				// Last mouse coords
 static SDWORD		wx, wy, ww, wh;		// Position and size of button to place tip by
@@ -136,6 +136,7 @@ void tipDisplay()
 		{
 			/* Activate the tip */
 			tipState = TIP_ACTIVE;
+			dirty = true;
 
 			/* Calculate the size of the tip box */
 			topGap = TIP_VGAP;
@@ -178,13 +179,18 @@ void tipDisplay()
 		break;
 	case TIP_ACTIVE:
 		/* Draw the tool tip */
-		pie_BoxFill(tx, ty, tx + tw, ty + th, WZCOL_FORM_TIP_BACKGROUND);
-		iV_Line(tx + 1,  ty + th - 2, tx + 1,      ty + 1,  WZCOL_FORM_DARK);
-		iV_Line(tx + 2,  ty + 1,      tx + tw - 2, ty + 1,  WZCOL_FORM_DARK);
-		iV_Line(tx,      ty + th,     tx + tw,     ty + th, WZCOL_FORM_DARK);
-		iV_Line(tx + tw, ty + th - 1, tx + tw,     ty,      WZCOL_FORM_DARK);
-		iV_Box(tx, ty, tx + tw - 1, ty + th - 1, WZCOL_FORM_LIGHT);
-
+		if (dirty)
+		{
+			gqueue.clear();
+			gqueue.rect(tx, ty, tx + tw, ty + th, WZCOL_FORM_TIP_BACKGROUND);
+			gqueue.line(tx + 1,  ty + th - 2, tx + 1,      ty + 1,  WZCOL_FORM_DARK);
+			gqueue.line(tx + 2,  ty + 1,      tx + tw - 2, ty + 1,  WZCOL_FORM_DARK);
+			gqueue.line(tx,      ty + th,     tx + tw,     ty + th, WZCOL_FORM_DARK);
+			gqueue.line(tx + tw, ty + th - 1, tx + tw,     ty,      WZCOL_FORM_DARK);
+			gqueue.box(tx, ty, tx + tw - 1, ty + th - 1, WZCOL_FORM_LIGHT, WZCOL_FORM_LIGHT);
+			dirty = false;
+		}
+		gqueue.draw();
 		iV_SetFont(FontID);
 		iV_SetTextColour(TipColour);
 		for (int n = 0; n < pTip.size(); ++n)
