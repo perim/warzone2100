@@ -84,10 +84,11 @@ enum VBO_TYPE
 {
 	VBO_VERTEX,
 	VBO_TEXCOORD,
-	VBO_MINIMAL,
-	VBO_NORMAL = VBO_MINIMAL,
-	VBO_INDEX,
-	VBO_COUNT
+	VBO_MINIMAL,               // minimal VBO set, only vertex and texture
+	VBO_INDEX = VBO_MINIMAL,
+	VBO_INDEXED,                // minimal + index buffer
+	VBO_NORMAL = VBO_INDEXED,
+	VBO_COUNT                  // full VBO set
 };
 
 struct iIMDShape

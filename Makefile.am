@@ -8,6 +8,7 @@ SUBDIRS = \
 	win32 \
 	3rdparty/miniupnpc \
 	3rdparty/quesoglc \
+	3rdparty/freetype-gl \
 	lib/framework \
 	lib/exceptionhandler \
 	lib/script \

@@ -598,7 +598,7 @@ bool systemInitialise(void)
 	// Fix badly named OpenGL functions. Must be done after iV_TextInit, to avoid the renames being clobbered by an extra glewInit() call.
 	screen_EnableMissingFunctions();
 
-	pie_InitRadar();
+	pie_InitGraphics();
 
 	readAIs();
 
@@ -613,7 +613,7 @@ extern char *mod_list;
 
 void systemShutdown(void)
 {
-	pie_ShutdownRadar();
+	pie_ShutdownGraphics();
 	if (mod_list)
 	{
 		free(mod_list);

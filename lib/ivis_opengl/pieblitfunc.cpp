@@ -55,6 +55,8 @@ struct PIERECT  ///< Screen rectangle.
 	float x, y, w, h;
 };
 
+static texture_font_t *fonts[font_count] = { NULL };
+
 /***************************************************************************/
 /*
  *	Static function forward declarations
@@ -70,9 +72,16 @@ static Vector2i makePieImage(IMAGEFILE *imageFile, unsigned id, PIERECT *dest = 
  */
 /***************************************************************************/
 
-GFX::GFX(GFXTYPE type, GLenum drawType, int coordsPerVertex) : mType(type), mdrawType(drawType), mCoordsPerVertex(coordsPerVertex), mSize(0)
+GFX::GFX(GFXTYPE type, GLenum drawType, int coordsPerVertex) : mType(type), mDrawType(drawType), mCoordsPerVertex(coordsPerVertex), mSize(0)
 {
-	glGenBuffers(VBO_MINIMAL, mBuffers);
+	if (type == GFX_TEXTURE_INDEXED)
+	{
+		glGenBuffers(VBO_INDEXED, mBuffers);
+	}
+	else
+	{
+		glGenBuffers(VBO_MINIMAL, mBuffers);
+	}
 	if (type == GFX_TEXTURE)
 	{
 		glGenTextures(1, &mTexture);
@@ -81,8 +90,8 @@ GFX::GFX(GFXTYPE type, GLenum drawType, int coordsPerVertex) : mType(type), mdra
 
 void GFX::associateTexture(int i) // refers to texture in tex.cpp table
 {
-	ASSERT(mType == GFX_TEXTURE_PERSISTENT, "Wrong GFX type");
-	ASSERT(i >= 0 && i < pie_NumberOfPages(), "Bad page number: %d", i);
+	ASSERT(mType == GFX_TEXTURE_PERSISTENT || mType == GFX_TEXTURE_INDEXED, "Bad GFX type");
+	ASSERT(mType != GFX_TEXTURE_PERSISTENT || (i >= 0 && i < pie_NumberOfPages()), "Bad GFX parameter");
 	mTexture = i;
 }
 
@@ -128,11 +137,23 @@ void GFX::updateTexture(const void *image, int width, int height)
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, mFormat, GL_UNSIGNED_BYTE, image);
 }
 
-void GFX::buffers(int vertices, const GLvoid *vertBuf, const GLvoid *auxBuf)
+static inline int verticesPerPolygon(GLenum drawType)
+{
+	switch (drawType)
+	{
+	case GL_TRIANGLES: return 3;
+	case GL_LINES: return 2;
+	case GL_POINTS: return 1;
+	default: ASSERT(false, "Wrong draw type for indexed mode");
+	}
+	return -1;
+}
+
+void GFX::buffers(int vertices, const GLvoid *vertBuf, const GLvoid *auxBuf, int polygons, const uint16_t *indices)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_VERTEX]);
 	glBufferData(GL_ARRAY_BUFFER, vertices * mCoordsPerVertex * sizeof(GLfloat), vertBuf, GL_STATIC_DRAW);
-	if (mType == GFX_TEXTURE || mType == GFX_TEXTURE_PERSISTENT)
+	if (mType == GFX_TEXTURE || mType == GFX_TEXTURE_PERSISTENT || mType == GFX_TEXTURE_INDEXED)
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_TEXCOORD]);
 		glBufferData(GL_ARRAY_BUFFER, vertices * 2 * sizeof(GLfloat), auxBuf, GL_STATIC_DRAW);
@@ -143,8 +164,17 @@ void GFX::buffers(int vertices, const GLvoid *vertBuf, const GLvoid *auxBuf)
 		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_TEXCOORD]);
 		glBufferData(GL_ARRAY_BUFFER, vertices * 4 * sizeof(GLbyte), auxBuf, GL_STATIC_DRAW);
 	}
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	mSize = vertices;
+	if (mType == GFX_TEXTURE_INDEXED)
+	{
+		ASSERT(polygons > 0 && indices != NULL, "No index parameters given");
+		const int vtsPerPoly = verticesPerPolygon(mDrawType);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBuffers[VBO_INDEX]);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, polygons * vtsPerPoly * sizeof(uint16_t), indices, GL_STATIC_DRAW);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		mSize = polygons * vtsPerPoly;
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void GFX::draw()
@@ -179,13 +209,40 @@ void GFX::draw()
 		glEnableClientState(GL_COLOR_ARRAY);
 		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_TEXCOORD]); glColorPointer(4, GL_UNSIGNED_BYTE, 0, NULL);
 	}
+	else if (mType == GFX_TEXTURE_INDEXED)
+	{
+		// TODO, alpha blending parameters hard-coded here and for the two other texture types for now,
+		// un-hard-code this later by setting it explicitly...
+		pie_SetRendMode(REND_ALPHA);
+		pie_SetTexturePage(TEXPAGE_EXTERN);
+		//pie_ActivateShader(SHADER_FONT);
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		glBindTexture(GL_TEXTURE_2D, mTexture);
+		//glBlendColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_TEXCOORD]); glTexCoordPointer(2, GL_FLOAT, 0, NULL);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBuffers[VBO_INDEX]);
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_VERTEX]); glVertexPointer(mCoordsPerVertex, GL_FLOAT, 0, NULL);
+		glDrawElements(mDrawType, mSize, GL_UNSIGNED_SHORT, 0);
+		glDisableClientState(GL_VERTEX_ARRAY);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		//glBlendColor(0.0f, 0.0f, 0.0f, 0.0f); // only needed after indexed (string) draw...
+		pie_DeactivateShader(); // ditto
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); // ditto
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glErrors();
+		return;
+	}
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_VERTEX]); glVertexPointer(mCoordsPerVertex, GL_FLOAT, 0, NULL);
-	glDrawArrays(mdrawType, 0, mSize);
+	glDrawArrays(mDrawType, 0, mSize);
 	glDisableClientState(GL_VERTEX_ARRAY);
-	if (mType == GFX_TEXTURE || mType == GFX_TEXTURE_PERSISTENT)
+	if (mType == GFX_TEXTURE || mType == GFX_TEXTURE_PERSISTENT || mType == GFX_TEXTURE_INDEXED)
 	{
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glBlendColor(0.0f, 0.0f, 0.0f, 0.0f); // only needed after indexed (string) draw...
+		pie_DeactivateShader(); // ditto
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); // ditto
 	}
 	else if (mType == GFX_COLOUR || mType == GFX_COLOUR_BLEND)
 	{
@@ -196,10 +253,17 @@ void GFX::draw()
 
 GFX::~GFX()
 {
-	glDeleteBuffers(VBO_MINIMAL, mBuffers);
+	if (mType != GFX_TEXTURE_INDEXED)
+	{
+		glDeleteBuffers(VBO_MINIMAL, mBuffers);
+	}
+	else
+	{
+		glDeleteBuffers(VBO_INDEXED, mBuffers);
+	}
 	if (mType == GFX_TEXTURE)
 	{
-		glDeleteTextures(1, &mTexture);
+		glDeleteTextures(1, &mTexture); // 'cos we own this texture
 	}
 }
 
@@ -266,17 +330,67 @@ void GFXQueue::draw()
 			{
 				task->buffers(job.vertices, job.verts.data(), job.texcoords.data());
 			}
-			else
+			else if (job.type != GFX_TEXTURE_INDEXED)
 			{
 				task->buffers(job.vertices, job.verts.data(), job.colours.data());
+			}
+			else // indexed texture drawing
+			{
+				task->associateTexture(job.texPage);
+				task->buffers(job.vertices, job.verts.data(), job.texcoords.data(), job.polygons, job.indices.data());
 			}
 			job.verts.clear();
 			job.texcoords.clear();
 			job.colours.clear();
+			job.indices.clear();
 			jobs[i].task = task;
 		}
 		glColor4ubv(jobs[i].texColour.vector); // hack until we have got rid of global colour...
 		jobs[i].task->draw();
+	}
+}
+
+void GFXQueue::text(iV_fonts fontType, const QString &text, float x, float y, int flags, float width)
+{
+	(void)flags; // TODO
+	(void)width; // TODO
+	GFXJob &job = findJob(GFX_TEXTURE_INDEXED, GL_TRIANGLES, 2);
+	Vector2f pen = { x, y };
+	texture_font_t *font = fonts[fontType];
+	const int length = text.size();
+	job.texPage = font->atlas->id;
+	job.vertices = length * 4;
+	job.polygons = length * 2;
+	job.verts.reserve(job.vertices * 2); // reserve sufficient space for data in advance
+	job.texcoords.reserve(job.vertices * 2);
+	job.indices.reserve(length * 3 * 2);
+	const QVector<uint> data = text.toUcs4();
+	for (int i = 0; i < length; i++)
+	{
+		texture_glyph_t *glyph = texture_font_get_glyph(font, data[i]);
+		if (glyph != NULL)
+		{
+			int kerning = 0;
+			if (i > 0)
+			{
+				kerning = texture_glyph_get_kerning(glyph, data[i - 1]);
+			}
+			pen.x += kerning;
+			glDisable(GL_CULL_FACE);
+			const float x0 = pen.x + glyph->offset_x;
+			const float y0 = pen.y - glyph->offset_y;
+			const float x1 = x0 + glyph->width;
+			const float y1 = y0 + glyph->height;
+			const float s0 = glyph->s0;
+			const float t0 = glyph->t0;
+			const float s1 = glyph->s1;
+			const float t1 = glyph->t1;
+			job.texcoords += { s0, t1,  s0, t0,  s1, t0,  s1, t1 };
+			job.verts += { x0, y1,  x0, y0,  x1, y0,  x1, y1 };
+			uint16_t idx = i * 4;
+			job.indices += { idx, (uint16_t)(idx + 1), (uint16_t)(idx + 2), idx, (uint16_t)(idx + 2), (uint16_t)(idx + 3) };
+			pen.x += glyph->advance_x;
+		}
 	}
 }
 
@@ -618,16 +732,38 @@ void iV_DrawImageRepeatY(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Heigh
 	}
 }
 
-bool pie_InitRadar(void)
+bool pie_InitGraphics()
 {
+	// Initialize fonts
+	// TODO: map language -> font file from config file
+	texture_atlas_t *atlas = texture_atlas_new(512, 512, 1);
+
+	fonts[font_regular] = texture_font_new(atlas, "data/fonts/robotoslab-regular.ttf", 12);
+	fonts[font_small] = texture_font_new(atlas, "data/fonts/robotoslab-light.ttf", 9);
+	fonts[font_large] = texture_font_new(atlas, "data/fonts/robotoslab-bold.ttf", 21);
+	fonts[font_scaled] = texture_font_new(atlas, "data/fonts/robotoslab-regular.ttf", 12.f * pie_GetVideoBufferHeight() / 480);
+	const wchar_t *cache = L" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
+			       L"`abcdefghijklmnopqrstuvwxyz{|}~";
+	texture_font_load_glyphs(fonts[font_regular], cache);
+	texture_font_load_glyphs(fonts[font_small], cache);
+	texture_font_load_glyphs(fonts[font_large], cache);
+	texture_font_load_glyphs(fonts[font_scaled], cache);
+	debug(LOG_ERROR, "Font texture occupancy: %.2f%%", 100.0 * atlas->used / (float)(atlas->width * atlas->height));
+
+	// Initialize radar
 	radarGfx = new GFX(GFX_TEXTURE, GL_TRIANGLE_STRIP, 2);
 	return true;
 }
 
-bool pie_ShutdownRadar(void)
+bool pie_ShutdownGraphics()
 {
-	delete radarGfx;
-	radarGfx = NULL;
+	texture_font_delete(fonts[font_regular]);
+	texture_font_delete(fonts[font_small]);
+	texture_font_delete(fonts[font_large]);
+	texture_font_delete(fonts[font_scaled]);
+	memset(fonts, 0, sizeof(fonts));
+
+	delete radarGfx; radarGfx = NULL;
 	return true;
 }
 

@@ -3980,11 +3980,10 @@ void displayPosition(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	const int i = psWidget->UserData;
 	char text[80];
 
-	drawBlueBox(x, y, psWidget->width(), psWidget->height());
-	iV_SetFont(font_regular);
-	iV_SetTextColour(WZCOL_FORM_TEXT);
+	psWidget->gqueue.drawBlueBox(x, y, psWidget->width(), psWidget->height());
+	//iV_SetTextColour(WZCOL_FORM_TEXT); FIXME!!
 	ssprintf(text, _("Click to take player slot %d"), NetPlay.players[i].position);
-	iV_DrawText(text, x + 10, y + 22);
+	psWidget->gqueue.text(font_regular, text, x + 10, y + 22);
 }
 
 static void displayAi(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)

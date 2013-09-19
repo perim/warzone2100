@@ -455,6 +455,10 @@ WZ_CPPFLAGS="${WZ_CPPFLAGS} -I\$(top_srcdir)"
 
 # 3rdparty libs
 WZ_CPPFLAGS="${WZ_CPPFLAGS} -I\$(top_srcdir)/3rdparty -I\$(top_srcdir)/3rdparty/quesoglc"
+WZ_CPPFLAGS="${WZ_CPPFLAGS} -I\$(top_srcdir)/3rdparty -I\$(top_srcdir)/3rdparty/freetype-gl"
+OPENGL_CFLAGS="${OPENGL_CFLAGS} ${FREETYPE_CFLAGS}"
+OPENGL_LIBS="${OPENGL_LIBS} ${FREETYPE_LIBS}"
+AC_SUBST([OPENGL_CFLAGS], [${OPENGL_CFLAGS}])
 
 
 AC_SUBST([WZ_CPPFLAGS], [${WZ_CPPFLAGS}])
@@ -475,6 +479,7 @@ AC_CONFIG_FILES([Makefile
 		tests/Makefile
 		3rdparty/miniupnpc/Makefile
 		3rdparty/quesoglc/Makefile
+		3rdparty/freetype-gl/Makefile
 		lib/framework/Makefile
 		lib/exceptionhandler/Makefile
 		lib/gamelib/Makefile

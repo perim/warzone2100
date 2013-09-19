@@ -33,6 +33,8 @@
 
 #include "lib/framework/frame.h"
 #include "lib/framework/string_ext.h"
+#include "texture-font.h"
+#include "textdraw.h"
 #include "piedef.h"
 #include "piepalette.h"
 
@@ -60,6 +62,7 @@ enum GFXTYPE
 	GFX_COLOUR,
 	GFX_COLOUR_BLEND,
 	GFX_TEXTURE_PERSISTENT, // texture handled by tex.cpp
+	GFX_TEXTURE_INDEXED,  // used for text rendering
 	GFX_COUNT
 };
 
@@ -83,12 +86,11 @@ public:
 	/// Upload given memory buffer to already allocated texture space on the GPU
 	void updateTexture(const GLvoid *image, int width = -1, int height = -1);
 
-	/// Associate a texture in the global texture table to this graphics object. This can only
-	/// be used by GFX_TEXTURE_PERSISTENT type objects.
+	/// Associate a texture in the global texture table to this graphics object.
 	void associateTexture(int i);
 
 	/// Upload vertex and texture buffer data to the GPU
-	void buffers(int vertices, const GLvoid *vertBuf, const GLvoid *texBuf);
+	void buffers(int vertices, const GLvoid *vertBuf, const GLvoid *texBuf, int polygons = 0, const uint16_t *indices = NULL);
 
 	/// Draw everything
 	void draw();
@@ -98,7 +100,7 @@ private:
 	GLenum mFormat;
 	int mWidth;
 	int mHeight;
-	GLenum mdrawType;
+	GLenum mDrawType;
 	int mCoordsPerVertex;
 	GLuint mBuffers[VBO_COUNT];
 	GLuint mTexture;
@@ -107,7 +109,7 @@ private:
 
 struct GFXJob
 {
-	GFXJob() : vertices(0), texPage(-1), texColour(WZCOL_WHITE), task(NULL) {}
+	GFXJob() : vertices(0), texPage(-1), polygons(-1), texColour(WZCOL_WHITE), task(NULL) {}
 
 	GFXTYPE type;
 	GLenum drawType;
@@ -116,16 +118,23 @@ struct GFXJob
 	QVector<GLfloat> verts;
 	QVector<GLfloat> texcoords;
 	QVector<UBYTE> colours;
+	QVector<uint16_t> indices;
 	int texPage;
+	int polygons;
 	PIELIGHT texColour;
 	GFX *task;
 };
 
+
+#define TEXT_JUSTIFY_RIGHT    1
+#define TEXT_JUSTIFY_CENTER   2
+#define TEXT_ROTATE_270       4
+
 class GFXQueue
 {
 public:
+
 	~GFXQueue();
-	//void merge(GFXQueue &other);
 	void draw(); // draw all
 	void clear();
 
@@ -139,6 +148,7 @@ public:
 	void imageFileTc(Image image, Image imageTc, int x, int y, PIELIGHT colour);
 	void imageFile(Image image, float x, float y) { imageFile(image.images, image.id, x, y); }
 	void drawBlueBox(float x, float y, float w, float h) { rect(x - 1, y - 1, x + w + 1, y + h + 1, WZCOL_MENU_BORDER); rect(x, y , x + w, y + h, WZCOL_MENU_BACKGROUND); }
+	void text(iV_fonts fontType, const QString &text, float x, float y, int flags = 0, float width = 0.0f);
 
 private:
 	QList<GFXJob> jobs; // queued up jobs, sort and merge into tasks on demand
@@ -167,8 +177,9 @@ static inline void iV_DrawImageTc(IMAGEFILE *imageFile, unsigned id, unsigned id
 extern void iV_TransBoxFill(float x0, float y0, float x1, float y1);
 extern void pie_UniTransBoxFill(float x0, float y0, float x1, float y1, PIELIGHT colour);
 
-bool pie_InitRadar();
-bool pie_ShutdownRadar();
+bool pie_InitGraphics();
+bool pie_ShutdownGraphics();
+
 void pie_DownLoadRadar(UDWORD *buffer);
 void pie_RenderRadar();
 void pie_SetRadar(GLfloat x, GLfloat y, GLfloat width, GLfloat height, int twidth, int theight, bool filter);
