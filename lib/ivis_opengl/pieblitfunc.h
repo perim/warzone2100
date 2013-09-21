@@ -125,15 +125,18 @@ struct GFXJob
 	GFX *task;
 };
 
-
+/// Draw the text right justified
 #define TEXT_JUSTIFY_RIGHT    1
+/// Draw the text center justified
 #define TEXT_JUSTIFY_CENTER   2
+/// Draw the text downwards
 #define TEXT_ROTATE_270       4
+/// Truncate the text at width ending with '...'
+#define TEXT_TRUNCATE         8
 
 class GFXQueue
 {
 public:
-
 	~GFXQueue();
 	void draw(); // draw all
 	void clear();
@@ -148,7 +151,11 @@ public:
 	void imageFileTc(Image image, Image imageTc, int x, int y, PIELIGHT colour);
 	void imageFile(Image image, float x, float y) { imageFile(image.images, image.id, x, y); }
 	void drawBlueBox(float x, float y, float w, float h) { rect(x - 1, y - 1, x + w + 1, y + h + 1, WZCOL_MENU_BORDER); rect(x, y , x + w, y + h, WZCOL_MENU_BACKGROUND); }
-	void text(iV_fonts fontType, const QString &text, float x, float y, int flags = 0, float width = 0.0f);
+	Vector2f text(iV_fonts fontType, const QString &text, float x, float y, PIELIGHT colour = WZCOL_FORM_TEXT, int flags = 0, float width = 0.0f);
+	Vector2f textSize(iV_fonts fontType, const QString &text);
+	float textLineSize(iV_fonts fontType);
+	float textAboveBase(iV_fonts fontType);
+	float textBelowBase(iV_fonts fontType);
 
 private:
 	QList<GFXJob> jobs; // queued up jobs, sort and merge into tasks on demand

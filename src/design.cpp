@@ -390,7 +390,7 @@ bool intAddDesign(bool bShowCentreScreen)
 	sEdInit.width = DES_NAMEBOXWIDTH;
 	sEdInit.height = DES_NAMEBOXHEIGHT;
 	sEdInit.pText = _("New Vehicle");
-	sEdInit.pBoxDisplay = intDisplayEditBox;
+	sEdInit.pDisplay = intDisplayEditBox;
 	if (!widgAddEditBox(psWScreen, &sEdInit))
 	{
 		return false;

@@ -744,7 +744,7 @@ static bool OptionsInet(void)			//internet options
 	sEdInit.width = CON_NAMEBOXWIDTH;
 	sEdInit.height = CON_NAMEBOXHEIGHT;
 	sEdInit.pText = "";									//_("IP Address or Machine Name");
-	sEdInit.pBoxDisplay = intDisplayEditBox;
+	sEdInit.pDisplay = intDisplayEditBox;
 	if (!widgAddEditBox(psConScreen, &sEdInit))
 	{
 		return false;
@@ -1002,7 +1002,7 @@ static void addGames(void)
 				}
 				else
 				{
-					std::string flags;
+					QString flags;
 					if (NetPlay.games[i].privateGame)
 					{
 						flags += " "; flags += _("[Password required]");
@@ -1019,13 +1019,13 @@ static void addGames(void)
 					{
 						flags += " "; flags += _("[No VTOLs]");
 					}
-					if (flags.empty())
+					if (flags.isEmpty())
 					{
 						ssprintf(tooltipbuffer[i], _("Hosted by %s"), NetPlay.games[i].hostname);
 					}
 					else
 					{
-						ssprintf(tooltipbuffer[i], _("Hosted by %s —%s"), NetPlay.games[i].hostname, flags.c_str());
+						ssprintf(tooltipbuffer[i], _("Hosted by %s —%s"), NetPlay.games[i].hostname, flags.toUtf8().constData());
 					}
 					sButInit.pTip = tooltipbuffer[i];
 				}
@@ -2573,15 +2573,15 @@ static void addChatBox(void)
 	sEdInit.height = MULTIOP_CHATEDITH;
 
 	sEdInit.pUserData = NULL;
-	sEdInit.pBoxDisplay = displayChatEdit;
+	sEdInit.pDisplay = displayChatEdit;
 
 	widgAddEditBox(psWScreen, &sEdInit);
 
 	if (*getModList())
 	{
-		std::string modListMessage = _("Mod: ");
+		QString modListMessage = _("Mod: ");
 		modListMessage += getModList();
-		addConsoleMessage(modListMessage.c_str(), DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
+		addConsoleMessage(modListMessage.toUtf8().constData(), DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
 		if (NetPlay.bComms)
 		{
 			addConsoleMessage(_("All players need to have the same mods to join your game."),DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
@@ -3981,9 +3981,9 @@ void displayPosition(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	char text[80];
 
 	psWidget->gqueue.drawBlueBox(x, y, psWidget->width(), psWidget->height());
-	//iV_SetTextColour(WZCOL_FORM_TEXT); FIXME!!
 	ssprintf(text, _("Click to take player slot %d"), NetPlay.players[i].position);
 	psWidget->gqueue.text(font_regular, text, x + 10, y + 22);
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 static void displayAi(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
@@ -3993,10 +3993,9 @@ static void displayAi(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	const int j = psWidget->UserData;
 	const char *commsText[] = { N_("Open"), N_("Closed") };
 
-	drawBlueBox(x, y, psWidget->width(), psWidget->height());
-	iV_SetFont(font_regular);
-	iV_SetTextColour(WZCOL_FORM_TEXT);
-	iV_DrawText((j >= 0) ? aidata[j].name : gettext(commsText[j + 2]), x + 10, y + 22);
+	psWidget->gqueue.drawBlueBox(x, y, psWidget->width(), psWidget->height());
+	psWidget->gqueue.text(font_regular, (j >= 0) ? aidata[j].name : gettext(commsText[j + 2]), x + 10, y + 22);
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 static int difficultyIcon(int difficulty)
@@ -4018,20 +4017,19 @@ static void displayDifficulty(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	const int j = psWidget->UserData;
 
 	ASSERT_OR_RETURN(, j < ARRAY_SIZE(difficultyList), "Bad difficulty found: %d", j);
-	drawBlueBox(x, y, psWidget->width(), psWidget->height());
-	iV_SetFont(font_regular);
-	iV_SetTextColour(WZCOL_FORM_TEXT);
-	iV_DrawImage(FrontImages, difficultyIcon(j), x + 5, y + 5);
-	iV_DrawText(gettext(difficultyList[j]), x + 42, y + 22);
+	psWidget->gqueue.drawBlueBox(x, y, psWidget->width(), psWidget->height());
+	psWidget->gqueue.imageFile(FrontImages, difficultyIcon(j), x + 5, y + 5);
+	psWidget->gqueue.text(font_regular, gettext(difficultyList[j]), x + 42, y + 22);
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
-static bool isKnownPlayer(std::map<std::string, EcKey::Key> const &knownPlayers, std::string const &name, EcKey const &key)
+static bool isKnownPlayer(std::map<QString, EcKey::Key> const &knownPlayers, QString const &name, EcKey const &key)
 {
 	if (key.empty())
 	{
 		return false;
 	}
-	std::map<std::string, EcKey::Key>::const_iterator i = knownPlayers.find(name);
+	std::map<QString, EcKey::Key>::const_iterator i = knownPlayers.find(name);
 	return i != knownPlayers.end() && key.toBytes(EcKey::Public) == i->second;
 }
 
@@ -4045,61 +4043,44 @@ void displayPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	const int nameX = 32;
 
 	//bluboxes.
-	drawBlueBox(x, y, psWidget->width(), psWidget->height());
+	psWidget->gqueue.drawBlueBox(x, y, psWidget->width(), psWidget->height());
 	if (NetPlay.isHost && NetPlay.players[j].wzFile.isSending)
 	{
 		static char mapProgressString[MAX_STR_LENGTH] = {'\0'};
 		int progress = (NetPlay.players[j].wzFile.currPos * 100) / NetPlay.players[j].wzFile.fileSize_32;
 
 		snprintf(mapProgressString, MAX_STR_LENGTH, _("Sending Map: %d%% "), progress);
-		iV_SetFont(font_regular); // font
-		iV_SetTextColour(WZCOL_FORM_TEXT);
-		iV_DrawText(mapProgressString, x + 15, y + 22);
+		psWidget->gqueue.text(font_regular, mapProgressString, x + 15, y + 22);
 	}
 	else if (mapDownloadProgress != 100 && j == selectedPlayer)
 	{
 		static char mapProgressString[MAX_STR_LENGTH] = {'\0'};
 		snprintf(mapProgressString, MAX_STR_LENGTH, _("Map: %d%% downloaded"), mapDownloadProgress);
-		iV_SetFont(font_regular); // font
-		iV_SetTextColour(WZCOL_FORM_TEXT);
-		iV_DrawText(mapProgressString, x + 5, y + 22);
+		psWidget->gqueue.text(font_regular, mapProgressString, x + 5, y + 22);
 		return;
 	}
 	else if (ingame.localOptionsReceived && NetPlay.players[j].allocated)					// only draw if real player!
 	{
-		std::string name = NetPlay.players[j].name;
+		QString name = NetPlay.players[j].name;
+		PIELIGHT colour = WZCOL_FORM_PLAYER_UNKNOWN;
 
-		drawBlueBox(x, y, psWidget->width(), psWidget->height());
+		psWidget->gqueue.drawBlueBox(x, y, psWidget->width(), psWidget->height());
 
-		iV_SetFont(font_regular);											// font
-		std::map<std::string, EcKey::Key> serverPlayers;  // TODO Fill this with players known to the server (needs implementing on the server, too). Currently useless.
+		std::map<QString, EcKey::Key> serverPlayers;  // TODO Fill this with players known to the server (needs implementing on the server, too). Currently useless.
 		if (ingame.PingTimes[j] >= PING_LIMIT)
 		{
-			iV_SetTextColour(WZCOL_FORM_PLAYER_NOPING);
+			colour = WZCOL_FORM_PLAYER_NOPING;
 		}
 		else if (isKnownPlayer(serverPlayers, name, getMultiStats(j).identity))
 		{
-			iV_SetTextColour(WZCOL_FORM_PLAYER_KNOWN_BY_SERVER);
+			colour = WZCOL_FORM_PLAYER_KNOWN_BY_SERVER;
 		}
 		else if (isKnownPlayer(getKnownPlayers(), name, getMultiStats(j).identity))
 		{
-			iV_SetTextColour(WZCOL_FORM_PLAYER_KNOWN);
-		}
-		else
-		{
-			iV_SetTextColour(WZCOL_FORM_PLAYER_UNKNOWN);
+			colour = WZCOL_FORM_PLAYER_KNOWN;
 		}
 
-		// name
-		if (iV_GetTextWidth(name.c_str()) > psWidget->width() - nameX)
-		{
-			while (!name.empty() && iV_GetTextWidth((name + "...").c_str()) > psWidget->width() - nameX)
-			{
-				name.resize(name.size() - 1);  // Clip name.
-			}
-			name += "...";
-		}
-		std::string subText;
+		QString subText;
 		if (j == NET_HOST_ONLY && NetPlay.bComms)
 		{
 			subText += _("HOST");
@@ -4109,7 +4090,7 @@ void displayPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 			char buf[250] = {'\0'};
 
 			// show "actual" ping time
-			ssprintf(buf, "%s%s: ", subText.empty()? "" : ", ", _("Ping"));
+			ssprintf(buf, "%s%s: ", subText.isEmpty()? "" : ", ", _("Ping"));
 			subText += buf;
 			if (ingame.PingTimes[j] < PING_LIMIT)
 			{
@@ -4121,20 +4102,16 @@ void displayPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 			}
 			subText += buf;
 		}
-		iV_DrawText(name.c_str(), x + nameX, y + (subText.empty()? 22 : 18));
-		if (!subText.empty())
+		psWidget->gqueue.text(font_regular, name, x + nameX, y + (subText.isEmpty()? 22 : 18), WZCOL_FORM_TEXT, TEXT_TRUNCATE, psWidget->width() - nameX);
+		if (!subText.isEmpty())
 		{
-			iV_SetFont(font_small);
-			iV_SetTextColour(WZCOL_TEXT_MEDIUM);
-			iV_DrawText(subText.c_str(), x + nameX, y + 28);
-			iV_SetFont(font_regular);
-			iV_SetTextColour(WZCOL_FORM_TEXT);
+			psWidget->gqueue.text(font_small, subText, x + nameX, y + 28, WZCOL_TEXT_MEDIUM);
 		}
 
 		PLAYERSTATS stat = getMultiStats(j);
 		if(stat.wins + stat.losses < 5)
 		{
-			iV_DrawImage(FrontImages, IMAGE_MEDAL_DUMMY, x + 4, y + 13);
+			psWidget->gqueue.imageFile(FrontImages, IMAGE_MEDAL_DUMMY, x + 4, y + 13);
 		}
 		else
 		{
@@ -4144,45 +4121,45 @@ void displayPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 			eval = stat.totalKills;
 			if(eval >600)
 			{
-				iV_DrawImage(FrontImages, IMAGE_MULTIRANK1, x + 4, y + 3);
+				psWidget->gqueue.imageFile(FrontImages, IMAGE_MULTIRANK1, x + 4, y + 3);
 			}
 			else if(eval >300)
 			{
-				iV_DrawImage(FrontImages, IMAGE_MULTIRANK2, x + 4, y + 3);
+				psWidget->gqueue.imageFile(FrontImages, IMAGE_MULTIRANK2, x + 4, y + 3);
 			}
 			else if(eval >150)
 			{
-				iV_DrawImage(FrontImages, IMAGE_MULTIRANK3, x + 4, y + 3);
+				psWidget->gqueue.imageFile(FrontImages, IMAGE_MULTIRANK3, x + 4, y + 3);
 			}
 
 			// star 2 games played (Cannot use stat.played, since that's just the number of times the player exited via the game menu, not the number of games played.)
 			eval = stat.wins + stat.losses;
 			if(eval >200)
 			{
-				iV_DrawImage(FrontImages, IMAGE_MULTIRANK1, x + 4, y + 13);
+				psWidget->gqueue.imageFile(FrontImages, IMAGE_MULTIRANK1, x + 4, y + 13);
 			}
 			else if(eval >100)
 			{
-				iV_DrawImage(FrontImages, IMAGE_MULTIRANK2, x + 4, y + 13);
+				psWidget->gqueue.imageFile(FrontImages, IMAGE_MULTIRANK2, x + 4, y + 13);
 			}
 			else if(eval >50)
 			{
-				iV_DrawImage(FrontImages, IMAGE_MULTIRANK3, x + 4, y + 13);
+				psWidget->gqueue.imageFile(FrontImages, IMAGE_MULTIRANK3, x + 4, y + 13);
 			}
 
 			// star 3 games won.
 			eval = stat.wins;
 			if(eval >80)
 			{
-				iV_DrawImage(FrontImages, IMAGE_MULTIRANK1, x + 4, y + 23);
+				psWidget->gqueue.imageFile(FrontImages, IMAGE_MULTIRANK1, x + 4, y + 23);
 			}
 			else if(eval >40)
 			{
-				iV_DrawImage(FrontImages, IMAGE_MULTIRANK2, x + 4, y + 23);
+				psWidget->gqueue.imageFile(FrontImages, IMAGE_MULTIRANK2, x + 4, y + 23);
 			}
 			else if(eval >10)
 			{
-				iV_DrawImage(FrontImages, IMAGE_MULTIRANK3, x + 4, y + 23);
+				psWidget->gqueue.imageFile(FrontImages, IMAGE_MULTIRANK3, x + 4, y + 23);
 			}
 
 			// medals.
@@ -4192,16 +4169,16 @@ void displayPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 				{
 					if ((stat.wins >= 24) && (stat.wins > (8 * stat.losses))) // gold requirement
 					{
-						iV_DrawImage(FrontImages, IMAGE_MEDAL_GOLD, x + 16, y + 11);
+						psWidget->gqueue.imageFile(FrontImages, IMAGE_MEDAL_GOLD, x + 16, y + 11);
 					}
 					else
 					{
-						iV_DrawImage(FrontImages, IMAGE_MEDAL_SILVER, x + 16, y + 11);
+						psWidget->gqueue.imageFile(FrontImages, IMAGE_MEDAL_SILVER, x + 16, y + 11);
 					}
 				}
 				else
 				{
-					iV_DrawImage(FrontImages, IMAGE_MEDAL_BRONZE, x + 16, y + 11);
+					psWidget->gqueue.imageFile(FrontImages, IMAGE_MEDAL_BRONZE, x + 16, y + 11);
 				}
 			}
 		}
@@ -4213,10 +4190,8 @@ void displayPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 
 		if (NetPlay.players[j].ai >= 0)
 		{
-			iV_DrawImage(FrontImages, IMAGE_PLAYER_PC, x, y + 11);
+			psWidget->gqueue.imageFile(FrontImages, IMAGE_PLAYER_PC, x, y + 11);
 		}
-		iV_SetFont(font_regular);
-		iV_SetTextColour(WZCOL_FORM_TEXT);
 		ASSERT_OR_RETURN(, NetPlay.players[j].ai < (int)aidata.size(), "Uh-oh, AI index out of bounds");
 		switch (NetPlay.players[j].ai)
 		{
@@ -4224,8 +4199,9 @@ void displayPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 		case AI_CLOSED: sstrcpy(aitext, _("Closed")); break;
 		default: sstrcpy(aitext, nameOverrides[j][0] == '\0'? NetPlay.isHost? aidata[NetPlay.players[j].ai].name : NetPlay.players[j].name : nameOverrides[j]); break;
 		}
-		iV_DrawText(aitext, x + nameX, y + 22);
+		psWidget->gqueue.text(font_regular, aitext, x + nameX, y + 22);
 	}
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 void displayColour(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
@@ -4234,13 +4210,14 @@ void displayColour(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	const int y = yOffset + psWidget->y();
 	const int j = psWidget->UserData;
 
-	drawBlueBox(x, y, psWidget->width(), psWidget->height());
+	psWidget->gqueue.drawBlueBox(x, y, psWidget->width(), psWidget->height());
 	if (!NetPlay.players[j].wzFile.isSending && game.skDiff[j])
 	{
 		int player = getPlayerColour(j);
 		STATIC_ASSERT(MAX_PLAYERS <= 16);
-		iV_DrawImageTc(FrontImages, IMAGE_PLAYERN, IMAGE_PLAYERN_TC, x + 7, y + 9, pal_GetTeamColour(player));
+		psWidget->gqueue.imageFileTc(Image(FrontImages, IMAGE_PLAYERN), Image(FrontImages, IMAGE_PLAYERN_TC), x + 7, y + 9, pal_GetTeamColour(player));
 	}
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -4258,7 +4235,7 @@ void displayMultiEditBox(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	int x = xOffset + psWidget->x();
 	int y = yOffset + psWidget->y();
 
-	drawBlueBox(x, y, psWidget->width(), psWidget->height());
+	psWidget->gqueue.drawBlueBox(x, y, psWidget->width(), psWidget->height());
 
 	if( ((W_EDITBOX*)psWidget)->state & WEDBS_DISABLE)					// disabled
 	{
@@ -4268,8 +4245,9 @@ void displayMultiEditBox(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 		colour.byte.b = FILLBLUE;
 		colour.byte.g = FILLGREEN;
 		colour.byte.a = FILLTRANS;
-		pie_UniTransBoxFill(x, y, x + psWidget->width() + psWidget->height(), y + psWidget->height(), colour);
+		psWidget->gqueue.transBoxFill(x, y, x + psWidget->width() + psWidget->height(), y + psWidget->height(), colour);
 	}
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 static Image getFrontHighlightImage(Image image)
@@ -4379,7 +4357,7 @@ static bool addMultiEditBox(UDWORD formid, UDWORD id, UDWORD x, UDWORD y, char c
 	sEdInit.width = MULTIOP_EDITBOXW;
 	sEdInit.height = MULTIOP_EDITBOXH;
 	sEdInit.pText = tipres;
-	sEdInit.pBoxDisplay = displayMultiEditBox;
+	sEdInit.pDisplay = displayMultiEditBox;
 	if (!widgAddEditBox(psWScreen, &sEdInit))
 	{
 		return false;

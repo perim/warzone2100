@@ -350,14 +350,49 @@ void GFXQueue::draw()
 	}
 }
 
-void GFXQueue::text(iV_fonts fontType, const QString &text, float x, float y, int flags, float width)
+Vector2f GFXQueue::textSize(iV_fonts fontType, const QString &text)
 {
+	const int length = text.size();
+	texture_font_t *font = fonts[fontType];
+	Vector2f pen = { 0, 0 };
+	QVector<uint> data = text.toUcs4();
+	float height = 0.0f;
+	for (int i = 0; i < length; i++)
+	{
+		texture_glyph_t *glyph = texture_font_get_glyph(font, data[i]);
+		if (glyph != NULL)
+		{
+			int kerning = 0;
+			if (i > 0)
+			{
+				kerning = texture_glyph_get_kerning(glyph, data[i - 1]);
+			}
+			pen.x += kerning + glyph->advance_x;
+			height = MAX(height, glyph->advance_y);
+		}
+	}
+	pen.y += height;
+	return pen;
+}
+
+// cannot inline since 'fonts' is static here
+float GFXQueue::textLineSize(iV_fonts fontType) { return -fonts[fontType]->linegap; }
+float GFXQueue::textAboveBase(iV_fonts fontType) { return -fonts[fontType]->ascender; }
+float GFXQueue::textBelowBase(iV_fonts fontType) { return -fonts[fontType]->descender; }
+
+Vector2f GFXQueue::text(iV_fonts fontType, const QString &text, float x, float y, PIELIGHT colour, int flags, float width)
+{
+	Vector2f pen = { x, y };
+	const int length = text.size();
+	if (length == 0)
+	{
+		return pen;
+	}
 	(void)flags; // TODO
 	(void)width; // TODO
+	(void)colour; // TODO
 	GFXJob &job = findJob(GFX_TEXTURE_INDEXED, GL_TRIANGLES, 2);
-	Vector2f pen = { x, y };
 	texture_font_t *font = fonts[fontType];
-	const int length = text.size();
 	job.texPage = font->atlas->id;
 	job.vertices = length * 4;
 	job.polygons = length * 2;
@@ -392,6 +427,7 @@ void GFXQueue::text(iV_fonts fontType, const QString &text, float x, float y, in
 			pen.x += glyph->advance_x;
 		}
 	}
+	return pen;
 }
 
 void GFXQueue::line(float x0, float y0, float x1, float y1, PIELIGHT colour)
@@ -738,10 +774,10 @@ bool pie_InitGraphics()
 	// TODO: map language -> font file from config file
 	texture_atlas_t *atlas = texture_atlas_new(512, 512, 1);
 
-	fonts[font_regular] = texture_font_new(atlas, "data/fonts/robotoslab-regular.ttf", 12);
-	fonts[font_small] = texture_font_new(atlas, "data/fonts/robotoslab-light.ttf", 9);
-	fonts[font_large] = texture_font_new(atlas, "data/fonts/robotoslab-bold.ttf", 21);
-	fonts[font_scaled] = texture_font_new(atlas, "data/fonts/robotoslab-regular.ttf", 12.f * pie_GetVideoBufferHeight() / 480);
+	fonts[font_regular] = texture_font_new(atlas, "data/fonts/robotoslab-regular.ttf", 13);
+	fonts[font_small] = texture_font_new(atlas, "data/fonts/robotoslab-light.ttf", 10);
+	fonts[font_large] = texture_font_new(atlas, "data/fonts/robotoslab-bold.ttf", 22);
+	fonts[font_scaled] = texture_font_new(atlas, "data/fonts/robotoslab-regular.ttf", 13.f * pie_GetVideoBufferHeight() / 480);
 	const wchar_t *cache = L" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
 			       L"`abcdefghijklmnopqrstuvwxyz{|}~";
 	texture_font_load_glyphs(fonts[font_regular], cache);

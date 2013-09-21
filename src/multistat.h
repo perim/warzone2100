@@ -55,7 +55,7 @@ void updateMultiStatsLoses(void);
 void updateMultiStatsKills(BASE_OBJECT *psKilled,UDWORD player);
 void recvMultiStats(NETQUEUE queue);
 
-std::map<std::string, EcKey::Key> const &getKnownPlayers();
-void addKnownPlayer(std::string const &name, EcKey const &key, bool override = false);
+std::map<QString, EcKey::Key> const &getKnownPlayers();
+void addKnownPlayer(QString const &name, EcKey const &key, bool override = false);
 
 #endif // __INCLUDED_SRC_MULTISTATS_H__

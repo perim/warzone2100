@@ -317,10 +317,10 @@ void updateMultiStatsKills(BASE_OBJECT *psKilled,UDWORD player)
 	}
 }
 
-static std::map<std::string, EcKey::Key> knownPlayers;
+static std::map<QString, EcKey::Key> knownPlayers;
 static QSettings *knownPlayersIni = nullptr;
 
-std::map<std::string, EcKey::Key> const &getKnownPlayers()
+std::map<QString, EcKey::Key> const &getKnownPlayers()
 {
 	if (knownPlayersIni == nullptr)
 	{
@@ -328,13 +328,13 @@ std::map<std::string, EcKey::Key> const &getKnownPlayers()
 		QStringList names = knownPlayersIni->allKeys();
 		for (int i = 0; i < names.size(); ++i)
 		{
-			knownPlayers[names[i].toUtf8().constData()] = base64Decode(knownPlayersIni->value(names[i]).toString().toStdString());
+			knownPlayers[names[i]] = base64Decode(knownPlayersIni->value(names[i]).toString().toStdString());
 		}
 	}
 	return knownPlayers;
 }
 
-void addKnownPlayer(std::string const &name, EcKey const &key, bool override)
+void addKnownPlayer(QString const &name, EcKey const &key, bool override)
 {
 	if (key.empty())
 	{
@@ -348,6 +348,6 @@ void addKnownPlayer(std::string const &name, EcKey const &key, bool override)
 
 	getKnownPlayers();  // Init knownPlayersIni.
 	knownPlayers[name] = key.toBytes(EcKey::Public);
-	knownPlayersIni->setValue(QString::fromUtf8(name.c_str()), base64Encode(key.toBytes(EcKey::Public)).c_str());
+	knownPlayersIni->setValue(name, base64Encode(key.toBytes(EcKey::Public)).c_str());
 	knownPlayersIni->sync();
 }

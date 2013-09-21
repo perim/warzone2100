@@ -44,9 +44,6 @@
 /* Size of the overwrite cursor */
 #define WEDB_CURSORSIZE		8
 
-/* Whether the cursor blinks or not */
-#define CURSOR_BLINK		1
-
 /* The time the cursor blinks for */
 #define WEDB_BLINKRATE		800
 
@@ -57,7 +54,6 @@
 W_EDBINIT::W_EDBINIT()
 	: pText(NULL)
 	, FontID(font_regular)
-	, pBoxDisplay(NULL)
 {}
 
 W_EDITBOX::W_EDITBOX(W_EDBINIT const *init)
@@ -66,7 +62,6 @@ W_EDITBOX::W_EDITBOX(W_EDBINIT const *init)
 	, FontID(init->FontID)
 	, blinkOffset(wzGetTicks())
 	, printStart(0)
-	, pBoxDisplay(init->pBoxDisplay)
 	, HilightAudioID(WidgGetHilightAudioID())
 	, ClickedAudioID(WidgGetClickedAudioID())
 	, AudioCallback(WidgGetAudioCallback())
@@ -90,7 +85,6 @@ W_EDITBOX::W_EDITBOX(WIDGET* parent)
 	: WIDGET(parent)
 	, state(WEDBS_FIXED)
 	, FontID(font_regular)
-	, pBoxDisplay(nullptr)
 	, HilightAudioID(WidgGetHilightAudioID())
 	, ClickedAudioID(WidgGetClickedAudioID())
 	, AudioCallback(WidgGetAudioCallback())
@@ -103,7 +97,6 @@ void W_EDITBOX::initialise()
 {
 	state = WEDBS_FIXED;
 	printStart = 0;
-	iV_SetFont(FontID);
 	fitStringStart();
 }
 
@@ -136,6 +129,7 @@ void W_EDITBOX::overwriteChar(QChar ch)
 	}
 
 	ASSERT(insPos <= aText.length(), "overwriteChar: Invalid insertion point");
+	dirty = true;
 
 	if (insPos == aText.length())
 	{
@@ -180,16 +174,13 @@ void W_EDITBOX::delCharLeft()
 /* Calculate how much of the start of a string can fit into the edit box */
 void W_EDITBOX::fitStringStart()
 {
-	// We need to calculate the whole string's pixel size.
-	// From QuesoGLC's notes: additional processing like kerning creates strings of text whose dimensions are not directly
-	// related to the simple juxtaposition of individual glyph metrics. For example, the advance width of "VA" isn't the
-	// sum of the advances of "V" and "A" taken separately.
 	QString tmp = aText;
 	tmp.remove(0, printStart);  // Ignore the first printStart characters.
+	dirty = true;
 
 	while (!tmp.isEmpty())
 	{
-		int pixelWidth = iV_GetTextWidth(tmp.toUtf8().constData());
+		int pixelWidth = gqueue.textSize(FontID, tmp).x;
 
 		if (pixelWidth <= width() - (WEDB_XGAP * 2 + WEDB_CURSORSIZE))
 		{
@@ -215,7 +206,7 @@ void W_EDITBOX::fitStringEnd()
 
 	while (!tmp.isEmpty())
 	{
-		int pixelWidth = iV_GetTextWidth(tmp.toUtf8().constData());
+		int pixelWidth = gqueue.textSize(FontID, tmp).x;
 
 		if (pixelWidth <= width() - (WEDB_XGAP * 2 + WEDB_CURSORSIZE))
 		{
@@ -232,8 +223,6 @@ void W_EDITBOX::fitStringEnd()
 	printWidth = 0;
 }
 
-
-/* Calculate how much of the end of a string can fit into the edit box */
 void W_EDITBOX::setCursorPosPixels(int xPos)
 {
 	QString tmp = aText;
@@ -244,7 +233,7 @@ void W_EDITBOX::setCursorPosPixels(int xPos)
 	int prevPos = printStart + tmp.length();
 	while (!tmp.isEmpty())
 	{
-		int pixelWidth = iV_GetTextWidth(tmp.toUtf8().constData());
+		int pixelWidth = gqueue.textSize(FontID, tmp).x;
 		int delta = pixelWidth - (xPos - (WEDB_XGAP + WEDB_CURSORSIZE / 2));
 		int pos = printStart + tmp.length();
 
@@ -274,6 +263,7 @@ void W_EDITBOX::run(W_CONTEXT *psContext)
 	{
 		return;
 	}
+	dirty = true;
 
 	/* If there is a mouse click outside of the edit box - stop editing */
 	int mx = psContext->mx;
@@ -283,9 +273,6 @@ void W_EDITBOX::run(W_CONTEXT *psContext)
 		screenPointer->setFocus(nullptr);
 		return;
 	}
-
-	/* note the widget state */
-	iV_SetFont(FontID);
 
 	/* Loop through the characters in the input buffer */
 	bool done = false;
@@ -327,7 +314,7 @@ void W_EDITBOX::run(W_CONTEXT *psContext)
 				printStart = MIN(printStart + WEDB_CHARJUMP, len - 1);
 				fitStringStart();
 			}
-			debug(LOG_INPUT, "EditBox cursor right");
+			debug(LOG_INPUT, "EditBox cursor right (%d, %d, %d)", insPos, printStart, printChars);
 			break;
 		case INPBUF_UP :
 			debug(LOG_INPUT, "EditBox cursor up");
@@ -350,17 +337,6 @@ void W_EDITBOX::run(W_CONTEXT *psContext)
 				fitStringEnd();
 			}
 			debug(LOG_INPUT, "EditBox cursor end");
-			break;
-		case INPBUF_INS :
-			if (editState == WEDBS_INSERT)
-			{
-				editState = WEDBS_OVER;
-			}
-			else
-			{
-				editState = WEDBS_INSERT;
-			}
-			debug(LOG_INPUT, "EditBox cursor insert");
 			break;
 		case INPBUF_DEL :
 			delCharRight();
@@ -419,14 +395,7 @@ void W_EDITBOX::run(W_CONTEXT *psContext)
 				break;
 			}
 			/* Dealt with everything else this must be a printable character */
-			if (editState == WEDBS_INSERT)
-			{
-				insertChar(unicode);
-			}
-			else
-			{
-				overwriteChar(unicode);
-			}
+			insertChar(unicode);
 			len = aText.length();
 			/* Update the printable chars */
 			if (insPos == len)
@@ -463,6 +432,7 @@ void W_EDITBOX::setString(QString string)
 {
 	aText = string;
 	initialise();
+	dirty = true;
 }
 
 
@@ -475,7 +445,6 @@ void W_EDITBOX::clicked(W_CONTEXT *psContext, WIDGET_KEY)
 	}
 
 	// Set cursor position to the click location.
-	iV_SetFont(FontID);
 	setCursorPosPixels(psContext->mx - x());
 
 	// Cursor should be visible instantly.
@@ -532,6 +501,7 @@ void W_EDITBOX::highlight(W_CONTEXT *)
 	}
 
 	psWidget->state |= WEDBS_HILITE;
+	dirty = true;
 }
 
 
@@ -545,6 +515,7 @@ void W_EDITBOX::highlightLost()
 	}
 
 	psWidget->state = psWidget->state & WEDBS_MASK;
+	dirty = true;
 }
 
 void W_EDITBOX::setBoxColours(PIELIGHT first, PIELIGHT second, PIELIGHT background)
@@ -552,86 +523,60 @@ void W_EDITBOX::setBoxColours(PIELIGHT first, PIELIGHT second, PIELIGHT backgrou
 	boxColourFirst = first;
 	boxColourSecond = second;
 	boxColourBackground = background;
+	dirty = true;
 }
 
 void W_EDITBOX::display(int xOffset, int yOffset)
 {
-	if (displayFunction != NULL)
+	if (!dirty)
 	{
-		displayFunction(this, xOffset, yOffset);
+		gqueue.draw();
 		return;
 	}
+	gqueue.clear();
 
 	int x0 = x() + xOffset;
 	int y0 = y() + yOffset;
 	int x1 = x0 + width();
 	int y1 = y0 + height();
 
-	if (pBoxDisplay != NULL)
+	// displayFunction is handled differently in this widget; if defined, it only replaces the box draw part of the implementation
+	if (displayFunction != NULL)
 	{
-		pBoxDisplay(this, xOffset, yOffset);
+		displayFunction(this, xOffset, yOffset);
 	}
 	else
 	{
-		iV_ShadowBox(x0, y0, x1, y1, 0, boxColourFirst, boxColourSecond, boxColourBackground);
+		gqueue.shadowBox(x0, y0, x1, y1, 0, boxColourFirst, boxColourSecond, boxColourBackground);
 	}
 
-	int fx = x0 + WEDB_XGAP;// + (psEdBox->width - fw) / 2;
-
-	iV_SetFont(FontID);
-	iV_SetTextColour(WZCOL_FORM_TEXT);
-
-	int fy = y0 + (height() - iV_GetTextLineSize()) / 2 - iV_GetTextAboveBase();
+	int fx = x0 + WEDB_XGAP;
+	int fy = y0 + (height() - gqueue.textLineSize(FontID)) / 2 - gqueue.textAboveBase(FontID);
 
 	/* If there is more text than will fit into the box, display the bit with the cursor in it */
 	QString tmp = aText;
 	tmp.remove(0, printStart);  // Erase anything there isn't room to display.
 	tmp.remove(printChars, tmp.length());
 
-	iV_DrawText(tmp.toUtf8().constData(), fx, fy);
+	gqueue.text(FontID, tmp, fx, fy - gqueue.textBelowBase(FontID) / 2);
 
 	// Display the cursor if editing
-#if CURSOR_BLINK
 	bool blink = !(((wzGetTicks() - blinkOffset) / WEDB_BLINKRATE) % 2);
 	if ((state & WEDBS_MASK) == WEDBS_INSERT && blink)
-#else
-	if ((state & WEDBS_MASK) == WEDBS_INSERT)
-#endif
 	{
-		// insert mode
 		QString tmp = aText;
 		tmp.remove(insPos, tmp.length());         // Erase from the cursor on, to find where the cursor should be.
 		tmp.remove(0, printStart);
-
-		int cx = x0 + WEDB_XGAP + iV_GetTextWidth(tmp.toUtf8().constData());
-		cx += iV_GetTextWidth("-");
+		int cx = x0 + WEDB_XGAP + gqueue.textSize(FontID, tmp).x;
 		int cy = fy;
-		iV_Line(cx, cy + iV_GetTextAboveBase(), cx, cy - iV_GetTextBelowBase(), WZCOL_FORM_CURSOR);
+		gqueue.line(cx, cy + gqueue.textAboveBase(FontID), cx, cy - gqueue.textBelowBase(FontID), WZCOL_FORM_CURSOR);
 	}
-#if CURSOR_BLINK
-	else if ((state & WEDBS_MASK) == WEDBS_OVER && blink)
-#else
-	else if ((state & WEDBS_MASK) == WEDBS_OVER)
-#endif
+	// Generic highlight implementation
+	if (displayFunction == NULL && (state & WEDBS_HILITE) != 0)
 	{
-		// overwrite mode
-		QString tmp = aText;
-		tmp.remove(insPos, tmp.length());         // Erase from the cursor on, to find where the cursor should be.
-		tmp.remove(0, printStart);
-
-		int cx = x0 + WEDB_XGAP + iV_GetTextWidth(tmp.toUtf8().constData());
-		int cy = fy;
-		iV_Line(cx, cy, cx + WEDB_CURSORSIZE, cy, WZCOL_FORM_CURSOR);
+		gqueue.box(x0 - 2, y0 - 2, x1 + 2, y1 + 2, WZCOL_FORM_HILITE, WZCOL_FORM_HILITE);
 	}
-
-	if (pBoxDisplay == NULL)
-	{
-		if ((state & WEDBS_HILITE) != 0)
-		{
-			/* Display the button hilite */
-			iV_Box(x0 - 2, y0 - 2, x1 + 2, y1 + 2, WZCOL_FORM_HILITE);
-		}
-	}
+	gqueue.draw();
 }
 
 
