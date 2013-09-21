@@ -558,7 +558,7 @@ void W_EDITBOX::display(int xOffset, int yOffset)
 	tmp.remove(0, printStart);  // Erase anything there isn't room to display.
 	tmp.remove(printChars, tmp.length());
 
-	gqueue.text(FontID, tmp, fx, fy - gqueue.textBelowBase(FontID) / 2);
+	gqueue.text(FontID, tmp, fx, fy - gqueue.textBelowBase(FontID) / 2); // hack
 
 	// Display the cursor if editing
 	bool blink = !(((wzGetTicks() - blinkOffset) / WEDB_BLINKRATE) % 2);

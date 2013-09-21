@@ -215,10 +215,8 @@ void GFX::draw()
 		// un-hard-code this later by setting it explicitly...
 		pie_SetRendMode(REND_ALPHA);
 		pie_SetTexturePage(TEXPAGE_EXTERN);
-		//pie_ActivateShader(SHADER_FONT);
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 		glBindTexture(GL_TEXTURE_2D, mTexture);
-		//glBlendColor(1.0f, 1.0f, 1.0f, 1.0f);
 		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_TEXCOORD]); glTexCoordPointer(2, GL_FLOAT, 0, NULL);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBuffers[VBO_INDEX]);
 		glEnableClientState(GL_VERTEX_ARRAY);
@@ -226,9 +224,7 @@ void GFX::draw()
 		glDrawElements(mDrawType, mSize, GL_UNSIGNED_SHORT, 0);
 		glDisableClientState(GL_VERTEX_ARRAY);
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		//glBlendColor(0.0f, 0.0f, 0.0f, 0.0f); // only needed after indexed (string) draw...
-		pie_DeactivateShader(); // ditto
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); // ditto
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glErrors();
 		return;
@@ -376,7 +372,7 @@ Vector2f GFXQueue::textSize(iV_fonts fontType, const QString &text)
 }
 
 // cannot inline since 'fonts' is static here
-float GFXQueue::textLineSize(iV_fonts fontType) { return -fonts[fontType]->linegap; }
+float GFXQueue::textLineSize(iV_fonts fontType) { return fonts[fontType]->linegap; }
 float GFXQueue::textAboveBase(iV_fonts fontType) { return -fonts[fontType]->ascender; }
 float GFXQueue::textBelowBase(iV_fonts fontType) { return -fonts[fontType]->descender; }
 

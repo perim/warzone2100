@@ -339,11 +339,6 @@ bool pie_LoadShaders()
 	result = pie_LoadShader("", "shaders/button.vert", "shaders/button.frag");
 	ASSERT_OR_RETURN(false, result, "Failed to load button shader");
 
-	// Font shader
-	debug(LOG_3D, "Loading shader: SHADER_FONT");
-	result = pie_LoadShader("", "shaders/v3f-t2f-c4f.vert", "shaders/v3f-t2f-c4f.frag");
-	ASSERT_OR_RETURN(false, result, "Failed to load font shader");
-
 	currentShaderMode = SHADER_NONE;
 	return true;
 }
