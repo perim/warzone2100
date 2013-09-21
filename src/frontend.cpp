@@ -277,7 +277,7 @@ static void startSinglePlayerMenu(void)
 	addTextButton(FRONTEND_LOADGAME_MISSION, FRONTEND_POS5X,FRONTEND_POS5Y, _("Load Campaign Game"), WBUT_TXTCENTRE);
 	addTextButton(FRONTEND_LOADGAME_SKIRMISH, FRONTEND_POS6X,FRONTEND_POS6Y, _("Load Skirmish Game"), WBUT_TXTCENTRE);
 
-	addSideText	 (FRONTEND_SIDETEXT ,FRONTEND_SIDEX,FRONTEND_SIDEY,_("SINGLE PLAYER"));
+	addSideText(FRONTEND_SIDETEXT, FRONTEND_SIDEX, FRONTEND_SIDEY,_("SINGLE PLAYER"));
 	addMultiBut(psWScreen, FRONTEND_BOTFORM, FRONTEND_QUIT, 10, 10, 30, 29, P_("menu", "Return"), IMAGE_RETURN, IMAGE_RETURN_HI, IMAGE_RETURN_HI);
 	// show this only when the video sequences are not installed
 	if (!PHYSFS_exists("sequences/devastation.ogg"))
@@ -1567,28 +1567,18 @@ bool runGameOptionsMenu(void)
 // drawing functions
 
 // show a background piccy (currently used for version and mods labels)
-static void displayTitleBitmap(WZ_DECL_UNUSED WIDGET *psWidget, WZ_DECL_UNUSED UDWORD xOffset, WZ_DECL_UNUSED UDWORD yOffset)
+static void displayTitleBitmap(WIDGET *psWidget, UDWORD, UDWORD)
 {
-	char modListText[MAX_STR_LENGTH] = "";
-
-	iV_SetFont(font_regular);
-	iV_SetTextColour(WZCOL_GREY);
-	iV_DrawTextRotated(version_getFormattedVersionString(), pie_GetVideoBufferWidth() - 9, pie_GetVideoBufferHeight() - 14, 270.f);
-
+	QString text(version_getFormattedVersionString());
+	psWidget->gqueue.text(font_regular, text, pie_GetVideoBufferWidth() - 9, pie_GetVideoBufferHeight() - 14, WZCOL_GREY, TEXT_ROTATE_270);
+	psWidget->gqueue.text(font_regular, text, pie_GetVideoBufferWidth() - 10, pie_GetVideoBufferHeight() - 15, WZCOL_TEXT_BRIGHT, TEXT_ROTATE_270);
 	if (*getModList())
 	{
-		sstrcat(modListText, _("Mod: "));
-		sstrcat(modListText, getModList());
-		iV_DrawText(modListText, 9, 14);
+		QString modListText(QString(_("Mod: ")) + getModList());
+		psWidget->gqueue.text(font_regular, modListText, 9, 14, WZCOL_GREY);
+		psWidget->gqueue.text(font_regular, modListText, 10, 15, WZCOL_TEXT_BRIGHT);
 	}
-
-	iV_SetTextColour(WZCOL_TEXT_BRIGHT);
-	iV_DrawTextRotated(version_getFormattedVersionString(), pie_GetVideoBufferWidth() - 10, pie_GetVideoBufferHeight() - 15, 270.f);
-
-	if (*getModList())
-	{
-		iV_DrawText(modListText, 10, 15);
-	}
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -1611,27 +1601,20 @@ static void displayBigSlider(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 
 	int sx = (Slider->width() - 3 - Slider->barSize) * Slider->pos / Slider->numStops;  // determine pos.
 	Slider->gqueue.imageFile(IntImages, IMAGE_SLIDER_BIGBUT, x + 3 + sx, y + 3);		//draw amount
-	Slider->dirty = false;
+	Slider->dirty = false; // FIXME, move when done implementing queue
 }
 
 // ////////////////////////////////////////////////////////////////////////////
 // show text written on its side.
 static void displayTextAt270(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 {
-	SDWORD		fx,fy;
-	W_LABEL		*psLab;
+	W_LABEL *psLab = (W_LABEL *)psWidget;
+	const int fx = xOffset + psWidget->x();
+	const int fy = yOffset + psWidget->y() + psWidget->gqueue.textSize(font_large, psLab->aText).x;
 
-	psLab = (W_LABEL *)psWidget;
-
-	iV_SetFont(font_large);
-
-	fx = xOffset + psWidget->x();
-	fy = yOffset + psWidget->y() + iV_GetTextWidth(psLab->aText.toUtf8().constData());
-
-	iV_SetTextColour(WZCOL_GREY);
-	iV_DrawTextRotated(psLab->aText.toUtf8().constData(), fx+2, fy+2, 270.f);
-	iV_SetTextColour(WZCOL_TEXT_BRIGHT);
-	iV_DrawTextRotated(psLab->aText.toUtf8().constData(), fx, fy, 270.f);
+	psWidget->gqueue.text(font_large, psLab->aText, fx+2, fy+2, WZCOL_GREY, TEXT_ROTATE_270);
+	psWidget->gqueue.text(font_large, psLab->aText, fx, fy, WZCOL_TEXT_BRIGHT, TEXT_ROTATE_270);
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 // ////////////////////////////////////////////////////////////////////////////

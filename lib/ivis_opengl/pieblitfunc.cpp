@@ -76,7 +76,7 @@ GFX::GFX(GFXTYPE type, GLenum drawType, int coordsPerVertex) : mType(type), mDra
 {
 	if (type == GFX_TEXTURE_INDEXED)
 	{
-		glGenBuffers(VBO_INDEXED, mBuffers);
+		glGenBuffers(VBO_COUNT, mBuffers);
 	}
 	else
 	{
@@ -149,7 +149,7 @@ static inline int verticesPerPolygon(GLenum drawType)
 	return -1;
 }
 
-void GFX::buffers(int vertices, const GLvoid *vertBuf, const GLvoid *auxBuf, int polygons, const uint16_t *indices)
+void GFX::buffers(int vertices, const GLvoid *vertBuf, const GLvoid *auxBuf, const GLvoid *auxBuf2, int polygons, const uint16_t *indices)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_VERTEX]);
 	glBufferData(GL_ARRAY_BUFFER, vertices * mCoordsPerVertex * sizeof(GLfloat), vertBuf, GL_STATIC_DRAW);
@@ -167,7 +167,10 @@ void GFX::buffers(int vertices, const GLvoid *vertBuf, const GLvoid *auxBuf, int
 	mSize = vertices;
 	if (mType == GFX_TEXTURE_INDEXED)
 	{
+		// reusing normal buffer for colours for now... original design starting to show its limits
 		ASSERT(polygons > 0 && indices != NULL, "No index parameters given");
+		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_NORMAL]);
+		glBufferData(GL_ARRAY_BUFFER, vertices * 4 * sizeof(GLbyte), auxBuf2, GL_STATIC_DRAW);
 		const int vtsPerPoly = verticesPerPolygon(mDrawType);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBuffers[VBO_INDEX]);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, polygons * vtsPerPoly * sizeof(uint16_t), indices, GL_STATIC_DRAW);
@@ -216,7 +219,9 @@ void GFX::draw()
 		pie_SetRendMode(REND_ALPHA);
 		pie_SetTexturePage(TEXPAGE_EXTERN);
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		glEnableClientState(GL_COLOR_ARRAY);
 		glBindTexture(GL_TEXTURE_2D, mTexture);
+		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_NORMAL]); glColorPointer(4, GL_UNSIGNED_BYTE, 0, NULL); // colours... (sic)
 		glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_TEXCOORD]); glTexCoordPointer(2, GL_FLOAT, 0, NULL);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBuffers[VBO_INDEX]);
 		glEnableClientState(GL_VERTEX_ARRAY);
@@ -224,6 +229,7 @@ void GFX::draw()
 		glDrawElements(mDrawType, mSize, GL_UNSIGNED_SHORT, 0);
 		glDisableClientState(GL_VERTEX_ARRAY);
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glErrors();
@@ -236,9 +242,6 @@ void GFX::draw()
 	if (mType == GFX_TEXTURE || mType == GFX_TEXTURE_PERSISTENT || mType == GFX_TEXTURE_INDEXED)
 	{
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glBlendColor(0.0f, 0.0f, 0.0f, 0.0f); // only needed after indexed (string) draw...
-		pie_DeactivateShader(); // ditto
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); // ditto
 	}
 	else if (mType == GFX_COLOUR || mType == GFX_COLOUR_BLEND)
 	{
@@ -255,7 +258,7 @@ GFX::~GFX()
 	}
 	else
 	{
-		glDeleteBuffers(VBO_INDEXED, mBuffers);
+		glDeleteBuffers(VBO_COUNT, mBuffers);
 	}
 	if (mType == GFX_TEXTURE)
 	{
@@ -333,7 +336,7 @@ void GFXQueue::draw()
 			else // indexed texture drawing
 			{
 				task->associateTexture(job.texPage);
-				task->buffers(job.vertices, job.verts.data(), job.texcoords.data(), job.polygons, job.indices.data());
+				task->buffers(job.vertices, job.verts.data(), job.texcoords.data(), job.colours.data(), job.polygons, job.indices.data());
 			}
 			job.verts.clear();
 			job.texcoords.clear();
@@ -384,9 +387,7 @@ Vector2f GFXQueue::text(iV_fonts fontType, const QString &text, float x, float y
 	{
 		return pen;
 	}
-	(void)flags; // TODO
 	(void)width; // TODO
-	(void)colour; // TODO
 	GFXJob &job = findJob(GFX_TEXTURE_INDEXED, GL_TRIANGLES, 2);
 	texture_font_t *font = fonts[fontType];
 	job.texPage = font->atlas->id;
@@ -395,6 +396,7 @@ Vector2f GFXQueue::text(iV_fonts fontType, const QString &text, float x, float y
 	job.verts.reserve(job.vertices * 2); // reserve sufficient space for data in advance
 	job.texcoords.reserve(job.vertices * 2);
 	job.indices.reserve(length * 3 * 2);
+	job.colours.reserve(length * 4 * 4);
 	const QVector<uint> data = text.toUcs4();
 	for (int i = 0; i < length; i++)
 	{
@@ -406,21 +408,34 @@ Vector2f GFXQueue::text(iV_fonts fontType, const QString &text, float x, float y
 			{
 				kerning = texture_glyph_get_kerning(glyph, data[i - 1]);
 			}
-			pen.x += kerning;
-			glDisable(GL_CULL_FACE);
-			const float x0 = pen.x + glyph->offset_x;
-			const float y0 = pen.y - glyph->offset_y;
-			const float x1 = x0 + glyph->width;
-			const float y1 = y0 + glyph->height;
+			if (flags & TEXT_ROTATE_270)
+			{
+				pen.y -= kerning;
+				const float x0 = pen.x - glyph->offset_y;
+				const float y0 = pen.y - glyph->offset_x - glyph->width;
+				const float x1 = x0 + glyph->height;
+				const float y1 = y0 + glyph->width;
+				job.verts += { x1, y1,  x0, y1,  x0, y0,  x1, y0 };
+				pen.y -= glyph->advance_x;
+			}
+			else
+			{
+				pen.x += kerning;
+				const float x0 = pen.x + glyph->offset_x;
+				const float y0 = pen.y - glyph->offset_y;
+				const float x1 = x0 + glyph->width;
+				const float y1 = y0 + glyph->height;
+				job.verts += { x0, y1,  x0, y0,  x1, y0,  x1, y1 };
+				pen.x += glyph->advance_x;
+			}
 			const float s0 = glyph->s0;
 			const float t0 = glyph->t0;
 			const float s1 = glyph->s1;
 			const float t1 = glyph->t1;
 			job.texcoords += { s0, t1,  s0, t0,  s1, t0,  s1, t1 };
-			job.verts += { x0, y1,  x0, y0,  x1, y0,  x1, y1 };
 			uint16_t idx = i * 4;
 			job.indices += { idx, (uint16_t)(idx + 1), (uint16_t)(idx + 2), idx, (uint16_t)(idx + 2), (uint16_t)(idx + 3) };
-			pen.x += glyph->advance_x;
+			for (int j = 0; j < 4; j++) job.colours += { colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a };
 		}
 	}
 	return pen;

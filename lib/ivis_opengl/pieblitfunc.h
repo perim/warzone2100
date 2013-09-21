@@ -90,7 +90,7 @@ public:
 	void associateTexture(int i);
 
 	/// Upload vertex and texture buffer data to the GPU
-	void buffers(int vertices, const GLvoid *vertBuf, const GLvoid *texBuf, int polygons = 0, const uint16_t *indices = NULL);
+	void buffers(int vertices, const GLvoid *vertBuf, const GLvoid *texBuf, const GLvoid *auxBuf2 = NULL, int polygons = 0, const uint16_t *indices = NULL);
 
 	/// Draw everything
 	void draw();

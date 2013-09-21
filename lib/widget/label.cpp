@@ -30,8 +30,6 @@
 #endif
 #include "form.h"
 #include "tip.h"
-// FIXME Direct iVis implementation include!
-#include "lib/ivis_opengl/textdraw.h"
 
 W_LABINIT::W_LABINIT()
 	: FontID(font_regular)
@@ -55,25 +53,29 @@ W_LABEL::W_LABEL(WIDGET *parent)
 
 void W_LABEL::display(int xOffset, int yOffset)
 {
+	if (!dirty)
+	{
+		gqueue.draw();
+		return;
+	}
 	if (displayFunction != NULL)
 	{
+		gqueue.clear();
 		displayFunction(this, xOffset, yOffset);
+		gqueue.draw();
 		return;
 	}
 
-	iV_SetFont(FontID);
-	iV_SetTextColour(fontColour);
+	gqueue.clear();
 
-	QByteArray text = aText.toUtf8();
 	int fx;
+	int fw = gqueue.textSize(FontID, aText).x;
 	if (style & WLAB_ALIGNCENTRE)
 	{
-		int fw = iV_GetTextWidth(text.constData());
 		fx = xOffset + x() + (width() - fw) / 2;
 	}
 	else if (style & WLAB_ALIGNRIGHT)
 	{
-		int fw = iV_GetTextWidth(text.constData());
 		fx = xOffset + x() + width() - fw;
 	}
 	else
@@ -83,17 +85,19 @@ void W_LABEL::display(int xOffset, int yOffset)
 	int fy;
 	if ((style & WLAB_ALIGNTOPLEFT) != 0)  // Align top
 	{
-		fy = yOffset + y() - iV_GetTextAboveBase();
+		fy = yOffset + y() - gqueue.textAboveBase(FontID);
 	}
 	else if ((style & WLAB_ALIGNBOTTOMLEFT) != 0)  // Align bottom
 	{
-		fy = yOffset + y() - iV_GetTextAboveBase() + (height() - iV_GetTextLineSize());
+		fy = yOffset + y() - gqueue.textAboveBase(FontID) + (height() - gqueue.textLineSize(FontID));
 	}
 	else
 	{
-		fy = yOffset + y() - iV_GetTextAboveBase() + (height() - iV_GetTextLineSize())/2;
+		fy = yOffset + y() - gqueue.textAboveBase(FontID) + (height() - gqueue.textLineSize(FontID))/2;
 	}
-	iV_DrawText(text.constData(), fx, fy);
+	gqueue.text(FontID, aText, fx, fy, fontColour);
+
+	gqueue.draw();
 }
 
 /* Respond to a mouse moving over a label */
@@ -124,6 +128,7 @@ QString W_LABEL::getString() const
 void W_LABEL::setString(QString string)
 {
 	aText = string;
+	dirty = true;
 }
 
 void W_LABEL::setTip(QString string)
@@ -135,4 +140,5 @@ void W_LABEL::setTextAlignment(WzTextAlignment align)
 {
 	style &= ~(WLAB_ALIGNLEFT | WLAB_ALIGNCENTRE | WLAB_ALIGNRIGHT);
 	style |= align;
+	dirty = true;
 }
