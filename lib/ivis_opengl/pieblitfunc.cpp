@@ -372,7 +372,7 @@ Vector2f GFXQueue::textSize(iV_fonts fontType, const QString &text)
 }
 
 // cannot inline since 'fonts' is static here
-float GFXQueue::textLineSize(iV_fonts fontType) { return fonts[fontType]->linegap; }
+float GFXQueue::textLineSize(iV_fonts fontType) { return fonts[fontType]->height; }
 float GFXQueue::textAboveBase(iV_fonts fontType) { return -fonts[fontType]->ascender; }
 float GFXQueue::textBelowBase(iV_fonts fontType) { return -fonts[fontType]->descender; }
 

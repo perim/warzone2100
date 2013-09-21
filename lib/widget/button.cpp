@@ -235,23 +235,16 @@ void W_BUTTON::display(int xOffset, int yOffset)
 
 	if (haveText)
 	{
-		QByteArray textBytes = pText.toUtf8();
-
-		iV_SetFont(FontID);
-		int fw = iV_GetTextWidth(textBytes.constData());
+		PIELIGHT colour = WZCOL_FORM_TEXT;
+		int fw = gqueue.textSize(FontID, pText).x;
 		int fx = x0 + (width() - fw) / 2;
-		int fy = y0 + (height() - iV_GetTextLineSize()) / 2 - iV_GetTextAboveBase();
+		int fy = y0 + (height() - gqueue.textLineSize(FontID)) / 2 - gqueue.textAboveBase(FontID);
 		if (isDisabled)
 		{
-			iV_SetTextColour(WZCOL_FORM_LIGHT);
-			iV_DrawText(textBytes.constData(), fx + 1, fy + 1);
-			iV_SetTextColour(WZCOL_FORM_DISABLE);
+			gqueue.text(FontID, pText, fx + 1, fy + 1, WZCOL_FORM_LIGHT);
+			colour = WZCOL_FORM_DISABLE;
 		}
-		else
-		{
-			iV_SetTextColour(WZCOL_FORM_TEXT);
-		}
-		iV_DrawText(textBytes.constData(), fx, fy);
+		gqueue.text(FontID, pText, fx, fy, colour);
 	}
 
 	if (isDisabled && !images.normal.isNull() && images.disabled.isNull())
