@@ -930,6 +930,9 @@ bool stageOneShutDown(void)
 {
 	debug(LOG_WZ, "== stageOneShutDown ==");
 
+	atmosSetWeatherType(WT_NONE); // reset weather and free its data
+	wzPerfShutdown();
+
 	pie_FreeShaders();
 
 	if ( audio_Disabled() == false )

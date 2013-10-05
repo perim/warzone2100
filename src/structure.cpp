@@ -468,7 +468,7 @@ bool loadStructureStats(QString filename)
 		psStats->base.power = ini.value("powerPoints", 0).toInt();
 		psStats->base.rearm = ini.value("rearmPoints", 0).toInt();
 		psStats->base.resistance = ini.value("resistance", 0).toUInt();
-		psStats->base.hitpoints = ini.value("bodyPoints", 1).toUInt();
+		psStats->base.hitpoints = ini.value("hitpoints", 1).toUInt();
 		psStats->base.armour = ini.value("armour", 0).toUInt();
 		psStats->base.thermal = ini.value("thermal", 0).toUInt();
 		for (int i = 0; i < MAX_PLAYERS; i++)
@@ -479,7 +479,7 @@ bool loadStructureStats(QString filename)
 			psStats->upgrade[i].production = psStats->base.production;
 			psStats->upgrade[i].rearm = psStats->base.rearm;
 			psStats->upgrade[i].resistance = ini.value("resistance", 0).toUInt();
-			psStats->upgrade[i].hitpoints = ini.value("bodyPoints", 1).toUInt();
+			psStats->upgrade[i].hitpoints = ini.value("hitpoints", 1).toUInt();
 			psStats->upgrade[i].armour = ini.value("armour", 0).toUInt();
 			psStats->upgrade[i].thermal = ini.value("thermal", 0).toUInt();
 		}
@@ -500,12 +500,12 @@ bool loadStructureStats(QString filename)
 		psStats->strength = structStrength[strength];
 	
 		// set baseWidth
-		psStats->baseWidth = ini.value("baseWidth", 0).toUInt();
-		ASSERT_OR_RETURN(false, psStats->baseWidth <= 100, "Invalid baseWidth '%d' for structure '%s'", psStats->baseWidth, getID(psStats));
+		psStats->baseWidth = ini.value("width", 0).toUInt();
+		ASSERT_OR_RETURN(false, psStats->baseWidth <= 100, "Invalid width '%d' for structure '%s'", psStats->baseWidth, getID(psStats));
 		
 		// set baseBreadth
-		psStats->baseBreadth = ini.value("baseBreadth", 0).toUInt();
-		ASSERT_OR_RETURN(false, psStats->baseBreadth < 100, "Invalid baseBreadth '%d' for structure '%s'", psStats->baseBreadth, getID(psStats));
+		psStats->baseBreadth = ini.value("breadth", 0).toUInt();
+		ASSERT_OR_RETURN(false, psStats->baseBreadth < 100, "Invalid breadth '%d' for structure '%s'", psStats->baseBreadth, getID(psStats));
 		
 		psStats->height = ini.value("height").toUInt();
 		psStats->powerToBuild = ini.value("buildPower").toUInt();

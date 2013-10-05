@@ -208,8 +208,8 @@ _keymapsave keyMapSaveTable[] =
 	kf_ToggleRadarJump,
 	kf_MovePause,
 	kf_NOOP,
-	kf_SensorDisplayOn,
-	kf_SensorDisplayOff,
+	kf_NOOP,
+	kf_NOOP,
 	kf_ToggleRadarTerrain,          //radar terrain on/off
 	kf_ToggleRadarAllyEnemy,        //enemy/ally radar color toggle
 	kf_ToggleSensorDisplay,		//  Was commented out below. moved also!.  Re-enabled --Q 5/10/05
@@ -252,7 +252,7 @@ _keymapsave keyMapSaveTable[] =
 	kf_ToggleDrivingMode,
 	kf_ToggleShowGateways,
 	kf_ToggleShowPath,
-	kf_MapCheck,
+	kf_PerformanceSample,
 	kf_SetDroidGoToTransport,
 	kf_NOOP,
 	kf_toggleTrapCursor,
@@ -410,8 +410,6 @@ void	keyInitMappings( bool bForceDefaults )
 
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT, KEY_H, KEYMAP_PRESSED, kf_AddHelpBlip, N_("Drop a beacon"));
 
-	keyAddMapping(KEYMAP_ALWAYS,     KEY_IGNORE, KEY_Z,   KEYMAP_PRESSED,  kf_SensorDisplayOn,      N_("Sensor display On"));
-	keyAddMapping(KEYMAP_ALWAYS,     KEY_IGNORE, KEY_Z,   KEYMAP_RELEASED, kf_SensorDisplayOff,     N_("Sensor display Off"));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT,   KEY_S,   KEYMAP_PRESSED,  kf_ToggleShadows,        N_("Toggles shadows"));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT,   KEY_T,   KEYMAP_PRESSED,  kf_toggleTrapCursor,     N_("Trap cursor"));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LCTRL,  KEY_TAB, KEYMAP_PRESSED,  kf_ToggleRadarTerrain,   N_("Toggle radar terrain"));
@@ -469,7 +467,7 @@ void	keyInitMappings( bool bForceDefaults )
 	keyAddMapping(KEYMAP__DEBUG, KEY_LCTRL,  KEY_J,         KEYMAP_PRESSED, kf_ToggleFog,           N_("Toggles All fog"));
 	keyAddMapping(KEYMAP__DEBUG, KEY_LCTRL,  KEY_Q,         KEYMAP_PRESSED, kf_ToggleWeather,       N_("Trigger some weather"));
 	keyAddMapping(KEYMAP__DEBUG, KEY_IGNORE, KEY_K,         KEYMAP_PRESSED, kf_TriFlip,             N_("Flip terrain triangle"));
-	keyAddMapping(KEYMAP__DEBUG, KEY_LCTRL,  KEY_K,         KEYMAP_PRESSED, kf_MapCheck,            N_("Realign height of all objects on the map"));
+	keyAddMapping(KEYMAP__DEBUG, KEY_LCTRL,  KEY_K,         KEYMAP_PRESSED, kf_PerformanceSample,   N_("Make a performance measurement sample"));
 
 	//These ones are necessary for debugging
 	keyAddMapping(KEYMAP__DEBUG, KEY_LALT,   KEY_A, KEYMAP_PRESSED, kf_AllAvailable,      N_("Make all items available"));

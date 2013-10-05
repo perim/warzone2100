@@ -38,6 +38,7 @@
 #include "lib/ivis_opengl/piemode.h"
 #include "lib/framework/fixedpoint.h"
 #include "lib/ivis_opengl/piefunc.h"
+#include "lib/ivis_opengl/screen.h"
 
 #include "lib/gamelib/gtime.h"
 #include "lib/gamelib/animobj.h"
@@ -94,6 +95,11 @@
 
 /********************  Prototypes  ********************/
 
+static void displayDelivPoints();
+static void displayProximityMsgs();
+static void displayDynamicObjects();
+static void displayStaticObjects();
+static void displayFeatures();
 static UDWORD	getTargettingGfx(void);
 static void	drawDroidGroupNumber(DROID *psDroid);
 static void	trackHeight(float desiredHeight);
@@ -677,7 +683,7 @@ static void setupConnectionStatusForm(void)
 /// Render the 3D world
 void draw3DScene( void )
 {
-	GL_DEBUG("Draw 3D scene - start");
+	wzPerfBegin(PERF_START_FRAME, "Start 3D scene");
 
 	/* What frame number are we on? */
 	currentGameFrame = frameGetFrameNumber();
@@ -704,10 +710,12 @@ void draw3DScene( void )
 	pie_Begin3DScene();
 	/* Set 3D world origins */
 	pie_SetGeometricOffset(rendSurface.width / 2, geoOffset);
+	wzPerfEnd(PERF_START_FRAME);
 
 	// draw terrain
 	displayTerrain();
 
+	wzPerfBegin(PERF_MISC, "3D scene - misc text");
 	pie_BeginInterface();
 	drawDroidSelections();
 
@@ -726,7 +734,6 @@ void draw3DScene( void )
 		pie_SetFogStatus(true);
 	}
 
-	GL_DEBUG("Draw 3D scene - text");
 	if (!bRender3DOnly)
 	{
 		/* Ensure that any text messages are displayed at bottom of screen */
@@ -856,6 +863,7 @@ void draw3DScene( void )
 		showDroidPaths();
 	}
 
+	wzPerfEnd(PERF_MISC);
 	GL_DEBUG("Draw 3D scene - end");
 }
 
@@ -1017,12 +1025,14 @@ static void drawTiles(iView *player)
 	}
 
 	/* This is done here as effects can light the terrain - pause mode problems though */
+	wzPerfBegin(PERF_EFFECTS, "3D scene - effects");
 	processEffects();
 	atmosUpdateSystem();
 	avUpdateTiles();
+	wzPerfEnd(PERF_EFFECTS);
 
 	// now we are about to draw the terrain
-	GL_DEBUG("Draw 3D scene - terrain");
+	wzPerfBegin(PERF_TERRAIN, "3D scene - terrain");
 	pie_SetFogStatus(true);
 
 	pie_MatBegin();
@@ -1034,12 +1044,13 @@ static void drawTiles(iView *player)
 
 	// and to the warzone modelview transform
 	pie_MatEnd();
+	wzPerfEnd(PERF_TERRAIN);
 
 	// draw skybox
 	renderSurroundings();
 
 	// and prepare for rendering the models
-	GL_DEBUG("Draw 3D scene - models");
+	wzPerfBegin(PERF_MODEL_INIT, "Draw 3D scene - model init");
 	pie_SetRendMode(REND_OPAQUE);
 
 	/* ---------------------------------------------------------------- */
@@ -1056,10 +1067,13 @@ static void drawTiles(iView *player)
 	displayDelivPoints();
 	display3DProjectiles(); // may be bucket render implemented
 	pie_MatEnd();
+	wzPerfEnd(PERF_MODEL_INIT);
 
-	GL_DEBUG("Draw 3D scene - particles");
+	wzPerfBegin(PERF_PARTICLES, "3D scene - particles");
 	atmosDrawParticles();
+	wzPerfEnd(PERF_PARTICLES);
 
+	wzPerfBegin(PERF_WATER, "3D scene - water");
 	// prepare for the water and the lightmap
 	pie_SetFogStatus(true);
 
@@ -1071,11 +1085,12 @@ static void drawTiles(iView *player)
 
 	// and to the warzone modelview transform
 	pie_MatEnd();
+	wzPerfEnd(PERF_WATER);
 
-	GL_DEBUG("Draw 3D scene - bucket render");
+	wzPerfBegin(PERF_MODELS, "3D scene - models");
 	bucketRenderCurrentList();
 
-	GL_DEBUG("Draw 3D scene - blue prints");
+	GL_DEBUG("Draw 3D scene - blueprints");
 	displayBlueprints();
 
 	pie_RemainingPasses(); // draws shadows and transparent shapes
@@ -1088,8 +1103,7 @@ static void drawTiles(iView *player)
 	/* Clear the matrix stack */
 	pie_MatEnd();
 	locateMouse();
-
-	GL_DEBUG("Draw 3D scene - end of tiles");
+	wzPerfEnd(PERF_MODELS);
 }
 
 /// Initialise the fog, skybox and some other stuff
@@ -1455,7 +1469,7 @@ void	renderAnimComponent( const COMPONENT_OBJECT *psObj )
 }
 
 /// Draw the buildings
-void displayStaticObjects( void )
+static void displayStaticObjects()
 {
 	ANIM_OBJECT	*psAnimObj;
 
@@ -1703,7 +1717,7 @@ void displayBlueprints(void)
 }
 
 /// Draw Factory Delivery Points
-void displayDelivPoints(void)
+static void displayDelivPoints()
 {
 	for (FLAG_POSITION *psDelivPoint = apsFlagPosLists[selectedPlayer]; psDelivPoint != NULL; psDelivPoint = psDelivPoint->psNext)
 	{
@@ -1715,7 +1729,7 @@ void displayDelivPoints(void)
 }
 
 /// Draw the features
-void displayFeatures( void )
+static void displayFeatures()
 {
 	// player can only be 0 for the features.
 	for (unsigned player = 0; player <= 1; ++player)
@@ -1737,15 +1751,14 @@ void displayFeatures( void )
 }
 
 /// Draw the Proximity messages for the *SELECTED PLAYER ONLY*
-void displayProximityMsgs( void )
+static void displayProximityMsgs()
 {
 	PROXIMITY_DISPLAY	*psProxDisp;
 	VIEW_PROXIMITY		*pViewProximity;
 	UDWORD				x, y;
 
 	/* Go through all the proximity Displays*/
-	for (psProxDisp = apsProxDisp[selectedPlayer]; psProxDisp != NULL;
-		psProxDisp = psProxDisp->psNext)
+	for (psProxDisp = apsProxDisp[selectedPlayer]; psProxDisp != NULL; psProxDisp = psProxDisp->psNext)
 	{
 		if(!(psProxDisp->psMessage->read))
 		{
@@ -1817,7 +1830,7 @@ static void displayAnimation( ANIM_OBJECT * psAnimObj, bool bHoldOnFirstFrame )
 }
 
 /// Draw the droids
-void displayDynamicObjects( void )
+static void displayDynamicObjects()
 {
 	ANIM_OBJECT	*psAnimObj;
 
@@ -1845,7 +1858,7 @@ void displayDynamicObjects( void )
 						// In this case, AFAICT only DROID_CYBORG_SUPER had the issue.  (Same issue as oil pump anim)
 						if (psDroid->droidType != DROID_CYBORG_SUPER)
 						{
-							renderDroid(psDroid);
+							displayComponentObject(psDroid);
 						}
 						else
 						{
@@ -1888,19 +1901,10 @@ Vector2i getPlayerPos()
 /// Set the player position
 void setPlayerPos(SDWORD x, SDWORD y)
 {
-	ASSERT( (x >= 0) && (x < world_coord(mapWidth)) &&
-			(y >= 0) && (y < world_coord(mapHeight)),
-		"setPlayerPos: position off map" );
-
+	ASSERT(x >= 0 && x < world_coord(mapWidth) && y >= 0 && y < world_coord(mapHeight), "Position off map");
 	player.p.x = x;
 	player.p.z = y;
 	player.r.z = 0;
-}
-
-/// Set the angle at which the player views the world
-void	setViewAngle(SDWORD angle)
-{
-	player.r.x = DEG(360 + angle);
 }
 
 /// Get the distance at which the player views the world
@@ -1919,10 +1923,10 @@ void setViewDistance(float dist)
 void	renderFeature(FEATURE *psFeature)
 {
 	SDWORD		rotation;
-	PIELIGHT	brightness;
+	PIELIGHT	brightness = pal_SetBrightness(200);
 	Vector3i dv;
-	bool bForceDraw = ( getRevealStatus() && psFeature->psStats->visibleAtStart);
-	int shadowFlags = 0;
+	bool bForceDraw = (getRevealStatus() && psFeature->psStats->visibleAtStart);
+	int pieFlags = 0;
 
 	if (!psFeature->visible[selectedPlayer] && !bForceDraw)
 	{
@@ -1932,7 +1936,7 @@ void	renderFeature(FEATURE *psFeature)
 	/* Mark it as having been drawn */
 	psFeature->sDisplay.frameNumber = currentGameFrame;
 
-	/* Daft hack to get around the oild derrick issue */
+	/* Daft hack to get around the oil derrick issue */
 	if (!TileHasFeature(mapTile(map_coord(removeZ(psFeature->pos)))))
 	{
 		return;
@@ -1955,18 +1959,12 @@ void	renderFeature(FEATURE *psFeature)
 
 	pie_MatRotY(-rotation);
 
-	brightness = pal_SetBrightness(200); //? HUH?
-
 	if (psFeature->psStats->subType == FEAT_SKYSCRAPER)
 	{
 		objectShimmy((BASE_OBJECT*)psFeature);
 	}
 
-	if (bForceDraw)
-	{
-		brightness = pal_SetBrightness(200);
-	}
-	else if (!getRevealStatus())
+	if (!getRevealStatus())
 	{
 		brightness = pal_SetBrightness(avGetObjLightLevel((BASE_OBJECT*)psFeature, brightness.byte.r));
 	}
@@ -1982,17 +1980,16 @@ void	renderFeature(FEATURE *psFeature)
 		|| psFeature->psStats->subType == FEAT_OIL_DRUM)
 	{
 		/* these cast a shadow */
-		shadowFlags = pie_STATIC_SHADOW;
+		pieFlags = pie_STATIC_SHADOW;
 	}
 
-	pie_Draw3DShape(psFeature->sDisplay.imd, 0, 0, brightness, shadowFlags, 0);
+	pie_Draw3DShape(psFeature->sDisplay.imd, 0, 0, brightness, pieFlags, 0);
 
 	setScreenDisp(&psFeature->sDisplay);
 
 	pie_MatEnd();
 }
 
-/// 
 void renderProximityMsg(PROXIMITY_DISPLAY *psProxDisp)
 {
 	UDWORD			msgX = 0, msgY = 0;
@@ -2648,12 +2645,6 @@ void renderShadow( DROID *psDroid, iIMDShape *psShadowIMD )
 	pie_Draw3DShape(psShadowIMD, 0, 0, WZCOL_WHITE, pie_TRANSLUCENT, 128);
 
 	pie_MatEnd();
-}
-
-/// Draw all pieces of a droid and register it as a target
-void renderDroid( DROID *psDroid )
-{
-	displayComponentObject(psDroid);
 }
 
 /// Draws the strobing 3D drag box that is used for multiple selection
