@@ -362,7 +362,7 @@ extern SWORD WidgGetClickedAudioID(void);
 extern void sliderEnableDrag(bool Enable);
 
 extern void setWidgetsStatus(bool var);
-extern bool getWidgetsStatus(void);
+extern bool getWidgetsStatus();
 
 /** @} */
 

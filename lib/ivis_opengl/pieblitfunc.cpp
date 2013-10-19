@@ -288,19 +288,18 @@ GFXJob &GFXQueue::findJob(GFXTYPE type, GLenum drawType, int coordsPerVertex, in
 	// Try to reuse existing entry. For now, do not try to combine texture tasks or
 	// strip draw types. TODO: Allow more reuse if we can use the primitive restart extension
 	// (a core feature of OpenGL 3.1+ and OpenGL ES 3.0).
-	if ((type == GFX_COLOUR || type == GFX_COLOUR_BLEND) && (drawType == GL_POINTS || drawType == GL_LINES || drawType == GL_TRIANGLES))
+	if ((type == GFX_COLOUR || type == GFX_COLOUR_BLEND)
+	    && (drawType == GL_POINTS || drawType == GL_LINES || drawType == GL_TRIANGLES))
 	{
 		for (int i = 0; i < jobs.size(); i++)
 		{
-			if (jobs[i].type == type && jobs[i].drawType == drawType && jobs[i].coordsPerVertex == coordsPerVertex)
+			if (jobs[i].type == type
+			    && jobs[i].drawType == drawType
+			    && jobs[i].coordsPerVertex == coordsPerVertex)
 			{
 				return jobs[i];
 			}
 		}
-	}
-	if (type == GFX_TEXTURE || type == GFX_TEXTURE_PERSISTENT)
-	{
-		ASSERT(texPage >= 0 && texPage < pie_NumberOfPages(), "Bad page number: %d", texPage);
 	}
 	// no applicable entry found, make a new entry for this type of draw
 	GFXJob job;
@@ -344,7 +343,7 @@ void GFXQueue::draw()
 			job.indices.clear();
 			jobs[i].task = task;
 		}
-		glColor4ubv(jobs[i].texColour.vector); // hack until we have got rid of global colour...
+		glColor4ubv(jobs[i].texColour.vector); // FIXME hack until we have got rid of global colour...
 		jobs[i].task->draw();
 	}
 }

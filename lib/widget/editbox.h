@@ -59,7 +59,6 @@ public:
 	UDWORD		state;						// The current edit box state
 	QString         aText;                  // The text in the edit box
 	iV_fonts        FontID;
-	int 		blinkOffset;		// Cursor should be visible at time blinkOffset.
 	int             insPos;                 // The insertion point in the buffer
 	int             printStart;					// Where in the string appears at the far left of the box
 	int             printChars;					// The number of characters appearing in the box

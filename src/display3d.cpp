@@ -135,6 +135,7 @@ static void NetworkDisplayPlainForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOf
 static void NetworkDisplayImage(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset);
 void NotifyUserOfError(char *msg);
 extern bool writeGameInfo(const char *pFileName); // Used to help debug issues when we have fatal errors & crash handler testing.
+
 /********************  Variables  ********************/
 // Should be cleaned up properly and be put in structures.
 
@@ -142,6 +143,10 @@ extern bool writeGameInfo(const char *pFileName); // Used to help debug issues w
 // In model coordinates where x is east, y is up and z is north, rather than world coordinates where x is east, y is south and z is up.
 // To get the real camera position, still need to add Vector3i(player.p.x, 0, player.p.z).
 static Vector3i actualCameraPosition;
+
+/// Any main screen GUI stuff
+static GFXQueue gqueue;
+static bool dirty = false;
 
 bool	bRender3DOnly;
 static bool	bRangeDisplay = false;
@@ -217,10 +222,7 @@ bool showSAMPLES = false;
  *  default OFF, turn ON via console command 'showorders'
  */
 bool showORDERS = false;
-/** Show the current level name on the screen, toggle via the 'showlevelname'
- *  console command
-*/
-bool showLevelName = true;
+
 /** When we have a connection issue, we will flash a message on screen
 */
 static bool errorWaiting = false;
@@ -338,6 +340,10 @@ static inline void rotateSomething(int &x, int &y, uint16_t angle)
 	y = newY;
 }
 
+void dirty3DDisplay()
+{
+	dirty = true;
+}
 
 void NotifyUserOfError(char *msg)
 {
@@ -445,29 +451,6 @@ static PIELIGHT structureBrightness(STRUCTURE *psStructure)
 	return buildingBrightness;
 }
 
-/// Display the multiplayer chat box
-static void displayMultiChat(void)
-{
-	iV_SetFont(font_regular);
-
-	UDWORD	pixelLength;
-	UDWORD	pixelHeight;
-
-	pixelLength = iV_GetTextWidth(sTextToSend);
-	pixelHeight = iV_GetTextLineSize();
-
-	if((realTime % 500) < 250)
-	{
-		// implement blinking cursor in multiplayer chat
-		pie_BoxFill(RET_X + pixelLength + 3, 474 + E_H - (pixelHeight/4), RET_X + pixelLength + 10, 473 + E_H, WZCOL_CURSOR);
-	}
-
-	/* FIXME: GET RID OF THE MAGIC NUMBERS BELOW */
-	iV_TransBoxFill(RET_X + 1, 474 + E_H - pixelHeight, RET_X + 1 + pixelLength + 2, 473 + E_H);
-
-	iV_DrawText(sTextToSend, RET_X + 3, 469 + E_H);
-}
-
 /// Show all droid movement parts by displaying an explosion at every step
 static void showDroidPaths(void)
 {
@@ -538,10 +521,10 @@ static void NetworkDisplayImage(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset
 
 	if (NETcheckPlayerConnectionStatus(status, NET_ALL_PLAYERS))
 	{
-		unsigned width, height;
 		unsigned n, c = 0;
 		char players[MAX_PLAYERS + 1];
 		PlayerMask playerMaskMapped = 0;
+
 		for (n = 0; n < MAX_PLAYERS; ++n)
 		{
 			if (NETcheckPlayerConnectionStatus(status, n))
@@ -559,15 +542,12 @@ static void NetworkDisplayImage(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset
 		}
 		players[c] = '\0';
 
-		iV_SetFont(font_regular);
-		width = iV_GetTextWidth(players) + 10;
-		height = iV_GetTextHeight(players) + 10;
-
-		iV_SetTextColour(WZCOL_TEXT_BRIGHT);
-		iV_DrawText(players, x - width, y + height);
+		Vector2f size = psWidget->gqueue.textSize(font_regular, players);
+		psWidget->gqueue.text(font_regular, players, x - size.x + 10, y + size.y + 10, WZCOL_TEXT_BRIGHT);
 	}
 
-	iV_DrawImage(IntImages,ImageID,x,y);
+	psWidget->gqueue.imageFile(IntImages, ImageID, x, y);
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 static void setupConnectionStatusForm(void)
@@ -681,9 +661,25 @@ static void setupConnectionStatusForm(void)
 }
 
 /// Render the 3D world
-void draw3DScene( void )
+void draw3DScene()
 {
+	static bool lastWidgetStatus = false;
+
 	wzPerfBegin(PERF_START_FRAME, "Start 3D scene");
+
+	if (lastWidgetStatus != getWidgetsStatus())
+	{
+		dirty = true;
+	}
+	lastWidgetStatus = getWidgetsStatus();
+	if ((showSAMPLES || showFPS || showORDERS) && realTime % 1000 == 0)
+	{
+		dirty = true;
+	}
+	if (dirty)
+	{
+		gqueue.clear();
+	}
 
 	/* What frame number are we on? */
 	currentGameFrame = frameGetFrameNumber();
@@ -743,12 +739,18 @@ void draw3DScene( void )
 
 	pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_OFF);
 	pie_SetFogStatus(false);
-	iV_SetTextColour(WZCOL_TEXT_BRIGHT);
 
-	/* Dont remove this folks!!!! */
-	if(!bAllowOtherKeyPresses)
+	if (!bAllowOtherKeyPresses && dirty)
 	{
-		displayMultiChat();
+		UDWORD	pixelLength = gqueue.textSize(font_regular, sTextToSend).x;
+		UDWORD	pixelHeight = gqueue.textLineSize(font_regular);
+
+		// cursor
+		gqueue.rect(RET_X + pixelLength + 3, 474 + E_H - (pixelHeight/4), RET_X + pixelLength + 10, 473 + E_H, WZCOL_CURSOR, GFX_COLOUR);
+
+		/* FIXME: GET RID OF THE MAGIC NUMBERS BELOW */
+		gqueue.transBoxFill(RET_X + 1, 474 + E_H - pixelHeight, RET_X + 1 + pixelLength + 2, 473 + E_H);
+		gqueue.text(font_regular, sTextToSend, RET_X + 3, 469 + E_H);
 	}
 	if (errorWaiting)
 	{
@@ -761,58 +763,40 @@ void draw3DScene( void )
 			errorWaiting = false;
 		}
 	}
-	if (showSAMPLES)		//Displays the number of sound samples we currently have
+	if (showSAMPLES && dirty)	// displays the number of sound samples we currently have
 	{
-		iV_SetFont(font_regular);
-		unsigned int width, height;
-		const char *Qbuf, *Lbuf, *Abuf;
-
-		sasprintf((char**)&Qbuf,"Que: %04u",audio_GetSampleQueueCount());
-		sasprintf((char**)&Lbuf,"Lst: %04u",audio_GetSampleListCount());
-		sasprintf((char**)&Abuf,"Act: %04u",sound_GetActiveSamplesCount());
-		width = iV_GetTextWidth(Qbuf) + 11;
-		height = iV_GetTextHeight(Qbuf);
-
-		iV_DrawText(Qbuf, pie_GetVideoBufferWidth() - width, height + 2);
-		iV_DrawText(Lbuf, pie_GetVideoBufferWidth() - width, height + 48);
-		iV_DrawText(Abuf, pie_GetVideoBufferWidth() - width, height + 59);
+		QString Qbuf = QString("Que: ") + audio_GetSampleQueueCount();
+		QString Lbuf = QString("Lst: ") + audio_GetSampleListCount();
+		QString Abuf = QString("Act: ") + sound_GetActiveSamplesCount();
+		Vector2f v = gqueue.textSize(font_regular, Qbuf);
+		const int width = pie_GetVideoBufferWidth() - v.x + 11;
+		gqueue.text(font_regular, Qbuf, width, v.y + 2, WZCOL_TEXT_BRIGHT);
+		gqueue.text(font_regular, Lbuf, width, v.y + 48, WZCOL_TEXT_BRIGHT);
+		gqueue.text(font_regular, Abuf, width, v.y + 59, WZCOL_TEXT_BRIGHT);
 	}
-	if (showFPS)
+	if (showFPS && dirty)
 	{
-		iV_SetFont(font_regular);
-		unsigned int width, height;
-		const char* fps;
-		sasprintf((char**)&fps, "FPS: %d", frameRate());
-		width = iV_GetTextWidth(fps) + 10;
-		height = iV_GetTextHeight(fps);
-
-		iV_DrawText(fps, pie_GetVideoBufferWidth() - width, pie_GetVideoBufferHeight() - height);
+		QString fps = "FPS: " + QString::number(frameRate());
+		Vector2f v = gqueue.textSize(font_regular, fps);
+		gqueue.text(font_regular, fps, pie_GetVideoBufferWidth() - (v.x + 10), pie_GetVideoBufferHeight() - v.y, WZCOL_TEXT_BRIGHT);
 	}
-	if (showORDERS)
+	if (showORDERS && dirty)
 	{
-		iV_SetFont(font_regular);
-		unsigned int height;
-		height = iV_GetTextHeight(DROIDDOING);
-		iV_DrawText(DROIDDOING, 0, pie_GetVideoBufferHeight()- height);
+		Vector2f v = gqueue.textSize(font_regular, DROIDDOING);
+		gqueue.text(font_regular, DROIDDOING, 0, pie_GetVideoBufferHeight()- v.y, WZCOL_TEXT_BRIGHT);
 	}
 
 	setupConnectionStatusForm();
 
-	if (getWidgetsStatus() && !gamePaused())
+	if (getWidgetsStatus() && !gamePaused() && dirty)
 	{
 		char buildInfo[255];
-		if (showLevelName)
-		{
-			iV_SetFont(font_small);
-			iV_SetTextColour(WZCOL_TEXT_MEDIUM);
-			iV_DrawText( getLevelName(), RET_X + 134, 410 + E_H );
-		}
+		gqueue.text(font_small, getLevelName(), RET_X + 134, 410 + E_H, WZCOL_TEXT_MEDIUM);
 		getAsciiTime(buildInfo, graphicsTime);
-		iV_DrawText( buildInfo, RET_X + 134, 422 + E_H );
-
+		gqueue.text(font_small, buildInfo, RET_X + 134, 422 + E_H, WZCOL_TEXT_MEDIUM);
 		if (getDebugMappingStatus())
 		{
-			iV_DrawText( "DEBUG ", RET_X + 134, 436 + E_H );
+			gqueue.text(font_small, "DEBUG ", RET_X + 134, 436 + E_H, WZCOL_TEXT_MEDIUM);
 		}
 	}
 
@@ -863,10 +847,9 @@ void draw3DScene( void )
 		showDroidPaths();
 	}
 
+	gqueue.draw();
 	wzPerfEnd(PERF_MISC);
-	GL_DEBUG("Draw 3D scene - end");
 }
-
 
 /// Draws the 3D textured terrain
 static void displayTerrain(void)

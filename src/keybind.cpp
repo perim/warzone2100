@@ -586,11 +586,6 @@ void kf_ToggleOrders(void)	// Displays orders & action of currently selected uni
 		CONPRINTF(ConsoleString, (ConsoleString, "Unit Order/Action displayed is %s", showORDERS ? "Enabled" : "Disabled"));
 }
 
-void kf_ToggleLevelName(void) // toggles level name 
-{
-	showLevelName = !showLevelName;
-}
-
 /* Writes out the frame rate */
 void	kf_FrameRate( void )
 {
@@ -1200,14 +1195,14 @@ void	kf_ToggleDroidInfo( void )
 {
 	camToggleInfo();
 }
-// --------------------------------------------------------------------------
+
 void	kf_addInGameOptions( void )
 {
-		setWidgetsStatus(true);
-		if (!isInGamePopupUp)	// they can *only* quit when popup is up.
-		{
+	setWidgetsStatus(true);
+	if (!isInGamePopupUp)	// they can *only* quit when popup is up.
+	{
 		intAddInGameOptions();
-		}
+	}
 }
 
 // --------------------------------------------------------------------------
@@ -2008,8 +2003,9 @@ void kf_SendTextMessage(void)
 	UDWORD	ch;
 	utf_32_char unicode;
 
-	if(bAllowOtherKeyPresses)									// just starting.
+	if (bAllowOtherKeyPresses) // starting key capture
 	{
+		dirty3DDisplay();
 		bAllowOtherKeyPresses = false;
 		sstrcpy(sTextToSend, "");
 		sstrcpy(sCurrentConsoleText, "");							//for beacons
@@ -2026,7 +2022,7 @@ void kf_SendTextMessage(void)
 		 || iV_GetTextWidth(sTextToSend) > (pie_GetVideoBufferWidth()-64))// sendit
 		{
 			bAllowOtherKeyPresses = true;
-			//	flushConsoleMessages();
+			dirty3DDisplay();
 
 			sstrcpy(sCurrentConsoleText, "");		//reset beacon msg, since console is empty now
 
@@ -2048,6 +2044,7 @@ void kf_SendTextMessage(void)
 		{
 			if(sTextToSend[0] != '\0')							// cant delete nothing!
 			{
+				dirty3DDisplay();
 				size_t newlen = strlen(sTextToSend) - 1;
 				while(newlen > 0 && (sTextToSend[newlen]&0xC0) == 0x80)
 				    --newlen;  // Don't delete half a unicode character.
@@ -2058,8 +2055,8 @@ void kf_SendTextMessage(void)
 		else if(ch == INPBUF_ESC)								//abort.
 		{
 			bAllowOtherKeyPresses = true;
+			dirty3DDisplay();
 			sstrcpy(sCurrentConsoleText, "");
-			//	flushConsoleMessages();
 			return;
 		}
 		else							 						// display
@@ -2069,8 +2066,8 @@ void kf_SendTextMessage(void)
 			sstrcat(sTextToSend, utf);
 			free(utf);
 			sstrcpy(sCurrentConsoleText, sTextToSend);
+			dirty3DDisplay();
 		}
-
 		ch = inputGetKey(&unicode);
 	}
 
@@ -2085,7 +2082,7 @@ void kf_SendTextMessage(void)
 		{
 			sstrcpy(sTextToSend, ingame.phrases[0]);
 			bAllowOtherKeyPresses = true;
-			//	flushConsoleMessages();
+			dirty3DDisplay();
 			sendTextMessage(sTextToSend,false);
 			return;
 		}
@@ -2100,7 +2097,7 @@ void kf_SendTextMessage(void)
 		{
 			sstrcpy(sTextToSend, ingame.phrases[1]);
 			bAllowOtherKeyPresses = true;
-			//	flushConsoleMessages();
+			dirty3DDisplay();
 			sendTextMessage(sTextToSend,false);
 			return;
 		}
@@ -2115,7 +2112,7 @@ void kf_SendTextMessage(void)
 		{
 			sstrcpy(sTextToSend, ingame.phrases[2]);
 			bAllowOtherKeyPresses = true;
-			//	flushConsoleMessages();
+			dirty3DDisplay();
 			sendTextMessage(sTextToSend,false);
 			return;
 		}
@@ -2130,7 +2127,7 @@ void kf_SendTextMessage(void)
 		{
 			sstrcpy(sTextToSend, ingame.phrases[3]);
 			bAllowOtherKeyPresses = true;
-			//	flushConsoleMessages();
+			dirty3DDisplay();
 			sendTextMessage(sTextToSend,false);
 			return;
 		}
@@ -2145,16 +2142,13 @@ void kf_SendTextMessage(void)
 		{
 			sstrcpy(sTextToSend, ingame.phrases[4]);
 			bAllowOtherKeyPresses = true;
-			 //	flushConsoleMessages();
+			dirty3DDisplay();
 			sendTextMessage(sTextToSend,false);
 			return;
 		}
 	}
-
-//	flushConsoleMessages();								//clear
-//	addConsoleMessage(sTextToSend,DEFAULT_JUSTIFY, SYSTEM_MESSAGE);		//display
-//	iV_DrawText(sTextToSend,16+D_W,RADTLY+D_H-16);
 }
+
 // --------------------------------------------------------------------------
 void	kf_ToggleConsole( void )
 {

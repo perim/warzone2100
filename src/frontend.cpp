@@ -1625,6 +1625,7 @@ void displayTextOption(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	W_BUTTON		*psBut;
 	bool			hilight = false;
 	bool			greyOut = psWidget->UserData; // if option is unavailable.
+	PIELIGHT		colour = WZCOL_TEXT_MEDIUM;
 
 	psBut = (W_BUTTON *)psWidget;
 	iV_SetFont(psBut->FontID);
@@ -1634,8 +1635,8 @@ void displayTextOption(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 		hilight = true;
 	}
 
-  	fw = iV_GetTextWidth(psBut->pText.toUtf8().constData());
-	fy = yOffset + psWidget->y() + (psWidget->height() - iV_GetTextLineSize())/2 - iV_GetTextAboveBase();
+	fw = psWidget->gqueue.textSize(psBut->FontID, psBut->pText).x;
+	fy = yOffset + psWidget->y() + (psWidget->height() - psWidget->gqueue.textLineSize(psBut->FontID)) / 2 - psWidget->gqueue.textAboveBase(psBut->FontID);
 
 	if (psWidget->style & WBUT_TXTCENTRE)							//check for centering, calculate offset.
 	{
@@ -1648,27 +1649,22 @@ void displayTextOption(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 
 	if(greyOut)														// unavailable
 	{
-		iV_SetTextColour(WZCOL_TEXT_DARK);
+		colour = WZCOL_TEXT_DARK;
 	}
 	else															// available
 	{
 		if(hilight)													// hilight
 		{
-			iV_SetTextColour(WZCOL_TEXT_BRIGHT);
+			colour = WZCOL_TEXT_BRIGHT;
 		}
 		else if (psWidget->id == FRONTEND_HYPERLINK || psWidget->id == FRONTEND_DONATELINK)				// special case for our hyperlink										
 		{
-			iV_SetTextColour(WZCOL_YELLOW);
-		}
-		else														// dont highlight
-		{
-			iV_SetTextColour(WZCOL_TEXT_MEDIUM);
+			colour = WZCOL_YELLOW;
 		}
 	}
 
-	iV_DrawText(psBut->pText.toUtf8().constData(), fx, fy);
-
-	return;
+	psWidget->gqueue.text(psBut->FontID, psBut->pText, fx, fy, colour);
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 

@@ -82,12 +82,12 @@ bool		challengeActive = false;	///< Whether we are running a challenge
 
 static void displayLoadBanner(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 {
-	PIELIGHT col = WZCOL_GREEN;
 	UDWORD	x = xOffset + psWidget->x();
 	UDWORD	y = yOffset + psWidget->y();
 
-	pie_BoxFill(x, y, x + psWidget->width(), y + psWidget->height(), col);
-	pie_BoxFill(x + 2, y + 2, x + psWidget->width() - 2, y + psWidget->height() - 2, WZCOL_MENU_BACKGROUND);
+	psWidget->gqueue.rect(x, y, x + psWidget->width(), y + psWidget->height(), WZCOL_GREEN);
+	psWidget->gqueue.rect(x + 2, y + 2, x + psWidget->width() - 2, y + psWidget->height() - 2, WZCOL_MENU_BACKGROUND);
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 // quite the hack, game name is stored in global sRequestResult
@@ -128,28 +128,22 @@ void updateChallenge(bool gameWon)
 // ////////////////////////////////////////////////////////////////////////////
 static void displayLoadSlot(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 {
-
 	UDWORD	x = xOffset + psWidget->x();
 	UDWORD	y = yOffset + psWidget->y();
-	char  butString[64];
 
-	drawBlueBox(x, y, psWidget->width(), psWidget->height());	//draw box
+	psWidget->gqueue.drawBlueBox(x, y, psWidget->width(), psWidget->height());
 
 	if (!((W_BUTTON *)psWidget)->pText.isEmpty())
 	{
-		sstrcpy(butString, ((W_BUTTON *)psWidget)->pText.toUtf8().constData());
+		QString butString(((W_BUTTON *)psWidget)->pText);
 
-		iV_SetFont(font_regular);									// font
-		iV_SetTextColour(WZCOL_FORM_TEXT);
-
-		while (iV_GetTextWidth(butString) > psWidget->width())
+		while (psWidget->gqueue.textSize(font_regular, butString).x > psWidget->width())
 		{
-			butString[strlen(butString)-1] = '\0';
+			butString.chop(1);
 		}
-
-		//draw text
-		iV_DrawText(butString, x + 4, y + 17);
+		psWidget->gqueue.text(font_regular, butString, x + 4, y + 17);
 	}
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 //****************************************************************************************

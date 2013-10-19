@@ -44,9 +44,6 @@
 /* Size of the overwrite cursor */
 #define WEDB_CURSORSIZE		8
 
-/* The time the cursor blinks for */
-#define WEDB_BLINKRATE		800
-
 /* Number of characters to jump the edit box text when moving the cursor */
 #define WEDB_CHARJUMP		6
 
@@ -60,7 +57,6 @@ W_EDITBOX::W_EDITBOX(W_EDBINIT const *init)
 	: WIDGET(init, WIDG_EDITBOX)
 	, state(WEDBS_FIXED)
 	, FontID(init->FontID)
-	, blinkOffset(wzGetTicks())
 	, printStart(0)
 	, HilightAudioID(WidgGetHilightAudioID())
 	, ClickedAudioID(WidgGetClickedAudioID())
@@ -279,9 +275,6 @@ void W_EDITBOX::run(W_CONTEXT *psContext)
 	utf_32_char unicode;
 	for (unsigned key = inputGetKey(&unicode); key != 0 && !done; key = inputGetKey(&unicode))
 	{
-		// Don't blink while typing.
-		blinkOffset = wzGetTicks();
-
 		int len = 0;
 
 		/* Deal with all the control keys, assume anything else is a printable character */
@@ -447,9 +440,6 @@ void W_EDITBOX::clicked(W_CONTEXT *psContext, WIDGET_KEY)
 	// Set cursor position to the click location.
 	setCursorPosPixels(psContext->mx - x());
 
-	// Cursor should be visible instantly.
-	blinkOffset = wzGetTicks();
-
 	if ((state & WEDBS_MASK) == WEDBS_FIXED)
 	{
 		if (AudioCallback)
@@ -561,8 +551,7 @@ void W_EDITBOX::display(int xOffset, int yOffset)
 	gqueue.text(FontID, tmp, fx, fy);
 
 	// Display the cursor if editing
-	bool blink = !(((wzGetTicks() - blinkOffset) / WEDB_BLINKRATE) % 2);
-	if ((state & WEDBS_MASK) == WEDBS_INSERT && blink)
+	if ((state & WEDBS_MASK) == WEDBS_INSERT)
 	{
 		QString tmp = aText;
 		tmp.remove(insPos, tmp.length());         // Erase from the cursor on, to find where the cursor should be.

@@ -125,4 +125,6 @@ extern bool CauseCrash;
 
 extern bool tuiTargetOrigin;
 
+void dirty3DDisplay();
+
 #endif // __INCLUDED_SRC_DISPLAY3D_H__
