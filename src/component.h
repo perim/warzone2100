@@ -54,19 +54,21 @@ UDWORD getStructureStatSizeMax(STRUCTURE_STATS *Stats);
 #define TOWER_HEIGHT    100
 UDWORD getStructureStatHeight(STRUCTURE_STATS *psStat);
 
-void displayIMDButton(iIMDShape *IMDShape, Vector3i *Rotation, Vector3i *Position, bool RotXYZ, SDWORD scale);
-void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i *Position, bool RotXYZ, SDWORD scale);
-void displayStructureStatButton(STRUCTURE_STATS *Stats, Vector3i *Rotation, Vector3i *Position, bool RotXYZ, SDWORD scale);
-void displayComponentButton(BASE_STATS *Stat, Vector3i *Rotation, Vector3i *Position, bool RotXYZ, SDWORD scale);
-void displayResearchButton(BASE_STATS *Stat, Vector3i *Rotation, Vector3i *Position, bool RotXYZ, SDWORD scale);
-void displayComponentButtonTemplate(DROID_TEMPLATE *psTemplate, Vector3i *Rotation, Vector3i *Position, bool RotXYZ, SDWORD scale);
-void displayComponentButtonObject(DROID *psDroid, Vector3i *Rotation, Vector3i *Position, bool RotXYZ, SDWORD scale);
+void displayIMDButton(iIMDShape *IMDShape, Vector3i *Rotation, Vector3i *Position, SDWORD scale);
+void displayStructureButton(STRUCTURE *psStructure, Vector3i *Rotation, Vector3i *Position, SDWORD scale);
+void displayStructureStatButton(STRUCTURE_STATS *Stats, Vector3i *Rotation, Vector3i *Position, SDWORD scale);
+void displayComponentButton(BASE_STATS *Stat, Vector3i *Rotation, Vector3i *Position, SDWORD scale);
+void displayResearchButton(BASE_STATS *Stat, Vector3i *Rotation, Vector3i *Position, SDWORD scale);
+void displayComponentButtonTemplate(DROID_TEMPLATE *psTemplate, Vector3i *Rotation, Vector3i *Position, SDWORD scale);
+void displayComponentButtonObject(DROID *psDroid, Vector3i *Rotation, Vector3i *Position, SDWORD scale);
 void displayComponentObject(DROID *psDroid);
 
 void compPersonToBits(DROID *psDroid);
 
 SDWORD rescaleButtonObject(SDWORD radius, SDWORD baseScale,SDWORD baseRadius);
 void destroyFXDroid(DROID *psDroid, unsigned impactTime);
+
+void drawMuzzleFlash(WEAPON sWeap, iIMDShape *weaponImd, iIMDShape *flashImd, PIELIGHT buildingBrightness, int pieFlag, int pieFlagData, UBYTE colour = 0);
 
 /* Pass in the stats you're interested in and the COMPONENT - double reference, but works. NOTE: Unused!*/
 #define PART_IMD(STATS,DROID,COMPONENT,PLAYER)	(STATS[DROID->asBits[COMPONENT]].pIMD)
