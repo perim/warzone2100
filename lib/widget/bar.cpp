@@ -79,17 +79,9 @@ W_BARGRAPH::W_BARGRAPH(W_BARINIT const *init)
 /* Set the current size of a bar graph */
 void widgSetBarSize(W_SCREEN *psScreen, UDWORD id, UDWORD iValue)
 {
-	W_BARGRAPH		*psBGraph;
-	UDWORD			size;
-
-	ASSERT(psScreen != NULL, "Invalid screen pointer");
-
-	psBGraph = (W_BARGRAPH *)widgGetFromID(psScreen, id);
-	if (psBGraph == NULL || psBGraph->type != WIDG_BARGRAPH)
-	{
-		ASSERT(false, "widgSetBarSize: Couldn't find widget from id");
-		return;
-	}
+	W_BARGRAPH *psBGraph = (W_BARGRAPH *)widgGetFromID(psScreen, id);
+	ASSERT(psBGraph != NULL, "Could not find widget from ID");
+	ASSERT(psBGraph->type == WIDG_BARGRAPH, "Wrong widget type");
 
 	psBGraph->iOriginal = iValue;
 	if (iValue < psBGraph->iRange)
@@ -100,35 +92,20 @@ void widgSetBarSize(W_SCREEN *psScreen, UDWORD id, UDWORD iValue)
 	{
 		psBGraph->iValue = psBGraph->iRange;
 	}
-
-	size = WBAR_SCALE * psBGraph->iValue / MAX(psBGraph->iRange, 1);
-
-	psBGraph->majorSize = (UWORD)size;
+	psBGraph->majorSize = WBAR_SCALE * psBGraph->iValue / MAX(psBGraph->iRange, 1);
+	psBGraph->dirty = true;
 }
 
 
 /* Set the current size of a minor bar on a double graph */
 void widgSetMinorBarSize(W_SCREEN *psScreen, UDWORD id, UDWORD iValue)
 {
-	W_BARGRAPH		*psBGraph;
-	UDWORD			size;
+	W_BARGRAPH *psBGraph = (W_BARGRAPH *)widgGetFromID(psScreen, id);
+	ASSERT(psBGraph != NULL, "Could not find widget from ID");
+	ASSERT(psBGraph->type == WIDG_BARGRAPH, "Wrong widget type");
 
-	ASSERT(psScreen != NULL, "Invalid screen pointer");
-
-	psBGraph = (W_BARGRAPH *)widgGetFromID(psScreen, id);
-	if (psBGraph == NULL || psBGraph->type != WIDG_BARGRAPH)
-	{
-		ASSERT(false, "Couldn't find widget from id");
-		return;
-	}
-
-	size = WBAR_SCALE * iValue / MAX(psBGraph->iRange, 1);
-	if (size > WBAR_SCALE)
-	{
-		size = WBAR_SCALE;
-	}
-
-	psBGraph->minorSize = (UWORD)size;
+	psBGraph->minorSize = MIN(WBAR_SCALE * iValue / MAX(psBGraph->iRange, 1), WBAR_SCALE);
+	psBGraph->dirty = true;
 }
 
 
@@ -148,24 +125,21 @@ void W_BARGRAPH::highlightLost()
 	tipStop(this);
 }
 
-
 static void barGraphDisplayText(W_BARGRAPH *barGraph, int x0, int x1, int y1)
 {
 	if (!barGraph->text.isEmpty())
 	{
-		QByteArray utf = barGraph->text.toUtf8();
-		iV_SetFont(font_small);
-		int textWidth = iV_GetTextWidth(utf.constData());
+		int textWidth = barGraph->gqueue.textSize(font_small, barGraph->text).x;
 		Vector2i pos((x0 + x1 - textWidth) / 2, y1);
-		iV_SetTextColour(WZCOL_BLACK);  // Add a shadow, to make it visible against any background.
-		for (int dx = -1; dx <= 1; ++dx)
+		for (int dx = -1; dx <= 1; ++dx) // Add a shadow, to make it visible against any background.
+		{
 			for (int dy = -1; dy <= 1; ++dy)
 			{
-				iV_DrawText(utf.constData(), pos.x + dx * 1.25f, pos.y + dy * 1.25f);
+				barGraph->gqueue.text(font_small, barGraph->text, pos.x + dx * 1.25f, pos.y + dy * 1.25f, WZCOL_BLACK);
 			}
-		iV_SetTextColour(barGraph->textCol);
-		iV_DrawText(utf.constData(), pos.x, pos.y - 0.25f);
-		iV_DrawText(utf.constData(), pos.x, pos.y + 0.25f);  // Draw twice, to make it more visible.
+		}
+		barGraph->gqueue.text(font_small, barGraph->text, pos.x, pos.y - 0.25f, barGraph->textCol);
+		barGraph->gqueue.text(font_small, barGraph->text, pos.x, pos.y + 0.25f, barGraph->textCol);  // Draw twice, to make it more visible. ?????????
 	}
 }
 
@@ -207,7 +181,7 @@ static void barGraphDisplay(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	}
 
 	/* Now draw the graph */
-	iV_ShadowBox(x0, y0, x1, y1, 0, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, psBGraph->majorCol);
+	psBGraph->gqueue.shadowBox(x0, y0, x1, y1, 0, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, psBGraph->majorCol);
 
 	barGraphDisplayText(psBGraph, x0, x1, y1);
 }
@@ -279,11 +253,11 @@ static void barGraphDisplayDouble(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffs
 	/* Draw the minor bar graph */
 	if (psBGraph->minorSize > 0)
 	{
-		iV_ShadowBox(x2, y2, x3, y3, 0, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, psBGraph->minorCol);
+		psBGraph->gqueue.shadowBox(x2, y2, x3, y3, 0, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, psBGraph->minorCol);
 	}
 
 	/* Draw the major bar graph */
-	iV_ShadowBox(x0, y0, x1, y1, 0, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, psBGraph->majorCol);
+	psBGraph->gqueue.shadowBox(x0, y0, x1, y1, 0, WZCOL_FORM_LIGHT, WZCOL_FORM_DARK, psBGraph->majorCol);
 
 	barGraphDisplayText(psBGraph, x0, x1, y1);
 }
@@ -377,21 +351,29 @@ void barGraphDisplayTrough(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	/* Now draw the graph */
 	if (showBar)
 	{
-		pie_BoxFill(x0, y0, x1, y1, psBGraph->majorCol);
+		psBGraph->gqueue.box(x0, y0, x1, y1, psBGraph->majorCol, psBGraph->majorCol);
 	}
 	if (showTrough)
 	{
-		iV_ShadowBox(tx0, ty0, tx1, ty1, 0, WZCOL_FORM_DARK, WZCOL_FORM_LIGHT, psBGraph->backgroundColour);
+		psBGraph->gqueue.shadowBox(tx0, ty0, tx1, ty1, 0, WZCOL_FORM_DARK, WZCOL_FORM_LIGHT, psBGraph->backgroundColour);
 	}
-
 	barGraphDisplayText(psBGraph, x0, tx1, ty1);
 }
 
 void W_BARGRAPH::display(int xOffset, int yOffset)
 {
+	if (!dirty)
+	{
+		gqueue.draw();
+		return;
+	}
+	gqueue.clear();
+
 	if (displayFunction != NULL)
 	{
+		gqueue.clear();
 		displayFunction(this, xOffset, yOffset);
+		gqueue.draw();
 		return;
 	}
 
@@ -407,6 +389,7 @@ void W_BARGRAPH::display(int xOffset, int yOffset)
 	{
 		barGraphDisplay(this, xOffset, yOffset);
 	}
+	gqueue.draw();
 }
 
 void W_BARGRAPH::setTip(QString string)

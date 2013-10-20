@@ -188,16 +188,13 @@ void tipDisplay()
 			gqueue.line(tx,      ty + th,     tx + tw,     ty + th, WZCOL_FORM_DARK);
 			gqueue.line(tx + tw, ty + th - 1, tx + tw,     ty,      WZCOL_FORM_DARK);
 			gqueue.box(tx, ty, tx + tw - 1, ty + th - 1, WZCOL_FORM_LIGHT, WZCOL_FORM_LIGHT);
+			for (int n = 0; n < pTip.size(); ++n)
+			{
+				gqueue.text(FontID, pTip[n], fx, fy + lineHeight * n, TipColour);
+			}
 			dirty = false;
 		}
 		gqueue.draw();
-		iV_SetFont(FontID);
-		iV_SetTextColour(TipColour);
-		for (int n = 0; n < pTip.size(); ++n)
-		{
-			iV_DrawText(pTip[n].toUtf8().constData(), fx, fy + lineHeight*n);
-		}
-
 		break;
 	default:
 		break;

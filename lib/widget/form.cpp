@@ -215,7 +215,8 @@ void W_CLICKFORM::display(int xOffset, int yOffset)
 		gqueue.clear();
 		displayFunction(this, xOffset, yOffset);
 	}
-	gqueue.draw();}
+	gqueue.draw();
+}
 
 void W_CLICKFORM::setTip(QString string)
 {

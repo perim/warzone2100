@@ -1975,8 +1975,9 @@ static void intDisplayBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, bool
 	if (BarGraph->minorSize != 0)
 	{
 		width = MIN(BarGraph->minorSize * barWidth / 100, barWidth);
-		iV_DrawImage(IntImages, IMAGE_DES_STATSCOMP, iX + width, y0 - 1);
+		psWidget->gqueue.imageFile(IntImages, IMAGE_DES_STATSCOMP, iX + width, y0 - 1);
 	}
+	psWidget->dirty = true; // FIXME, force redraw for now because unfinished due to repeat function
 }
 
 /* Draws a stats bar for the design screen */
@@ -1990,7 +1991,6 @@ void intDisplayDesignPowerBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 {
 	intDisplayBar(psWidget, xOffset, yOffset, true);
 }
-
 
 // Widget callback function to play an audio track.
 //
@@ -2291,8 +2291,9 @@ void intDisplayResSubGroup(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 
 	if (psResearch->subGroup != NO_RESEARCH_ICON)
 	{
-		iV_DrawImage(IntImages, psResearch->subGroup, x, y);
+		psWidget->gqueue.imageFile(IntImages, psResearch->subGroup, x, y);
 	}
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 void intDisplayAllyIcon(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
@@ -2314,7 +2315,9 @@ void intDisplayAllyIcon(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	{
 		return;  // If inactive, blink the icon. (Alternatively, we could use a different icon instead.)
 	}
-	iV_DrawImageTc(IntImages, IMAGE_ALLY_RESEARCH, IMAGE_ALLY_RESEARCH_TC, x, y, pal_GetTeamColour(getPlayerColour(researches[num].player)));
+
+	psWidget->gqueue.imageFileTc(Image(IntImages, IMAGE_ALLY_RESEARCH), Image(IntImages, IMAGE_ALLY_RESEARCH_TC), x, y, pal_GetTeamColour(getPlayerColour(researches[num].player)));
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 void intDisplayAllyBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
@@ -2369,6 +2372,7 @@ void intDisplayAllyBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 		setBarGraphValue(psBar, psBar->majorCol, researchPowerCost - bestPowerNeeded, researchPowerCost);
 	}
 	barGraphDisplayTrough(psWidget, xOffset, yOffset);
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 /* Set the shadow power for the selected player */
