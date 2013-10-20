@@ -173,9 +173,7 @@ STAT_BAR	infoBars[]=
 };
 
 // --------------------------------------------------------------------
-static void drawStatBars(void);
 static void fillUpStats( void );
-static void dispAdditionalInfo( void );
 // --------------------------------------------------------------------
 
 /* The present mission data */
@@ -254,13 +252,6 @@ void	scoreUpdateVar( DATA_INDEX var )
 	}
 }
 
-
-// --------------------------------------------------------------------
-void	scoreDataToScreen(void)
-{
-	drawStatBars();
-}
-
 // Builds an ascii string for the passed in components 4:02:23 for example.
 void getAsciiTime(char *psText, unsigned time)
 {
@@ -280,14 +271,10 @@ void getAsciiTime(char *psText, unsigned time)
 	}
 }
 
-
-// -----------------------------------------------------------------------------------
-static void drawStatBars(void)
+void scoreDataToScreen(WIDGET *psWidget)
 {
-UDWORD	index;
-bool	bMoreBars;
-UDWORD	x,y;
-UDWORD	width,height;
+	int index, x, y, width, height;
+	bool bMoreBars;
 
 	if(!bDispStarted)
 	{
@@ -298,12 +285,12 @@ UDWORD	width,height;
 
 	fillUpStats();
 
-	pie_UniTransBoxFill(16 + D_W, MT_Y_POS - 16, pie_GetVideoBufferWidth() - D_W - 16, MT_Y_POS + 256+16, WZCOL_SCORE_BOX);
-	iV_Box(16 + D_W, MT_Y_POS - 16, pie_GetVideoBufferWidth() - D_W - 16, MT_Y_POS + 256+16, WZCOL_SCORE_BOX_BORDER);
+	psWidget->gqueue.transBoxFill(16 + D_W, MT_Y_POS - 16, pie_GetVideoBufferWidth() - D_W - 16, MT_Y_POS + 256+16, WZCOL_SCORE_BOX);
+	psWidget->gqueue.box(16 + D_W, MT_Y_POS - 16, pie_GetVideoBufferWidth() - D_W - 16, MT_Y_POS + 256+16, WZCOL_SCORE_BOX_BORDER, WZCOL_SCORE_BOX_BORDER);
 
-	iV_DrawText( _("Unit Losses"), LC_X + D_W, 80 + 16 + D_H );
-	iV_DrawText( _("Structure Losses"), LC_X + D_W, 140 + 16 + D_H );
-	iV_DrawText( _("Force Information"), LC_X + D_W, 200 + 16 + D_H );
+	psWidget->gqueue.text(font_regular, _("Unit Losses"), LC_X + D_W, 80 + 16 + D_H );
+	psWidget->gqueue.text(font_regular, _("Structure Losses"), LC_X + D_W, 140 + 16 + D_H );
+	psWidget->gqueue.text(font_regular, _("Force Information"), LC_X + D_W, 200 + 16 + D_H );
 
 	index = 0;
 	bMoreBars = true;
@@ -317,22 +304,19 @@ UDWORD	width,height;
 			{
 				/* Don't do this next time...! */
 				infoBars[index].bQueued = true;
-
-				/* Play a sound */
-//				audio_PlayTrack(ID_SOUND_BUTTON_CLICK_5);
 			}
 			x = infoBars[index].topX+D_W;
 			y = infoBars[index].topY+D_H;
 			width = infoBars[index].width;
 			height = infoBars[index].height;
 
-			iV_Box(x, y, x + width, y + height, WZCOL_BLACK);
+			psWidget->gqueue.box(x, y, x + width, y + height, WZCOL_BLACK, WZCOL_BLACK);
 
 			/* Draw the background border box */
-			pie_BoxFill(x - 1, y - 1, x + width + 1, y + height + 1, WZCOL_MENU_BACKGROUND);
+			psWidget->gqueue.rect(x - 1, y - 1, x + width + 1, y + height + 1, WZCOL_MENU_BACKGROUND);
 
 			/* Draw the interior grey */
-			pie_BoxFill(x, y, x + width, y + height, WZCOL_MENU_SCORES_INTERIOR);
+			psWidget->gqueue.rect(x, y, x + width, y + height, WZCOL_MENU_SCORES_INTERIOR);
 
 			if( ((realTime - dispST) > infoBars[index].queTime) )
 			{
@@ -347,23 +331,21 @@ UDWORD	width,height;
 				{
 
 					/* Black shadow */
-					pie_BoxFill(x + 1, y + 3, x + length - 1, y + height - 1, WZCOL_MENU_SHADOW);
+					psWidget->gqueue.rect(x + 1, y + 3, x + length - 1, y + height - 1, WZCOL_MENU_SHADOW);
 
 					/* Solid coloured bit */
-					pie_BoxFill(x + 1, y + 2, x + length - 4, y + height - 4, getColour(index));
+					psWidget->gqueue.rect(x + 1, y + 2, x + length - 4, y + height - 4, getColour(index));
 				}
 			}
 			/* Now render the text by the bar */
 			sprintf(text, getDescription((MR_STRING)infoBars[index].stringID), infoBars[index].number);
-			iV_DrawText(text, x + width + 16, y + 12);
+			psWidget->gqueue.text(font_regular, text, x + width + 16, y + 12);
 
 			/* If we're beyond STAT_ROOKIE, then we're on rankings */
 			if(index>=STAT_GREEN && index <= STAT_ACE)
 			{
-				iV_DrawImage(IntImages,(UWORD)(IMAGE_LEV_0 + (index - STAT_GREEN)),x-8,y+2);
+				psWidget->gqueue.imageFile(IntImages, IMAGE_LEV_0 + (index - STAT_GREEN), x - 8, y + 2);
 			}
-
-
 		}
 		/* Move onto the next bar */
 		index++;
@@ -372,37 +354,27 @@ UDWORD	width,height;
 			bMoreBars = false;
 		}
 	}
-	dispAdditionalInfo();
-}
 
-// -----------------------------------------------------------------------------------
-void	dispAdditionalInfo( void )
-{
-
-	/* We now need to display the mission time, game time,
-		average unit experience level an number of artefacts found */
+	/* We now need to display the mission time, game time, average unit experience level an number of artefacts found */
 
 	/* Firstly, top of the screen, number of artefacts found */
-	sprintf( text, _("ARTIFACTS RECOVERED: %d"), missionData.artefactsFound );
-	iV_DrawText( text, (pie_GetVideoBufferWidth() - iV_GetTextWidth(text))/2, 300 + D_H );
+	sprintf(text, _("ARTIFACTS RECOVERED: %d"), missionData.artefactsFound);
+	psWidget->gqueue.text(font_regular, text, (pie_GetVideoBufferWidth() - iV_GetTextWidth(text))/2, 300 + D_H);
 
 	/* Get the mission result time in a string - and write it out */
 	getAsciiTime( (char*)&text2, gameTime - missionData.missionStarted );
-	sprintf( text, _("Mission Time - %s"), text2 );
-	iV_DrawText( text, (pie_GetVideoBufferWidth() - iV_GetTextWidth(text))/2, 320 + D_H);
+	sprintf(text, _("Mission Time - %s"), text2);
+	psWidget->gqueue.text(font_regular, text, (pie_GetVideoBufferWidth() - iV_GetTextWidth(text))/2, 320 + D_H);
 
 	/* Write out total game time so far */
-	getAsciiTime( (char*)&text2, gameTime );
-	sprintf( text, _("Total Game Time - %s"), text2 );
-	iV_DrawText( text, (pie_GetVideoBufferWidth() - iV_GetTextWidth(text))/2, 340 + D_H );
+	getAsciiTime( (char*)&text2, gameTime);
+	sprintf(text, _("Total Game Time - %s"), text2);
+	psWidget->gqueue.text(font_regular, text, (pie_GetVideoBufferWidth() - iV_GetTextWidth(text))/2, 340 + D_H);
 	if (Cheated)
 	{
-		// A quick way to flash the text
-		((realTime / 250) % 2) ? iV_SetTextColour(WZCOL_RED) : iV_SetTextColour(WZCOL_YELLOW);
-		sprintf( text, _("You cheated!"));
-		iV_DrawText( text, (pie_GetVideoBufferWidth() - iV_GetTextWidth(text))/2, 360 + D_H );
-		iV_SetTextColour(WZCOL_TEXT_BRIGHT);
+		psWidget->gqueue.text(font_regular, _("You cheated!"), (pie_GetVideoBufferWidth() - iV_GetTextWidth(text))/2, 360 + D_H, WZCOL_RED);
 	}
+	psWidget->dirty = false; // FIXME
 }
 
 // -----------------------------------------------------------------------------------

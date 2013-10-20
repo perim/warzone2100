@@ -142,7 +142,7 @@ public:
 	void clear();
 
 	void line(float x0, float y0, float x1, float y1, PIELIGHT colour);
-	void rect(float x0, float y0, float x1, float y1, PIELIGHT colour, GFXTYPE type = GFX_COLOUR);
+	void rect(float x0, float y0, float x1, float y1, PIELIGHT colour, GFXTYPE type = GFX_COLOUR); // pie_BoxFill replacement
 	void shadowBox(float x0, float y0, float x1, float y1, float pad, PIELIGHT first, PIELIGHT second, PIELIGHT fill);
 	void box(float x0, float y0, float x1, float y1, PIELIGHT first, PIELIGHT second);
 	void transBoxFill(float x0, float y0, float x1, float y1, PIELIGHT colour = WZCOL_TRANSPARENT_BOX);

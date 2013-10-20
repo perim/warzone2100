@@ -256,36 +256,34 @@ static void displayKeyMap(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	int h = psWidget->height();
 	KEY_MAPPING *psMapping = (KEY_MAPPING*)psWidget->pUserData;
 	char		sKey[MAX_STR_LENGTH];
+	PIELIGHT colour = WZCOL_FORM_TEXT;
 
 	if(psMapping == selectedKeyMap)
 	{
-		pie_BoxFill(x, y, x + w, y + h, WZCOL_KEYMAP_ACTIVE);
+		psWidget->gqueue.rect(x, y, x + w, y + h, WZCOL_KEYMAP_ACTIVE);
 	}
 	else if(psMapping->status == KEYMAP_ALWAYS || psMapping->status == KEYMAP_ALWAYS_PROCESS)
 	{
 		// when user can't edit something...
-		pie_BoxFill(x, y , x + w, y + h, WZCOL_KEYMAP_FIXED);
+		psWidget->gqueue.rect(x, y , x + w, y + h, WZCOL_KEYMAP_FIXED);
 	}
 	else
 	{
-		drawBlueBox(x,y,w,h);
+		psWidget->gqueue.drawBlueBox(x, y, w, h);
 	}
 
-	// draw name
-	iV_SetFont(font_regular);											// font type
-	iV_SetTextColour(WZCOL_FORM_TEXT);
-
-	iV_DrawText(_(psMapping->pName), x + 2, y + (psWidget->height() / 2) + 3);
+	psWidget->gqueue.text(font_regular, _(psMapping->pName), x + 2, y + (psWidget->height() / 2) + 3, colour);
 
 	// draw binding
 	keyMapToString(sKey, psMapping);
 	// Check to see if key is on the numpad, if so tell user and change color
 	if (psMapping->subKeyCode >= KEY_KP_0 && psMapping->subKeyCode <= KEY_KPENTER)
 	{
-		iV_SetTextColour(WZCOL_YELLOW);
+		colour = WZCOL_YELLOW;
 		sstrcat(sKey, " (numpad)");
 	}
-	iV_DrawText(sKey, x + 364, y + (psWidget->height() / 2) + 3);
+	psWidget->gqueue.text(font_regular, sKey, x + 364, y + (psWidget->height() / 2) + 3, colour);
+	psWidget->dirty = false; // FIXME, move when done implementing queue
 }
 
 static bool keyMappingSort(KEY_MAPPING const *a, KEY_MAPPING const *b)
