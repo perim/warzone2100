@@ -150,7 +150,7 @@ public:
 	void draw(); // draw all
 	void clear();
 
-	void line(float x0, float y0, float x1, float y1, PIELIGHT colour);
+	void line(float x0, float y0, float x1, float y1, PIELIGHT colour, int animation = 0);
 	void rect(float x0, float y0, float x1, float y1, PIELIGHT colour, GFXTYPE type = GFX_COLOUR, int animation = 0); // pie_BoxFill replacement
 	void shadowBox(float x0, float y0, float x1, float y1, float pad, PIELIGHT first, PIELIGHT second, PIELIGHT fill);
 	void box(float x0, float y0, float x1, float y1, PIELIGHT first, PIELIGHT second);

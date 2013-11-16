@@ -339,8 +339,8 @@ void GFXQueue::draw()
 			jobs[i].task = task;
 		}
 		glColor4ubv(jobs[i].texColour.vector); // FIXME hack until we have got rid of global colour...
-		if ((jobs[i].animation > 0 && jobs[i].animation > graphicsTime % 1000)
-		    || (jobs[i].animation < 0 && jobs[i].animation <= graphicsTime % 1000))
+		if ((jobs[i].animation > 0 && jobs[i].animation > realTime % 1000)
+		    || (jobs[i].animation < 0 && jobs[i].animation <= realTime % 1000))
 		{
 			continue; // make blink animation
 		}
@@ -441,10 +441,10 @@ Vector2f GFXQueue::text(iV_fonts fontType, const QString &text, float x, float y
 	return pen - origin;
 }
 
-void GFXQueue::line(float x0, float y0, float x1, float y1, PIELIGHT colour)
+void GFXQueue::line(float x0, float y0, float x1, float y1, PIELIGHT colour, int animation)
 {
 	const int vertices = 2;
-	GFXJob &job = findJob(GFX_COLOUR, GL_LINES, 2);
+	GFXJob &job = findJob(GFX_COLOUR, GL_LINES, 2, -1, WZCOL_WHITE, animation);
 	job.verts += { x0, y0, x1, y1 };
 	job.vertices += vertices;
 	for (int i = vertices; i-- > 0;) job.colours += { colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a };

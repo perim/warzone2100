@@ -41,7 +41,7 @@
 /* Pixel gap between edge of edit box and text */
 #define WEDB_XGAP	4
 
-/* Size of the overwrite cursor */
+/// Size of the cursor
 #define WEDB_CURSORSIZE		8
 
 /* Number of characters to jump the edit box text when moving the cursor */
@@ -558,7 +558,7 @@ void W_EDITBOX::display(int xOffset, int yOffset)
 		tmp.remove(0, printStart);
 		int cx = x0 + WEDB_XGAP + gqueue.textSize(FontID, tmp).x;
 		int cy = fy;
-		gqueue.line(cx, cy + gqueue.textAboveBase(FontID), cx, cy - gqueue.textBelowBase(FontID), WZCOL_FORM_CURSOR);
+		gqueue.rect(cx, cy, cx + 7, cy + gqueue.textLineSize(font_regular) / 4, WZCOL_CURSOR, GFX_COLOUR, 500);
 	}
 	// Generic highlight implementation
 	if (displayFunction == NULL && (state & WEDBS_HILITE) != 0)

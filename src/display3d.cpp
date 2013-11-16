@@ -746,7 +746,7 @@ void draw3DScene()
 		UDWORD	pixelHeight = gqueue.textLineSize(font_regular);
 
 		// cursor
-		gqueue.rect(RET_X + pixelLength + 3, 474 + E_H - (pixelHeight/4), RET_X + pixelLength + 10, 473 + E_H, WZCOL_CURSOR, GFX_COLOUR);
+		gqueue.rect(RET_X + pixelLength + 3, 474 + E_H - (pixelHeight/4), RET_X + pixelLength + 10, 473 + E_H, WZCOL_CURSOR, GFX_COLOUR, 500);
 
 		/* FIXME: GET RID OF THE MAGIC NUMBERS BELOW */
 		gqueue.transBoxFill(RET_X + 1, 474 + E_H - pixelHeight, RET_X + 1 + pixelLength + 2, 473 + E_H);
