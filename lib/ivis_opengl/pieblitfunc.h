@@ -107,6 +107,9 @@ private:
 	int mSize;
 };
 
+/// Queued job for the graphics drawing class. We store jobs here until we are ready
+/// to actually draw something to avoid unnecessary bus traffic and to be able to compact
+/// the draw calls as much as possible.
 struct GFXJob
 {
 	GFXJob() : vertices(0), texPage(-1), polygons(-1), texColour(WZCOL_WHITE), task(NULL) {}
@@ -115,6 +118,7 @@ struct GFXJob
 	GLenum drawType;
 	int coordsPerVertex;
 	int vertices;
+	int animation; // animation if non-zero
 	QVector<GLfloat> verts;
 	QVector<GLfloat> texcoords;
 	QVector<UBYTE> colours;
@@ -142,7 +146,7 @@ public:
 	void clear();
 
 	void line(float x0, float y0, float x1, float y1, PIELIGHT colour);
-	void rect(float x0, float y0, float x1, float y1, PIELIGHT colour, GFXTYPE type = GFX_COLOUR); // pie_BoxFill replacement
+	void rect(float x0, float y0, float x1, float y1, PIELIGHT colour, GFXTYPE type = GFX_COLOUR, int animation = 0); // pie_BoxFill replacement
 	void shadowBox(float x0, float y0, float x1, float y1, float pad, PIELIGHT first, PIELIGHT second, PIELIGHT fill);
 	void box(float x0, float y0, float x1, float y1, PIELIGHT first, PIELIGHT second);
 	void transBoxFill(float x0, float y0, float x1, float y1, PIELIGHT colour = WZCOL_TRANSPARENT_BOX);
@@ -159,7 +163,7 @@ public:
 
 private:
 	QList<GFXJob> jobs; // queued up jobs, sort and merge into tasks on demand
-	GFXJob &findJob(GFXTYPE type, GLenum drawType, int coordsPerVertex, int texPage = -1, PIELIGHT texColour = WZCOL_WHITE);
+	GFXJob &findJob(GFXTYPE type, GLenum drawType, int coordsPerVertex, int texPage = -1, PIELIGHT texColour = WZCOL_WHITE, int animation = 0);
 };
 
 /***************************************************************************/

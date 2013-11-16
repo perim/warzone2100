@@ -21,13 +21,12 @@
 /*
  * pieBlitFunc.c
  *
- * patch for exisitng ivis rectangle draw functions.
- *
  */
 /***************************************************************************/
 
 #include "lib/framework/frame.h"
 #include "lib/framework/opengl.h"
+#include "lib/gamelib/gtime.h"
 #include <time.h>
 
 #include "lib/ivis_opengl/bitimage.h"
@@ -282,7 +281,7 @@ void GFXQueue::clear()
 	jobs.clear();
 }
 
-GFXJob &GFXQueue::findJob(GFXTYPE type, GLenum drawType, int coordsPerVertex, int texPage, PIELIGHT texColour)
+GFXJob &GFXQueue::findJob(GFXTYPE type, GLenum drawType, int coordsPerVertex, int texPage, PIELIGHT texColour, int animation)
 {
 	(void)texPage; // when we start reusing texture buffers, this will be handy
 	// Try to reuse existing entry. For now, do not try to combine texture tasks or
@@ -295,7 +294,8 @@ GFXJob &GFXQueue::findJob(GFXTYPE type, GLenum drawType, int coordsPerVertex, in
 		{
 			if (jobs[i].type == type
 			    && jobs[i].drawType == drawType
-			    && jobs[i].coordsPerVertex == coordsPerVertex)
+			    && jobs[i].coordsPerVertex == coordsPerVertex
+			    && jobs[i].animation == animation)
 			{
 				return jobs[i];
 			}
@@ -307,6 +307,7 @@ GFXJob &GFXQueue::findJob(GFXTYPE type, GLenum drawType, int coordsPerVertex, in
 	job.texColour = texColour;
 	job.drawType = drawType;
 	job.coordsPerVertex = coordsPerVertex;
+	job.animation = animation;
 	jobs.append(job);
 	return jobs[jobs.size() - 1];
 }
@@ -344,6 +345,11 @@ void GFXQueue::draw()
 			jobs[i].task = task;
 		}
 		glColor4ubv(jobs[i].texColour.vector); // FIXME hack until we have got rid of global colour...
+		if ((jobs[i].animation > 0 && jobs[i].animation > graphicsTime % 1000)
+		    || (jobs[i].animation < 0 && jobs[i].animation <= graphicsTime % 1000))
+		{
+			continue; // make blink animation
+		}
 		jobs[i].task->draw();
 	}
 }
@@ -381,6 +387,7 @@ float GFXQueue::textBelowBase(iV_fonts fontType) { return -fonts[fontType]->desc
 Vector2f GFXQueue::text(iV_fonts fontType, const QString &text, float x, float y, PIELIGHT colour, int flags, float width)
 {
 	Vector2f pen = { x, y };
+	Vector2f origin = pen;
 	const int length = text.size();
 	if (length == 0)
 	{
@@ -437,7 +444,7 @@ Vector2f GFXQueue::text(iV_fonts fontType, const QString &text, float x, float y
 			for (int j = 0; j < 4; j++) job.colours += { colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a };
 		}
 	}
-	return pen;
+	return pen - origin;
 }
 
 void GFXQueue::line(float x0, float y0, float x1, float y1, PIELIGHT colour)
@@ -449,10 +456,10 @@ void GFXQueue::line(float x0, float y0, float x1, float y1, PIELIGHT colour)
 	for (int i = vertices; i-- > 0;) job.colours += { colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a };
 }
 
-void GFXQueue::rect(float x0, float y0, float x1, float y1, PIELIGHT colour, GFXTYPE type) // colour filled rectangle
+void GFXQueue::rect(float x0, float y0, float x1, float y1, PIELIGHT colour, GFXTYPE type, int animation) // colour filled rectangle
 {
 	const int vertices = 4;
-	GFXJob &job = findJob(type, GL_TRIANGLE_STRIP, 2);
+	GFXJob &job = findJob(type, GL_TRIANGLE_STRIP, 2, -1, WZCOL_WHITE, animation);
 	job.verts += { x0, y0, x1, y0, x0, y1, x1, y1 };
 	job.vertices += vertices;
 	for (int i = vertices; i-- > 0;) job.colours += { colour.byte.r, colour.byte.g, colour.byte.b, colour.byte.a };
