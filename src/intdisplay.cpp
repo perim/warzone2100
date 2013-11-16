@@ -536,7 +536,7 @@ void intDisplayPowerBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	BarWidth = BarGraph->width();
 	iV_SetFont(font_regular);
 	sprintf(szVal, "%d", realPower);
-	textWidth = iV_GetTextWidth(szVal);
+	textWidth = psWidget->gqueue.textSize(font_regular, szVal).x;
 	BarWidth -= textWidth;
 
 	if (ManPow > Avail)
@@ -568,7 +568,7 @@ void intDisplayPowerBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	pie_SetDepthBufferStatus(DEPTH_CMP_ALWAYS_WRT_ON);
 	pie_SetFogStatus(false);
 
-	iV_DrawImage(IntImages, IMAGE_PBAR_TOP, x0, y0);
+	psWidget->gqueue.imageFile(IntImages, IMAGE_PBAR_TOP, x0, y0);
 
 	iX = x0 + 3;
 	iY = y0 + 10;
@@ -578,7 +578,7 @@ void intDisplayPowerBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	//fill in the empty section behind text
 	if (textWidth > 0)
 	{
-		iV_DrawImageRepeatX(IntImages, IMAGE_PBAR_EMPTY, x0, y0, textWidth);
+		psWidget->gqueue.imageFileRepeatX(IntImages, IMAGE_PBAR_EMPTY, x0, y0, textWidth);
 		x0 += textWidth;
 	}
 
@@ -586,53 +586,44 @@ void intDisplayPowerBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	if (ManPow > Avail)
 	{
 		//draw the required in red
-		iV_DrawImageRepeatX(IntImages, IMAGE_PBAR_USED, x0, y0, ManPow);
+		psWidget->gqueue.imageFileRepeatX(IntImages, IMAGE_PBAR_USED, x0, y0, ManPow);
 	}
 	else
 	{
-		iV_DrawImageRepeatX(IntImages, IMAGE_PBAR_REQUIRED, x0, y0, ManPow);
+		psWidget->gqueue.imageFileRepeatX(IntImages, IMAGE_PBAR_REQUIRED, x0, y0, ManPow);
 	}
 	x0 += ManPow;
 
 	//draw the available section if any!
 	if (Avail - ManPow > 0)
 	{
-		iV_DrawImageRepeatX(IntImages, IMAGE_PBAR_AVAIL, x0, y0, Avail - ManPow);
+		psWidget->gqueue.imageFileRepeatX(IntImages, IMAGE_PBAR_AVAIL, x0, y0, Avail - ManPow);
 		x0 += Avail - ManPow;
 	}
 
 	//fill in the rest with empty section
 	if (Empty > 0)
 	{
-		iV_DrawImageRepeatX(IntImages, IMAGE_PBAR_EMPTY, x0, y0, Empty);
+		psWidget->gqueue.imageFileRepeatX(IntImages, IMAGE_PBAR_EMPTY, x0, y0, Empty);
 		x0 += Empty;
 	}
 
-	iV_DrawImage(IntImages, IMAGE_PBAR_BOTTOM, x0, y0);
+	psWidget->gqueue.imageFile(IntImages, IMAGE_PBAR_BOTTOM, x0, y0);
 	if (Avail < 0)
 	{
 		const char *need = _("Need more resources!");
 		if ((realTime / 1250) % 5 == 0)
 		{
-			iV_SetTextColour(WZCOL_BLACK);
-			iV_SetFont(font_small);
-			iV_DrawText(need, iX + 102, iY - 1);
-			iV_SetTextColour(WZCOL_RED);
+			psWidget->gqueue.text(font_small, need, iX + 102, iY - 1, WZCOL_BLACK);
 		}
 		else
 		{
-			iV_SetTextColour(WZCOL_RED);
-			iV_SetFont(font_small);
-			iV_DrawText(need, iX + 102, iY - 1);
+			psWidget->gqueue.text(font_small, need, iX + 102, iY - 1, WZCOL_RED);
 		}
 	}
-	else
-	{
-		iV_SetTextColour(WZCOL_TEXT_BRIGHT);
-	}
 	// draw text value
-	iV_SetFont(font_regular);
-	iV_DrawText(szVal, iX, iY);
+	psWidget->gqueue.text(font_regular, szVal, iX, iY, Avail < 0 ? WZCOL_RED : WZCOL_TEXT_BRIGHT);
+	psWidget->dirty = false; // FIXME
 }
 
 IntFancyButton::IntFancyButton(WIDGET *parent)

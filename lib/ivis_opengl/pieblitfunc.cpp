@@ -48,12 +48,6 @@
 /***************************************************************************/
 
 static GFX *radarGfx = NULL;
-
-struct PIERECT  ///< Screen rectangle.
-{
-	float x, y, w, h;
-};
-
 static texture_font_t *fonts[font_count] = { NULL };
 
 /***************************************************************************/
@@ -486,20 +480,14 @@ void GFXQueue::transBoxFill(float x0, float y0, float x1, float y1, PIELIGHT col
 	rect(x0, y0, x1, y1, colour, GFX_COLOUR_BLEND);
 }
 
-void GFXQueue::imageFile(IMAGEFILE *imageFile, int id, float x, float y, PIELIGHT colour)
+// internal
+void GFXQueue::makeImageFile(Vector2i size, PIERECT dest, const ImageDef *image, PIELIGHT colour)
 {
 	const int vertices = 4;
-	if (!assertValidImage(imageFile, id))
-	{
-		return;
-	}
-	PIERECT dest;
-	const Vector2i size = makePieImage(imageFile, id, &dest, x, y);
-	const ImageDef &image2 = imageFile->imageDefs[id];
-	const GLuint texPage = imageFile->pages[image2.TPageID].id;
-	const GLfloat invTextureSize = 1.f / imageFile->pages[image2.TPageID].size;
-	const int tu = image2.Tu;
-	const int tv = image2.Tv;
+	const GLuint texPage = image->textureId;
+	const GLfloat invTextureSize = image->invTextureSize;
+	const int tu = image->Tu;
+	const int tv = image->Tv;
 	GFXJob &job = findJob(GFX_TEXTURE_PERSISTENT, GL_TRIANGLE_STRIP, 2, texPage, colour);
 	job.texPage = texPage;
 	job.verts += { dest.x, dest.y, dest.x + dest.w, dest.y, dest.x, dest.y + dest.h, dest.x + dest.w, dest.y + dest.h };
@@ -508,28 +496,76 @@ void GFXQueue::imageFile(IMAGEFILE *imageFile, int id, float x, float y, PIELIGH
 	job.vertices += vertices;
 }
 
+void GFXQueue::imageFile(IMAGEFILE *imageFile, int id, float x, float y, PIELIGHT colour)
+{
+	if (!assertValidImage(imageFile, id))
+	{
+		return;
+	}
+	PIERECT dest;
+	const Vector2i size = makePieImage(imageFile, id, &dest, x, y);
+	makeImageFile(size, dest, &imageFile->imageDefs[id], colour);
+}
+
+void GFXQueue::imageFileRepeatX(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Width)
+{
+	int hRep, hRemainder;
+	if (!assertValidImage(ImageFile, ID))
+	{
+		return;
+	}
+	const ImageDef *Image = &ImageFile->imageDefs[ID];
+	PIERECT dest;
+	Vector2i size = makePieImage(ImageFile, ID, &dest, x, y);
+	hRemainder = Width % Image->Width;
+	for (hRep = 0; hRep < Width / Image->Width; hRep++)
+	{
+		makeImageFile(size, dest, Image, WZCOL_WHITE);
+		dest.x += Image->Width;
+	}
+	if (hRemainder > 0)	// draw remainder
+	{
+		size.x = hRemainder;
+		dest.w = hRemainder;
+		makeImageFile(size, dest, Image, WZCOL_WHITE);
+	}
+}
+
+void GFXQueue::imageFileRepeatY(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Height)
+{
+	int vRep, vRemainder;
+	if (!assertValidImage(ImageFile, ID))
+	{
+		return;
+	}
+	const ImageDef *Image = &ImageFile->imageDefs[ID];
+	PIERECT dest;
+	Vector2i size = makePieImage(ImageFile, ID, &dest, x, y);
+	vRemainder = Height % Image->Height;
+	for (vRep = 0; vRep < Height / Image->Height; vRep++)
+	{
+		makeImageFile(size, dest, Image, WZCOL_WHITE);
+		dest.y += Image->Height;
+	}
+	if (vRemainder > 0)	// draw remainder
+	{
+		size.y = vRemainder;
+		dest.h = vRemainder;
+		makeImageFile(size, dest, Image, WZCOL_WHITE);
+	}
+}
+
 void GFXQueue::imageFile(QString filename, float x, float y, float width, float height)
 {
-	const int vertices = 4;
 	const ImageDef *image = iV_GetImage(filename, x, y);
-	const GLfloat invTextureSize = image->invTextureSize;
-	const GLfloat tu = image->Tu;
-	const GLfloat tv = image->Tv;
 	const GLfloat w = width > 0 ? width : image->Width;
 	const GLfloat h = height > 0 ? height : image->Height;
-	GFXJob &job = findJob(GFX_TEXTURE_PERSISTENT, GL_TRIANGLE_STRIP, 2, image->textureId);
-	x += image->XOffset;
-	y += image->YOffset;
-	job.texPage = image->textureId;
-	job.verts += { x, y, x + w, y, x, y + h, x + w, y + h };
-	job.texcoords += { tu * image->invTextureSize, tv * invTextureSize, (tu + image->Width) * invTextureSize, tv * invTextureSize,
-			   tu * invTextureSize, (tv + image->Height) * invTextureSize, (tu + image->Width) * invTextureSize, (tv + image->Height) * invTextureSize };
-	job.vertices += vertices;
+	PIERECT rect = { x, y, w, h };
+	makeImageFile(Vector2i(width, height), rect, image, WZCOL_WHITE);
 }
 
 void GFXQueue::imageFileTc(Image image, Image imageTc, int x, int y, PIELIGHT colour)
 {
-	// I hope this works...
 	imageFile(image.images, image.id, x, y);
 	imageFile(imageTc.images, imageTc.id, x, y, colour);
 }

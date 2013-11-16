@@ -50,6 +50,11 @@
 #define BACKDROP_HACK_WIDTH 512
 #define BACKDROP_HACK_HEIGHT 512
 
+struct PIERECT  ///< Screen rectangle. Only used here, and should be nixed.
+{
+	float x, y, w, h;
+};
+
 /***************************************************************************/
 /*
  *	Global Classes
@@ -154,6 +159,8 @@ public:
 	void imageFile(QString filename, float x, float y, float width = -0.0f, float height = -0.0f);
 	void imageFileTc(Image image, Image imageTc, int x, int y, PIELIGHT colour);
 	void imageFile(Image image, float x, float y) { imageFile(image.images, image.id, x, y); }
+	void imageFileRepeatX(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Width);
+	void imageFileRepeatY(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Height);
 	void drawBlueBox(float x, float y, float w, float h) { rect(x - 1, y - 1, x + w + 1, y + h + 1, WZCOL_MENU_BORDER); rect(x, y , x + w, y + h, WZCOL_MENU_BACKGROUND); }
 	Vector2f text(iV_fonts fontType, const QString &text, float x, float y, PIELIGHT colour = WZCOL_FORM_TEXT, int flags = 0, float width = 0.0f);
 	Vector2f textSize(iV_fonts fontType, const QString &text);
@@ -164,6 +171,7 @@ public:
 private:
 	QList<GFXJob> jobs; // queued up jobs, sort and merge into tasks on demand
 	GFXJob &findJob(GFXTYPE type, GLenum drawType, int coordsPerVertex, int texPage = -1, PIELIGHT texColour = WZCOL_WHITE, int animation = 0);
+	void makeImageFile(Vector2i size, PIERECT dest, const ImageDef *image, PIELIGHT colour);
 };
 
 /***************************************************************************/
