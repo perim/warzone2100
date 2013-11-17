@@ -379,7 +379,7 @@ void pie_ActivateShader(int shaderMode)
 	}
 }
 
-void pie_ActivateShader(int shaderMode, iIMDShape* shape, PIELIGHT teamcolour, PIELIGHT colour)
+void pie_ActivateShader(int shaderMode, const iIMDShape* shape, PIELIGHT teamcolour, PIELIGHT colour)
 {
 	int maskpage = shape->tcmaskpage;
 	int normalpage = shape->normalpage;
