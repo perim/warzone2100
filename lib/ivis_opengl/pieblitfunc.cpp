@@ -561,7 +561,7 @@ void GFXQueue::imageFile(QString filename, float x, float y, float width, float 
 	const GLfloat w = width > 0 ? width : image->Width;
 	const GLfloat h = height > 0 ? height : image->Height;
 	PIERECT rect = { x, y, w, h };
-	makeImageFile(Vector2i(width, height), rect, image, WZCOL_WHITE);
+	makeImageFile(Vector2i(image->Width, image->Height), rect, image, WZCOL_WHITE);
 }
 
 void GFXQueue::imageFileTc(Image image, Image imageTc, int x, int y, PIELIGHT colour)
