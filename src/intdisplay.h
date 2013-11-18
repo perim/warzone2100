@@ -107,8 +107,13 @@ protected:
 	void displayBlank(int xOffset, int yOffset);
 	void displayIfHighlight(int xOffset, int yOffset);
 
-	int imdRotation;  // Rotation if button is an IMD.
-	int imdRotationRate;
+	struct
+	{
+		Vector3i position;
+		Vector3i rotation;
+		int scale;
+		int rate;
+	} model;
 	ButtonType buttonType;  // TOPBUTTON is square, BTMBUTTON has a little up arrow.
 };
 
