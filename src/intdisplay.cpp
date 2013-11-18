@@ -639,11 +639,15 @@ IntFancyButton::IntFancyButton(WIDGET *parent)
 	model.rate = 0;
 }
 
-void IntFancyButton::doRotation()
+void IntFancyButton::initDisplay()
 {
 	model.rate += realTimeAdjustedAverage(isHighlighted()? 2*BUTTONOBJ_ROTSPEED : -4*BUTTONOBJ_ROTSPEED);
 	model.rate = clip(model.rate, 0, BUTTONOBJ_ROTSPEED);
 	model.rotation.y += realTimeAdjustedAverage(model.rate);
+}
+
+void IntFancyButton::doneDisplay()
+{
 }
 
 void IntFancyButton::displayIfHighlight(int xOffset, int yOffset)
@@ -669,11 +673,10 @@ void IntStatusButton::display(int xOffset, int yOffset)
 	BASE_STATS          *Stats, *psResGraphic;
 	UDWORD              compID;
 	bool	            bOnHold = false;
-
-	doRotation();
-
 	ImdObject object;
 	Image image;
+
+	initDisplay();
 
 	if (psObj && isDead(psObj))
 	{
@@ -815,7 +818,7 @@ IntObjectButton::IntObjectButton(WIDGET *parent)
 // Widget callback to display a rendered object button.
 void IntObjectButton::display(int xOffset, int yOffset)
 {
-	doRotation();
+	initDisplay();
 
 	ImdObject object;
 
@@ -844,6 +847,8 @@ void IntObjectButton::display(int xOffset, int yOffset)
 
 	displayIMD(Image(), object, xOffset, yOffset);
 	displayIfHighlight(xOffset, yOffset);
+
+	doneDisplay();
 }
 
 IntStatsButton::IntStatsButton(WIDGET *parent)
@@ -858,7 +863,7 @@ void IntStatsButton::display(int xOffset, int yOffset)
 	BASE_STATS *    psResGraphic;
 	SDWORD          compID;
 
-	doRotation();
+	initDisplay();
 
 	ImdObject object;
 	Image image;
@@ -927,6 +932,8 @@ void IntStatsButton::display(int xOffset, int yOffset)
 
 	displayIMD(image, object, xOffset, yOffset);
 	displayIfHighlight(xOffset, yOffset);
+
+	doneDisplay();
 }
 
 IntFormAnimated::IntFormAnimated(WIDGET *parent, bool openAnimate)
@@ -1989,7 +1996,7 @@ void IntTransportButton::display(int xOffset, int yOffset)
 	// There should always be a droid associated with the button
 	ASSERT(psDroid != NULL, "Invalid droid pointer");
 
-	doRotation();
+	initDisplay();
 	displayIMD(Image(), ImdObject::Droid(psDroid), xOffset, yOffset);
 	displayIfHighlight(xOffset, yOffset);
 
@@ -2003,6 +2010,7 @@ void IntTransportButton::display(int xOffset, int yOffset)
 			iV_DrawImage(IntImages, gfxId, xOffset + x() + 50, yOffset + y() + 30);
 		}
 	}
+	doneDisplay();
 }
 
 /* Draws blips on radar to represent Proximity Display and damaged structures */

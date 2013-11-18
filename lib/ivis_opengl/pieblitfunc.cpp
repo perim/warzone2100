@@ -481,14 +481,14 @@ void GFXQueue::transBoxFill(float x0, float y0, float x1, float y1, PIELIGHT col
 }
 
 // internal
-void GFXQueue::makeImageFile(Vector2i size, PIERECT dest, const ImageDef *image, PIELIGHT colour)
+void GFXQueue::makeImageFile(Vector2i size, PIERECT dest, const ImageDef *image, PIELIGHT colour, int animation)
 {
 	const int vertices = 4;
 	const GLuint texPage = image->textureId;
 	const GLfloat invTextureSize = image->invTextureSize;
 	const int tu = image->Tu;
 	const int tv = image->Tv;
-	GFXJob &job = findJob(GFX_TEXTURE_PERSISTENT, GL_TRIANGLE_STRIP, 2, texPage, colour);
+	GFXJob &job = findJob(GFX_TEXTURE_PERSISTENT, GL_TRIANGLE_STRIP, 2, texPage, colour, animation);
 	job.texPage = texPage;
 	job.verts += { dest.x, dest.y, dest.x + dest.w, dest.y, dest.x, dest.y + dest.h, dest.x + dest.w, dest.y + dest.h };
 	job.texcoords += { tu * invTextureSize, tv * invTextureSize, (tu + size.x) * invTextureSize, tv * invTextureSize,
@@ -496,7 +496,7 @@ void GFXQueue::makeImageFile(Vector2i size, PIERECT dest, const ImageDef *image,
 	job.vertices += vertices;
 }
 
-void GFXQueue::imageFile(IMAGEFILE *imageFile, int id, float x, float y, PIELIGHT colour)
+void GFXQueue::imageFile(IMAGEFILE *imageFile, int id, float x, float y, PIELIGHT colour, int animation)
 {
 	if (!assertValidImage(imageFile, id))
 	{
@@ -504,7 +504,7 @@ void GFXQueue::imageFile(IMAGEFILE *imageFile, int id, float x, float y, PIELIGH
 	}
 	PIERECT dest;
 	const Vector2i size = makePieImage(imageFile, id, &dest, x, y);
-	makeImageFile(size, dest, &imageFile->imageDefs[id], colour);
+	makeImageFile(size, dest, &imageFile->imageDefs[id], colour, animation);
 }
 
 void GFXQueue::imageFileRepeatX(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Width)

@@ -100,7 +100,8 @@ protected:
 	//the two types of button used in the object display (bottom bar)
 	enum ButtonType {TOPBUTTON = 0, BTMBUTTON = 1};
 
-	void doRotation();
+	void initDisplay();
+	void doneDisplay();
 	void displayClear(int xOffset, int yOffset);
 	void displayIMD(Image image, ImdObject imdObject, int xOffset, int yOffset);
 	void displayImage(Image image, int xOffset, int yOffset);

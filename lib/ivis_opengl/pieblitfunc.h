@@ -155,7 +155,7 @@ public:
 	void shadowBox(float x0, float y0, float x1, float y1, float pad, PIELIGHT first, PIELIGHT second, PIELIGHT fill);
 	void box(float x0, float y0, float x1, float y1, PIELIGHT first, PIELIGHT second);
 	void transBoxFill(float x0, float y0, float x1, float y1, PIELIGHT colour = WZCOL_TRANSPARENT_BOX);
-	void imageFile(IMAGEFILE *imageFile, int id, float x, float y, PIELIGHT colour = WZCOL_WHITE);
+	void imageFile(IMAGEFILE *imageFile, int id, float x, float y, PIELIGHT colour = WZCOL_WHITE, int animation = 0);
 	void imageFile(QString filename, float x, float y, float width = -0.0f, float height = -0.0f);
 	void imageFileTc(Image image, Image imageTc, int x, int y, PIELIGHT colour);
 	void imageFile(Image image, float x, float y) { imageFile(image.images, image.id, x, y); }
@@ -171,7 +171,7 @@ public:
 private:
 	QList<GFXJob> jobs; // queued up jobs, sort and merge into tasks on demand
 	GFXJob &findJob(GFXTYPE type, GLenum drawType, int coordsPerVertex, int texPage = -1, PIELIGHT texColour = WZCOL_WHITE, int animation = 0);
-	void makeImageFile(Vector2i size, PIERECT dest, const ImageDef *image, PIELIGHT colour);
+	void makeImageFile(Vector2i size, PIERECT dest, const ImageDef *image, PIELIGHT colour, int animation = 0);
 };
 
 /***************************************************************************/
