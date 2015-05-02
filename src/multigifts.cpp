@@ -32,7 +32,6 @@
 #include "research.h"
 #include "power.h"
 #include "group.h"
-#include "anim_id.h"
 #include "hci.h"
 #include "lib/gamelib/gtime.h"
 #include "effects.h"

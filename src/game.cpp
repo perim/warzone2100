@@ -63,7 +63,6 @@
 #include "init.h"
 #include "mission.h"
 #include "scores.h"
-#include "anim_id.h"
 #include "design.h"
 #include "component.h"
 #include "radar.h"
@@ -5037,11 +5036,6 @@ static bool loadSaveStructure2(const char *pFileName, STRUCTURE **ppList)
 				break;
 			case REF_RESOURCE_EXTRACTOR:
 				checkForPowerGen(psStructure);
-				/* GJ HACK! - add anim to deriks */
-				if (psStructure->psCurAnim == NULL)
-				{
-					psStructure->psCurAnim = animObj_Add(psStructure, ID_ANIM_DERIK, 0);
-				}
 				break;
 			default:
 				//do nothing for factories etc

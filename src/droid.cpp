@@ -50,7 +50,6 @@
 #include "action.h"
 #include "order.h"
 #include "move.h"
-#include "anim_id.h"
 #include "geometry.h"
 #include "display.h"
 #include "console.h"
@@ -370,13 +369,6 @@ DROID::~DROID()
 	DROID *psDroid = this;
 	DROID	*psCurr, *psNext;
 
-	/* remove animation if present */
-	if (psDroid->psCurAnim != NULL)
-	{
-		animObj_Remove(psDroid->psCurAnim, psDroid->psCurAnim->psAnim->uwID);
-		psDroid->psCurAnim = NULL;
-	}
-
 	if (isTransporter(psDroid))
 	{
 		if (psDroid->psGroup)
@@ -463,14 +455,6 @@ bool removeDroidBase(DROID *psDel)
 	}
 
 	syncDebugDroid(psDel, '#');
-
-	/* remove animation if present */
-	if (psDel->psCurAnim != NULL)
-	{
-		const bool bRet = animObj_Remove(psDel->psCurAnim, psDel->psCurAnim->psAnim->uwID);
-		ASSERT(bRet, "animObj_Remove failed");
-		psDel->psCurAnim = NULL;
-	}
 
 	//kill all the droids inside the transporter
 	if (isTransporter(psDel))
@@ -633,41 +617,6 @@ bool droidRemove(DROID *psDroid, DROID *pList[MAX_PLAYERS])
 	return true;
 }
 
-static void droidFlameFallCallback(ANIM_OBJECT *psObj)
-{
-	DROID	*psDroid;
-
-	ASSERT_OR_RETURN(, psObj != NULL, "invalid anim object pointer");
-	psDroid = (DROID *) psObj->psParent;
-
-	ASSERT_OR_RETURN(, psDroid != NULL, "invalid Unit pointer");
-	psDroid->psCurAnim = NULL;
-
-	// This breaks synch, obviously. Animations are not synched, so changing game state as part of an animation is not completely ideal.
-	//debug(LOG_DEATH, "droidFlameFallCallback: Droid %d destroyed", (int)psDroid->id);
-	//destroyDroid( psDroid );
-}
-
-static void droidBurntCallback(ANIM_OBJECT *psObj)
-{
-	DROID	*psDroid;
-
-	ASSERT_OR_RETURN(, psObj != NULL, "invalid anim object pointer");
-	psDroid = (DROID *) psObj->psParent;
-
-	ASSERT_OR_RETURN(, psDroid != NULL, "invalid Unit pointer");
-
-	/* add falling anim */
-	psDroid->psCurAnim = animObj_Add(psDroid, ID_ANIM_DROIDFLAMEFALL, 1);
-	if (!psDroid->psCurAnim)
-	{
-		debug(LOG_ERROR, "couldn't add fall over anim");
-		return;
-	}
-
-	animObj_SetDoneFunc(psDroid->psCurAnim, droidFlameFallCallback);
-}
-
 void droidBurn(DROID *psDroid)
 {
 	CHECK_DROID(psDroid);
@@ -684,35 +633,14 @@ void droidBurn(DROID *psDroid)
 		orderDroid(psDroid, DORDER_RUNBURN, ModeImmediate);
 	}
 
-	/* if already burning return else remove currently-attached anim if present */
-	if (psDroid->psCurAnim != NULL)
+	if (psDroid->timeAnimationStarted && psDroid->animationEvent == ANIM_EVENT_BURNING)
 	{
-		/* return if already burning */
-		if (psDroid->psCurAnim->psAnim->uwID == ID_ANIM_DROIDBURN)
-		{
-			return;
-		}
-		else
-		{
-			const bool bRet = animObj_Remove(psDroid->psCurAnim, psDroid->psCurAnim->psAnim->uwID);
-			ASSERT(bRet, "animObj_Remove failed");
-			psDroid->psCurAnim = NULL;
-		}
+		return; // already burning
 	}
 
-	/* add burning anim */
-	psDroid->psCurAnim = animObj_Add(psDroid, ID_ANIM_DROIDBURN, 3);
-	if (psDroid->psCurAnim == NULL)
-	{
-		debug(LOG_ERROR, "couldn't add burn anim");
-		return;
-	}
+	psDroid->timeAnimationStarted = gameTime;
+	psDroid->animationEvent = ANIM_EVENT_BURNING;
 
-	/* set callback */
-	animObj_SetDoneFunc(psDroid->psCurAnim, droidBurntCallback);
-
-	/* add scream */
-	debug(LOG_NEVER, "baba burn");
 	// NOTE: 3 types of screams are available ID_SOUND_BARB_SCREAM - ID_SOUND_BARB_SCREAM3
 	audio_PlayObjDynamicTrack(psDroid, ID_SOUND_BARB_SCREAM + (rand() % 3), NULL);
 }
