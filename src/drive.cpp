@@ -31,7 +31,6 @@
 #include "lib/gamelib/gtime.h"
 #include "lib/sound/audio.h"
 
-//#include "animobj.h"
 #include "drive.h"
 #include "objects.h"
 #include "move.h"
@@ -39,7 +38,6 @@
 #include "map.h"
 #include "loop.h"
 #include "geometry.h"
-#include "anim_id.h"
 #include "action.h"
 #include "order.h"
 #include "combat.h"

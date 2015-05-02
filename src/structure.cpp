@@ -50,8 +50,6 @@
 #include "stats.h"
 #include "lib/framework/math_ext.h"
 #include "edit3d.h"
-#include "anim_id.h"
-#include "lib/gamelib/anim.h"
 #include "display3d.h"
 #include "geometry.h"
 // FIXME Direct iVis implementation include!
@@ -3590,6 +3588,18 @@ void structureUpdate(STRUCTURE *psBuilding, bool mission)
 			psBuilding->lastStateTime = gameTime;	// reset timer
 		}
 	}
+	else if (psBuilding->pStructureType->type == REF_RESOURCE_EXTRACTOR)
+	{
+		if (!psBuilding->pFunctionality->resourceExtractor.psPowerGen) // no power generator connected
+		{
+			psBuilding->timeAnimationStarted = 0; // so turn off animation, if any
+		}
+		else if (psBuilding->timeAnimationStarted == 0) // we have a power generator, but no animation
+		{
+			psBuilding->timeAnimationStarted = gameTime; // so start animation
+			psBuilding->animationEvent = ANIM_EVENT_ACTIVE;
+		}
+	}
 
 	// Remove invalid targets. This must be done each frame.
 	for (i = 0; i < STRUCT_MAXWEAPS; i++)
@@ -3766,13 +3776,6 @@ STRUCTURE::STRUCTURE(uint32_t id, unsigned player)
 STRUCTURE::~STRUCTURE()
 {
 	STRUCTURE *psBuilding = this;
-
-	/* remove animation if present */
-	if (psBuilding->psCurAnim != NULL)
-	{
-		animObj_Remove(psBuilding->psCurAnim, psBuilding->psCurAnim->psAnim->uwID);
-		psBuilding->psCurAnim = NULL;
-	}
 
 	// free up the space used by the functionality array
 	free(psBuilding->pFunctionality);
@@ -4587,13 +4590,6 @@ bool removeStruct(STRUCTURE *psDel, bool bDestroy)
 		killStruct(psDel);
 	}
 
-	/* remove animation if present */
-	if (psDel->psCurAnim != NULL)
-	{
-		animObj_Remove(psDel->psCurAnim, psDel->psCurAnim->psAnim->uwID);
-		psDel->psCurAnim = NULL;
-	}
-
 	clustUpdateCluster(apsStructLists[psDel->player], cluster);
 
 	if (psDel->player == selectedPlayer)
@@ -4746,13 +4742,6 @@ bool destroyStruct(STRUCTURE *psDel, unsigned impactTime)
 				}
 			}
 		}
-	}
-
-	/* remove animation if present */
-	if (psDel->psCurAnim != NULL)
-	{
-		animObj_Remove(psDel->psCurAnim, psDel->psCurAnim->psAnim->uwID);
-		psDel->psCurAnim = NULL;
 	}
 
 	// updates score stats only if not wall
@@ -5395,21 +5384,13 @@ void buildingComplete(STRUCTURE *psBuilding)
 	{
 	case REF_POWER_GEN:
 		checkForResExtractors(psBuilding);
-
 		if (selectedPlayer == psBuilding->player)
 		{
 			audio_PlayObjStaticTrack(psBuilding, ID_SOUND_POWER_HUM);
 		}
-
 		break;
 	case REF_RESOURCE_EXTRACTOR:
 		checkForPowerGen(psBuilding);
-		/* GJ HACK! - add anim to deriks */
-		if (psBuilding->psCurAnim == NULL)
-		{
-			psBuilding->psCurAnim = animObj_Add(psBuilding, ID_ANIM_DERIK, 0);
-		}
-
 		break;
 	case REF_RESEARCH:
 		//this deals with research facilities that are upgraded whilst mid-research
