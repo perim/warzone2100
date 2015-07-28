@@ -107,9 +107,6 @@ enum SECONDARY_STATE
 	DSS_ALEV_ATTACKED   = 0x000020,	/**< state referred to secondary order DSO_ATTACK_LEVEL. Droid attacks if it is attacked. */
 	DSS_ALEV_NEVER      = 0x000030,	/**< state referred to secondary order DSO_ATTACK_LEVEL. Droid never attacks. */
 	DSS_RECYCLE_SET     = 0x000100,	/**< state referred to secondary order DSO_RECYCLE. If set, the droid can be recycled. */
-	DSS_ASSPROD_START   = 0x000200,	/**< @todo this state is not called on the code. Consider removing it. */
-	DSS_ASSPROD_MID     = 0x002000,	/**< @todo this state is not called on the code. Consider removing it. */
-	DSS_ASSPROD_END     = 0x040000,	/**< @todo this state is not called on the code. Consider removing it. */
 	DSS_RTL_REPAIR      = 0x080000,	/**< state set to send order DORDER_RTR to droid. */
 	DSS_RTL_BASE        = 0x100000,	/**< state set to send order DORDER_RTB to droid. */
 	DSS_RTL_TRANSPORT   = 0x200000,	/**< state set to send order DORDER_EMBARK to droid. */
