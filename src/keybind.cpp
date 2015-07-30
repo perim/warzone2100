@@ -1179,9 +1179,6 @@ void	kf_SelectGrouping(UDWORD	groupNumber)
 	} \
 	void	kf_AssignGrouping_##x( void ) { \
 		assignDroidsToGroup(selectedPlayer, x); \
-	} \
-	void	kf_SelectCommander_##x( void ) { \
-		selCommander(x); \
 	}
 
 DEFINE_NUMED_KF(0)
@@ -1636,12 +1633,6 @@ void	kf_JumpToConstructorUnits(void)
 void	kf_JumpToSensorUnits(void)
 {
 	selNextSpecifiedUnit(DROID_SENSOR);
-}
-// --------------------------------------------------------------------------
-// --------------------------------------------------------------------------
-void	kf_JumpToCommandUnits(void)
-{
-	selNextSpecifiedUnit(DROID_COMMAND);
 }
 // --------------------------------------------------------------------------
 

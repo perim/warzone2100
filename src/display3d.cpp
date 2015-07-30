@@ -90,7 +90,6 @@
 #include "advvis.h"
 #include "texture.h"
 #include "anim_id.h"
-#include "cmddroid.h"
 #include "terrain.h"
 
 /********************  Prototypes  ********************/
@@ -123,7 +122,6 @@ static void	showSensorRange2(BASE_OBJECT *psObj);
 static void	drawRangeAtPos(SDWORD centerX, SDWORD centerY, SDWORD radius);
 static void	addConstructionLine(DROID *psDroid, STRUCTURE *psStructure);
 static void	doConstructionLines(void);
-static void	drawDroidCmndNo(DROID *psDroid);
 static void	drawDroidRank(DROID *psDroid);
 static void	drawDroidSensorLock(DROID *psDroid);
 static void	calcAverageTerrainHeight(iView *player);
@@ -1207,7 +1205,6 @@ static void display3DProjectiles(void)
 			/* these guys get drawn last */
 			if (psObj->psWStats->weaponSubClass == WSC_ROCKET ||
 			    psObj->psWStats->weaponSubClass == WSC_MISSILE ||
-			    psObj->psWStats->weaponSubClass == WSC_COMMAND ||
 			    psObj->psWStats->weaponSubClass == WSC_SLOWMISSILE ||
 			    psObj->psWStats->weaponSubClass == WSC_SLOWROCKET ||
 			    psObj->psWStats->weaponSubClass == WSC_ENERGY ||
@@ -1236,7 +1233,6 @@ void	renderProjectile(PROJECTILE *psCurr)
 	psStats = psCurr->psWStats;
 	/* Reject flame or command since they have interim drawn fx */
 	if (psStats->weaponSubClass == WSC_FLAME ||
-	    psStats->weaponSubClass == WSC_COMMAND || // || psStats->weaponSubClass == WSC_ENERGY)
 	    psStats->weaponSubClass == WSC_ELECTRONIC ||
 	    psStats->weaponSubClass == WSC_EMP ||
 	    (bMultiPlayer && psStats->weaponSubClass == WSC_LAS_SAT))
@@ -2737,9 +2733,6 @@ static void drawStructureTargetOriginIcon(STRUCTURE *psStruct, int weapon_slot)
 	case ORIGIN_VISUAL:
 		iV_DrawImage(IntImages, IMAGE_ORIGIN_VISUAL, scrX + scrR + 5, scrY - 1);
 		break;
-	case ORIGIN_COMMANDER:
-		iV_DrawImage(IntImages, IMAGE_ORIGIN_COMMANDER, scrX + scrR + 5, scrY - 1);
-		break;
 	case ORIGIN_SENSOR:
 		iV_DrawImage(IntImages, IMAGE_ORIGIN_SENSOR_STANDARD, scrX + scrR + 5, scrY - 1);
 		break;
@@ -2951,7 +2944,7 @@ static UDWORD	getTargettingGfx(void)
 	}
 }
 
-/// Is the droid, its commander or its sensor tower selected?
+/// Is the droid or its sensor tower selected?
 bool	eitherSelected(DROID *psDroid)
 {
 	bool			retVal;
@@ -2961,17 +2954,6 @@ bool	eitherSelected(DROID *psDroid)
 	if (psDroid->selected)
 	{
 		retVal = true;
-	}
-
-	if (psDroid->psGroup)
-	{
-		if (psDroid->psGroup->psCommander)
-		{
-			if (psDroid->psGroup->psCommander->selected)
-			{
-				retVal = true;
-			}
-		}
 	}
 
 	psObj = orderStateObj(psDroid, DORDER_FIRESUPPORT);
@@ -3084,7 +3066,6 @@ static void	drawDroidSelections(void)
 			{
 				drawDroidRank(psDroid);
 				drawDroidSensorLock(psDroid);
-				drawDroidCmndNo(psDroid);
 				drawDroidGroupNumber(psDroid);
 			}
 
@@ -3273,71 +3254,6 @@ static void	drawDroidGroupNumber(DROID *psDroid)
 	}
 }
 
-/// X offset to display the group number at
-#define CMND_STAR_X_OFFSET	(6)
-#define CMND_GN_Y_OFFSET	(8)
-/// Draw the number of the commander the droid is assigned to
-static void	drawDroidCmndNo(DROID *psDroid)
-{
-	SDWORD	xShift, yShift, index;
-	UDWORD	id2;
-	UWORD	id;
-	bool	bDraw = true;
-
-	id = UWORD_MAX;
-
-	id2 = IMAGE_GN_STAR;
-	index = SDWORD_MAX;
-	if (psDroid->droidType == DROID_COMMAND)
-	{
-		index = cmdDroidGetIndex(psDroid);
-	}
-	else if (hasCommander(psDroid))
-	{
-		index = cmdDroidGetIndex(psDroid->psGroup->psCommander);
-	}
-	switch (index)
-	{
-	case 1:
-		id = IMAGE_GN_1;
-		break;
-	case 2:
-		id = IMAGE_GN_2;
-		break;
-	case 3:
-		id = IMAGE_GN_3;
-		break;
-	case 4:
-		id = IMAGE_GN_4;
-		break;
-	case 5:
-		id = IMAGE_GN_5;
-		break;
-	case 6:
-		id = IMAGE_GN_6;
-		break;
-	case 7:
-		id = IMAGE_GN_7;
-		break;
-	case 8:
-		id = IMAGE_GN_8;
-		break;
-	case 9:
-		id = IMAGE_GN_9;
-		break;
-	default:
-		bDraw = false;
-		break;
-	}
-
-	if (bDraw)
-	{
-		xShift = psDroid->sDisplay.screenR + GN_X_OFFSET;
-		yShift = psDroid->sDisplay.screenR - CMND_GN_Y_OFFSET;
-		iV_DrawImage(IntImages, id2, psDroid->sDisplay.screenX - xShift - CMND_STAR_X_OFFSET, psDroid->sDisplay.screenY + yShift);
-		iV_DrawImage(IntImages, id, psDroid->sDisplay.screenX - xShift, psDroid->sDisplay.screenY + yShift);
-	}
-}
 /* ---------------------------------------------------------------------------- */
 
 

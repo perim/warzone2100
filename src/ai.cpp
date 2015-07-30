@@ -27,7 +27,6 @@
 #include "lib/framework/frame.h"
 
 #include "action.h"
-#include "cmddroid.h"
 #include "combat.h"
 #include "drive.h"
 #include "mapgrid.h"
@@ -48,7 +47,6 @@
 
 #define	WEIGHT_SERVICE_DROIDS		(WEIGHT_DIST_TILE_DROID * 5)		//We don't want them to be repairing droids or structures while we are after them
 #define	WEIGHT_WEAPON_DROIDS		(WEIGHT_DIST_TILE_DROID * 4)		//We prefer to go after anything that has a gun and can hurt us
-#define	WEIGHT_COMMAND_DROIDS		(WEIGHT_DIST_TILE_DROID * 6)		//Commanders get a higher priority
 #define	WEIGHT_MILITARY_STRUCT		WEIGHT_DIST_TILE_STRUCT				//Droid/cyborg factories, repair facility; shouldn't have too much weight
 #define	WEIGHT_WEAPON_STRUCT		WEIGHT_WEAPON_DROIDS				//Same as weapon droids (?)
 #define	WEIGHT_DERRICK_STRUCT		(WEIGHT_MILITARY_STRUCT + WEIGHT_DIST_TILE_STRUCT * 4)	//Even if it's 4 tiles further away than defenses we still choose it
@@ -64,10 +62,6 @@
 
 #define TARGET_DOOMED_PENALTY_F		10	// Targets that have a lot of damage incoming are less attractive
 #define TARGET_DOOMED_SLOW_RELOAD_T	21	// Weapon ROF threshold for above penalty. per minute.
-
-//Some weights for the units attached to a commander
-#define	WEIGHT_CMD_RANK				(WEIGHT_DIST_TILE * 4)			//A single rank is as important as 4 tiles distance
-#define	WEIGHT_CMD_SAME_TARGET		WEIGHT_DIST_TILE				//Don't want this to be too high, since a commander can have many units assigned
 
 uint8_t alliances[MAX_PLAYER_SLOTS][MAX_PLAYER_SLOTS];
 
@@ -253,12 +247,12 @@ static BASE_OBJECT *aiSearchSensorTargets(BASE_OBJECT *psObj, int weapon_slot, W
 static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker, SDWORD weapon_slot)
 {
 	SDWORD			targetTypeBonus = 0, damageRatio = 0, attackWeight = 0, noTarget = -1;
-	UDWORD			weaponSlot;
-	DROID			*targetDroid = NULL, *psAttackerDroid = NULL, *psGroupDroid, *psDroid;
+	DROID			*targetDroid = NULL, *psAttackerDroid = NULL;
 	STRUCTURE		*targetStructure = NULL;
 	WEAPON_EFFECT	weaponEffect;
 	WEAPON_STATS	*attackerWeapon;
-	bool			bEmpWeap = false, bCmdAttached = false, bTargetingCmd = false, bDirect = false;
+	bool bDirect = false;
+	bool bEmpWeap = false;
 
 	if (psTarget == NULL || psAttacker == NULL || psTarget->died)
 	{
@@ -274,44 +268,6 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 		psAttackerDroid = (DROID *)psAttacker;
 
 		attackerWeapon = (WEAPON_STATS *)(asWeaponStats + psAttackerDroid->asWeaps[weapon_slot].nStat);
-
-		//check if this droid is assigned to a commander
-		bCmdAttached = hasCommander(psAttackerDroid);
-
-		//find out if current target is targeting our commander
-		if (bCmdAttached)
-		{
-			if (psTarget->type == OBJ_DROID)
-			{
-				psDroid = (DROID *)psTarget;
-
-				//go through all enemy weapon slots
-				for (weaponSlot = 0; !bTargetingCmd &&
-				     weaponSlot < ((DROID *)psTarget)->numWeaps; weaponSlot++)
-				{
-					//see if this weapon is targeting our commander
-					if (psDroid->psActionTarget[weaponSlot] == (BASE_OBJECT *)psAttackerDroid->psGroup->psCommander)
-					{
-						bTargetingCmd = true;
-					}
-				}
-			}
-			else
-			{
-				if (psTarget->type == OBJ_STRUCTURE)
-				{
-					//go through all enemy weapons
-					for (weaponSlot = 0; !bTargetingCmd && weaponSlot < ((STRUCTURE *)psTarget)->numWeaps; weaponSlot++)
-					{
-						if (((STRUCTURE *)psTarget)->psTarget[weaponSlot] ==
-						    (BASE_OBJECT *)psAttackerDroid->psGroup->psCommander)
-						{
-							bTargetingCmd = true;
-						}
-					}
-				}
-			}
-		}
 	}
 	else if (psAttacker->type == OBJ_STRUCTURE)
 	{
@@ -385,10 +341,6 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 		case DROID_WEAPON:
 		case DROID_CYBORG_SUPER:
 			targetTypeBonus = WEIGHT_WEAPON_DROIDS;
-			break;
-
-		case DROID_COMMAND:
-			targetTypeBonus = WEIGHT_COMMAND_DROIDS;
 			break;
 
 		case DROID_CONSTRUCT:
@@ -488,33 +440,6 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 			return noTarget;
 		}
 		attackWeight /= TARGET_DOOMED_PENALTY_F;
-	}
-
-	/* Commander-related criterias */
-	if (bCmdAttached)	//attached to a commander and don't have a target assigned by some order
-	{
-		ASSERT(psAttackerDroid->psGroup->psCommander != NULL, "Commander is NULL");
-
-		//if commander is being targeted by our target, try to defend the commander
-		if (bTargetingCmd)
-		{
-			attackWeight += WEIGHT_CMD_RANK * (1 + getDroidLevel(psAttackerDroid->psGroup->psCommander));
-		}
-
-		//fire support - go through all droids assigned to the commander
-		for (psGroupDroid = psAttackerDroid->psGroup->psList; psGroupDroid; psGroupDroid = psGroupDroid->psGrpNext)
-		{
-			for (weaponSlot = 0; weaponSlot < psGroupDroid->numWeaps; weaponSlot++)
-			{
-				//see if this droid is currently targeting current target
-				if (psGroupDroid->order.psObj == psTarget ||
-				    psGroupDroid->psActionTarget[weaponSlot] == psTarget)
-				{
-					//we prefer targets that are already targeted and hence will be destroyed faster
-					attackWeight += WEIGHT_CMD_SAME_TARGET;
-				}
-			}
-		}
 	}
 
 	return attackWeight;
@@ -800,7 +725,6 @@ static bool aiObjIsWall(BASE_OBJECT *psObj)
 bool aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot, bool bUpdateTarget, UWORD *targetOrigin)
 {
 	BASE_OBJECT		*psTarget = NULL;
-	DROID			*psCommander;
 	SDWORD			curTargetWeight = -1;
 	UWORD 			tmpOrigin = ORIGIN_UNKNOWN;
 
@@ -863,53 +787,21 @@ bool aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 	else if (psObj->type == OBJ_STRUCTURE)
 	{
 		WEAPON_STATS	*psWStats = NULL;
-		bool	bCommanderBlock = false;
 
 		ASSERT(((STRUCTURE *)psObj)->asWeaps[weapon_slot].nStat > 0, "no weapons on structure");
 
 		psWStats = ((STRUCTURE *)psObj)->asWeaps[weapon_slot].nStat + asWeaponStats;
 		int longRange = proj_GetLongRange(psWStats, psObj->player);
 
-		// see if there is a target from the command droids
 		psTarget = NULL;
-		psCommander = cmdDroidGetDesignator(psObj->player);
-		if (!proj_Direct(psWStats) && (psCommander != NULL) &&
-		    aiStructHasRange((STRUCTURE *)psObj, (BASE_OBJECT *)psCommander, weapon_slot))
-		{
-			// there is a commander that can fire designate for this structure
-			// set bCommanderBlock so that the structure does not fire until the commander
-			// has a target - (slow firing weapons will not be ready to fire otherwise).
-			bCommanderBlock = true;
-
-			// I do believe this will never happen, check for yourself :-)
-			debug(LOG_NEVER, "Commander %d is good enough for fire designation", psCommander->id);
-
-			if (psCommander->action == DACTION_ATTACK
-			    && psCommander->psActionTarget[0] != NULL
-			    && !psCommander->psActionTarget[0]->died)
-			{
-				// the commander has a target to fire on
-				if (aiStructHasRange((STRUCTURE *)psObj, psCommander->psActionTarget[0], weapon_slot))
-				{
-					// target in range - fire on it
-					tmpOrigin = ORIGIN_COMMANDER;
-					psTarget = psCommander->psActionTarget[0];
-				}
-				else
-				{
-					// target out of range - release the commander block
-					bCommanderBlock = false;
-				}
-			}
-		}
 
 		// indirect fire structures use sensor towers first
-		if (psTarget == NULL && !bCommanderBlock && !proj_Direct(psWStats))
+		if (psTarget == NULL && !proj_Direct(psWStats))
 		{
 			psTarget = aiSearchSensorTargets(psObj, weapon_slot, psWStats, &tmpOrigin);
 		}
 
-		if (psTarget == NULL && !bCommanderBlock)
+		if (psTarget == NULL)
 		{
 			int targetValue = -1;
 			int tarDist = INT32_MAX;
@@ -1142,13 +1034,6 @@ void aiUpdateDroid(DROID *psDroid)
 		updateTarget = false;
 	}
 
-	// don't allow units to start attacking if they will switch to guarding the commander
-	if (hasCommander(psDroid))
-	{
-		lookForTarget = false;
-		updateTarget = false;
-	}
-
 	if (bMultiPlayer && isVtolDroid(psDroid) && isHumanPlayer(psDroid->player))
 	{
 		lookForTarget = false;
@@ -1175,11 +1060,10 @@ void aiUpdateDroid(DROID *psDroid)
 		lookForTarget = false;
 	}
 
-	/* For commanders and non-assigned non-commanders:
-	 look for a better target once in a while */
+	/* look for a better target once in a while */
 	if (!lookForTarget && updateTarget)
 	{
-		if ((psDroid->numWeaps > 0) && !hasCommander(psDroid))	//not assigned to commander
+		if (psDroid->numWeaps > 0)
 		{
 			if ((psDroid->id + gameTime) / TARGET_UPD_SKIP_FRAMES != (psDroid->id + gameTime - deltaGameTime) / TARGET_UPD_SKIP_FRAMES)
 			{

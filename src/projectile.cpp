@@ -44,7 +44,6 @@
 #include "scripttabs.h"
 #include "scriptcb.h"
 #include "group.h"
-#include "cmddroid.h"
 #include "feature.h"
 #include "lib/ivis_opengl/piestate.h"
 #include "loop.h"
@@ -268,9 +267,6 @@ int getExpGain(int player)
 // update the kills after a target is damaged/destroyed
 static void proj_UpdateKills(PROJECTILE *psObj, int32_t experienceInc)
 {
-	DROID	        *psDroid;
-	BASE_OBJECT     *psSensor;
-
 	CHECK_PROJECTILE(psObj);
 
 	if (psObj->psSource == NULL || (psObj->psDest && psObj->psDest->type == OBJ_FEATURE)
@@ -290,7 +286,7 @@ static void proj_UpdateKills(PROJECTILE *psObj, int32_t experienceInc)
 
 	if (psObj->psSource->type == OBJ_DROID)			/* update droid kills */
 	{
-		psDroid = (DROID *) psObj->psSource;
+		DROID *psDroid = (DROID *) psObj->psSource;
 
 		// If it is 'droid-on-droid' then modify the experience by the Quality factor
 		// Only do this in MP so to not un-balance the campaign
@@ -305,27 +301,11 @@ static void proj_UpdateKills(PROJECTILE *psObj, int32_t experienceInc)
 		ASSERT_OR_RETURN(, 0 <= experienceInc && experienceInc < (int)(2.1 * 65536), "Experience increase out of range");
 
 		psDroid->experience += experienceInc;
-		cmdDroidUpdateKills(psDroid, experienceInc);
 
-		psSensor = orderStateObj(psDroid, DORDER_FIRESUPPORT);
-		if (psSensor
-		    && psSensor->type == OBJ_DROID)
+		BASE_OBJECT *psSensor = orderStateObj(psDroid, DORDER_FIRESUPPORT);
+		if (psSensor && psSensor->type == OBJ_DROID)
 		{
 			((DROID *)psSensor)->experience += experienceInc;
-		}
-	}
-	else if (psObj->psSource->type == OBJ_STRUCTURE)
-	{
-		ASSERT_OR_RETURN(, 0 <= experienceInc && experienceInc < (int)(2.1 * 65536), "Experience increase out of range");
-
-		// See if there was a command droid designating this target
-		psDroid = cmdDroidGetDesignator(psObj->psSource->player);
-
-		if (psDroid != NULL
-		    && psDroid->action == DACTION_ATTACK
-		    && psDroid->psActionTarget[0] == psObj->psDest)
-		{
-			psDroid->experience += experienceInc;
 		}
 	}
 }
@@ -920,7 +900,6 @@ static void proj_InFlightFunc(PROJECTILE *psProj)
 				effectGiveAuxVar(PERCENT(currentDistance, psStats->upgrade[psProj->player].maxRange));
 				addEffect(&posFlip, EFFECT_EXPLOSION, EXPLOSION_TYPE_FLAMETHROWER, false, NULL, 0, effectTime);
 				break;
-			case WSC_COMMAND:
 			case WSC_ELECTRONIC:
 			case WSC_EMP:
 				posFlip.z -= 8;  // Why?
@@ -1432,7 +1411,6 @@ static ObjectShape establishTargetShape(BASE_OBJECT *psTarget)
 		case DROID_SENSOR:
 		case DROID_ECM:
 		case DROID_CONSTRUCT:
-		case DROID_COMMAND:
 		case DROID_REPAIR:
 		case DROID_PERSON:
 		case DROID_CYBORG:
@@ -1679,8 +1657,6 @@ int establishTargetHeight(BASE_OBJECT const *psTarget)
 			case DROID_DEFAULT:
 			case DROID_TRANSPORTER:
 			case DROID_SUPERTRANSPORTER:
-			// Commanders don't have pIMD either
-			case DROID_COMMAND:
 			case DROID_ANY:
 				return height;
 			}

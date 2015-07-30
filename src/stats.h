@@ -36,7 +36,6 @@
 
 /* The stores for the different stats */
 extern BODY_STATS			*asBodyStats;
-extern BRAIN_STATS			*asBrainStats;
 extern PROPULSION_STATS		*asPropulsionStats;
 extern SENSOR_STATS			*asSensorStats;
 extern ECM_STATS			*asECMStats;
@@ -51,7 +50,6 @@ extern WEAPON_MODIFIER		asWeaponModifierBody[WE_NUMEFFECTS][SIZE_NUM];
 
 /* The number of different stats stored */
 extern UDWORD		numBodyStats;
-extern UDWORD		numBrainStats;
 extern UDWORD		numPropulsionStats;
 extern UDWORD		numSensorStats;
 extern UDWORD		numECMStats;
@@ -62,7 +60,6 @@ extern UDWORD		numTerrainTypes;
 
 /* What number the ref numbers start at for each type of stat */
 #define REF_BODY_START			0x010000
-#define REF_BRAIN_START			0x020000
 #define REF_PROPULSION_START	0x040000
 #define REF_SENSOR_START		0x050000
 #define REF_ECM_START			0x060000
@@ -106,9 +103,6 @@ extern bool statsAllocWeapons(UDWORD numEntries);
 /*Allocate Body stats*/
 extern bool statsAllocBody(UDWORD numEntries);
 
-/*Allocate Brain stats*/
-extern bool statsAllocBrain(UDWORD numEntries);
-
 /*Allocate Propulsion stats*/
 extern bool statsAllocPropulsion(UDWORD numEntries);
 
@@ -137,9 +131,6 @@ extern bool loadWeaponStats(const char *pFileName);
 
 /*Load the body stats from the file exported from Access*/
 extern bool loadBodyStats(const char *pFileName);
-
-/*Load the brain stats from the file exported from Access*/
-extern bool loadBrainStats(const char *pFileName);
 
 /*Load the propulsion stats from the file exported from Access*/
 extern bool loadPropulsionStats(const char *pFileName);

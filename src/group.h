@@ -29,7 +29,6 @@
 enum GROUP_TYPE
 {
 	GT_NORMAL,      // standard group
-	GT_COMMAND,     // command droid group
 	GT_TRANSPORTER, // transporter group
 };
 
@@ -52,7 +51,6 @@ public: // TODO: c++ design to members become private.
 	GROUP_TYPE	type;         // Type from the enum GROUP_TYPE above
 	SWORD		refCount;     // Number of objects in the group. Group is deleted if refCount<=0. Count number of droids+NULL pointers.
 	DROID		*psList;      // List of droids in the group
-	DROID		*psCommander; // The command droid of a command group
 	RUN_DATA	sRunData;   // Where the group should retreat to
 	int		id;	// unique group id
 };

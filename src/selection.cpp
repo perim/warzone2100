@@ -286,8 +286,6 @@ void selNextSpecifiedUnit(DROID_TYPE unitType)
 		case	DROID_SENSOR:
 			addConsoleMessage(_("Unable to locate any Sensor Units!"), LEFT_JUSTIFY, SYSTEM_MESSAGE);
 			break;
-		case	DROID_COMMAND:
-			addConsoleMessage(_("Unable to locate any Commanders!"), LEFT_JUSTIFY, SYSTEM_MESSAGE);
 		default:
 			break;
 		}
@@ -415,65 +413,6 @@ void selNextSpecifiedBuilding(STRUCTURE_TYPE structType)
 	{
 		// Can't find required building
 		addConsoleMessage("Cannot find required building!", LEFT_JUSTIFY, SYSTEM_MESSAGE);
-	}
-}
-
-// ---------------------------------------------------------------------
-// see if a commander is the n'th command droid
-static bool droidIsCommanderNum(DROID *psDroid, SDWORD n)
-{
-	if (psDroid->droidType != DROID_COMMAND)
-	{
-		return false;
-	}
-
-	int numLess = 0;
-	for (DROID *psCurr = apsDroidLists[psDroid->player]; psCurr; psCurr = psCurr->psNext)
-	{
-		if ((psCurr->droidType == DROID_COMMAND) && (psCurr->id < psDroid->id))
-		{
-			numLess++;
-		}
-	}
-
-	return (numLess == (n - 1));
-}
-
-// select the n'th command droid
-void selCommander(int n)
-{
-	for (DROID *psCurr = apsDroidLists[selectedPlayer]; psCurr; psCurr = psCurr->psNext)
-	{
-		if (droidIsCommanderNum(psCurr, n))
-		{
-			if (!psCurr->selected)
-			{
-				clearSelection();
-				psCurr->selected = true;
-			}
-			else
-			{
-				clearSelection();
-				psCurr->selected = true;
-
-				// this horrible bit of code is taken from activateGroupAndMove
-				// and sets the camera position to that of the commander
-
-				if (getWarCamStatus())
-				{
-					camToggleStatus(); // messy - fix this
-					processWarCam(); // odd, but necessary
-					camToggleStatus(); // messy - FIXME
-				}
-				else
-				{
-					/* Centre display on him if warcam isn't active */
-					setViewPos(map_coord(psCurr->pos.x), map_coord(psCurr->pos.y), true);
-				}
-			}
-			setSelectedCommander(n);
-			return;
-		}
 	}
 }
 

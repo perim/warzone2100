@@ -350,11 +350,6 @@ static inline BODY_STATS *getBodyStats(DROID *psDroid)
 	return asBodyStats + psDroid->asBits[COMP_BODY];
 }
 
-static inline BRAIN_STATS *getBrainStats(DROID *psDroid)
-{
-	return asBrainStats + psDroid->asBits[COMP_BRAIN];
-}
-
 static inline PROPULSION_STATS *getPropulsionStats(DROID *psDroid)
 {
 	return asPropulsionStats + psDroid->asBits[COMP_PROPULSION];

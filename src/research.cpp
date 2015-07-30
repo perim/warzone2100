@@ -41,7 +41,6 @@
 #include "scripttabs.h"
 #include "hci.h"
 #include "console.h"
-#include "cmddroid.h"
 #include "power.h"
 #include "mission.h"
 #include "frend.h"		// frontend ids.

@@ -237,18 +237,6 @@ static bool bufferSREPAIRLoad(const char *fileName, void **ppData)
 	return true;
 }
 
-/* Load the Brain stats */
-static bool bufferSBRAINLoad(const char *fileName, void **ppData)
-{
-	if (!loadBrainStats(fileName) || !allocComponentList(COMP_BRAIN, numBrainStats))
-	{
-		return false;
-	}
-	//not interested in this value
-	*ppData = NULL;
-	return true;
-}
-
 /* Load the PropulsionType stats */
 static bool bufferSPROPTYPESLoad(const char *fileName, void **ppData)
 {
@@ -783,7 +771,6 @@ static const RES_TYPE_MIN_FILE FileResourceTypes[] =
 	{"WAV", dataAudioLoad, (RES_FREE)sound_ReleaseTrack},
 	{"SWEAPON", bufferSWEAPONLoad, dataReleaseStats},
 	{"SBPIMD", bufferSBPIMDLoad, dataReleaseStats},
-	{"SBRAIN", bufferSBRAINLoad, dataReleaseStats},
 	{"SSENSOR", bufferSSENSORLoad, dataReleaseStats},
 	{"SECM", bufferSECMLoad, dataReleaseStats},
 	{"SREPAIR", bufferSREPAIRLoad, dataReleaseStats},

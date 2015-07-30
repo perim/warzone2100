@@ -49,10 +49,6 @@
 #define IDORDER_PATROL						8040
 #define IDORDER_RETURN						8060
 #define IDORDER_RECYCLE						8070
-#define IDORDER_ASSIGN_PRODUCTION			8080
-#define IDORDER_ASSIGN_CYBORG_PRODUCTION	8090
-#define IDORDER_FIRE_DESIGNATOR				8100
-#define IDORDER_ASSIGN_VTOL_PRODUCTION		8110
 #define IDORDER_CIRCLE						8120
 
 enum ORDBUTTONTYPE
@@ -68,9 +64,6 @@ enum ORDBUTTONTYPE
 enum ORDBUTTONCLASS
 {
 	ORDBUTCLASS_NORMAL,			// A normal button, one order type per line.
-	ORDBUTCLASS_FACTORY,		// A factory assignment button.
-	ORDBUTCLASS_CYBORGFACTORY,	// A cyborg factory assignment button.
-	ORDBUTCLASS_VTOLFACTORY, 	// A VTOL factory assignment button.
 };
 
 
@@ -143,10 +136,6 @@ enum
 	STR_DORD_EMBARK,
 	STR_DORD_ARMRECYCLE,
 	STR_DORD_RECYCLE,
-	STR_DORD_FACTORY,
-	STR_DORD_CYBORG_FACTORY,
-	STR_DORD_FIREDES,
-	STR_DORD_VTOL_FACTORY,
 	STR_DORD_CIRCLE,
 };
 
@@ -167,10 +156,6 @@ static const char *getDORDDescription(int id)
 	case STR_DORD_EMBARK         : return _("Go to Transport");
 	case STR_DORD_ARMRECYCLE     : return _("Return for Recycling");
 	case STR_DORD_RECYCLE        : return _("Recycle");
-	case STR_DORD_FACTORY        : return _("Assign Factory Production");
-	case STR_DORD_CYBORG_FACTORY : return _("Assign Cyborg Factory Production");
-	case STR_DORD_FIREDES        : return _("Assign Fire Support");
-	case STR_DORD_VTOL_FACTORY   : return _("Assign VTOL Factory Production");
 	case STR_DORD_CIRCLE         : return _("Circle");
 
 	default : return "";  // make compiler shut up
@@ -207,20 +192,6 @@ static ORDERBUTTONS OrderButtons[NUM_ORDERS] =
 		{IMAGE_DES_HILIGHT,		IMAGE_DES_HILIGHT,	IMAGE_DES_HILIGHT},
 		{STR_DORD_FIRE1,	STR_DORD_FIRE2,	STR_DORD_FIRE3},
 		{DSS_ALEV_ALWAYS,	DSS_ALEV_ATTACKED,	DSS_ALEV_NEVER}
-	},
-	{
-		ORDBUTCLASS_NORMAL,
-		DSO_FIRE_DESIGNATOR,
-		DSS_FIREDES_MASK,
-		ORD_BTYPE_BOOLEAN,
-		ORD_JUSTIFY_COMBINE,
-		IDORDER_FIRE_DESIGNATOR,
-		1, 0,
-		{IMAGE_ORD_FIREDES_UP,	0,	0},
-		{IMAGE_ORD_FIREDES_UP,	0,	0},
-		{IMAGE_DES_HILIGHT,	0,	0},
-		{STR_DORD_FIREDES,	0,	0},
-		{DSS_FIREDES_SET,	0,	0}
 	},
 	{
 		ORDBUTCLASS_NORMAL,
@@ -279,58 +250,7 @@ static ORDERBUTTONS OrderButtons[NUM_ORDERS] =
 		{IMAGE_DES_HILIGHT,	IMAGE_DES_HILIGHT,	0},
 		{STR_DORD_ARMRECYCLE,	STR_DORD_RECYCLE,	0},
 		{DSS_RECYCLE_SET,	DSS_RECYCLE_SET,	0}
-	},
-	{
-		ORDBUTCLASS_FACTORY,
-		DSO_ASSIGN_PRODUCTION,
-		DSS_ASSPROD_MASK,
-		ORD_BTYPE_BOOLEAN_COMBINE,
-		ORD_JUSTIFY_CENTER | ORD_JUSTIFY_NEWLINE,
-		IDORDER_ASSIGN_PRODUCTION,
-		5, 0,
-		{IMAGE_ORD_FAC1UP,		IMAGE_ORD_FAC2UP,	IMAGE_ORD_FAC3UP,	IMAGE_ORD_FAC4UP,	IMAGE_ORD_FAC5UP	},
-		{IMAGE_ORD_FAC1UP,		IMAGE_ORD_FAC2UP,	IMAGE_ORD_FAC3UP,	IMAGE_ORD_FAC4UP,	IMAGE_ORD_FAC5UP	},
-		{IMAGE_ORD_FACHILITE,	IMAGE_ORD_FACHILITE, IMAGE_ORD_FACHILITE, IMAGE_ORD_FACHILITE, IMAGE_ORD_FACHILITE	},
-		{STR_DORD_FACTORY,	STR_DORD_FACTORY,	STR_DORD_FACTORY,	STR_DORD_FACTORY,	STR_DORD_FACTORY},
-		{
-			0x01 << DSS_ASSPROD_SHIFT, 0x02 << DSS_ASSPROD_SHIFT, 0x04 << DSS_ASSPROD_SHIFT,
-			0x08 << DSS_ASSPROD_SHIFT, 0x10 << DSS_ASSPROD_SHIFT
-		}
-	},
-	{
-		ORDBUTCLASS_CYBORGFACTORY,
-		DSO_ASSIGN_CYBORG_PRODUCTION,
-		DSS_ASSPROD_MASK,
-		ORD_BTYPE_BOOLEAN_COMBINE,
-		ORD_JUSTIFY_CENTER | ORD_JUSTIFY_NEWLINE,
-		IDORDER_ASSIGN_CYBORG_PRODUCTION,
-		5, 0,
-		{IMAGE_ORD_FAC1UP,		IMAGE_ORD_FAC2UP,	IMAGE_ORD_FAC3UP,	IMAGE_ORD_FAC4UP,	IMAGE_ORD_FAC5UP	},
-		{IMAGE_ORD_FAC1UP,		IMAGE_ORD_FAC2UP,	IMAGE_ORD_FAC3UP,	IMAGE_ORD_FAC4UP,	IMAGE_ORD_FAC5UP	},
-		{IMAGE_ORD_FACHILITE,	IMAGE_ORD_FACHILITE, IMAGE_ORD_FACHILITE, IMAGE_ORD_FACHILITE, IMAGE_ORD_FACHILITE	},
-		{STR_DORD_CYBORG_FACTORY,	STR_DORD_CYBORG_FACTORY,	STR_DORD_CYBORG_FACTORY,	STR_DORD_CYBORG_FACTORY,	STR_DORD_CYBORG_FACTORY},
-		{
-			0x01 << DSS_ASSPROD_CYBORG_SHIFT, 0x02 << DSS_ASSPROD_CYBORG_SHIFT, 0x04 << DSS_ASSPROD_CYBORG_SHIFT,
-			0x08 << DSS_ASSPROD_CYBORG_SHIFT, 0x10 << DSS_ASSPROD_CYBORG_SHIFT
-		}
-	},
-	{
-		ORDBUTCLASS_VTOLFACTORY,
-		DSO_ASSIGN_VTOL_PRODUCTION,
-		DSS_ASSPROD_MASK,
-		ORD_BTYPE_BOOLEAN_COMBINE,
-		ORD_JUSTIFY_CENTER | ORD_JUSTIFY_NEWLINE,
-		IDORDER_ASSIGN_VTOL_PRODUCTION,
-		5, 0,
-		{IMAGE_ORD_FAC1UP,		IMAGE_ORD_FAC2UP,	IMAGE_ORD_FAC3UP,	IMAGE_ORD_FAC4UP,	IMAGE_ORD_FAC5UP	},
-		{IMAGE_ORD_FAC1UP,		IMAGE_ORD_FAC2UP,	IMAGE_ORD_FAC3UP,	IMAGE_ORD_FAC4UP,	IMAGE_ORD_FAC5UP	},
-		{IMAGE_ORD_FACHILITE,	IMAGE_ORD_FACHILITE, IMAGE_ORD_FACHILITE, IMAGE_ORD_FACHILITE, IMAGE_ORD_FACHILITE	},
-		{STR_DORD_VTOL_FACTORY,	STR_DORD_VTOL_FACTORY,	STR_DORD_VTOL_FACTORY,	STR_DORD_VTOL_FACTORY,	STR_DORD_VTOL_FACTORY},
-		{
-			0x01 << DSS_ASSPROD_VTOL_SHIFT, 0x02 << DSS_ASSPROD_VTOL_SHIFT, 0x04 << DSS_ASSPROD_VTOL_SHIFT,
-			0x08 << DSS_ASSPROD_VTOL_SHIFT, 0x10 << DSS_ASSPROD_VTOL_SHIFT
-		}
-	},
+	}
 };
 
 
@@ -458,7 +378,7 @@ bool intAddOrder(BASE_OBJECT *psObj)
 	UWORD Height, NumDisplayedOrders;
 	UWORD NumButs;
 	UWORD NumJustifyButs, NumCombineButs, NumCombineBefore;
-	bool  bLastCombine, bHidden;
+	bool  bLastCombine;
 	DROID *Droid;
 	STRUCTURE *psStructure;
 
@@ -514,13 +434,7 @@ bool intAddOrder(BASE_OBJECT *psObj)
 	AvailableOrders.clear();
 	SelectedDroids.clear();
 
-	// Selected droid is a command droid?
-	if ((Droid != NULL) && (Droid->droidType == DROID_COMMAND))
-	{
-		// displaying for a command droid - ignore any other droids
-		SelectedDroids.push_back(Droid);
-	}
-	else if (psStructure != NULL)
+	if (psStructure != NULL)
 	{
 		AvailableOrders = buildStructureOrderList(psStructure);
 		if (AvailableOrders.empty())
@@ -593,22 +507,6 @@ bool intAddOrder(BASE_OBJECT *psObj)
 		NumButs = OrderButtons[OrdIndex].NumButs;
 		// Set actual number of buttons.
 		OrderButtons[OrdIndex].AcNumButs = NumButs;
-
-		// Handle special case for factory -> command droid assignment buttons.
-		switch (OrderButtons[OrdIndex].Class)
-		{
-		case ORDBUTCLASS_FACTORY:
-			NumButs = countAssignableFactories((UBYTE)selectedPlayer, FACTORY_FLAG);
-			break;
-		case ORDBUTCLASS_CYBORGFACTORY:
-			NumButs = countAssignableFactories((UBYTE)selectedPlayer, CYBORG_FLAG);
-			break;
-		case ORDBUTCLASS_VTOLFACTORY:
-			NumButs = countAssignableFactories((UBYTE)selectedPlayer, VTOL_FLAG);
-			break;
-		default:
-			break;
-		}
 
 		sButInit.id = OrderButtons[OrdIndex].ButBaseID;
 
@@ -737,40 +635,7 @@ bool intAddOrder(BASE_OBJECT *psObj)
 				break;
 			}
 
-			// may not add a button if the factory doesn't exist
-			bHidden = false;
-			switch (OrderButtons[OrdIndex].Class)
-			{
-			case ORDBUTCLASS_FACTORY:
-				if (!checkFactoryExists(selectedPlayer, FACTORY_FLAG, i))
-				{
-					widgHide(psWScreen, sButInit.id);
-					bHidden = true;
-				}
-				break;
-			case ORDBUTCLASS_CYBORGFACTORY:
-				if (!checkFactoryExists(selectedPlayer, CYBORG_FLAG, i))
-				{
-					widgHide(psWScreen, sButInit.id);
-					bHidden = true;
-				}
-				break;
-			case ORDBUTCLASS_VTOLFACTORY:
-				if (!checkFactoryExists(selectedPlayer, VTOL_FLAG, i))
-				{
-					widgHide(psWScreen, sButInit.id);
-					bHidden = true;
-				}
-				break;
-			default:
-				break;
-			}
-
-			if (!bHidden)
-			{
-
-				sButInit.x = (SWORD)(sButInit.x + sButInit.width + ORDER_BUTGAP);
-			}
+			sButInit.x = (SWORD)(sButInit.x + sButInit.width + ORDER_BUTGAP);
 			sButInit.id++;
 		}
 
@@ -795,8 +660,6 @@ bool intAddOrder(BASE_OBJECT *psObj)
 
 // Do any housekeeping for the droid order screen.
 // Any droids that die now get set to NULL - John.
-// No droids being selected no longer removes the screen,
-// this lets the screen work with command droids - John.
 void intRunOrder(void)
 {
 	// Check to see if there all dead or unselected.

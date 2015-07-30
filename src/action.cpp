@@ -373,7 +373,7 @@ bool actionTargetTurret(BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, WEAPON *
 		calcDroidMuzzleLocation(psDroid, &attackerMuzzlePos, weapon_slot);
 
 		if (psDroid->droidType == DROID_WEAPON || isTransporter(psDroid)
-		    || psDroid->droidType == DROID_COMMAND || psDroid->droidType == DROID_CYBORG
+		    || psDroid->droidType == DROID_CYBORG
 		    || psDroid->droidType == DROID_CYBORG_SUPER)
 		{
 			pitchLowerLimit = DEG(psWeapStats->minElevation);

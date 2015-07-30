@@ -34,7 +34,6 @@
 #include "map.h"
 #include "cluster.h"
 #include "lib/netplay/netplay.h"
-#include "cmddroid.h"
 #include "projectile.h"
 #include "research.h"
 #include "gateway.h"
@@ -65,12 +64,6 @@ bool scrGroupAddDroid(void)
 	       "scrGroupAdd: Invalid droid pointer");
 	if (psDroid == NULL)
 	{
-		return false;
-	}
-	if (psDroid->droidType == DROID_COMMAND)
-	{
-		debug(LOG_ERROR,
-		      "scrGroupAdd: cannot add a command droid to a group");
 		return false;
 	}
 	if (isTransporter(psDroid))
@@ -112,7 +105,6 @@ bool scrGroupAddArea(void)
 	{
 		if (((SDWORD)psDroid->pos.x >= x1) && ((SDWORD)psDroid->pos.x <= x2) &&
 		    ((SDWORD)psDroid->pos.y >= y1) && ((SDWORD)psDroid->pos.y <= y2) &&
-		    psDroid->droidType != DROID_COMMAND &&
 		    !isTransporter(psDroid))
 
 		{
@@ -150,7 +142,6 @@ bool scrGroupAddAreaNoGroup(void)
 	{
 		if (((SDWORD)psDroid->pos.x >= x1) && ((SDWORD)psDroid->pos.x <= x2) &&
 		    ((SDWORD)psDroid->pos.y >= y1) && ((SDWORD)psDroid->pos.y <= y2) &&
-		    psDroid->droidType != DROID_COMMAND &&
 		    !isTransporter(psDroid) &&
 		    psDroid->psGroup   == NULL)
 		{
@@ -666,8 +657,6 @@ bool scrCmdDroidAddDroid(void)
 		return false;
 	}
 
-	cmdDroidAddDroid(psCommander, psDroid);
-
 	return true;
 }
 
@@ -684,7 +673,7 @@ bool scrCmdDroidMaxGroup(void)
 	ASSERT(psCommander != NULL,
 	       "scrCmdDroidMaxGroup: NULL pointer passed");
 
-	scrFunctionResult.v.ival = cmdDroidMaxGroup(psCommander);
+	scrFunctionResult.v.ival = 0;
 	if (!stackPushResult(VAL_INT, &scrFunctionResult))
 	{
 		return false;
@@ -1007,9 +996,6 @@ static UDWORD scrDroidTargetMask(DROID *psDroid)
 	case DROID_CONSTRUCT:
 	case DROID_CYBORG_CONSTRUCT:
 		mask |= SCR_DT_CONSTRUCT;
-		break;
-	case DROID_COMMAND:
-		mask |= SCR_DT_COMMAND;
 		break;
 	case DROID_REPAIR:
 	case DROID_CYBORG_REPAIR:
@@ -1397,12 +1383,6 @@ bool scrSkCanBuildTemplate(void)
 		break;
 	case DROID_CYBORG_REPAIR:
 		if (apCompLists[player][COMP_REPAIRUNIT][psTempl->asParts[COMP_REPAIRUNIT]] != AVAILABLE)
-		{
-			goto failTempl;
-		}
-		break;
-	case DROID_COMMAND:
-		if (apCompLists[player][COMP_BRAIN][psTempl->asParts[COMP_BRAIN]] != AVAILABLE)
 		{
 			goto failTempl;
 		}

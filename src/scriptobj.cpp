@@ -576,10 +576,6 @@ bool scrGroupObjGet(UDWORD index)
 		type = VAL_INT;
 		scrFunctionResult.v.ival = psGroup->type;
 		break;
-	case GROUPID_CMD:
-		type = (INTERP_TYPE)ST_DROID;
-		scrFunctionResult.v.oval = psGroup->psCommander;
-		break;
 	default:
 		ASSERT(false, "scrGroupObjGet: unknown variable index");
 		return false;
@@ -657,12 +653,6 @@ static const QString scrGetStatName(INTERP_TYPE type, UDWORD data)
 			pName = asRepairStats[data].id;
 		}
 		break;
-	case ST_BRAIN:
-		if (data < numBrainStats)
-		{
-			pName = asBrainStats[data].id;
-		}
-		break;
 	case ST_BASESTATS:
 	case ST_COMPONENT:
 		// should never have variables of this type
@@ -716,7 +706,6 @@ bool scrValDefSave(INTERP_VAL *psVal, WzConfig &ini)
 	case ST_CONSTRUCT:
 	case ST_WEAPON:
 	case ST_REPAIR:
-	case ST_BRAIN:
 		pName = scrGetStatName(psVal->type, psVal->v.ival);
 		if (!pName.isEmpty())
 		{
@@ -924,15 +913,6 @@ bool scrValDefLoad(INTERP_VAL *psVal, WzConfig &ini)
 		if (index == -1)
 		{
 			debug(LOG_FATAL, "Could not find repair component");
-			index = 0;
-		}
-		psVal->v.ival = index;
-		break;
-	case ST_BRAIN:
-		index = getCompFromName(COMP_BRAIN, ini.value("data").toString());
-		if (index == -1)
-		{
-			debug(LOG_FATAL, "Could not find repair brain");
 			index = 0;
 		}
 		psVal->v.ival = index;

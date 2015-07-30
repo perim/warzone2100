@@ -63,7 +63,6 @@ DROID_GROUP::DROID_GROUP()
 	type = GT_NORMAL;
 	refCount = 0;
 	psList = NULL;
-	psCommander = NULL;
 	memset(&sRunData, 0, sizeof(sRunData));
 }
 
@@ -126,21 +125,10 @@ void DROID_GROUP::add(DROID *psDroid)
 			psDroid->psGrpNext = psList;
 			psList = psDroid;
 		}
-		else if ((psDroid->droidType == DROID_COMMAND) && (type != GT_TRANSPORTER))
-		{
-			ASSERT_OR_RETURN(, (type == GT_NORMAL) && (psCommander == NULL), "grpJoin: Cannot have two command droids in a group");
-			type = GT_COMMAND;
-			psCommander = psDroid;
-		}
 		else
 		{
 			psDroid->psGrpNext = psList;
 			psList = psDroid;
-		}
-
-		if (type == GT_COMMAND)
-		{
-			syncDebug("Droid %d joining command group %d", psDroid->id, psCommander != NULL ? psCommander->id : 0);
 		}
 	}
 }
@@ -158,52 +146,37 @@ void DROID_GROUP::remove(DROID *psDroid)
 		return;
 	}
 
-	// SyncDebug
-	if (psDroid != NULL && type == GT_COMMAND)
-	{
-		syncDebug("Droid %d leaving command group %d", psDroid->id, psCommander != NULL ? psCommander->id : 0);
-	}
-
 	refCount -= 1;
 	// if psDroid == NULL just decrease the refcount don't remove anything from the list
 	if (psDroid != NULL)
 	{
 		// update group list of droids and droids' psGrpNext
-		if (psDroid->droidType != DROID_COMMAND || type != GT_COMMAND)
+		psPrev = NULL;
+		for (psCurr = psList; psCurr; psCurr = psCurr->psGrpNext)
 		{
-			psPrev = NULL;
-			for (psCurr = psList; psCurr; psCurr = psCurr->psGrpNext)
+			if (psCurr == psDroid)
 			{
-				if (psCurr == psDroid)
-				{
-					break;
-				}
-				psPrev = psCurr;
+				break;
 			}
-			ASSERT(psCurr != NULL, "grpLeave: droid not found");
-			if (psCurr != NULL)
+			psPrev = psCurr;
+		}
+		ASSERT(psCurr != NULL, "grpLeave: droid not found");
+		if (psCurr != NULL)
+		{
+			if (psPrev)
 			{
-				if (psPrev)
-				{
-					psPrev->psGrpNext = psCurr->psGrpNext;
-				}
-				else
-				{
-					psList = psList->psGrpNext;
-				}
+				psPrev->psGrpNext = psCurr->psGrpNext;
+			}
+			else
+			{
+				psList = psList->psGrpNext;
 			}
 		}
 
 		psDroid->psGroup = NULL;
 		psDroid->psGrpNext = NULL;
 
-		// update group's type
-		if ((psDroid->droidType == DROID_COMMAND) && (type == GT_COMMAND))
-		{
-			type = GT_NORMAL;
-			psCommander = NULL;
-		}
-		else if (isTransporter(psDroid) && (type == GT_TRANSPORTER))
+		if (isTransporter(psDroid) && (type == GT_TRANSPORTER))
 		{
 			type = GT_NORMAL;
 		}

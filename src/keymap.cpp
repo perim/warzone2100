@@ -149,7 +149,7 @@ _keymapsave keyMapSaveTable[] =
 	kf_JumpToRepairUnits,
 	kf_JumpToConstructorUnits,
 	kf_JumpToSensorUnits,
-	kf_JumpToCommandUnits,
+	kf_NOOP,
 	kf_ToggleOverlays,
 	kf_CentreOnBase,
 	kf_SetDroidAttackCease ,
@@ -187,15 +187,15 @@ _keymapsave keyMapSaveTable[] =
 	kf_SelectNextPowerStation,
 	kf_SelectNextCyborgFactory,
 	kf_ToggleConsoleDrop,
-	kf_SelectCommander_1,
-	kf_SelectCommander_2,
-	kf_SelectCommander_3,
-	kf_SelectCommander_4,
-	kf_SelectCommander_5,
-	kf_SelectCommander_6,
-	kf_SelectCommander_7,
-	kf_SelectCommander_8,
-	kf_SelectCommander_9,
+	kf_NOOP,
+	kf_NOOP,
+	kf_NOOP,
+	kf_NOOP,
+	kf_NOOP,
+	kf_NOOP,
+	kf_NOOP,
+	kf_NOOP,
+	kf_NOOP,
 	kf_FaceNorth,
 	kf_FaceSouth,
 	kf_FaceWest,
@@ -226,7 +226,7 @@ _keymapsave keyMapSaveTable[] =
 	kf_SelectPlayer,
 	kf_AssignGrouping_0,
 	kf_SelectGrouping_0,
-	kf_SelectCommander_0,
+	kf_NOOP,
 	kf_TraceObject,
 	kf_NOOP, // unused
 	kf_AddMissionOffWorld,
@@ -347,19 +347,6 @@ void	keyInitMappings(bool bForceDefaults)
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, KEY_9, KEYMAP_PRESSED, kf_SelectGrouping_9, N_("Select Group 9"));
 	//                                **********************************
 	//                                **********************************
-	//	SELECT COMMANDER - Will jump to the group as well as select if group is ALREADY selected
-	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT, KEY_0, KEYMAP_PRESSED, kf_SelectCommander_0, N_("Select Commander 0"));
-	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT, KEY_1, KEYMAP_PRESSED, kf_SelectCommander_1, N_("Select Commander 1"));
-	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT, KEY_2, KEYMAP_PRESSED, kf_SelectCommander_2, N_("Select Commander 2"));
-	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT, KEY_3, KEYMAP_PRESSED, kf_SelectCommander_3, N_("Select Commander 3"));
-	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT, KEY_4, KEYMAP_PRESSED, kf_SelectCommander_4, N_("Select Commander 4"));
-	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT, KEY_5, KEYMAP_PRESSED, kf_SelectCommander_5, N_("Select Commander 5"));
-	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT, KEY_6, KEYMAP_PRESSED, kf_SelectCommander_6, N_("Select Commander 6"));
-	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT, KEY_7, KEYMAP_PRESSED, kf_SelectCommander_7, N_("Select Commander 7"));
-	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT, KEY_8, KEYMAP_PRESSED, kf_SelectCommander_8, N_("Select Commander 8"));
-	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LALT, KEY_9, KEYMAP_PRESSED, kf_SelectCommander_9, N_("Select Commander 9"));
-	//                                **********************************
-	//                                **********************************
 	//	MULTIPLAYER
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, KEY_KPENTER, KEYMAP_PRESSED, kf_addMultiMenu, N_("Multiplayer Options / Alliance dialog"));
 	//
@@ -388,7 +375,6 @@ void	keyInitMappings(bool bForceDefaults)
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, (KEY_CODE)KEY_MAXSCAN, KEYMAP_PRESSED, kf_JumpToRepairUnits,       N_("View next Repair Unit"));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, (KEY_CODE)KEY_MAXSCAN, KEYMAP_PRESSED, kf_JumpToConstructorUnits,  N_("View next Truck"));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, (KEY_CODE)KEY_MAXSCAN, KEYMAP_PRESSED, kf_JumpToSensorUnits,       N_("View next Sensor Unit"));
-	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, (KEY_CODE)KEY_MAXSCAN, KEYMAP_PRESSED, kf_JumpToCommandUnits,      N_("View next Commander"));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, KEY_TAB,               KEYMAP_PRESSED, kf_ToggleOverlays,          N_("Toggle Overlays"));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, KEY_BACKQUOTE,         KEYMAP_PRESSED, kf_ToggleConsoleDrop,       N_("Toggle Console History "));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LCTRL,  KEY_BACKQUOTE,         KEYMAP_PRESSED, kf_ToggleTeamChat,          N_("Toggle Team Chat History"));

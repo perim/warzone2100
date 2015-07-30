@@ -65,7 +65,6 @@
 #include "text.h"
 #include "scripttabs.h"
 #include "scriptcb.h"
-#include "cmddroid.h"
 #include "fpath.h"
 #include "mapgrid.h"
 #include "projectile.h"
@@ -90,7 +89,6 @@
 // store the experience of recently recycled droids
 UWORD	aDroidExperience[MAX_PLAYERS][MAX_RECYCLED_DROIDS];
 UDWORD	selectedGroup = UBYTE_MAX;
-UDWORD	selectedCommander = UBYTE_MAX;
 
 /** Height the transporter hovers at above the terrain. */
 #define TRANSPORTER_HOVER_HEIGHT	10
@@ -484,7 +482,6 @@ void recycleDroid(DROID *psDroid)
 bool removeDroidBase(DROID *psDel)
 {
 	DROID	*psCurr, *psNext;
-	STRUCTURE	*psStruct;
 
 	CHECK_DROID(psDel);
 
@@ -542,20 +539,6 @@ bool removeDroidBase(DROID *psDel)
 	{
 		psDel->psGroup->remove(psDel);
 		psDel->psGroup = NULL;
-	}
-
-	/* Put Deliv. Pts back into world when a command droid dies */
-	if (psDel->droidType == DROID_COMMAND)
-	{
-		for (psStruct = apsStructLists[psDel->player]; psStruct; psStruct = psStruct->psNext)
-		{
-			// alexl's stab at a right answer.
-			if (StructIsFactory(psStruct)
-			    && psStruct->pFunctionality->factory.psCommander == psDel)
-			{
-				assignFactoryCommandDroid(psStruct, NULL);
-			}
-		}
 	}
 
 	// Check to see if constructor droid currently trying to find a location to build
@@ -912,8 +895,8 @@ void droidUpdate(DROID *psDroid)
 	}
 
 	// -----------------
-	/* Are we a sensor droid or a command droid? Show where we target for selectedPlayer. */
-	if (psDroid->player == selectedPlayer && (psDroid->droidType == DROID_SENSOR || psDroid->droidType == DROID_COMMAND))
+	/* Are we a sensor droid? Show where we target for selectedPlayer. */
+	if (psDroid->player == selectedPlayer && psDroid->droidType == DROID_SENSOR)
 	{
 		/* If we're attacking or sensing (observing), then... */
 		if ((psBeingTargetted = orderStateObj(psDroid, DORDER_ATTACK))
@@ -1495,10 +1478,6 @@ DROID_TYPE droidTemplateType(DROID_TEMPLATE *psTemplate)
 	{
 		type = psTemplate->droidType;
 	}
-	else if (psTemplate->asParts[COMP_BRAIN] != 0)
-	{
-		type = DROID_COMMAND;
-	}
 	else if ((asSensorStats + psTemplate->asParts[COMP_SENSOR])->location == LOC_TURRET)
 	{
 		type = DROID_SENSOR;
@@ -1536,7 +1515,6 @@ UDWORD calcDroidWeight(DROID_TEMPLATE *psTemplate)
 	/* Get the basic component weight */
 	weight =
 	    (asBodyStats + psTemplate->asParts[COMP_BODY])->weight +
-	    (asBrainStats + psTemplate->asParts[COMP_BRAIN])->weight +
 	    //(asPropulsionStats + psTemplate->asParts[COMP_PROPULSION])->weight +
 	    (asSensorStats + psTemplate->asParts[COMP_SENSOR])->weight +
 	    (asECMStats + psTemplate->asParts[COMP_ECM])->weight +
@@ -1570,7 +1548,6 @@ UDWORD calcTemplateBody(DROID_TEMPLATE *psTemplate, UBYTE player)
 	/* Get the basic component body points */
 	body =
 	    (asBodyStats + psTemplate->asParts[COMP_BODY])->body +
-	    (asBrainStats + psTemplate->asParts[COMP_BRAIN])->body +
 	    (asSensorStats + psTemplate->asParts[COMP_SENSOR])->body +
 	    (asECMStats + psTemplate->asParts[COMP_ECM])->body +
 	    (asRepairStats + psTemplate->asParts[COMP_REPAIRUNIT])->body +
@@ -1594,7 +1571,6 @@ static UDWORD calcDroidBaseBody(DROID *psDroid)
 	/* Get the basic component body points */
 	int body =
 	    (asBodyStats + psDroid->asBits[COMP_BODY])->upgrade[psDroid->player].body +
-	    (asBrainStats + psDroid->asBits[COMP_BRAIN])->body +
 	    (asSensorStats + psDroid->asBits[COMP_SENSOR])->body +
 	    (asECMStats + psDroid->asBits[COMP_ECM])->body +
 	    (asRepairStats + psDroid->asBits[COMP_REPAIRUNIT])->body +
@@ -1691,7 +1667,6 @@ UDWORD calcTemplateBuild(DROID_TEMPLATE *psTemplate)
 	UDWORD	build, i;
 
 	build = (asBodyStats + psTemplate->asParts[COMP_BODY])->buildPoints +
-	        (asBrainStats + psTemplate->asParts[COMP_BRAIN])->buildPoints +
 	        (asSensorStats + psTemplate->asParts[COMP_SENSOR])->buildPoints +
 	        (asECMStats + psTemplate->asParts[COMP_ECM])->buildPoints +
 	        (asRepairStats + psTemplate->asParts[COMP_REPAIRUNIT])->buildPoints +
@@ -1722,7 +1697,6 @@ UDWORD	calcTemplatePower(DROID_TEMPLATE *psTemplate)
 
 	//get the component power
 	power = (asBodyStats + psTemplate->asParts[COMP_BODY])->buildPower;
-	power += (asBrainStats + psTemplate->asParts[COMP_BRAIN])->buildPower;
 	power += (asSensorStats + psTemplate->asParts[COMP_SENSOR])->buildPower;
 	power += (asECMStats + psTemplate->asParts[COMP_ECM])->buildPower;
 	power += (asRepairStats + psTemplate->asParts[COMP_REPAIRUNIT])->buildPower;
@@ -1750,7 +1724,6 @@ UDWORD	calcDroidPower(DROID *psDroid)
 
 	//get the component power
 	power = (asBodyStats + psDroid->asBits[COMP_BODY])->buildPower +
-	        (asBrainStats + psDroid->asBits[COMP_BRAIN])->buildPower +
 	        (asSensorStats + psDroid->asBits[COMP_SENSOR])->buildPower +
 	        (asECMStats + psDroid->asBits[COMP_ECM])->buildPower +
 	        (asRepairStats + psDroid->asBits[COMP_REPAIRUNIT])->buildPower +
@@ -1778,7 +1751,6 @@ UDWORD calcDroidPoints(DROID *psDroid)
 	int points;
 
 	points  = getBodyStats(psDroid)->buildPoints;
-	points += getBrainStats(psDroid)->buildPoints;
 	points += getPropulsionStats(psDroid)->buildPoints;
 	points += getSensorStats(psDroid)->buildPoints;
 	points += getECMStats(psDroid)->buildPoints;
@@ -1821,7 +1793,7 @@ DROID *reallyBuildDroid(DROID_TEMPLATE *pTemplate, Position pos, UDWORD player, 
 		psDroid->pos.z = map_Height(psDroid->pos.x, psDroid->pos.y);
 	}
 
-	if (isTransporter(psDroid) || psDroid->droidType == DROID_COMMAND)
+	if (isTransporter(psDroid))
 	{
 		psGrp = grpCreate();
 		psGrp->add(psDroid);
@@ -2195,18 +2167,6 @@ UDWORD	getSelectedGroup(void)
 void	setSelectedGroup(UDWORD groupNumber)
 {
 	selectedGroup = groupNumber;
-	selectedCommander = UBYTE_MAX;
-}
-
-UDWORD	getSelectedCommander(void)
-{
-	return (selectedCommander);
-}
-
-void	setSelectedCommander(UDWORD commander)
-{
-	selectedGroup = UBYTE_MAX;
-	selectedCommander = commander;
 }
 
 /**
@@ -2355,27 +2315,24 @@ bool selectDroidByID(UDWORD id, UDWORD player)
 struct rankMap
 {
 	unsigned int kills;          // required minimum amount of kills to reach this rank
-	unsigned int commanderKills; // required minimum amount of kills for a commander (or sensor) to reach this rank
 	const char  *name;           // name of this rank
 };
 
 static const struct rankMap arrRank[] =
 {
-	{0,   0,    N_("Rookie")},
-	{4,   8,    NP_("rank", "Green")},
-	{8,   16,   N_("Trained")},
-	{16,  32,   N_("Regular")},
-	{32,  64,   N_("Professional")},
-	{64,  128,  N_("Veteran")},
-	{128, 256,  N_("Elite")},
-	{256, 512,  N_("Special")},
-	{512, 1024, N_("Hero")}
+	{0,   N_("Rookie")},
+	{4,   NP_("rank", "Green")},
+	{8,   N_("Trained")},
+	{16,  N_("Regular")},
+	{32,  N_("Professional")},
+	{64,  N_("Veteran")},
+	{128, N_("Elite")},
+	{256, N_("Special")},
+	{512, N_("Hero")}
 };
 
 unsigned int getDroidLevel(const DROID *psDroid)
 {
-	bool isCommander = (psDroid->droidType == DROID_COMMAND ||
-	                    psDroid->droidType == DROID_SENSOR) ? true : false;
 	unsigned int numKills = psDroid->experience / 65536;
 	unsigned int i;
 
@@ -2384,7 +2341,7 @@ unsigned int getDroidLevel(const DROID *psDroid)
 	// Then fall back to the previous rank.
 	for (i = 1; i < ARRAY_SIZE(arrRank); ++i)
 	{
-		const unsigned int requiredKills = isCommander ? arrRank[i].commanderKills : arrRank[i].kills;
+		const unsigned int requiredKills = arrRank[i].kills;
 
 		if (numKills < requiredKills)
 		{
@@ -2400,15 +2357,6 @@ UDWORD getDroidEffectiveLevel(DROID *psDroid)
 {
 	UDWORD level = getDroidLevel(psDroid);
 	UDWORD cmdLevel = 0;
-
-	// get commander level
-	if (hasCommander(psDroid))
-	{
-		cmdLevel = cmdGetCommanderLevel(psDroid);
-
-		// Commanders boost units' effectiveness just by being assigned to it
-		level++;
-	}
 
 	return MAX(level, cmdLevel);
 }
@@ -2781,26 +2729,12 @@ char const *getDroidResourceName(char const *pName)
 /*checks to see if an electronic warfare weapon is attached to the droid*/
 bool electronicDroid(DROID *psDroid)
 {
-	DROID	*psCurr;
-
 	CHECK_DROID(psDroid);
 
 	//use slot 0 for now
 	if (psDroid->numWeaps > 0 && asWeaponStats[psDroid->asWeaps[0].nStat].weaponSubClass == WSC_ELECTRONIC)
 	{
 		return true;
-	}
-
-	if (psDroid->droidType == DROID_COMMAND && psDroid->psGroup && psDroid->psGroup->psCommander == psDroid)
-	{
-		// if a commander has EW units attached it is electronic
-		for (psCurr = psDroid->psGroup->psList; psCurr; psCurr = psCurr->psGrpNext)
-		{
-			if (psDroid != psCurr && electronicDroid(psCurr))
-			{
-				return true;
-			}
-		}
 	}
 
 	return false;
@@ -2828,22 +2762,6 @@ bool droidUnderRepair(DROID *psDroid)
 		}
 	}
 	return false;
-}
-
-//count how many Command Droids exist in the world at any one moment
-UBYTE checkCommandExist(UBYTE player)
-{
-	DROID	*psDroid;
-	UBYTE	quantity = 0;
-
-	for (psDroid = apsDroidLists[player]; psDroid != NULL; psDroid = psDroid->psNext)
-	{
-		if (psDroid->droidType == DROID_COMMAND)
-		{
-			quantity++;
-		}
-	}
-	return quantity;
 }
 
 bool isTransporter(const DROID *psDroid)
@@ -3158,8 +3076,7 @@ bool droidSensorDroidWeapon(BASE_OBJECT *psObj, DROID *psDroid)
 	switch (psObj->type)
 	{
 	case OBJ_DROID:
-		if (((DROID *)psObj)->droidType != DROID_SENSOR &&
-		    ((DROID *)psObj)->droidType != DROID_COMMAND)
+		if (((DROID *)psObj)->droidType != DROID_SENSOR)
 		{
 			return false;
 		}
@@ -3184,14 +3101,6 @@ bool droidSensorDroidWeapon(BASE_OBJECT *psObj, DROID *psDroid)
 	      DROID_CYBORG || psDroid->droidType == DROID_CYBORG_SUPER))
 	{
 		return false;
-	}
-
-	//finally check the right droid/sensor combination
-	// check vtol droid with commander
-	if ((isVtolDroid(psDroid) || !proj_Direct(asWeaponStats + psDroid->asWeaps[0].nStat)) &&
-	    psObj->type == OBJ_DROID && ((DROID *)psObj)->droidType == DROID_COMMAND)
-	{
-		return true;
 	}
 
 	//check vtol droid with vtol sensor
@@ -3266,8 +3175,7 @@ DROID *giftSingleDroid(DROID *psD, UDWORD to)
 	if (bMultiPlayer
 	    && (getNumDroids(to) + 1 > getMaxDroids(to)
 	        || ((psD->droidType == DROID_CYBORG_CONSTRUCT || psD->droidType == DROID_CONSTRUCT)
-	            && getNumConstructorDroids(to) + 1 > getMaxConstructors(to))
-	        || (psD->droidType == DROID_COMMAND && getNumCommandDroids(to) + 1 > getMaxCommanders(to))))
+	            && getNumConstructorDroids(to) + 1 > getMaxConstructors(to))))
 	{
 		if (to == selectedPlayer || psD->player == selectedPlayer)
 		{
@@ -3353,14 +3261,6 @@ bool checkValidWeaponForProp(DROID_TEMPLATE *psTemplate)
 		{
 			return false;
 		}
-	}
-
-	//also checks that there is no other system component
-	if (psTemplate->asParts[COMP_BRAIN] != 0
-	    && asWeaponStats[psTemplate->asWeaps[0]].weaponSubClass != WSC_COMMAND)
-	{
-		assert(false);
-		return false;
 	}
 
 	return true;

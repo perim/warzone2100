@@ -532,7 +532,6 @@ static void displayCompObj(DROID *psDroid, bool bButton)
 	if (psDroid->asWeaps[0].nStat        == 0 &&
 	    psDroid->asBits[COMP_SENSOR]     == 0 &&
 	    psDroid->asBits[COMP_ECM]        == 0 &&
-	    psDroid->asBits[COMP_BRAIN]      == 0 &&
 	    psDroid->asBits[COMP_REPAIRUNIT] == 0 &&
 	    psDroid->asBits[COMP_CONSTRUCT]  == 0)
 	{
@@ -569,7 +568,6 @@ static void displayCompObj(DROID *psDroid, bool bButton)
 		case DROID_CYBORG:
 		case DROID_CYBORG_SUPER:
 		case DROID_WEAPON:
-		case DROID_COMMAND:		// command droids have a weapon to store all the graphics
 			/*	Get the mounting graphic - we've already moved to the right position
 			Allegedly - all droids will have a mount graphic so this shouldn't
 			fall on it's arse......*/
@@ -919,7 +917,6 @@ void destroyFXDroid(DROID *psDroid, unsigned impactTime)
 			case DROID_CYBORG_CONSTRUCT:
 			case DROID_CYBORG_REPAIR:
 			case DROID_WEAPON:
-			case DROID_COMMAND:
 				if (psDroid->numWeaps > 0)
 				{
 					if (psDroid->asWeaps[0].nStat > 0)
@@ -941,7 +938,6 @@ void destroyFXDroid(DROID *psDroid, unsigned impactTime)
 			case DROID_CYBORG_CONSTRUCT:
 			case DROID_CYBORG_REPAIR:
 			case DROID_WEAPON:
-			case DROID_COMMAND:
 				if (psDroid->numWeaps)
 				{
 					// get main weapon

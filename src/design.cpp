@@ -73,7 +73,6 @@
 #include "objects.h"
 #include "display.h"
 #include "console.h"
-#include "cmddroid.h"
 #include "scriptextern.h"
 #include "mission.h"
 #include "template.h"
@@ -104,7 +103,6 @@ enum DES_SYSMODE
 	IDES_CONSTRUCT,		// The Constructor clickable is displayed
 	IDES_REPAIR,		// The Repair clickable is displayed
 	IDES_WEAPON,		// The Weapon clickable is displayed
-	IDES_COMMAND,		// The command droid clickable is displayed
 	IDES_NOSYSTEM,		// No system clickable has been displayed
 };
 static DES_SYSMODE desSysMode;
@@ -256,12 +254,12 @@ static bool intSetPropulsionForm(PROPULSION_STATS *psStats);
 static ListTabWidget *intAddComponentForm();
 /* Add the template tab form to the design screen */
 static bool intAddTemplateForm(DROID_TEMPLATE *psSelected);
-/* Add the system buttons (weapons, command droid, etc) to the design screen */
+/* Add the system buttons (weapons etc) to the design screen */
 static bool intAddSystemButtons(DES_COMPMODE mode);
 /* Add the component buttons to the main tab of the system or component form */
 static bool intAddComponentButtons(ListTabWidget *compList, COMPONENT_STATS *psStats, unsigned size, UBYTE *aAvailable, unsigned numEntries, unsigned compID);
 /* Add the component buttons to the main tab of the component form */
-static bool intAddExtraSystemButtons(ListTabWidget *compList, unsigned sensorIndex, unsigned ecmIndex, unsigned constIndex, unsigned repairIndex, unsigned brainIndex);
+static bool intAddExtraSystemButtons(ListTabWidget *compList, unsigned sensorIndex, unsigned ecmIndex, unsigned constIndex, unsigned repairIndex);
 /* Set the bar graphs for the system clickable */
 static void intSetSystemStats(COMPONENT_STATS *psStats);
 /* Set the shadow bar graphs for the system clickable */
@@ -768,7 +766,7 @@ void desSetupDesignTemplates(void)
 	{
 		DROID_TEMPLATE *psTempl = &*i;  // &* changes iterators into pointers.
 		/* add template to list if not a transporter,
-		 * cyborg, person or command droid,
+		 * cyborg or person
 		 */
 		if (psTempl->droidType != DROID_TRANSPORTER        &&
 		    psTempl->droidType != DROID_SUPERTRANSPORTER   &&
@@ -923,8 +921,7 @@ static void intSetDesignMode(DES_COMPMODE newCompMode, bool forceRefresh)
 		                         sCurrDesign.asParts[COMP_SENSOR],
 		                         sCurrDesign.asParts[COMP_ECM],
 		                         sCurrDesign.asParts[COMP_CONSTRUCT],
-		                         sCurrDesign.asParts[COMP_REPAIRUNIT],
-		                         sCurrDesign.asParts[COMP_BRAIN]);
+		                         sCurrDesign.asParts[COMP_REPAIRUNIT]);
 		intAddSystemButtons(IDES_SYSTEM);
 		widgSetButtonState(psWScreen, IDDES_SYSTEMFORM, WBUT_LOCK);
 		widgSetButtonState(psWScreen, IDDES_SYSTEMBUTTON, WBUT_CLICKLOCK);
@@ -990,11 +987,6 @@ intChooseSystemStats(DROID_TEMPLATE *psTemplate)
 	// Choose correct system stats
 	switch (droidTemplateType(psTemplate))
 	{
-	case DROID_COMMAND:
-		compIndex = psTemplate->asParts[COMP_BRAIN];
-		ASSERT_OR_RETURN(NULL, compIndex < numBrainStats, "Invalid range referenced for numBrainStats, %d > %d", compIndex, numBrainStats);
-		psStats = (COMPONENT_STATS *)(asBrainStats + compIndex);
-		break;
 	case DROID_SENSOR:
 		compIndex = psTemplate->asParts[COMP_SENSOR];
 		ASSERT_OR_RETURN(NULL, compIndex < numSensorStats, "Invalid range referenced for numSensorStats, %d > %d", compIndex, numSensorStats);
@@ -1064,8 +1056,7 @@ const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 	    psTemplate->asParts[COMP_CONSTRUCT]	!= 0 ||
 	    psTemplate->asParts[COMP_SENSOR]		!= 0 ||
 	    psTemplate->asParts[COMP_ECM]			!= 0 ||
-	    psTemplate->asParts[COMP_REPAIRUNIT]   != 0 ||
-	    psTemplate->asParts[COMP_BRAIN]		!= 0)
+	    psTemplate->asParts[COMP_REPAIRUNIT]   != 0)
 	{
 		sstrcpy(aCurrName, getName(psStats));
 		sstrcat(aCurrName, " ");
@@ -1162,9 +1153,6 @@ static bool intSetSystemForm(COMPONENT_STATS *psStats)
 		break;
 	case COMP_CONSTRUCT:
 		newSysMode = IDES_CONSTRUCT;
-		break;
-	case COMP_BRAIN:
-		newSysMode = IDES_COMMAND;
 		break;
 	case COMP_REPAIRUNIT:
 		newSysMode = IDES_REPAIR;
@@ -1477,7 +1465,6 @@ static bool intSetSystemForm(COMPONENT_STATS *psStats)
 	case IDES_CONSTRUCT:
 	case IDES_ECM:
 	case IDES_REPAIR:
-	case IDES_COMMAND:
 		intSetDesignMode(IDES_SYSTEM);
 		break;
 	case IDES_WEAPON:
@@ -1890,16 +1877,6 @@ static bool intAddComponentButtons(ListTabWidget *compList, COMPONENT_STATS *psS
 			compList->setCurrentPage(compList->pages() - 1);
 		}
 
-		// if this is a command droid that is in use or dead - make it unavailable
-		if (psCurrStats->compType == COMP_BRAIN)
-		{
-			if ((((COMMAND_DROID *)psCurrStats)->psDroid != NULL) ||
-			    ((COMMAND_DROID *)psCurrStats)->died)
-			{
-				button->setState(WBUT_DISABLE);
-			}
-		}
-
 		/* Update the init struct for the next button */
 		++nextButtonId;
 
@@ -1911,7 +1888,7 @@ static bool intAddComponentButtons(ListTabWidget *compList, COMPONENT_STATS *psS
 }
 
 /* Add the component buttons to the main tab of the component form */
-static bool intAddExtraSystemButtons(ListTabWidget *compList, unsigned sensorIndex, unsigned ecmIndex, unsigned constIndex, unsigned repairIndex, unsigned brainIndex)
+static bool intAddExtraSystemButtons(ListTabWidget *compList, unsigned sensorIndex, unsigned ecmIndex, unsigned constIndex, unsigned repairIndex)
 {
 	UDWORD			i, buttonType, size = 0;
 	UDWORD			compIndex = 0, numStats = 0;
@@ -1926,7 +1903,6 @@ static bool intAddExtraSystemButtons(ListTabWidget *compList, unsigned sensorInd
 	// buttonType == 1  -  ECM Buttons
 	// buttonType == 2  -  Constructor Buttons
 	// buttonType == 3  -  Repair Buttons
-	// buttonType == 4  -  Brain Buttons
 	numExtraSys = 0;
 	for (buttonType = 0; buttonType < 5; buttonType++)
 	{
@@ -1964,14 +1940,6 @@ static bool intAddExtraSystemButtons(ListTabWidget *compList, unsigned sensorInd
 			numStats = numRepairStats;
 			compIndex = repairIndex;
 			break;
-		case 4:
-			// Brain Buttons
-			psCurrStats = (COMPONENT_STATS *)asBrainStats;
-			size = sizeof(BRAIN_STATS);
-			aAvailable = apCompLists[selectedPlayer][COMP_BRAIN];
-			numStats = numBrainStats;
-			compIndex = brainIndex;
-			break;
 		}
 		for (i = 0; i < numStats; i++)
 		{
@@ -1996,12 +1964,6 @@ static bool intAddExtraSystemButtons(ListTabWidget *compList, unsigned sensorInd
 			button->id = nextButtonId;
 			button->setStatsAndTip(psCurrStats);
 			compList->addWidgetToLayout(button);
-
-			//just use one set of buffers for mixed system form
-			if (psCurrStats->compType == COMP_BRAIN)
-			{
-				button->setStats(((BRAIN_STATS *)psCurrStats)->psWeaponStat);
-			}
 
 			// Store the stat pointer in the list
 			apsExtraSysList[numExtraSys++] = psCurrStats;
@@ -2061,9 +2023,6 @@ static void intSetSystemStats(COMPONENT_STATS *psStats)
 	case COMP_REPAIRUNIT:
 		intSetRepairStats((REPAIR_STATS *)psStats);
 		break;
-	case COMP_BRAIN:
-		// ??? TBD FIXME
-		break;
 	default:
 		ASSERT(false, "Bad choice");
 	}
@@ -2118,9 +2077,6 @@ static void intSetSystemShadowStats(COMPONENT_STATS *psStats)
 			{
 				psStats = NULL;
 			}
-			break;
-		case COMP_BRAIN:
-			psStats = NULL;
 			break;
 		case COMP_REPAIRUNIT:
 			if (desSysMode == IDES_REPAIR)
@@ -2478,7 +2434,6 @@ static void intSetTemplatePowerShadowStats(COMPONENT_STATS *psStats)
 	COMPONENT_TYPE type = psStats->compType;
 	UDWORD power;
 	UDWORD bodyPower        = asBodyStats[sCurrDesign.asParts[COMP_BODY]].buildPower;
-	UDWORD brainPower       = asBrainStats[sCurrDesign.asParts[COMP_BRAIN]].buildPower;
 	UDWORD sensorPower      = asSensorStats[sCurrDesign.asParts[COMP_SENSOR]].buildPower;
 	UDWORD ECMPower         = asECMStats[sCurrDesign.asParts[COMP_ECM]].buildPower;
 	UDWORD repairPower      = asRepairStats[sCurrDesign.asParts[COMP_REPAIRUNIT]].buildPower;
@@ -2489,11 +2444,6 @@ static void intSetTemplatePowerShadowStats(COMPONENT_STATS *psStats)
 	UDWORD weaponPower3     = asWeaponStats[sCurrDesign.numWeaps >= 3 ? sCurrDesign.asWeaps[2] : 0].buildPower;
 	UDWORD newComponentPower = psStats->buildPower;
 
-	// Commanders receive the stats of their associated weapon.
-	if (type == COMP_BRAIN)
-	{
-		newComponentPower += ((BRAIN_STATS *)psStats)->psWeaponStat->buildPower;
-	}
 	/*if type = BODY or PROPULSION can do a straight comparison but if the new stat is
 	a 'system' stat then need to find out which 'system' is currently in place so the
 	comparison is meaningful*/
@@ -2523,7 +2473,6 @@ static void intSetTemplatePowerShadowStats(COMPONENT_STATS *psStats)
 		repairPower = newComponentPower;
 		break;
 	case COMP_WEAPON:
-		brainPower = 0;
 		if (desCompMode == IDES_TURRET_A)
 		{
 			weaponPower2 = newComponentPower;
@@ -2544,7 +2493,7 @@ static void intSetTemplatePowerShadowStats(COMPONENT_STATS *psStats)
 	// this code is from calcTemplatePower
 
 	//get the component power
-	power = bodyPower + brainPower + sensorPower + ECMPower + repairPower + constructPower;
+	power = bodyPower + sensorPower + ECMPower + repairPower + constructPower;
 
 	/* propulsion power points are a percentage of the bodys' power points */
 	power += (propulsionPower * bodyPower) / 100;
@@ -2574,7 +2523,6 @@ static void intSetTemplateBodyShadowStats(COMPONENT_STATS *psStats)
 	COMPONENT_TYPE type = psStats->compType;
 	UDWORD body;
 	UDWORD bodyBody        = asBodyStats[sCurrDesign.asParts[COMP_BODY]].body;
-	UDWORD brainBody       = asBrainStats[sCurrDesign.asParts[COMP_BRAIN]].body;
 	UDWORD sensorBody      = asSensorStats[sCurrDesign.asParts[COMP_SENSOR]].body;
 	UDWORD ECMBody         = asECMStats[sCurrDesign.asParts[COMP_ECM]].body;
 	UDWORD repairBody      = asRepairStats[sCurrDesign.asParts[COMP_REPAIRUNIT]].body;
@@ -2585,11 +2533,6 @@ static void intSetTemplateBodyShadowStats(COMPONENT_STATS *psStats)
 	UDWORD weaponBody3     = asWeaponStats[sCurrDesign.numWeaps >= 3 ? sCurrDesign.asWeaps[2] : 0].body;
 	UDWORD newComponentBody = psStats->body;
 
-	// Commanders receive the stats of their associated weapon.
-	if (type == COMP_BRAIN)
-	{
-		newComponentBody += ((BRAIN_STATS *)psStats)->psWeaponStat->body;
-	}
 	/*if type = BODY or PROPULSION can do a straight comparison but if the new stat is
 	a 'system' stat then need to find out which 'system' is currently in place so the
 	comparison is meaningful*/
@@ -2619,7 +2562,6 @@ static void intSetTemplateBodyShadowStats(COMPONENT_STATS *psStats)
 		repairBody = newComponentBody;
 		break;
 	case COMP_WEAPON:
-		brainBody = 0;
 		if (desCompMode == IDES_TURRET_A)
 		{
 			weaponBody2 = newComponentBody;
@@ -2639,7 +2581,7 @@ static void intSetTemplateBodyShadowStats(COMPONENT_STATS *psStats)
 	// this code is from calcTemplateBody
 
 	//get the component HP
-	body = bodyBody + brainBody + sensorBody + ECMBody + repairBody + constructBody;
+	body = bodyBody + sensorBody + ECMBody + repairBody + constructBody;
 
 	/* propulsion HP are a percentage of the body's HP */
 	body += (propulsionBody * bodyBody) / 100;
@@ -2817,13 +2759,6 @@ bool intValidTemplate(DROID_TEMPLATE *psTempl, const char *newName, bool complai
 	code_part level = complain ? LOG_ERROR : LOG_NEVER;
 	int bodysize = (asBodyStats + psTempl->asParts[COMP_BODY])->size;
 
-	// set the weapon for a command droid
-	if (psTempl->asParts[COMP_BRAIN] != 0)
-	{
-		psTempl->numWeaps = 1;
-		psTempl->asWeaps[0] = asBrainStats[psTempl->asParts[COMP_BRAIN]].psWeaponStat - asWeaponStats;
-	}
-
 	/* Check all the components have been set */
 	if (psTempl->asParts[COMP_BODY] == 0)
 	{
@@ -2840,7 +2775,6 @@ bool intValidTemplate(DROID_TEMPLATE *psTempl, const char *newName, bool complai
 	if (psTempl->numWeaps == 0 &&
 	    psTempl->asParts[COMP_SENSOR] == 0 &&
 	    psTempl->asParts[COMP_ECM] == 0 &&
-	    psTempl->asParts[COMP_BRAIN] == 0 &&
 	    psTempl->asParts[COMP_REPAIRUNIT] == 0 &&
 	    psTempl->asParts[COMP_CONSTRUCT] == 0)
 	{
@@ -2883,11 +2817,6 @@ bool intValidTemplate(DROID_TEMPLATE *psTempl, const char *newName, bool complai
 	     psTempl->asParts[COMP_CONSTRUCT]))
 	{
 		debug(level, "Cannot mix system and weapon turrets in a template!");
-		return false;
-	}
-	if (psTempl->numWeaps != 1 && psTempl->asParts[COMP_BRAIN])
-	{
-		debug(level, "Commander template needs 1 weapon turret");
 		return false;
 	}
 
@@ -3162,7 +3091,6 @@ void intProcessDesign(UDWORD id)
 			sCurrDesign.asParts[COMP_ECM] = 0;
 			sCurrDesign.asParts[COMP_CONSTRUCT] = 0;
 			sCurrDesign.asParts[COMP_REPAIRUNIT] = 0;
-			sCurrDesign.asParts[COMP_BRAIN] = 0;
 			//Watemelon:weaponslots >= 2
 			if ((asBodyStats + sCurrDesign.asParts[COMP_BODY])->weaponSlots >= 2)
 			{
@@ -3195,7 +3123,6 @@ void intProcessDesign(UDWORD id)
 			sCurrDesign.asParts[COMP_ECM] = 0;
 			sCurrDesign.asParts[COMP_CONSTRUCT] = 0;
 			sCurrDesign.asParts[COMP_REPAIRUNIT] = 0;
-			sCurrDesign.asParts[COMP_BRAIN] = 0;
 			//Watemelon:weaponSlots > 2
 			if ((asBodyStats + sCurrDesign.asParts[COMP_BODY])->weaponSlots > 2)
 			{
@@ -3224,7 +3151,6 @@ void intProcessDesign(UDWORD id)
 			sCurrDesign.asParts[COMP_ECM] = 0;
 			sCurrDesign.asParts[COMP_CONSTRUCT] = 0;
 			sCurrDesign.asParts[COMP_REPAIRUNIT] = 0;
-			sCurrDesign.asParts[COMP_BRAIN] = 0;
 			/* Set the new stats on the display */
 			intSetSystemForm(apsComponentList[id - IDDES_COMPSTART]);
 			// Stop the button flashing
@@ -3264,7 +3190,7 @@ void intProcessDesign(UDWORD id)
 					sCurrDesign.numWeaps = 2;
 					sCurrDesign.asWeaps[2] = 0;
 				}
-				else if (sCurrDesign.numWeaps == 1 && sCurrDesign.asWeaps[0] && sCurrDesign.asParts[COMP_BRAIN] == 0)
+				else if (sCurrDesign.numWeaps == 1 && sCurrDesign.asWeaps[0])
 				{
 					widgReveal(psWScreen, IDDES_WPABUTTON);
 					widgSetButtonState(psWScreen, IDDES_WPABUTTON,   0);
@@ -3283,7 +3209,7 @@ void intProcessDesign(UDWORD id)
 					widgSetButtonState(psWScreen, IDDES_WPBBUTTON,   0);
 					intSetButtonFlash(IDDES_WPABUTTON,   false);
 				}
-				else if (sCurrDesign.numWeaps == 1 && sCurrDesign.asParts[COMP_BRAIN] == 0)
+				else if (sCurrDesign.numWeaps == 1)
 				{
 					widgReveal(psWScreen, IDDES_WPABUTTON);
 					widgSetButtonState(psWScreen, IDDES_WPABUTTON,   0);
@@ -3317,7 +3243,6 @@ void intProcessDesign(UDWORD id)
 
 				// Init all other stats as well!
 				sCurrDesign.asParts[COMP_SENSOR] = 0;
-				sCurrDesign.asParts[COMP_BRAIN] = 0;
 				sCurrDesign.asParts[COMP_REPAIRUNIT] = 0;
 				sCurrDesign.asParts[COMP_CONSTRUCT] = 0;
 				sCurrDesign.asParts[COMP_ECM] = 0;
@@ -3385,7 +3310,6 @@ void intProcessDesign(UDWORD id)
 			sCurrDesign.asParts[COMP_ECM] = 0;
 			sCurrDesign.asParts[COMP_CONSTRUCT] = 0;
 			sCurrDesign.asParts[COMP_REPAIRUNIT] = 0;
-			sCurrDesign.asParts[COMP_BRAIN] = 0;
 			widgHide(psWScreen, IDDES_WPABUTTON);
 			widgHide(psWScreen, IDDES_WPBBUTTON);
 			// Set the new stats on the display
@@ -3403,7 +3327,6 @@ void intProcessDesign(UDWORD id)
 			sCurrDesign.asParts[COMP_SENSOR] = 0;
 			sCurrDesign.asParts[COMP_CONSTRUCT] = 0;
 			sCurrDesign.asParts[COMP_REPAIRUNIT] = 0;
-			sCurrDesign.asParts[COMP_BRAIN] = 0;
 			widgHide(psWScreen, IDDES_WPABUTTON);
 			widgHide(psWScreen, IDDES_WPBBUTTON);
 			// Set the new stats on the display
@@ -3421,7 +3344,6 @@ void intProcessDesign(UDWORD id)
 			sCurrDesign.asParts[COMP_ECM] = 0;
 			sCurrDesign.asParts[COMP_SENSOR] = 0;
 			sCurrDesign.asParts[COMP_REPAIRUNIT] = 0;
-			sCurrDesign.asParts[COMP_BRAIN] = 0;
 			widgHide(psWScreen, IDDES_WPABUTTON);
 			widgHide(psWScreen, IDDES_WPBBUTTON);
 			// Set the new stats on the display
@@ -3439,30 +3361,9 @@ void intProcessDesign(UDWORD id)
 			sCurrDesign.asParts[COMP_ECM] = 0;
 			sCurrDesign.asParts[COMP_SENSOR] = 0;
 			sCurrDesign.asParts[COMP_CONSTRUCT] = 0;
-			sCurrDesign.asParts[COMP_BRAIN] = 0;
 			widgHide(psWScreen, IDDES_WPABUTTON);
 			widgHide(psWScreen, IDDES_WPBBUTTON);
 			// Set the new stats on the display
-			intSetSystemForm(apsExtraSysList[id - IDDES_EXTRASYSSTART]);
-			break;
-		case COMP_BRAIN:
-			/* Calculate the index of the brain */
-			sCurrDesign.asParts[COMP_BRAIN] =
-			    ((BRAIN_STATS *)apsExtraSysList[id - IDDES_EXTRASYSSTART]) -
-			    asBrainStats;
-			/* Reset the sensor, ECM and constructor and repair
-				- defaults will be set when OK is hit */
-			sCurrDesign.asParts[COMP_SENSOR] = 0;
-			sCurrDesign.asParts[COMP_ECM] = 0;
-			sCurrDesign.asParts[COMP_CONSTRUCT] = 0;
-			sCurrDesign.asParts[COMP_REPAIRUNIT] = 0;
-			sCurrDesign.numWeaps = 1;
-			sCurrDesign.asWeaps[0] =
-			    (((BRAIN_STATS *)apsExtraSysList[id - IDDES_EXTRASYSSTART])->psWeaponStat) -
-			    asWeaponStats;
-			widgHide(psWScreen, IDDES_WPABUTTON);
-			widgHide(psWScreen, IDDES_WPBBUTTON);
-			/* Set the new stats on the display */
 			intSetSystemForm(apsExtraSysList[id - IDDES_EXTRASYSSTART]);
 			break;
 		default:
@@ -3494,14 +3395,7 @@ void intProcessDesign(UDWORD id)
 		// do the callback if in the tutorial
 		if (bInTutorial)
 		{
-			if (apsExtraSysList[id - IDDES_EXTRASYSSTART]->compType == COMP_BRAIN)
-			{
-				eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DESIGN_COMMAND);
-			}
-			else
-			{
-				eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DESIGN_SYSTEM);
-			}
+			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DESIGN_SYSTEM);
 		}
 	}
 	else
@@ -3521,9 +3415,6 @@ void intProcessDesign(UDWORD id)
 		case IDDES_WEAPONS_B:
 			desCompID = 0;
 			intSetDesignMode(IDES_TURRET_B);
-			break;
-		case IDDES_COMMAND:
-			desCompID = 0;
 			break;
 		case IDDES_SYSTEMS:
 			desCompID = 0;
@@ -3607,7 +3498,6 @@ void intProcessDesign(UDWORD id)
 			// Add the correct component form
 			switch (droidTemplateType(&sCurrDesign))
 			{
-			case DROID_COMMAND:
 			case DROID_SENSOR:
 			case DROID_CONSTRUCT:
 			case DROID_ECM:
@@ -3631,7 +3521,6 @@ void intProcessDesign(UDWORD id)
 			// Add the correct component form
 			switch (droidTemplateType(&sCurrDesign))
 			{
-			case DROID_COMMAND:
 			case DROID_SENSOR:
 			case DROID_CONSTRUCT:
 			case DROID_ECM:
@@ -3654,7 +3543,6 @@ void intProcessDesign(UDWORD id)
 			// Add the correct component form
 			switch (droidTemplateType(&sCurrDesign))
 			{
-			case DROID_COMMAND:
 			case DROID_SENSOR:
 			case DROID_CONSTRUCT:
 			case DROID_ECM:
@@ -3779,7 +3667,7 @@ void intProcessDesign(UDWORD id)
 			case IDES_SYSTEM:
 			case IDES_TURRET:
 				if ((asBodyStats + sCurrDesign.asParts[COMP_BODY])->weaponSlots > 1 &&
-				    sCurrDesign.numWeaps == 1 && sCurrDesign.asParts[COMP_BRAIN] == 0)
+				    sCurrDesign.numWeaps == 1)
 				{
 					debug(LOG_GUI, "intProcessDesign: First weapon selected, doing next.");
 					intSetDesignMode(IDES_TURRET_A);

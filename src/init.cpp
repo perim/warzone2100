@@ -50,7 +50,6 @@
 #include "atmos.h"
 #include "challenge.h"
 #include "cluster.h"
-#include "cmddroid.h"
 #include "component.h"
 #include "configuration.h"
 #include "console.h"
@@ -1106,11 +1105,6 @@ bool stageTwoInitialise(void)
 		return false;
 	}
 
-	if (!cmdDroidInit())
-	{
-		return false;
-	}
-
 	/* Shift the interface initialisation here temporarily so that it
 		can pick up the stats after they have been loaded */
 
@@ -1196,8 +1190,6 @@ bool stageTwoShutDown(void)
 
 	interfaceShutDown();
 
-	cmdDroidShutDown();
-
 	//free up the gateway stuff?
 	gwShutDown();
 
@@ -1241,7 +1233,6 @@ bool stageThreeInitialise(void)
 		// FIXME Is this really needed?
 		debug(LOG_WZ, "multiGameInit()\n");
 		multiGameInit();
-		cmdDroidMultiExpBoost(true);
 	}
 
 	preProcessVisibility();
@@ -1348,8 +1339,6 @@ bool stageThreeShutDown(void)
 	{
 		multiGameShutdown();
 	}
-
-	cmdDroidMultiExpBoost(false);
 
 	eventReset();
 

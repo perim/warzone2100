@@ -70,7 +70,6 @@
 #include "mission.h"
 #include "levels.h"
 #include "console.h"
-#include "cmddroid.h"
 #include "feature.h"
 #include "mapgrid.h"
 #include "projectile.h"
@@ -158,8 +157,6 @@ static UDWORD	lastMaxUnitMessage;
 
 // max number of units
 static int droidLimit[MAX_PLAYERS];
-// max number of commanders
-static int commanderLimit[MAX_PLAYERS];
 // max number of constructors
 static int constructorLimit[MAX_PLAYERS];
 
@@ -259,7 +256,6 @@ void structureInitVars(void)
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
 		droidLimit[i] = INT16_MAX;
-		commanderLimit[i] = INT16_MAX;
 		constructorLimit[i] = INT16_MAX;
 		asStructLimits[i] = NULL;
 		for (j = 0; j < NUM_FLAG_TYPES; j++)
@@ -1969,143 +1965,6 @@ static bool setFunctionality(STRUCTURE	*psBuilding, STRUCTURE_TYPE functionType)
 }
 
 
-// Set the command droid that factory production should go to
-void assignFactoryCommandDroid(STRUCTURE *psStruct, DROID *psCommander)
-{
-	FACTORY			*psFact;
-	FLAG_POSITION	*psFlag, *psNext, *psPrev;
-	SDWORD			factoryInc, typeFlag;
-
-	CHECK_STRUCTURE(psStruct);
-	ASSERT_OR_RETURN(, StructIsFactory(psStruct), "structure not a factory");
-
-	psFact = &psStruct->pFunctionality->factory;
-
-	switch (psStruct->pStructureType->type)
-	{
-	case REF_FACTORY:
-		typeFlag = FACTORY_FLAG;
-		break;
-	case REF_VTOL_FACTORY:
-		typeFlag = VTOL_FLAG;
-		break;
-	case REF_CYBORG_FACTORY:
-		typeFlag = CYBORG_FLAG;
-		break;
-	default:
-		ASSERT(!"unknown factory type", "unknown factory type");
-		typeFlag = FACTORY_FLAG;
-		break;
-	}
-
-	// removing a commander from a factory
-	if (psFact->psCommander != NULL)
-	{
-		if (typeFlag == FACTORY_FLAG)
-		{
-			secondarySetState(psFact->psCommander, DSO_CLEAR_PRODUCTION,
-			                  (SECONDARY_STATE)(1 << (psFact->psAssemblyPoint->factoryInc + DSS_ASSPROD_SHIFT)));
-		}
-		else if (typeFlag == CYBORG_FLAG)
-		{
-			secondarySetState(psFact->psCommander, DSO_CLEAR_PRODUCTION,
-			                  (SECONDARY_STATE)(1 << (psFact->psAssemblyPoint->factoryInc + DSS_ASSPROD_CYBORG_SHIFT)));
-		}
-		else
-		{
-			secondarySetState(psFact->psCommander, DSO_CLEAR_PRODUCTION,
-			                  (SECONDARY_STATE)(1 << (psFact->psAssemblyPoint->factoryInc + DSS_ASSPROD_VTOL_SHIFT)));
-		}
-
-		psFact->psCommander = NULL;
-		// TODO: Synchronise .psCommander.
-		//syncDebug("Removed commander from factory %d", psStruct->id);
-		if (!missionIsOffworld())
-		{
-			addFlagPosition(psFact->psAssemblyPoint);	// add the assembly point back into the list
-		}
-		else
-		{
-			psFact->psAssemblyPoint->psNext = mission.apsFlagPosLists[psFact->psAssemblyPoint->player];
-			mission.apsFlagPosLists[psFact->psAssemblyPoint->player] = psFact->psAssemblyPoint;
-		}
-	}
-
-	if (psCommander != NULL)
-	{
-		ASSERT_OR_RETURN(, !missionIsOffworld(), "cannot assign a commander to a factory when off world");
-
-		factoryInc = psFact->psAssemblyPoint->factoryInc;
-		psPrev = NULL;
-
-		for (psFlag = apsFlagPosLists[psStruct->player]; psFlag; psFlag = psNext)
-		{
-			psNext = psFlag->psNext;
-
-			if ((psFlag->factoryInc == factoryInc) && (psFlag->factoryType == typeFlag))
-			{
-				if (psFlag != psFact->psAssemblyPoint)
-				{
-					removeFlagPosition(psFlag);
-				}
-				else
-				{
-					// need to keep the assembly point(s) for the factory
-					// but remove it(the primary) from the list so it doesn't get
-					// displayed
-					if (psPrev == NULL)
-					{
-						apsFlagPosLists[psStruct->player] = psFlag->psNext;
-					}
-					else
-					{
-						psPrev->psNext = psFlag->psNext;
-					}
-					psFlag->psNext = NULL;
-				}
-			}
-			else
-			{
-				psPrev = psFlag;
-			}
-		}
-		psFact->psCommander = psCommander;
-		syncDebug("Assigned commander %d to factory %d", psCommander->id, psStruct->id);
-	}
-}
-
-
-// remove all factories from a command droid
-void clearCommandDroidFactory(DROID *psDroid)
-{
-	STRUCTURE	*psCurr;
-
-	for (psCurr = apsStructLists[selectedPlayer]; psCurr; psCurr = psCurr->psNext)
-	{
-		if ((psCurr->pStructureType->type == REF_FACTORY) ||
-		    (psCurr->pStructureType->type == REF_CYBORG_FACTORY) ||
-		    (psCurr->pStructureType->type == REF_VTOL_FACTORY))
-		{
-			if (psCurr->pFunctionality->factory.psCommander == psDroid)
-			{
-				assignFactoryCommandDroid(psCurr, NULL);
-			}
-		}
-	}
-	for (psCurr = mission.apsStructLists[selectedPlayer]; psCurr; psCurr = psCurr->psNext)
-	{
-		if ((psCurr->pStructureType->type == REF_FACTORY) ||
-		    (psCurr->pStructureType->type == REF_CYBORG_FACTORY) ||
-		    (psCurr->pStructureType->type == REF_VTOL_FACTORY))
-		{
-			if (psCurr->pFunctionality->factory.psCommander == psDroid)
-			{
-				assignFactoryCommandDroid(psCurr, NULL);
-			}
-		}
-	}
-}
-
 /* Check that a tile is vacant for a droid to be placed */
 static bool structClearTile(UWORD x, UWORD y)
 {
@@ -2265,7 +2124,6 @@ static bool structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl, DR
 	FLAG_POSITION	*psFlag;
 	Vector3i iVecEffect;
 	UBYTE			factoryType;
-	bool			assignCommander;
 
 	CHECK_STRUCTURE(psStructure);
 
@@ -2333,9 +2191,6 @@ static bool structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl, DR
 		incNumDroids(psNewDroid->player);
 		switch (psNewDroid->droidType)
 		{
-		case DROID_COMMAND:
-			incNumCommandDroids(psNewDroid->player);
-			break;
 		case DROID_CONSTRUCT:
 		case DROID_CYBORG_CONSTRUCT:
 			incNumConstructorDroids(psNewDroid->player);
@@ -2346,38 +2201,9 @@ static bool structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl, DR
 
 		psFact = &psStructure->pFunctionality->factory;
 
-		// if we've built a command droid - make sure that it isn't assigned to another commander
-		assignCommander = false;
-		if ((psNewDroid->droidType == DROID_COMMAND) &&
-		    (psFact->psCommander != NULL))
-		{
-			assignFactoryCommandDroid(psStructure, NULL);
-			assignCommander = true;
-		}
-
 		if (isVtolDroid(psNewDroid) && !isTransporter(psNewDroid))
 		{
 			moveToRearm(psNewDroid);
-		}
-		if (psFact->psCommander != NULL && myResponsibility(psStructure->player))
-		{
-			// TODO: Should synchronise .psCommander in all cases.
-			//syncDebug("Has commander.");
-			if (isTransporter(psNewDroid))
-			{
-				// Transporters can't be assigned to commanders, due to abuse of .psGroup. Try to land on the commander instead. Hopefully the transport is heavy enough to crush the commander.
-				orderDroidLoc(psNewDroid, DORDER_MOVE, psFact->psCommander->pos.x, psFact->psCommander->pos.y, ModeQueue);
-			}
-			else if (idfDroid(psNewDroid) ||
-			         isVtolDroid(psNewDroid))
-			{
-				orderDroidObj(psNewDroid, DORDER_FIRESUPPORT, psFact->psCommander, ModeQueue);
-				//moveToRearm(psNewDroid);
-			}
-			else
-			{
-				orderDroidObj(psNewDroid, DORDER_COMMANDERSUPPORT, psFact->psCommander, ModeQueue);
-			}
 		}
 		else
 		{
@@ -2411,10 +2237,6 @@ static bool structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl, DR
 				orderDroidLoc(psNewDroid, DORDER_MOVE, psFlag->coords.x, psFlag->coords.y, ModeQueue);
 			}
 		}
-		if (assignCommander)
-		{
-			assignFactoryCommandDroid(psStructure, psNewDroid);
-		}
 		if (psNewDroid->player == selectedPlayer)
 		{
 			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DROIDBUILT);
@@ -2429,42 +2251,6 @@ static bool structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl, DR
 }
 
 
-static bool IsFactoryCommanderGroupFull(const FACTORY *psFactory)
-{
-	if (bMultiPlayer)
-	{
-		// TODO: Synchronise .psCommander. Have to return false here, to avoid desynch.
-		return false;
-	}
-
-	unsigned int DroidsInGroup;
-
-	// If we don't have a commander return false (group not full)
-	if (psFactory->psCommander == NULL)
-	{
-		return false;
-	}
-
-	// allow any number of IDF droids
-	if (templateIsIDF(psFactory->psSubject) || asPropulsionStats[psFactory->psSubject->asParts[COMP_PROPULSION]].propulsionType == PROPULSION_TYPE_LIFT)
-	{
-		return false;
-	}
-
-	// Get the number of droids in the commanders group
-	DroidsInGroup = psFactory->psCommander->psGroup ? psFactory->psCommander->psGroup->getNumMembers() : 0;
-
-	// if the number in group is less than the maximum allowed then return false (group not full)
-	if (DroidsInGroup < cmdDroidMaxGroup(psFactory->psCommander))
-	{
-		return false;
-	}
-
-	// the number in group has reached the maximum
-	return true;
-}
-
-
 // Disallow manufacture of units once these limits are reached,
 // doesn't mean that these numbers can't be exceeded if units are
 // put down in the editor or by the scripts.
@@ -2472,11 +2258,6 @@ static bool IsFactoryCommanderGroupFull(const FACTORY *psFactory)
 void setMaxDroids(int player, int value)
 {
 	droidLimit[player] = value;
-}
-
-void setMaxCommanders(int player, int value)
-{
-	commanderLimit[player] = value;
 }
 
 void setMaxConstructors(int player, int value)
@@ -2487,11 +2268,6 @@ void setMaxConstructors(int player, int value)
 int getMaxDroids(int player)
 {
 	return droidLimit[player];
-}
-
-int getMaxCommanders(int player)
-{
-	return commanderLimit[player];
 }
 
 int getMaxConstructors(int player)
@@ -2525,13 +2301,6 @@ bool CheckHaltOnMaxUnitsReached(STRUCTURE *psStructure)
 	}
 	else switch (droidTemplateType(templ))
 		{
-		case DROID_COMMAND:
-			if (getNumCommandDroids(psStructure->player) >= getMaxCommanders(psStructure->player))
-			{
-				isLimit = true;
-				ssprintf(limitMsg, _("Can't build anymore \"%s\", Command Control Limit Reached — Production Halted"), templ->name.toUtf8().constData());
-			}
-			break;
 		case DROID_CONSTRUCT:
 		case DROID_CYBORG_CONSTRUCT:
 			if (getNumConstructorDroids(psStructure->player) >= getMaxConstructors(psStructure->player))
@@ -2758,13 +2527,6 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 		{
 			pSubject = psStructure->pFunctionality->factory.psSubject;
 			structureMode = REF_FACTORY;
-			//check here to see if the factory's commander has died
-			if (psStructure->pFunctionality->factory.psCommander &&
-			    psStructure->pFunctionality->factory.psCommander->died)
-			{
-				//remove the commander from the factory
-				assignFactoryCommandDroid(psStructure, NULL);
-			}
 			break;
 		}
 	case REF_REPAIR_FACILITY: // FIXME FIXME FIXME: Magic numbers in this section
@@ -2842,14 +2604,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 							// if completely repaired reset order
 							secondarySetState(psDroid, DSO_RETURN_TO_LOC, DSS_NONE);
 
-							if (hasCommander(psDroid))
-							{
-								// return a droid to it's command group
-								DROID	*psCommander = psDroid->psGroup->psCommander;
-
-								orderDroidObj(psDroid, DORDER_GUARD, psCommander, ModeImmediate);
-							}
-							else if (psRepairFac->psDeliveryPoint != NULL)
+							if (psRepairFac->psDeliveryPoint != NULL)
 							{
 								// move the droid out the way
 								objTrace(psDroid->id, "Repair not needed - move to delivery point");
@@ -3186,14 +2941,6 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 
 			if (psFactory->timeStarted == ACTION_START_TIME)
 			{
-				// also need to check if a command droid's group is full
-
-				// If the factory commanders group is full - return
-				if (IsFactoryCommanderGroupFull(psFactory))
-				{
-					return;
-				}
-
 				if (CheckHaltOnMaxUnitsReached(psStructure) == true)
 				{
 					return;
@@ -3223,7 +2970,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 			}
 
 			//check for manufacture to be complete
-			if ((psFactory->buildPointsRemaining <= 0) && !IsFactoryCommanderGroupFull(psFactory) && !CheckHaltOnMaxUnitsReached(psStructure))
+			if ((psFactory->buildPointsRemaining <= 0) && !CheckHaltOnMaxUnitsReached(psStructure))
 			{
 				if (isMission)
 				{
@@ -3313,15 +3060,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 						// if completely repaired reset order
 						secondarySetState(psDroid, DSO_RETURN_TO_LOC, DSS_NONE);
 
-						if (hasCommander(psDroid))
-						{
-							// return a droid to it's command group
-							DROID	*psCommander = psDroid->psGroup->psCommander;
-
-							objTrace(psDroid->id, "Repair complete - move to commander");
-							orderDroidObj(psDroid, DORDER_GUARD, psCommander, ModeImmediate);
-						}
-						else if (psRepairFac->psDeliveryPoint != NULL)
+						if (psRepairFac->psDeliveryPoint != NULL)
 						{
 							// move the droid out the way
 							objTrace(psDroid->id, "Repair complete - move to delivery point");
@@ -6444,58 +6183,6 @@ ProductionRunEntry getProduction(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl
 
 	//not in the list so none being produced
 	return ProductionRunEntry();
-}
-
-
-/*looks through a players production list to see how many command droids
-are being built*/
-UBYTE checkProductionForCommand(UBYTE player)
-{
-	unsigned quantity = 0;
-
-	if (player == productionPlayer)
-	{
-		//assumes Cyborg or VTOL droids are not Command types!
-		unsigned factoryType = FACTORY_FLAG;
-
-		for (unsigned factoryInc = 0; factoryInc < factoryNumFlag[player][factoryType].size(); ++factoryInc)
-		{
-			//check to see if there is a factory with a production run
-			if (factoryNumFlag[player][factoryType][factoryInc] && factoryInc < asProductionRun[factoryType].size())
-			{
-				ProductionRun &productionRun = asProductionRun[factoryType][factoryInc];
-				for (unsigned inc = 0; inc < productionRun.size(); ++inc)
-				{
-					if (productionRun[inc].psTemplate->droidType == DROID_COMMAND)
-					{
-						quantity += productionRun[inc].numRemaining();
-					}
-				}
-			}
-		}
-	}
-	return quantity;
-}
-
-
-// Count number of factories assignable to a command droid.
-//
-UWORD countAssignableFactories(UBYTE player, UWORD factoryType)
-{
-	UBYTE           quantity = 0;
-
-	ASSERT_OR_RETURN(0, player == selectedPlayer, "%s should only be called for selectedPlayer", __FUNCTION__);
-
-	for (unsigned factoryInc = 0; factoryInc < factoryNumFlag[player][factoryType].size(); ++factoryInc)
-	{
-		//check to see if there is a factory
-		if (factoryNumFlag[player][factoryType][factoryInc])
-		{
-			quantity++;
-		}
-	}
-
-	return quantity;
 }
 
 

@@ -99,15 +99,6 @@ void SetFormAudioIDs(int OpenID, int CloseID);
 // Initialise interface graphics.
 void intInitialiseGraphics(void);
 
-// callback to update the command droid size label
-void intUpdateCommandSize(WIDGET *psWidget, W_CONTEXT *psContext);
-
-// callback to update the command droid experience
-void intUpdateCommandExp(WIDGET *psWidget, W_CONTEXT *psContext);
-
-// callback to update the command droid factories
-void intUpdateCommandFact(WIDGET *psWidget, W_CONTEXT *psContext);
-
 void intUpdateProgressBar(WIDGET *psWidget, W_CONTEXT *psContext);
 
 void intUpdateQuantity(WIDGET *psWidget, W_CONTEXT *psContext);

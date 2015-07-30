@@ -70,7 +70,6 @@
 #include "intimage.h"
 #include "component.h"
 #include "console.h"
-#include "cmddroid.h"
 #include "group.h"
 #include "transporter.h"
 #include "mission.h"
@@ -97,9 +96,6 @@ static int FormCloseCount;	// Count used to ensure only one sfx played when two 
 #define	DEFAULT_BUTTON_ROTATION (45)
 
 static UDWORD ManuPower = 0;	// Power required to manufacture the current item.
-
-// Get the first factory assigned to a command droid
-static STRUCTURE *droidGetCommandFactory(DROID *psDroid);
 
 // Set audio IDs for form opening/closing anims.
 // Use -1 to dissable audio.
@@ -405,103 +401,6 @@ void intAddLoopQuantity(WIDGET *psWidget, W_CONTEXT *psContext)
 	}
 }
 
-// callback to update the command droid size label
-void intUpdateCommandSize(WIDGET *psWidget, W_CONTEXT *psContext)
-{
-	W_LABEL				*Label = (W_LABEL *)psWidget;
-	BASE_OBJECT			*psObj = (BASE_OBJECT *)Label->pUserData;
-
-	// Get the object associated with this widget.
-	if (psObj != NULL && !isDead(psObj))
-	{
-		DROID	*psDroid = (DROID *)psObj;
-
-		ASSERT(psDroid->droidType == DROID_COMMAND,
-		       "Droid is not a command droid");
-
-		char tmp[40];
-		ssprintf(tmp, "%u/%u", psDroid->psGroup ? psDroid->psGroup->getNumMembers() : 0, cmdDroidMaxGroup(psDroid));
-		Label->aText = QString::fromUtf8(tmp);
-		Label->show();
-	}
-	else
-	{
-		Label->aText.clear();
-		Label->hide();
-	}
-}
-
-// callback to update the command droid experience
-void intUpdateCommandExp(WIDGET *psWidget, W_CONTEXT *psContext)
-{
-	W_LABEL				*Label = (W_LABEL *)psWidget;
-	BASE_OBJECT			*psObj = (BASE_OBJECT *)Label->pUserData;
-
-	// Get the object associated with this widget.
-	if (psObj != NULL && !isDead(psObj))
-	{
-		DROID	*psDroid = (DROID *)psObj;
-
-		ASSERT(psObj->type == OBJ_DROID, "Invalid droid pointer");
-		ASSERT(psDroid->droidType == DROID_COMMAND, "Droid is not a command droid");
-
-		int numStars = std::max((int)getDroidLevel(psDroid) - 1, 0);
-		Label->aText = QString(numStars, '*');
-		Label->show();
-	}
-	else
-	{
-		Label->aText.clear();
-		Label->hide();
-	}
-}
-
-// callback to update the command droid factories
-void intUpdateCommandFact(WIDGET *psWidget, W_CONTEXT *psContext)
-{
-	W_LABEL				*Label = (W_LABEL *)psWidget;
-	BASE_OBJECT			*psObj = (BASE_OBJECT *)Label->pUserData;
-	SDWORD                          i, start;
-
-	// Get the object associated with this widget.
-	if (psObj != NULL && !isDead(psObj))
-	{
-		DROID		*psDroid = (DROID *)psObj;
-
-		ASSERT(psObj->type == OBJ_DROID, "Invalid droid pointer");
-		ASSERT(psDroid->droidType == DROID_COMMAND, "Droid is not a command droid");
-
-		// see which type of factory this is for
-		if (Label->id >= IDOBJ_COUNTSTART && Label->id < IDOBJ_COUNTEND)
-		{
-			start = DSS_ASSPROD_SHIFT;
-		}
-		else if (Label->id >= IDOBJ_CMDFACSTART && Label->id < IDOBJ_CMDFACEND)
-		{
-			start = DSS_ASSPROD_CYBORG_SHIFT;
-		}
-		else
-		{
-			start = DSS_ASSPROD_VTOL_SHIFT;
-		}
-
-		Label->aText.clear();
-		for (i = 0; i < 5; ++i)  // TODO Support up to MAX_FACTORY (which won't fit in the ugly secondaryOrder bitmask hack).
-		{
-			if (psDroid->secondaryOrder & (1 << (i + start)))
-			{
-				Label->aText.append((char)('0' + i + 1));
-			}
-		}
-		Label->show();
-	}
-	else
-	{
-		Label->aText.clear();
-		Label->hide();
-	}
-}
-
 // Widget callback to update and display the power bar.
 // !!!!!!!!!!!!!!!!!!!!!!ONLY WORKS ON A SIDEWAYS POWERBAR!!!!!!!!!!!!!!!!!
 void intDisplayPowerBar(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
@@ -711,14 +610,6 @@ void IntStatusButton::display(int xOffset, int yOffset)
 				Stats = structGetDemolishStat();
 				ASSERT(Stats != NULL, "NULL Stats pointer.");
 				object = ImdObject::StructureStat(Stats);
-			}
-			else if (Droid->droidType == DROID_COMMAND)
-			{
-				Structure = droidGetCommandFactory(Droid);
-				if (Structure)
-				{
-					object = ImdObject::Structure(Structure);
-				}
 			}
 			break;
 
@@ -1620,58 +1511,6 @@ STRUCTURE *DroidGetBuildStructure(DROID *Droid)
 	return (STRUCTURE *)Structure;
 }
 
-// Get the first factory assigned to a command droid
-static STRUCTURE *droidGetCommandFactory(DROID *psDroid)
-{
-	SDWORD		inc;
-	STRUCTURE	*psCurr;
-
-	for (inc = 0; inc < MAX_FACTORY; inc++)
-	{
-		if (psDroid->secondaryOrder & (1 << (inc + DSS_ASSPROD_SHIFT)))
-		{
-			// found an assigned factory - look for it in the lists
-			for (psCurr = apsStructLists[psDroid->player]; psCurr; psCurr = psCurr->psNext)
-			{
-				if ((psCurr->pStructureType->type == REF_FACTORY) &&
-				    (((FACTORY *)psCurr->pFunctionality)->
-				     psAssemblyPoint->factoryInc == inc))
-				{
-					return psCurr;
-				}
-			}
-		}
-		if (psDroid->secondaryOrder & (1 << (inc + DSS_ASSPROD_CYBORG_SHIFT)))
-		{
-			// found an assigned factory - look for it in the lists
-			for (psCurr = apsStructLists[psDroid->player]; psCurr; psCurr = psCurr->psNext)
-			{
-				if ((psCurr->pStructureType->type == REF_CYBORG_FACTORY) &&
-				    (((FACTORY *)psCurr->pFunctionality)->
-				     psAssemblyPoint->factoryInc == inc))
-				{
-					return psCurr;
-				}
-			}
-		}
-		if (psDroid->secondaryOrder & (1 << (inc + DSS_ASSPROD_VTOL_SHIFT)))
-		{
-			// found an assigned factory - look for it in the lists
-			for (psCurr = apsStructLists[psDroid->player]; psCurr; psCurr = psCurr->psNext)
-			{
-				if ((psCurr->pStructureType->type == REF_VTOL_FACTORY) &&
-				    (((FACTORY *)psCurr->pFunctionality)->
-				     psAssemblyPoint->factoryInc == inc))
-				{
-					return psCurr;
-				}
-			}
-		}
-	}
-
-	return NULL;
-}
-
 // Get the stats for a structure which a droid is going to ( but not yet ) building.
 //
 BASE_STATS *DroidGetBuildStats(DROID *Droid)
@@ -1799,12 +1638,6 @@ SDWORD StatIsComponent(BASE_STATS *Stat)
 		return COMP_BODY;
 	}
 
-	if (Stat->ref >= REF_BRAIN_START &&
-	    Stat->ref < REF_BRAIN_START + REF_RANGE)
-	{
-		return COMP_BRAIN;
-	}
-
 	if (Stat->ref >= REF_PROPULSION_START &&
 	    Stat->ref < REF_PROPULSION_START + REF_RANGE)
 	{
@@ -1846,8 +1679,6 @@ SDWORD StatIsComponent(BASE_STATS *Stat)
 
 bool StatGetComponentIMD(BASE_STATS *Stat, SDWORD compID, iIMDShape **CompIMD, iIMDShape **MountIMD)
 {
-	WEAPON_STATS		*psWStat;
-
 	*CompIMD = NULL;
 	*MountIMD = NULL;
 
@@ -1855,12 +1686,6 @@ bool StatGetComponentIMD(BASE_STATS *Stat, SDWORD compID, iIMDShape **CompIMD, i
 	{
 	case COMP_BODY:
 		*CompIMD = ((COMPONENT_STATS *)Stat)->pIMD;
-		return true;
-
-	case COMP_BRAIN:
-		psWStat = ((BRAIN_STATS *)Stat)->psWeaponStat;
-		*MountIMD = psWStat->pMountGraphic;
-		*CompIMD = psWStat->pIMD;
 		return true;
 
 	case COMP_WEAPON:

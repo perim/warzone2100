@@ -38,7 +38,6 @@
 #include "lib/netplay/netplay.h"					// the netplay library.
 #include "multiplay.h"					// warzone net stuff.
 #include "multijoin.h"
-#include "cmddroid.h"					// command droids
 #include "action.h"
 #include "console.h"
 #include "mapgrid.h"
@@ -675,15 +674,6 @@ bool recvDroidInfo(NETQUEUE queue)
 			{
 			case ObjOrder:
 			case LocOrder:
-				/*
-				* If the current order not is a command order and we are not a
-				* commander yet are in the commander group remove us from it.
-				*/
-				if (hasCommander(psDroid))
-				{
-					psDroid->psGroup->remove(psDroid);
-				}
-
 				if (sOrder.psObj != TargetMissing)  // Only do order if the target didn't die.
 				{
 					if (!info.add)

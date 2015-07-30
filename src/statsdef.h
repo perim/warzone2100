@@ -41,7 +41,6 @@ enum DROID_TYPE
 	DROID_PERSON,           ///< person
 	DROID_CYBORG,           ///< cyborg-type thang
 	DROID_TRANSPORTER,      ///< guess what this is!
-	DROID_COMMAND,          ///< Command droid
 	DROID_REPAIR,           ///< Repair droid
 	DROID_DEFAULT,          ///< Default droid
 	DROID_CYBORG_CONSTRUCT, ///< cyborg constructor droid - new for update 28/5/99
@@ -167,7 +166,6 @@ enum WEAPON_SUBCLASS
 	WSC_SLOWROCKET,
 	WSC_LAS_SAT,
 	WSC_BOMB,
-	WSC_COMMAND,
 	WSC_EMP,
 	WSC_NUM_WEAPON_SUBCLASSES,	/** The number of enumerators in this enum.	 */
 };
@@ -423,15 +421,6 @@ struct CONSTRUCT_STATS : public COMPONENT_STATS
 	{
 		unsigned constructPoints;        ///< The number of points contributed each cycle
 	} upgrade[MAX_PLAYERS], base;
-};
-
-struct BRAIN_STATS : public COMPONENT_STATS
-{
-	BRAIN_STATS() : psWeaponStat(NULL), maxDroids(0), maxDroidsMult(0) {}
-
-	WEAPON_STATS	*psWeaponStat;	///< weapon stats associated with this brain - for Command Droids
-	UDWORD          maxDroids;       ///< base maximum number of droids that the commander can control
-	UDWORD          maxDroidsMult;   ///< maximum number of controlled droids multiplied by level
 };
 
 /*

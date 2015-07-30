@@ -72,10 +72,8 @@ extern STRUCTSTRENGTH_MODIFIER		asStructStrengthModifier[WE_NUMEFFECTS][
 extern void handleAbandonedStructures(void);
 
 int getMaxDroids(int player);
-int getMaxCommanders(int player);
 int getMaxConstructors(int player);
 void setMaxDroids(int player, int value);
-void setMaxCommanders(int player, int value);
 void setMaxConstructors(int player, int value);
 
 bool IsPlayerDroidLimitReached(int player);
@@ -204,13 +202,6 @@ extern void buildingComplete(STRUCTURE *psBuilding);
 extern void checkForResExtractors(STRUCTURE *psPowerGen);
 extern void checkForPowerGen(STRUCTURE *psPowerGen);
 
-// Set the command droid that factory production should go to
-//struct _command_droid;
-extern void assignFactoryCommandDroid(STRUCTURE *psStruct, struct DROID *psCommander);
-
-// remove all factories from a command droid
-void clearCommandDroidFactory(DROID *psDroid);
-
 /*for a given structure, return a pointer to its module stat */
 extern STRUCTURE_STATS *getModuleStat(const STRUCTURE *psStruct);
 
@@ -275,9 +266,6 @@ extern void factoryProdAdjust(STRUCTURE *psStructure, DROID_TEMPLATE *psTemplate
 //returns the quantity of a specific template in the production list
 ProductionRunEntry getProduction(STRUCTURE *psStructure, DROID_TEMPLATE *psTemplate);
 
-//looks through a players production list to see if a command droid is being built
-extern UBYTE checkProductionForCommand(UBYTE player);
-
 //check that delivery points haven't been put down in invalid location
 extern void checkDeliveryPoints(UDWORD version);
 
@@ -300,9 +288,6 @@ void doNextProduction(STRUCTURE *psStructure, DROID_TEMPLATE *current, QUEUE_MOD
 /*This function is called after a game is loaded so that any resource extractors
 that are active are initialised for when to start*/
 extern void checkResExtractorsActive(void);
-
-// Count number of factories assignable to a command droid.
-extern UWORD countAssignableFactories(UBYTE player, UWORD FactoryType);
 
 /*Used for determining how much of the structure to draw as being built or demolished*/
 extern float structHeightScale(STRUCTURE *psStruct);

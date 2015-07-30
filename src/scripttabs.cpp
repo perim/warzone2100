@@ -965,19 +965,6 @@ FUNC_SYMBOL asFuncTable[] =
 		0, 0, NULL, 0, 0, NULL, NULL
 	},
 
-	//Commander functions
-	{
-		"cmdDroidAddDroid",	scrCmdDroidAddDroid,	VAL_VOID,
-		2, { (INTERP_TYPE)ST_DROID, (INTERP_TYPE)ST_DROID },
-		0, 0, NULL, 0, 0, NULL, NULL
-	},
-
-	{
-		"cmdDroidMaxGroup",	scrCmdDroidMaxGroup,	VAL_INT,
-		1, { (INTERP_TYPE)ST_DROID},
-		0, 0, NULL, 0, 0, NULL, NULL
-	},
-
 	// a couple of example functions
 	{
 		"debugBox",			scrNumMB,				VAL_VOID,
@@ -2343,10 +2330,6 @@ VAR_SYMBOL asObjTable[] =
 		"type",		VAL_INT,	ST_OBJECT,
 		(INTERP_TYPE)ST_GROUP,		GROUPID_TYPE,	scrGroupObjGet,	NULL, 0, {0}, NULL
 	},
-	{
-		"commander",	(INTERP_TYPE)ST_DROID,	ST_OBJECT,
-		(INTERP_TYPE)ST_GROUP,		GROUPID_CMD,	scrGroupObjGet,	NULL, 0, {0}, NULL
-	},
 
 	/* new member variables */
 	//similar to .order
@@ -2507,7 +2490,6 @@ CONST_SYMBOL asConstantTable[] =
 	{ "DROID_CYBORG_SUPER",		VAL_INT,	false,	DROID_CYBORG_SUPER,		NULL, NULL, 0.0f },
 	{ "DROID_SUPERTRANSPORTER",	VAL_INT,	false,	DROID_SUPERTRANSPORTER,	NULL, NULL, 0.0f },
 	{ "DROID_TRANSPORTER",		VAL_INT,	false,	DROID_TRANSPORTER,		NULL, NULL, 0.0f },
-	{ "DROID_COMMAND",			VAL_INT,	false,	DROID_COMMAND,			NULL, NULL, 0.0f },
 	{ "DROID_REPAIR",			VAL_INT,	false,	DROID_REPAIR,			NULL, NULL, 0.0f },
 	{ "DROID_CYBORG_REPAIR",	VAL_INT,	false,	DROID_CYBORG_REPAIR,	NULL, NULL, 0.0f },
 	{ "DROID_CYBORG_CONSTRUCT",	VAL_INT,	false,	DROID_CYBORG_CONSTRUCT,	NULL, NULL, 0.0f },
@@ -2660,7 +2642,6 @@ CONST_SYMBOL asConstantTable[] =
 
 	{ "INT_OBJECT",			VAL_INT,	false,	INT_OBJECT,		NULL, NULL, 0.0f }, // Object screen
 	{ "INT_STAT",			VAL_INT,	false,	INT_STAT,		NULL, NULL, 0.0f }, // Object screen with stat screen
-	{ "INT_CMDORDER",		VAL_INT,	false,	INT_CMDORDER,	NULL, NULL, 0.0f }, // Object screen with command droids and orders screen
 	{ "INT_DESIGN",			VAL_INT,	false,	INT_DESIGN,		NULL, NULL, 0.0f }, // Design screen
 	{ "INT_INTELMAP",		VAL_INT,	false,	INT_INTELMAP,	NULL, NULL, 0.0f }, // Intelligence Map
 	{ "INT_ORDER",			VAL_INT,	false,	INT_ORDER,		NULL, NULL, 0.0f },
@@ -2752,7 +2733,6 @@ CONST_SYMBOL asConstantTable[] =
 
 	//Group types
 	{ "GT_NORMAL",		VAL_INT,	false,	GT_NORMAL,			NULL, NULL, 0.0f },
-	{ "GT_COMMAND",		VAL_INT,	false,	GT_COMMAND,			NULL, NULL, 0.0f },
 	{ "GT_TRANSPORTER",	VAL_INT,	false,	GT_TRANSPORTER,		NULL, NULL, 0.0f },
 
 	/* some key constants */

@@ -68,7 +68,6 @@
 #include "design.h"
 #include "component.h"
 #include "radar.h"
-#include "cmddroid.h"
 #include "warzoneconfig.h"
 #include "multiplay.h"
 #include "frontend.h"
@@ -1600,9 +1599,6 @@ static bool writeMessageFile(const char *pFileName);
 static bool loadSaveStructLimits(const char *pFileName);
 static bool writeStructLimitsFile(const char *pFileName);
 
-static bool readFiresupportDesignators(const char *pFileName);
-static bool writeFiresupportDesignators(const char *pFileName);
-
 static bool writeScriptState(const char *pFileName);
 
 static bool gameLoad(const char *fileName);
@@ -1992,7 +1988,6 @@ bool loadGame(const char *pGameToLoad, bool keepObjects, bool freeMem, bool User
 			productionPlayer = selectedPlayer;
 			bMultiPlayer	= saveGameData.multiPlayer;
 			bMultiMessages	= bMultiPlayer;
-			cmdDroidMultiExpBoost(true);
 
 			NetPlay.bComms = (saveGameData.sNetPlay).bComms;
 			for (i = 0; i < MAX_PLAYERS; i++)
@@ -2492,24 +2487,6 @@ bool loadGame(const char *pGameToLoad, bool keepObjects, bool freeMem, bool User
 		}
 	}
 
-	if (saveGameVersion >= VERSION_21)
-	{
-		//rebuild the apsCommandDesignation AFTER all droids and structures are loaded
-		if ((gameType == GTYPE_SAVE_START) ||
-		    (gameType == GTYPE_SAVE_MIDMISSION))
-		{
-			//load in the command list file
-			aFileName[fileExten] = '\0';
-			strcat(aFileName, "firesupport.json");
-
-			if (!readFiresupportDesignators(aFileName))
-			{
-				debug(LOG_ERROR, "Failed with: %s", aFileName);
-				goto error;
-			}
-		}
-	}
-
 	if ((saveGameVersion >= VERSION_15) && UserSaveGame)
 	{
 		//load in the mission structures
@@ -2812,15 +2789,6 @@ bool saveGame(char *aFileName, GAME_TYPE saveType)
 	if (!writeScoreData(CurrentFileName))
 	{
 		debug(LOG_ERROR, "saveGame: writeScoreData(\"%s\") failed", CurrentFileName);
-		goto error;
-	}
-
-	CurrentFileName[fileExtension] = '\0';
-	strcat(CurrentFileName, "firesupport.json");
-	/*Write the data to the file*/
-	if (!writeFiresupportDesignators(CurrentFileName))
-	{
-		debug(LOG_ERROR, "saveGame: writeFiresupportDesignators(\"%s\") failed", CurrentFileName);
 		goto error;
 	}
 
@@ -3815,7 +3783,6 @@ bool gameLoadV(PHYSFS_file *fileHandle, unsigned int version)
 			productionPlayer = selectedPlayer;
 			game			= saveGameData.sGame;  // why do this again????
 			game.scavengers = scav;
-			cmdDroidMultiExpBoost(true);
 			NetPlay.bComms = (saveGameData.sNetPlay).bComms;
 			if (bMultiPlayer)
 			{
@@ -4307,13 +4274,6 @@ foundDroid:
 			ASSERT(psObj->type == OBJ_STRUCTURE, "Droid base structure not a structure");
 			setSaveDroidBase(psDroid, (STRUCTURE *)psObj);
 		}
-		if (ini.contains("commander"))
-		{
-			int tid = ini.value("commander", -1).toInt();
-			DROID *psCommander = (DROID *)getBaseObjFromData(tid, psDroid->player, OBJ_DROID);
-			ASSERT(psCommander, "Failed to find droid commander");
-			cmdDroidAddDroid(psCommander, psDroid);
-		}
 		ini.endGroup();
 	}
 	return true;
@@ -4357,7 +4317,6 @@ static bool loadSaveDroid(const char *pFileName, DROID **ppsCurrentDroidLists)
 		{
 		case DROID_TRANSPORTER: ++priority;
 		case DROID_SUPERTRANSPORTER: ++priority;
-		case DROID_COMMAND:     ++priority;
 		default:                break;
 		}
 		sortedList.push_back(std::make_pair(-priority, list[i]));
@@ -4472,8 +4431,7 @@ static bool loadSaveDroid(const char *pFileName, DROID **ppsCurrentDroidLists)
 		}
 		else
 		{
-			if (isTransporter(psDroid)
-			    || psDroid->droidType == DROID_COMMAND)
+			if (isTransporter(psDroid))
 			{
 				DROID_GROUP *psGroup = grpCreate();
 				psGroup->add(psDroid);
@@ -4618,7 +4576,7 @@ static bool writeDroid(WzConfig &ini, DROID *psCurr, bool onMission, int &counte
 	}
 	if (psCurr->psGroup)
 	{
-		ini.setValue("aigroup", psCurr->psGroup->id);	// AI and commander/transport group
+		ini.setValue("aigroup", psCurr->psGroup->id);	// AI and transport group
 		ini.setValue("aigroup/type", psCurr->psGroup->type);
 	}
 	ini.setValue("group", psCurr->group);	// different kind of group. of course.
@@ -4630,10 +4588,6 @@ static bool writeDroid(WzConfig &ini, DROID *psCurr, bool onMission, int &counte
 	for (int i = 0; i < game.maxPlayers; i++)
 	{
 		ini.setValue("visible/" + QString::number(i), psCurr->visible[i]);
-	}
-	if (hasCommander(psCurr) && psCurr->psGroup->psCommander->died <= 1)
-	{
-		ini.setValue("commander", psCurr->psGroup->psCommander->id);
 	}
 	if (psCurr->died > 0)
 	{
@@ -4656,7 +4610,6 @@ static bool writeDroid(WzConfig &ini, DROID *psCurr, bool onMission, int &counte
 	ini.beginGroup("parts");
 	ini.setValue("body", (asBodyStats + psCurr->asBits[COMP_BODY])->id);
 	ini.setValue("propulsion", (asPropulsionStats + psCurr->asBits[COMP_PROPULSION])->id);
-	ini.setValue("brain", (asBrainStats + psCurr->asBits[COMP_BRAIN])->id);
 	ini.setValue("repair", (asRepairStats + psCurr->asBits[COMP_REPAIRUNIT])->id);
 	ini.setValue("ecm", (asECMStats + psCurr->asBits[COMP_ECM])->id);
 	ini.setValue("sensor", (asSensorStats + psCurr->asBits[COMP_SENSOR])->id);
@@ -5316,11 +5269,6 @@ bool writeStructFile(const char *pFileName)
 						}
 						ini.setValue("Factory/assemblyPoint/number", psFlag->factoryInc);
 					}
-					if (psFactory->psCommander)
-					{
-						ini.setValue("Factory/commander/id", psFactory->psCommander->id);
-						ini.setValue("Factory/commander/player", psFactory->psCommander->player);
-					}
 					ini.setValue("Factory/secondaryOrder", psFactory->secondaryOrder);
 					ProductionRun emptyRun;
 					bool haveRun = psFactory->psAssemblyPoint->factoryInc < asProductionRun[psFactory->psAssemblyPoint->factoryType].size();
@@ -5419,26 +5367,6 @@ bool loadSaveStructurePointers(QString filename, STRUCTURE **ppList)
 				ASSERT(tid >= 0 && tplayer >= 0, "Bad ID");
 				setStructureTarget(psStruct, getBaseObjFromData(tid, tplayer, ttype), j, ORIGIN_UNKNOWN);
 				ASSERT(psStruct->psTarget[j], "Failed to find target");
-			}
-			if (ini.contains("Factory/commander/id"))
-			{
-				ASSERT(psStruct->pStructureType->type == REF_FACTORY || psStruct->pStructureType->type == REF_CYBORG_FACTORY
-				       || psStruct->pStructureType->type == REF_VTOL_FACTORY, "Bad type");
-				FACTORY *psFactory = (FACTORY *)psStruct->pFunctionality;
-				OBJECT_TYPE ttype = OBJ_DROID;
-				int tid = ini.value("Factory/commander/id", -1).toInt();
-				int tplayer = ini.value("Factory/commander/player", -1).toInt();
-				ASSERT(tid >= 0 && tplayer >= 0, "Bad commander ID %d for player %d for building %d", tid, tplayer, id);
-				DROID *psCommander = (DROID *)getBaseObjFromData(tid, tplayer, ttype);
-				ASSERT(psCommander, "Commander %d not found for building %d", tid, id);
-				if (ppList == mission.apsStructLists)
-				{
-					psFactory->psCommander = psCommander;
-				}
-				else
-				{
-					assignFactoryCommandDroid(psStruct, psCommander);
-				}
 			}
 			if (ini.contains("Repair/target/id"))
 			{
@@ -5780,7 +5708,6 @@ bool writeTemplateFile(const char *pFileName)
 				setPlayer(ini, player);
 				ini.setValue("body", (asBodyStats + psCurr->asParts[COMP_BODY])->id);
 				ini.setValue("propulsion", (asPropulsionStats + psCurr->asParts[COMP_PROPULSION])->id);
-				ini.setValue("brain", (asBrainStats + psCurr->asParts[COMP_BRAIN])->id);
 				ini.setValue("repair", (asRepairStats + psCurr->asParts[COMP_REPAIRUNIT])->id);
 				ini.setValue("ecm", (asECMStats + psCurr->asParts[COMP_ECM])->id);
 				ini.setValue("sensor", (asSensorStats + psCurr->asParts[COMP_SENSOR])->id);
@@ -5996,15 +5923,6 @@ static bool writeCompListFile(const char *pFileName)
 		{
 			COMPONENT_STATS *psStats = (COMPONENT_STATS *)(asRepairStats + i);
 			const int state = apCompLists[player][COMP_REPAIRUNIT][i];
-			if (state != UNAVAILABLE)
-			{
-				ini.setValue(psStats->id, state);
-			}
-		}
-		for (int i = 0; i < numBrainStats; i++)
-		{
-			COMPONENT_STATS *psStats = (COMPONENT_STATS *)(asBrainStats + i);
-			const int state = apCompLists[player][COMP_BRAIN][i];
 			if (state != UNAVAILABLE)
 			{
 				ini.setValue(psStats->id, state);
@@ -6426,45 +6344,6 @@ bool writeStructLimitsFile(const char *pFileName)
 	}
 	return true;
 }
-
-/*!
- * Load the current fire-support designated commanders (the one who has fire-support enabled)
- */
-bool readFiresupportDesignators(const char *pFileName)
-{
-	WzConfig ini(pFileName, WzConfig::ReadOnly);
-	QStringList list = ini.childGroups();
-
-	for (int i = 0; i < list.size(); ++i)
-	{
-		uint32_t id = ini.value("Player_" + QString::number(i) + "/id", NULL_ID).toInt();
-		if (id != NULL_ID)
-		{
-			cmdDroidSetDesignator((DROID *)getBaseObjFromId(id));
-		}
-	}
-	return true;
-}
-
-/*!
- * Save the current fire-support designated commanders (the one who has fire-support enabled)
- */
-bool writeFiresupportDesignators(const char *pFileName)
-{
-	int player;
-	WzConfig ini(pFileName, WzConfig::ReadAndWrite);
-
-	for (player = 0; player < MAX_PLAYERS; player++)
-	{
-		DROID *psDroid = cmdDroidGetDesignator(player);
-		if (psDroid != NULL)
-		{
-			ini.setValue("Player_" + QString::number(player) + "/id", psDroid->id);
-		}
-	}
-	return true;
-}
-
 
 // -----------------------------------------------------------------------------------------
 // write the event state to a file on disk

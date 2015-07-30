@@ -99,7 +99,6 @@ static SDWORD bucketCalculateZ(RENDER_TYPE objectType, void *pObject)
 		break;
 	case RENDER_PROJECTILE:
 		if (((PROJECTILE *)pObject)->psWStats->weaponSubClass == WSC_FLAME ||
-		    ((PROJECTILE *)pObject)->psWStats->weaponSubClass == WSC_COMMAND ||
 		    ((PROJECTILE *)pObject)->psWStats->weaponSubClass == WSC_EMP)
 		{
 			/* We don't do projectiles from these guys, cos there's an effect instead */

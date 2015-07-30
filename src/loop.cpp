@@ -82,7 +82,6 @@
 #include "fpath.h"
 #include "scriptextern.h"
 #include "cluster.h"
-#include "cmddroid.h"
 #include "keybind.h"
 #include "wrappers.h"
 #include "random.h"
@@ -443,9 +442,6 @@ void countUpdate()
 			numDroids[i]++;
 			switch (psCurr->droidType)
 			{
-			case DROID_COMMAND:
-				numCommandDroids[i] += 1;
-				break;
 			case DROID_CONSTRUCT:
 			case DROID_CYBORG_CONSTRUCT:
 				numConstructorDroids[i] += 1;
@@ -464,10 +460,6 @@ void countUpdate()
 						{
 							numConstructorDroids[i] += 1;
 						}
-						if (psDroid->droidType == DROID_COMMAND)
-						{
-							numCommandDroids[i] += 1;
-						}
 					}
 				}
 				break;
@@ -480,9 +472,6 @@ void countUpdate()
 			numMissionDroids[i]++;
 			switch (psCurr->droidType)
 			{
-			case DROID_COMMAND:
-				numCommandDroids[i] += 1;
-				break;
 			case DROID_CONSTRUCT:
 			case DROID_CYBORG_CONSTRUCT:
 				numConstructorDroids[i] += 1;
@@ -503,9 +492,6 @@ void countUpdate()
 			// count the type of units
 			switch (psCurr->droidType)
 			{
-			case DROID_COMMAND:
-				numCommandDroids[i] += 1;
-				break;
 			case DROID_CONSTRUCT:
 			case DROID_CYBORG_CONSTRUCT:
 				numConstructorDroids[i] += 1;
@@ -596,7 +582,6 @@ static void gameStateUpdate()
 	clusterUpdate();
 
 	// update the command droids
-	cmdDroidUpdate();
 	if (getDrivingStatus())
 	{
 		driveUpdate();

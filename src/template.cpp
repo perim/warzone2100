@@ -29,7 +29,6 @@
 #include "lib/framework/strres.h"
 #include "lib/netplay/netplay.h"
 #include "template.h"
-#include "cmddroiddef.h"
 #include "mission.h"
 #include "objects.h"
 #include "droid.h"
@@ -72,17 +71,16 @@ bool researchedTemplate(DROID_TEMPLATE *psCurr, int player, bool allowRedundant,
 {
 	ASSERT_OR_RETURN(false, psCurr, "Given a null template");
 	bool resBody = researchedPart(psCurr, player, COMP_BODY, false, allowRedundant);
-	bool resBrain = researchedPart(psCurr, player, COMP_BRAIN, true, allowRedundant);
 	bool resProp = researchedPart(psCurr, player, COMP_PROPULSION, false, allowRedundant);
 	bool resSensor = researchedPart(psCurr, player, COMP_SENSOR, true, allowRedundant);
 	bool resEcm = researchedPart(psCurr, player, COMP_ECM, true, allowRedundant);
 	bool resRepair = researchedPart(psCurr, player, COMP_REPAIRUNIT, true, allowRedundant);
 	bool resConstruct = researchedPart(psCurr, player, COMP_CONSTRUCT, true, allowRedundant);
-	bool researchedEverything = resBody && resBrain && resProp && resSensor && resEcm && resRepair && resConstruct;
+	bool researchedEverything = resBody && resProp && resSensor && resEcm && resRepair && resConstruct;
 	if (verbose && !researchedEverything)
 	{
-		debug(LOG_ERROR, "%s : not researched : body=%d brai=%d prop=%d sensor=%d ecm=%d rep=%d con=%d", getName(psCurr),
-		      (int)resBody, (int)resBrain, (int)resProp, (int)resSensor, (int)resEcm, (int)resRepair, (int)resConstruct);
+		debug(LOG_ERROR, "%s : not researched : body=%d prop=%d sensor=%d ecm=%d rep=%d con=%d", getName(psCurr),
+		      (int)resBody, (int)resProp, (int)resSensor, (int)resEcm, (int)resRepair, (int)resConstruct);
 	}
 	for (unsigned weapIndex = 0; weapIndex < psCurr->numWeaps && researchedEverything; ++weapIndex)
 	{
@@ -132,17 +130,12 @@ static DROID_TEMPLATE loadTemplateCommon(WzConfig &ini)
 	{
 		design.droidType = DROID_DEFAULT;
 	}
-	else if (droidType == "DROID_COMMAND")
-	{
-		design.droidType = DROID_COMMAND;
-	}
 	else
 	{
 		ASSERT(false, "No such droid type \"%s\" for %s", droidType.toUtf8().constData(), getID(&design));
 	}
 
 	design.asParts[COMP_BODY] = getCompFromName(COMP_BODY, ini.value("body").toString());
-	design.asParts[COMP_BRAIN] = getCompFromName(COMP_BRAIN, ini.value("brain", QString("ZNULLBRAIN")).toString());
 	design.asParts[COMP_PROPULSION] = getCompFromName(COMP_PROPULSION, ini.value("propulsion", QString("ZNULLPROP")).toString());
 	design.asParts[COMP_REPAIRUNIT] = getCompFromName(COMP_REPAIRUNIT, ini.value("repair", QString("ZNULLREPAIR")).toString());
 	design.asParts[COMP_ECM] = getCompFromName(COMP_ECM, ini.value("ecm", QString("ZNULLECM")).toString());
@@ -175,7 +168,6 @@ bool initTemplates()
 		design.stored = true;
 		if (!(asBodyStats + design.asParts[COMP_BODY])->designable
 		    || !(asPropulsionStats + design.asParts[COMP_PROPULSION])->designable
-		    || (design.asParts[COMP_BRAIN] > 0 && !(asBrainStats + design.asParts[COMP_BRAIN])->designable)
 		    || (design.asParts[COMP_REPAIRUNIT] > 0 && !(asRepairStats + design.asParts[COMP_REPAIRUNIT])->designable)
 		    || (design.asParts[COMP_ECM] > 0 && !(asECMStats + design.asParts[COMP_ECM])->designable)
 		    || (design.asParts[COMP_SENSOR] > 0 && !(asSensorStats + design.asParts[COMP_SENSOR])->designable)
@@ -208,8 +200,7 @@ bool initTemplates()
 			    && psDestTemplate->asParts[COMP_REPAIRUNIT] == design.asParts[COMP_REPAIRUNIT]
 			    && psDestTemplate->asParts[COMP_ECM] == design.asParts[COMP_ECM]
 			    && psDestTemplate->asParts[COMP_SENSOR] == design.asParts[COMP_SENSOR]
-			    && psDestTemplate->asParts[COMP_CONSTRUCT] == design.asParts[COMP_CONSTRUCT]
-			    && psDestTemplate->asParts[COMP_BRAIN] == design.asParts[COMP_BRAIN])
+			    && psDestTemplate->asParts[COMP_CONSTRUCT] == design.asParts[COMP_CONSTRUCT])
 			{
 				break;
 			}
@@ -261,10 +252,6 @@ bool storeTemplates()
 		}
 		ini.setValue("body", (asBodyStats + psCurr->asParts[COMP_BODY])->id);
 		ini.setValue("propulsion", (asPropulsionStats + psCurr->asParts[COMP_PROPULSION])->id);
-		if (psCurr->asParts[COMP_BRAIN] != 0)
-		{
-			ini.setValue("brain", (asBrainStats + psCurr->asParts[COMP_BRAIN])->id);
-		}
 		if ((asRepairStats + psCurr->asParts[COMP_REPAIRUNIT])->location == LOC_TURRET) // avoid auto-repair...
 		{
 			ini.setValue("repair", (asRepairStats + psCurr->asParts[COMP_REPAIRUNIT])->id);
@@ -535,15 +522,6 @@ void fillTemplateList(std::vector<DROID_TEMPLATE *> &pList, STRUCTURE *psFactory
 		// Must add droids if currently in production.
 		if (!getProduction(psFactory, psCurr).quantity)
 		{
-			//can only have (MAX_CMDDROIDS) in the world at any one time
-			if (psCurr->droidType == DROID_COMMAND)
-			{
-				if (checkProductionForCommand(player) + checkCommandExist(player) >= (MAX_CMDDROIDS))
-				{
-					continue;
-				}
-			}
-
 			if (!psCurr->enabled || !validTemplateForFactory(psCurr, psFactory, false)
 			    || !researchedTemplate(psCurr, player, includeRedundantDesigns))
 			{

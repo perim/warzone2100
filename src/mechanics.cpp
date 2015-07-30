@@ -88,11 +88,6 @@ void freeComponentLists(void)
 			free(apCompLists[inc][COMP_BODY]);
 			apCompLists[inc][COMP_BODY] = NULL;
 		}
-		if (apCompLists[inc][COMP_BRAIN])
-		{
-			free(apCompLists[inc][COMP_BRAIN]);
-			apCompLists[inc][COMP_BRAIN] = NULL;
-		}
 		if (apCompLists[inc][COMP_PROPULSION])
 		{
 			free(apCompLists[inc][COMP_PROPULSION]);
@@ -198,10 +193,6 @@ void makeAllAvailable(void)
 		for (comp = 0; comp < numConstructStats; comp++)
 		{
 			apCompLists[i][COMP_CONSTRUCT][comp] = AVAILABLE;
-		}
-		for (comp = 0; comp < numBrainStats; comp++)
-		{
-			apCompLists[i][COMP_BRAIN][comp] = AVAILABLE;
 		}
 		for (comp = 0; comp < numRepairStats; comp++)
 		{

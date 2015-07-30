@@ -79,7 +79,6 @@ function eventGameInit()
 		}
 
 		setDroidLimit(playnum, 150, DROID_ANY);
-		setDroidLimit(playnum, 10, DROID_COMMAND);
 		setDroidLimit(playnum, 15, DROID_CONSTRUCT);
 
 		enableStructure("A0CommandCentre", playnum);		// make structures available to build
@@ -116,7 +115,6 @@ function eventGameInit()
 		"R-Sys-Engineering01",
 		"R-Struc-CommandRelay",
 		"R-Vehicle-Prop-Halftracks",
-		"R-Comp-CommandTurret01",
 		"R-Sys-Sensor-Turret01",
 		"R-Wpn-Flamer01Mk1",
 		"R-Vehicle-Body05",

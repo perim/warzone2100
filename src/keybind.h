@@ -179,7 +179,6 @@ extern void	kf_ToggleSensorDisplay(void);		//Was commented out.  Re-enabled --Q 
 extern void	kf_JumpToResourceExtractor(void);
 extern void	kf_JumpToRepairUnits(void);
 extern void	kf_JumpToConstructorUnits(void);
-extern void	kf_JumpToCommandUnits(void);
 extern void	kf_JumpToSensorUnits(void);
 extern void	kf_AddHelpBlip(void);				//Add a beacon
 extern void	kf_ToggleProximitys(void);
@@ -207,16 +206,6 @@ extern void	kf_ToggleMissionTimer(void);
 extern void	kf_TraceObject(void);
 
 extern void	kf_SetHardLevel(void);
-extern void	kf_SelectCommander_0(void);
-extern void	kf_SelectCommander_1(void);
-extern void	kf_SelectCommander_2(void);
-extern void	kf_SelectCommander_3(void);
-extern void	kf_SelectCommander_4(void);
-extern void	kf_SelectCommander_5(void);
-extern void	kf_SelectCommander_6(void);
-extern void	kf_SelectCommander_7(void);
-extern void	kf_SelectCommander_8(void);
-extern void	kf_SelectCommander_9(void);
 void kf_ToggleReopenBuildMenu(void);
 
 extern void	kf_ToggleShowGateways(void);

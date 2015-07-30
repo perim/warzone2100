@@ -71,7 +71,6 @@
 #include "scriptextern.h"
 #include "scriptcb.h"
 #include "drive.h"
-#include "cmddroid.h"
 #include "selection.h"
 #include "transporter.h"
 #include "intorder.h"
@@ -1544,26 +1543,18 @@ void renderDeliveryRepos(void)
 	}
 }
 
-// check whether a clicked on droid is in a command group or assigned to a sensor
+// check whether a clicked on droid is assigned to a sensor
 static bool droidHasLeader(DROID *psDroid)
 {
 	BASE_OBJECT		*psLeader;
 
-	if (psDroid->droidType == DROID_COMMAND ||
-	    psDroid->droidType == DROID_SENSOR)
+	if (psDroid->droidType == DROID_SENSOR)
 	{
 		return false;
 	}
 
-	if (hasCommander(psDroid))
-	{
-		psLeader = (BASE_OBJECT *)psDroid->psGroup->psCommander;
-	}
-	else
-	{
-		//psLeader can be either a droid or a structure
-		psLeader = orderStateObj(psDroid, DORDER_FIRESUPPORT);
-	}
+	// psLeader can be either a droid or a structure
+	psLeader = orderStateObj(psDroid, DORDER_FIRESUPPORT);
 
 	if (psLeader != NULL)
 	{
@@ -1738,20 +1729,6 @@ static void dealWithLMBDroid(DROID *psDroid, SELECTION_TYPE selection)
 			FeedbackOrderGiven();
 		}
 	}
-	// Clicked on a commander? Will link to it.
-	else if (psDroid->droidType == DROID_COMMAND && selection != SC_INVALID &&
-	         selection != SC_DROID_COMMAND &&
-	         selection != SC_DROID_CONSTRUCT &&
-	         !ctrlShiftDown() && ownDroid)
-	{
-		turnOffMultiMsg(true);
-		orderSelectedObj(selectedPlayer, (BASE_OBJECT *)psDroid);
-		FeedbackOrderGiven();
-		clearSelection();
-		assignSensorTarget((BASE_OBJECT *)psDroid);
-		dealWithDroidSelect(psDroid, false);
-		turnOffMultiMsg(false);
-	}
 	// Clicked on a sensor? Will assign to it.
 	else if (psDroid->droidType == DROID_SENSOR)
 	{
@@ -1789,8 +1766,7 @@ static void dealWithLMBDroid(DROID *psDroid, SELECTION_TYPE selection)
 		return;
 	}
 	// Clicked on a construction unit? Will guard it.
-	else if ((psDroid->droidType == DROID_CONSTRUCT || psDroid->droidType == DROID_SENSOR ||
-	          psDroid->droidType == DROID_COMMAND)
+	else if ((psDroid->droidType == DROID_CONSTRUCT || psDroid->droidType == DROID_SENSOR)
 	         && selection == SC_DROID_DIRECT)
 	{
 		orderSelectedObj(selectedPlayer, (BASE_OBJECT *)psDroid);
@@ -2163,17 +2139,8 @@ static void dealWithLMBDClick(void)
 			psDroid = (DROID *) psClickedOn;
 			if (psDroid->player == selectedPlayer)
 			{
-				/* If we've double clicked on a constructor droid, activate build menu */
-				if (psDroid->droidType == DROID_COMMAND)
-				{
-					intResetScreen(true);
-					intCommanderSelected(psDroid);
-				}
-				else
-				{
-					// Now selects all of same type on screen
-					selDroidSelection(selectedPlayer, DS_BY_TYPE, DST_ALL_SAME, true);
-				}
+				// Now selects all of same type on screen
+				selDroidSelection(selectedPlayer, DS_BY_TYPE, DST_ALL_SAME, true);
 			}
 		}
 		else if (psClickedOn->type == OBJ_STRUCTURE)
@@ -2461,7 +2428,6 @@ static MOUSE_TARGET	itemUnderMouse(BASE_OBJECT **ppObjectUnderMouse)
 					if (aiCheckAlliances(psDroid->player, selectedPlayer))
 					{
 						*ppObjectUnderMouse = (BASE_OBJECT *)psDroid;
-						// need to check for command droids here as well
 						if (psDroid->droidType == DROID_SENSOR)
 						{
 							if (selectedPlayer != psDroid->player)
@@ -2490,17 +2456,6 @@ static MOUSE_TARGET	itemUnderMouse(BASE_OBJECT **ppObjectUnderMouse)
 						         psDroid->droidType == DROID_CYBORG_CONSTRUCT)
 						{
 							return MT_CONSTRUCT;
-						}
-						else if (psDroid->droidType == DROID_COMMAND)
-						{
-							if (selectedPlayer != psDroid->player)
-							{
-								retVal = MT_CONSTRUCT; // Can't assign to allied units
-							}
-							else
-							{
-								retVal = MT_COMMAND;
-							}
 						}
 						else
 						{
@@ -2729,10 +2684,6 @@ static SELECTION_TYPE	establishSelection(UDWORD selectedPlayer)
 			selectionClass = SC_DROID_CONSTRUCT;
 			break;
 
-		case DROID_COMMAND:
-			selectionClass = SC_DROID_COMMAND;
-			break;
-
 		case DROID_REPAIR:
 		case DROID_CYBORG_REPAIR:
 			selectionClass = SC_DROID_REPAIR;
@@ -2848,7 +2799,6 @@ void clearSel()
 	}
 
 	setSelectedGroup(UBYTE_MAX);
-	setSelectedCommander(UBYTE_MAX);
 	intRefreshScreen();
 
 	triggerEventSelected();

@@ -1,20 +1,4 @@
 {
-    "R-Comp-CommandTurret01": {
-        "iconID": "IMAGE_RES_COMPUTERTECH",
-        "id": "R-Comp-CommandTurret01",
-        "msgName": "RES_C_CT1",
-        "name": "Command Turret",
-        "requiredResearch": [
-            "R-Struc-CommandRelay"
-        ],
-        "researchPoints": 1200,
-        "researchPower": 37,
-        "resultComponents": [
-            "CommandBrain01",
-            "CommandTurret1"
-        ],
-        "statID": "CommandBrain01"
-    },
     "R-Comp-SynapticLink": {
         "iconID": "IMAGE_RES_COMPUTERTECH",
         "id": "R-Comp-SynapticLink",
@@ -2080,9 +2064,6 @@
         ],
         "researchPoints": 1200,
         "researchPower": 37,
-        "resultStructures": [
-            "A0ComDroidControl"
-        ],
         "statID": "A0ComDroidControl"
     },
     "R-Struc-Factory-Cyborg": {

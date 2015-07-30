@@ -131,9 +131,6 @@ static void printWeaponInfo(const WEAPON_STATS *psStats)
 	case WSC_BOMB:
 		pWSC = "WSC_BOMB";
 		break;
-	case WSC_COMMAND:
-		pWSC = "WSC_COMMAND";
-		break;
 	case WSC_EMP:
 		pWSC = "WSC_EMP";
 		break;

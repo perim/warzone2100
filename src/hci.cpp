@@ -363,9 +363,6 @@ static bool intAddManufacture(STRUCTURE *psSelected);
 /* Add the research widgets to the widget screen */
 /* If psSelected != NULL it specifies which droid should be hilited */
 static bool intAddResearch(STRUCTURE *psSelected);
-/* Add the command droid widgets to the widget screen */
-/* If psSelected != NULL it specifies which droid should be hilited */
-static bool intAddCommand(DROID *psSelected);
 
 /* Start looking for a structure location */
 static void intStartStructPosition(BASE_STATS *psStats);
@@ -689,14 +686,12 @@ static void intDoScreenRefresh(void)
 
 		if ((intMode == INT_OBJECT ||
 		     intMode == INT_STAT ||
-		     intMode == INT_CMDORDER ||
 		     intMode == INT_ORDER ||
 		     intMode == INT_TRANSPORTER) &&
 		    widgGetFromID(psWScreen, IDOBJ_FORM) != NULL &&
 		    widgGetFromID(psWScreen, IDOBJ_FORM)->visible())
 		{
 			bool StatsWasUp = false;
-			bool OrderWasUp = false;
 
 			// If the stats form is up then remove it, but remember that it was up.
 			if ((intMode == INT_STAT) && widgGetFromID(psWScreen, IDSTAT_FORM) != NULL)
@@ -730,13 +725,6 @@ static void intDoScreenRefresh(void)
 
 			// see if there was a delivery point being positioned
 			psFlag = intFindSelectedDelivPoint();
-
-			// see if the commander order screen is up
-			if ((intMode == INT_CMDORDER) &&
-			    (widgGetFromID(psWScreen, IDORDER_FORM) != NULL))
-			{
-				OrderWasUp = true;
-			}
 
 			switch (objMode)
 			{
@@ -775,18 +763,6 @@ static void intDoScreenRefresh(void)
 			{
 				// need to restart the delivery point position
 				startDeliveryPosition(psFlag);
-			}
-
-			// make sure the commander order screen is in the right state
-			if ((intMode == INT_CMDORDER) &&
-			    !OrderWasUp &&
-			    (widgGetFromID(psWScreen, IDORDER_FORM) != NULL))
-			{
-				intRemoveOrderNoAnim();
-				if (statID)
-				{
-					widgSetButtonState(psWScreen, statID, 0);
-				}
 			}
 		}
 
@@ -886,18 +862,6 @@ void intResetScreen(bool NoAnim)
 		}
 		break;
 
-	case INT_CMDORDER:
-		if (NoAnim)
-		{
-			intRemoveOrderNoAnim();
-			intRemoveObjectNoAnim();
-		}
-		else
-		{
-			intRemoveOrder();
-			intRemoveObject();
-		}
-		break;
 	case INT_ORDER:
 		if (NoAnim)
 		{
@@ -1112,7 +1076,7 @@ INT_RETVAL intRunWidgets(void)
 	intDoScreenRefresh();
 
 	/* Update the object list if necessary */
-	if (intMode == INT_OBJECT || intMode == INT_STAT || intMode == INT_CMDORDER)
+	if (intMode == INT_OBJECT || intMode == INT_STAT)
 	{
 		// see if there is a dead object in the list
 		for (unsigned i = 0; i < apsObjectList.size(); ++i)
@@ -1288,7 +1252,6 @@ INT_RETVAL intRunWidgets(void)
 		case IDRET_COMMAND:
 			intResetScreen(false);
 			widgSetButtonState(psWScreen, IDRET_COMMAND, WBUT_CLICKLOCK);
-			intAddCommand(NULL);
 			break;
 
 		case IDRET_BUILD:
@@ -1394,7 +1357,6 @@ INT_RETVAL intRunWidgets(void)
 				intProcessEditStats(retID);
 				break;
 			case INT_STAT:
-			case INT_CMDORDER:
 			/* In stat mode ids get passed to processObject
 			* and then through to processStats
 			*/
@@ -1911,8 +1873,6 @@ static void intResetWindows(BASE_OBJECT *psObj)
 			intAddManufacture((STRUCTURE *)psObj);
 			break;
 		case IOBJ_COMMAND:
-
-			intAddCommand((DROID *)psObj);
 			break;
 		default:
 			break;
@@ -2345,7 +2305,6 @@ static void intProcessStats(UDWORD id)
 		if (psStruct)
 		{
 			// make sure that the factory isn't assigned to a commander
-			assignFactoryCommandDroid(psStruct, NULL);
 			psFlag = FindFactoryDelivery(psStruct);
 			if (psFlag)
 			{
@@ -2440,14 +2399,6 @@ void intConstructorSelected(DROID *psDroid)
 {
 	setWidgetsStatus(true);
 	intAddBuild(psDroid);
-	widgHide(psWScreen, IDOBJ_FORM);
-}
-
-// add the construction interface if a constructor droid is selected
-void intCommanderSelected(DROID *psDroid)
-{
-	setWidgetsStatus(true);
-	intAddCommand(psDroid);
 	widgHide(psWScreen, IDOBJ_FORM);
 }
 
@@ -3121,8 +3072,6 @@ static bool intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected, 
 				psSelected = (BASE_OBJECT *)intCheckForDroid(DROID_CYBORG_CONSTRUCT);
 			}
 			break;
-		case IOBJ_COMMAND:
-			psSelected = (BASE_OBJECT *)intCheckForDroid(DROID_COMMAND);
 			break;
 		default:
 			break;
@@ -3217,24 +3166,6 @@ static bool intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected, 
 	sLabInit.height = 16;
 	sLabInit.pText = "BUG! (a)";
 
-	W_LABINIT sLabInitCmdFac;
-	sLabInitCmdFac.id = IDOBJ_CMDFACSTART;
-	sLabInitCmdFac.style = WIDG_HIDDEN;
-	sLabInitCmdFac.x = OBJ_TEXTX;
-	sLabInitCmdFac.y = OBJ_T2TEXTY;
-	sLabInitCmdFac.width = 16;
-	sLabInitCmdFac.height = 16;
-	sLabInitCmdFac.pText = "BUG! (b)";
-
-	W_LABINIT sLabInitCmdFac2;
-	sLabInitCmdFac2.id = IDOBJ_CMDVTOLFACSTART;
-	sLabInitCmdFac2.style = WIDG_HIDDEN;
-	sLabInitCmdFac2.x = OBJ_TEXTX;
-	sLabInitCmdFac2.y = OBJ_T3TEXTY;
-	sLabInitCmdFac2.width = 16;
-	sLabInitCmdFac2.height = 16;
-	sLabInitCmdFac2.pText = "BUG! (c)";
-
 	W_LABINIT sLabIntObjText;
 	sLabIntObjText.id = IDOBJ_FACTORYSTART;
 	sLabIntObjText.style = WIDG_HIDDEN;
@@ -3243,15 +3174,6 @@ static bool intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected, 
 	sLabIntObjText.width = 16;
 	sLabIntObjText.height = 16;
 	sLabIntObjText.pText = "xxx/xxx - overrun";
-
-	W_LABINIT sLabInitCmdExp;
-	sLabInitCmdExp.id = IDOBJ_CMDEXPSTART;
-	sLabInitCmdExp.style = WIDG_HIDDEN;
-	sLabInitCmdExp.x = STAT_POWERBARX;
-	sLabInitCmdExp.y = STAT_POWERBARY;
-	sLabInitCmdExp.width = 16;
-	sLabInitCmdExp.height = 16;
-	sLabInitCmdExp.pText = "@@@@@ - overrun";
 
 	W_LABINIT sAllyResearch;
 	sAllyResearch.id = IDOBJ_ALLYRESEARCHSTART;
@@ -3390,31 +3312,6 @@ static bool intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected, 
 			}
 		}
 
-		// Add command droid bits
-		if ((psObj->type == OBJ_DROID) &&
-		    (((DROID *)psObj)->droidType == DROID_COMMAND))
-		{
-			// the group size label
-			sLabIntObjText.formID = nextObjButtonId;
-			sLabIntObjText.pCallback = intUpdateCommandSize;
-			sLabIntObjText.pUserData = psObj;
-			if (!widgAddLabel(psWScreen, &sLabIntObjText))
-			{
-				return false;
-			}
-			sLabIntObjText.id++;
-
-			// the experience stars
-			sLabInitCmdExp.formID = nextObjButtonId;
-			sLabInitCmdExp.pCallback = intUpdateCommandExp;
-			sLabInitCmdExp.pUserData = psObj;
-			if (!widgAddLabel(psWScreen, &sLabInitCmdExp))
-			{
-				return false;
-			}
-			sLabInitCmdExp.id++;
-		}
-
 		/* Now do the stats button */
 		psStats = objGetStatsFunc(psObj);
 
@@ -3423,42 +3320,16 @@ static bool intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected, 
 			statButton->setTip(getName(psStats));
 			statButton->setObjectAndStats(psObj, psStats);
 		}
-		else if ((psObj->type == OBJ_DROID) && (((DROID *)psObj)->droidType == DROID_COMMAND))
-		{
-			statButton->setObject(psObj);
-		}
 		else
 		{
 			statButton->setObject(nullptr);
 		}
 
-		// Add command droid bits
-		if ((psObj->type == OBJ_DROID) &&
-		    (((DROID *)psObj)->droidType == DROID_COMMAND))
-		{
-			// the assigned factories label
-			sLabInit.formID = nextStatButtonId;
-			sLabInit.pCallback = intUpdateCommandFact;
-			sLabInit.pUserData = psObj;
+		// Add a text label for the size of the production run.
+		sLabInit.formID = nextStatButtonId;
+		sLabInit.pCallback = intUpdateQuantity;
+		sLabInit.pUserData = psObj;
 
-			// the assigned cyborg factories label
-			sLabInitCmdFac.formID = nextStatButtonId;
-			sLabInitCmdFac.pCallback = intUpdateCommandFact;
-			sLabInitCmdFac.pUserData = psObj;
-			widgAddLabel(psWScreen, &sLabInitCmdFac);
-			// the assigned VTOL factories label
-			sLabInitCmdFac2.formID = nextStatButtonId;
-			sLabInitCmdFac2.pCallback = intUpdateCommandFact;
-			sLabInitCmdFac2.pUserData = psObj;
-			widgAddLabel(psWScreen, &sLabInitCmdFac2);
-		}
-		else
-		{
-			// Add a text label for the size of the production run.
-			sLabInit.formID = nextStatButtonId;
-			sLabInit.pCallback = intUpdateQuantity;
-			sLabInit.pUserData = psObj;
-		}
 		W_LABEL *label = widgAddLabel(psWScreen, &sLabInit);
 
 		// Add the progress bar.
@@ -3489,8 +3360,6 @@ static bool intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected, 
 
 		/* Set up the next button (Stats) */
 		sLabInit.id += 1;
-		sLabInitCmdFac.id += 1;
-		sLabInitCmdFac2.id += 1;
 
 		sBarInit.id += 1;
 		ASSERT_OR_RETURN(false, sBarInit.id < IDOBJ_PROGBAREND, "Too many progress bars");
@@ -3529,16 +3398,6 @@ static bool intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected, 
 			widgSetButtonState(psWScreen, statID, WBUT_CLICKLOCK);
 			intMode = INT_OBJECT;
 		}
-	}
-	else if (psSelected)
-	{
-		/* Note the object */
-		psObjSelected = psSelected;
-		objStatID = statID;
-		intAddOrder(psSelected);
-		widgSetButtonState(psWScreen, statID, WBUT_CLICKLOCK);
-
-		intMode = INT_CMDORDER;
 	}
 	else
 	{
@@ -4085,31 +3944,6 @@ static bool intAddStats(BASE_STATS **ppsStatsList, UDWORD numStats,
 	return true;
 }
 
-
-/* Select a command droid */
-static bool selectCommand(BASE_OBJECT *psObj)
-{
-	ASSERT_OR_RETURN(false, psObj && psObj->type == OBJ_DROID, "Invalid droid pointer");
-	DROID *psDroid = (DROID *)psObj;
-	if (psDroid->droidType == DROID_COMMAND && psDroid->died == 0)
-	{
-		return true;
-	}
-	return false;
-}
-
-/* Return the stats for a command droid */
-static BASE_STATS *getCommandStats(WZ_DECL_UNUSED BASE_OBJECT *psObj)
-{
-	return NULL;
-}
-
-/* Set the stats for a command droid */
-static bool setCommandStats(WZ_DECL_UNUSED BASE_OBJECT *psObj, WZ_DECL_UNUSED BASE_STATS *psStats)
-{
-	return true;
-}
-
 /* Select a construction droid */
 static bool selectConstruction(BASE_OBJECT *psObj)
 {
@@ -4400,26 +4234,6 @@ static bool intAddResearch(STRUCTURE *psSelected)
 	return intAddObjectWindow((BASE_OBJECT *)interfaceStructList(),
 	                          (BASE_OBJECT *)psSelected, true);
 }
-
-
-/* Add the command droid widgets to the widget screen */
-/* If psSelected != NULL it specifies which droid should be hilited */
-static bool intAddCommand(DROID *psSelected)
-{
-	ppsStatsList = NULL;//(BASE_STATS **)ppResearchList;
-
-	objSelectFunc = selectCommand;
-	objGetStatsFunc = getCommandStats;
-	objSetStatsFunc = setCommandStats;
-
-	/* Set the sub mode */
-	objMode = IOBJ_COMMAND;
-
-	/* Create the object screen with the required data */
-	return intAddObjectWindow((BASE_OBJECT *)apsDroidLists[selectedPlayer],
-	                          (BASE_OBJECT *)psSelected, true);
-}
-
 
 /*Deals with the RMB click for the stats screen */
 static void intStatsRMBPressed(UDWORD id)
@@ -4873,9 +4687,6 @@ void intCheckReticuleButtons(void)
 		case DROID_CONSTRUCT:
 		case DROID_CYBORG_CONSTRUCT:
 			ReticuleEnabled[RETBUT_BUILD].Enabled = true;
-			break;
-		case DROID_COMMAND:
-			ReticuleEnabled[RETBUT_COMMAND].Enabled = true;
 			break;
 		default:
 			break;

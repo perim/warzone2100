@@ -71,12 +71,6 @@
 #define IDOBJ_TABFORM		3500		// The object tab form for build/manufacture/research
 #define IDOBJ_FACTORYSTART	3600		// The first ID for factory number labels
 #define IDOBJ_FACTORYEND	3699		// The last ID for factory number labels
-#define IDOBJ_CMDEXPSTART	3700		// The first ID for factory number labels
-#define IDOBJ_CMDEXPEND		3749		// The last ID for factory number labels
-#define IDOBJ_CMDFACSTART	3750		// The first ID for factory number labels
-#define IDOBJ_CMDFACEND		3799		// The last ID for factory number labels
-#define IDOBJ_CMDVTOLFACSTART	3800	// The first ID for VTOL factory number labels
-#define IDOBJ_CMDVTOLFACEND		3849	// The last ID for VTOL factory number labels
 #define IDOBJ_ALLYRESEARCHSTART 2637000         // The first ID for ally research labels
 #define IDOBJ_ALLYRESEARCHEND   2637099         // The last ID for ally research labels
 
@@ -217,7 +211,6 @@ enum INTMODE
 	INT_EDITSTAT,	// Stat screen up for placing objects
 	INT_OBJECT,		// Object screen
 	INT_STAT,		// Object screen with stat screen
-	INT_CMDORDER,	// Object screen with command droids and orders screen
 	INT_DESIGN,		// Design screen
 	INT_INTELMAP,	// Intelligence Map
 	INT_ORDER,

@@ -57,7 +57,5 @@ unsigned int selNumSelected(unsigned int player);
 void selNextUnassignedUnit();
 void selNextSpecifiedBuilding(STRUCTURE_TYPE structType);
 void selNextSpecifiedUnit(DROID_TYPE unitType);
-// select the n'th command droid
-void selCommander(int n);
 
 #endif // __INCLUDED_SRC_SELECTION_H__

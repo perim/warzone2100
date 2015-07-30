@@ -587,7 +587,6 @@ QScriptValue convFeature(FEATURE *psFeature, QScriptEngine *engine)
 //;;   \item[DORDER_EMBARK] Order a droid to embark on a transport.
 //;;   \item[DORDER_DISEMBARK] Order a transport to disembark its units at the given position.
 //;;   \item[DORDER_FIRESUPPORT] Order a droid to fire at whatever the target sensor is targeting. (3.2+ only)
-//;;   \item[DORDER_COMMANDERSUPPORT] Assign the droid to a commander. (3.2+ only)
 //;;   \item[DORDER_STOP] Order a droid to stop whatever it is doing. (3.2+ only)
 //;;   \item[DORDER_RTR] Order a droid to return for repairs. (3.2+ only)
 //;;   \item[DORDER_RTB] Order a droid to return to base. (3.2+ only)
@@ -611,7 +610,6 @@ QScriptValue convFeature(FEATURE *psFeature, QScriptEngine *engine)
 //;;   \item[DROID_CYBORG] Cyborgs with weapons.
 //;;   \item[DROID_TRANSPORTER] Cyborg transporter.
 //;;   \item[DROID_SUPERTRANSPORTER] Droid transporter.
-//;;   \item[DROID_COMMAND] Commanders.
 //;;  \end{description}
 //;; \item[group] The group this droid is member of. This is a numerical ID. If not a member of any group, will be set to \emph{null}.
 //;; \item[armed] The percentage of weapon capability that is fully armed. Will be \emph{null} for droids other than VTOLs.
@@ -773,7 +771,6 @@ QScriptValue convObj(BASE_OBJECT *psObj, QScriptEngine *engine)
 //;; \item[droidType] The type of droid that would be created.
 //;; \item[body] The name of the body type.
 //;; \item[propulsion] The name of the propulsion type.
-//;; \item[brain] The name of the brain type.
 //;; \item[repair] The name of the repair type.
 //;; \item[ecm] The name of the ECM (electronic counter-measure) type.
 //;; \item[construct] The name of the construction type.
@@ -792,7 +789,6 @@ QScriptValue convTemplate(DROID_TEMPLATE *psTempl, QScriptEngine *engine)
 	value.setProperty("droidType", psTempl->droidType, QScriptValue::ReadOnly);
 	value.setProperty("body", (asBodyStats + psTempl->asParts[COMP_BODY])->id, QScriptValue::ReadOnly);
 	value.setProperty("propulsion", (asPropulsionStats + psTempl->asParts[COMP_PROPULSION])->id, QScriptValue::ReadOnly);
-	value.setProperty("brain", (asBrainStats + psTempl->asParts[COMP_BRAIN])->id, QScriptValue::ReadOnly);
 	value.setProperty("repair", (asRepairStats + psTempl->asParts[COMP_REPAIRUNIT])->id, QScriptValue::ReadOnly);
 	value.setProperty("ecm", (asECMStats + psTempl->asParts[COMP_ECM])->id, QScriptValue::ReadOnly);
 	value.setProperty("sensor", (asSensorStats + psTempl->asParts[COMP_SENSOR])->id, QScriptValue::ReadOnly);
@@ -1735,10 +1731,6 @@ static DROID_TEMPLATE *makeTemplate(int player, const QString &templName, QScrip
 	}
 	else
 	{
-		if (psComp->compType == COMP_BRAIN)
-		{
-			psTemplate->numWeaps = 1; // hack, necessary to pass intValidTemplate
-		}
 		result = get_first_available_component(player, SIZE_NUM, context->argument(firstTurret), psComp->compType, strict);
 		if (result < 0)
 		{
@@ -3244,8 +3236,7 @@ static QScriptValue js_donateObject(QScriptContext *context, QScriptEngine *engi
 		// Check unit limits.
 		DROID *psDroid = IdToDroid(id, player);
 		SCRIPT_ASSERT(context, psDroid, "No such droid id %u belonging to player %u", id, player);
-		if ((psDroid->droidType == DROID_COMMAND && getNumCommandDroids(to) + 1 > getMaxCommanders(to))
-		    || (psDroid->droidType == DROID_CONSTRUCT && getNumConstructorDroids(to) + 1 > getMaxConstructors(to))
+		if ((psDroid->droidType == DROID_CONSTRUCT && getNumConstructorDroids(to) + 1 > getMaxConstructors(to))
 		    || getNumDroids(to) + 1 > getMaxDroids(to))
 		{
 			return QScriptValue(false);
@@ -3354,7 +3345,7 @@ static QScriptValue js_countStruct(QScriptContext *context, QScriptEngine *engin
 
 //-- \subsection{countDroid([droid type[, player]])}
 //-- Count the number of droids that a given player has. Droid type must be either
-//-- DROID_ANY, DROID_COMMAND or DROID_CONSTRUCT.
+//-- DROID_ANY or DROID_CONSTRUCT.
 //-- The player parameter can be a specific player, ALL_PLAYERS, ALLIES or ENEMIES.
 static QScriptValue js_countDroid(QScriptContext *context, QScriptEngine *engine)
 {
@@ -3384,10 +3375,6 @@ static QScriptValue js_countDroid(QScriptContext *context, QScriptEngine *engine
 			else if (type == DROID_CONSTRUCT)
 			{
 				quantity += getNumConstructorDroids(i);
-			}
-			else if (type == DROID_COMMAND)
-			{
-				quantity += getNumCommandDroids(i);
 			}
 		}
 	}
@@ -3764,11 +3751,7 @@ static QScriptValue js_getDroidLimit(QScriptContext *context, QScriptEngine *eng
 	if (context->argumentCount() > 1)
 	{
 		DROID_TYPE type = (DROID_TYPE)context->argument(1).toInt32();
-		if (type == DROID_COMMAND)
-		{
-			return QScriptValue(getMaxCommanders(context->argument(0).toInt32()));
-		}
-		else if (type == DROID_CONSTRUCT)
+		if (type == DROID_CONSTRUCT)
 		{
 			return QScriptValue(getMaxConstructors(context->argument(0).toInt32()));
 		}
@@ -3802,8 +3785,7 @@ static QScriptValue js_setExperienceModifier(QScriptContext *context, QScriptEng
 //-- \subsection{setDroidLimit(player, value[, droid type])}
 //-- Set the maximum number of droids that this player can produce. If a third
 //-- parameter is added, this is the droid type to limit. It can be DROID_ANY
-//-- for droids in general, DROID_CONSTRUCT for constructors, or DROID_COMMAND
-//-- for commanders. (3.2+ only)
+//-- for droids in general, DROID_CONSTRUCT for constructors (3.2+ only)
 static QScriptValue js_setDroidLimit(QScriptContext *context, QScriptEngine *)
 {
 	int player = context->argument(0).toInt32();
@@ -3818,25 +3800,11 @@ static QScriptValue js_setDroidLimit(QScriptContext *context, QScriptEngine *)
 	case DROID_CONSTRUCT:
 		setMaxConstructors(player, value);
 		break;
-	case DROID_COMMAND:
-		setMaxCommanders(player, value);
-		break;
 	default:
 	case DROID_ANY:
 		setMaxDroids(player, value);
 		break;
 	}
-	return QScriptValue();
-}
-
-//-- \subsection{setCommanderLimit(player, value)}
-//-- Set the maximum number of commanders that this player can produce.
-//-- THIS FUNCTION IS DEPRECATED AND WILL BE REMOVED! (3.2+ only)
-static QScriptValue js_setCommanderLimit(QScriptContext *context, QScriptEngine *)
-{
-	int player = context->argument(0).toInt32();
-	int value = context->argument(1).toInt32();
-	setMaxCommanders(player, value);
 	return QScriptValue();
 }
 
@@ -4920,7 +4888,6 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 	engine->globalObject().setProperty("getDroidLimit", engine->newFunction(js_getDroidLimit));
 	engine->globalObject().setProperty("getExperienceModifier", engine->newFunction(js_getExperienceModifier));
 	engine->globalObject().setProperty("setDroidLimit", engine->newFunction(js_setDroidLimit));
-	engine->globalObject().setProperty("setCommanderLimit", engine->newFunction(js_setCommanderLimit));
 	engine->globalObject().setProperty("setConstructorLimit", engine->newFunction(js_setConstructorLimit));
 	engine->globalObject().setProperty("setExperienceModifier", engine->newFunction(js_setExperienceModifier));
 	engine->globalObject().setProperty("getWeaponInfo", engine->newFunction(js_getWeaponInfo));
@@ -4993,7 +4960,6 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 	engine->globalObject().setProperty("DORDER_EMBARK", DORDER_EMBARK, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_DISEMBARK", DORDER_DISEMBARK, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_FIRESUPPORT", DORDER_FIRESUPPORT, QScriptValue::ReadOnly | QScriptValue::Undeletable);
-	engine->globalObject().setProperty("DORDER_COMMANDERSUPPORT", DORDER_COMMANDERSUPPORT, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_HOLD", DORDER_HOLD, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_RTR", DORDER_RTR, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_RTB", DORDER_RTB, QScriptValue::ReadOnly | QScriptValue::Undeletable);
@@ -5025,7 +4991,6 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 	engine->globalObject().setProperty("DROID_CYBORG", DROID_CYBORG, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DROID_TRANSPORTER", DROID_TRANSPORTER, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DROID_SUPERTRANSPORTER", DROID_SUPERTRANSPORTER, QScriptValue::ReadOnly | QScriptValue::Undeletable);
-	engine->globalObject().setProperty("DROID_COMMAND", DROID_COMMAND, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DROID_ANY", DROID_ANY, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("OIL_RESOURCE", FEAT_OIL_RESOURCE, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("OIL_DRUM", FEAT_OIL_DRUM, QScriptValue::ReadOnly | QScriptValue::Undeletable);

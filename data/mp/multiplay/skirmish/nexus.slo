@@ -1369,7 +1369,7 @@ event droidBuiltAssign(droidBuiltTr)
 			}
 		}
 	}
-	else if((droid.droidType != DROID_TRANSPORTER) and (droid.droidType != DROID_COMMAND))
+	else if (droid.droidType != DROID_TRANSPORTER)
 	{
 
 		if((droid.droidType == DROID_REPAIR)
@@ -2047,8 +2047,7 @@ event takeover(takeoverTr)
 		{
 			groupAddDroid( buildGroup, droid );
 		}
-		else if (droid.droidType != DROID_TRANSPORTER
-		      && droid.droidType != DROID_COMMAND)
+		else if (droid.droidType != DROID_TRANSPORTER)
 		{
 			groupAddDroid( attackGroup, droid );
 		}

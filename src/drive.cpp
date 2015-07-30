@@ -532,17 +532,6 @@ static void driveMoveFollower(DROID *psDroid)
 }
 
 
-static void driveMoveCommandFollowers(DROID *psDroid)
-{
-	DROID_GROUP *psGroup = psDroid->psGroup;
-
-	for (DROID *psCurr = psGroup->psList; psCurr != NULL; psCurr = psCurr->psGrpNext)
-	{
-		driveMoveFollower(psCurr);
-	}
-}
-
-
 // Call once per frame.
 //
 void driveUpdate(void)
@@ -588,13 +577,6 @@ void driveUpdate(void)
 		// Is the driven droid under user control?
 		if (psDrivenDroid->sMove.Status == MOVEDRIVE)
 		{
-			// Is it a command droid
-			if ((psDrivenDroid->droidType == DROID_COMMAND) &&
-			    (psDrivenDroid->psGroup != NULL))
-			{
-				driveMoveCommandFollowers(psDrivenDroid);
-			}
-
 			for (psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
 			{
 				psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION];

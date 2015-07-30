@@ -379,8 +379,6 @@ static inline void releaseAllObjectsInList(OBJECT *list[])
 /* add the droid to the Droid Lists */
 void addDroid(DROID *psDroidToAdd, DROID *pList[MAX_PLAYERS])
 {
-	DROID_GROUP	*psGroup;
-
 	addObjectToList(pList, psDroidToAdd, psDroidToAdd->player);
 
 	/* Whenever a droid gets added to a list other than the current list
@@ -392,13 +390,6 @@ void addDroid(DROID *psDroidToAdd, DROID *pList[MAX_PLAYERS])
 		if (psDroidToAdd->droidType == DROID_SENSOR)
 		{
 			addObjectToFuncList(apsSensorList, (BASE_OBJECT *)psDroidToAdd, 0);
-		}
-
-		// commanders have to get their group back if not already loaded
-		if (psDroidToAdd->droidType == DROID_COMMAND && !psDroidToAdd->psGroup)
-		{
-			psGroup = grpCreate();
-			psGroup->add(psDroidToAdd);
 		}
 	}
 	else if (pList[psDroidToAdd->player] == mission.apsDroidLists[psDroidToAdd->player])
@@ -526,12 +517,6 @@ void killStruct(STRUCTURE *psBuilding)
 		if (StructIsFactory(psBuilding))
 		{
 			FACTORY *psFactory = &psBuilding->pFunctionality->factory;
-
-			// remove any commander from the factory
-			if (psFactory->psCommander != NULL)
-			{
-				assignFactoryCommandDroid(psBuilding, NULL);
-			}
 
 			// remove any assembly points
 			if (psFactory->psAssemblyPoint != NULL)

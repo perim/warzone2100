@@ -942,12 +942,6 @@ void transporterRemoveDroid(DROID *psTransport, DROID *psDroid, QUEUE_MODE mode)
 	//reset droid orders
 	orderDroid(psDroid, DORDER_STOP, ModeImmediate);
 	psDroid->cluster = 0;
-	// check if it is a commander
-	if (psDroid->droidType == DROID_COMMAND)
-	{
-		DROID_GROUP *psGroup = grpCreate();
-		psGroup->add(psDroid);
-	}
 	psDroid->selected = true;
 
 	if (calcRemainingCapacity(psTransport))

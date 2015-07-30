@@ -68,8 +68,7 @@ enum _groupids
 	GROUPID_POSY,		// average y of a group
 	GROUPID_MEMBERS,	// number of units in a group
 	GROUPID_HEALTH,		// average health of a group
-	GROUPID_TYPE,		// group type, one of: GT_NORMAL, GT_COMMAND or GT_TRANSPORTER
-	GROUPID_CMD,		// commander of the group if group type == GT_COMMAND
+	GROUPID_TYPE,		// group type, one of: GT_NORMAL or GT_TRANSPORTER
 };
 
 // Get values from a base object

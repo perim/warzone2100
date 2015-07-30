@@ -20,7 +20,7 @@
 /**
  * @file stats.c
  *
- * Store common stats for weapons, components, brains, etc.
+ * Store common stats for weapons, components, etc.
  *
  */
 #include <string.h>
@@ -43,7 +43,6 @@
 
 /* The stores for the different stats */
 BODY_STATS		*asBodyStats;
-BRAIN_STATS		*asBrainStats;
 PROPULSION_STATS	*asPropulsionStats;
 SENSOR_STATS		*asSensorStats;
 ECM_STATS		*asECMStats;
@@ -59,7 +58,6 @@ WEAPON_MODIFIER		asWeaponModifierBody[WE_NUMEFFECTS][SIZE_NUM];
 
 /* The number of different stats stored */
 UDWORD		numBodyStats;
-UDWORD		numBrainStats;
 UDWORD		numPropulsionStats;
 UDWORD		numSensorStats;
 UDWORD		numECMStats;
@@ -158,7 +156,6 @@ void statsInitVars(void)
 {
 	/* The number of different stats stored */
 	numBodyStats = 0;
-	numBrainStats = 0;
 	numPropulsionStats = 0;
 	numSensorStats = 0;
 	numECMStats = 0;
@@ -179,7 +176,6 @@ bool statsShutDown(void)
 	lookupStatPtr.clear();
 
 	STATS_DEALLOC(asWeaponStats, numWeaponStats);
-	STATS_DEALLOC(asBrainStats, numBrainStats);
 	STATS_DEALLOC(asPropulsionStats, numPropulsionStats);
 	STATS_DEALLOC(asRepairStats, numRepairStats);
 	STATS_DEALLOC(asConstructStats, numConstructStats);
@@ -221,11 +217,6 @@ bool statsAllocWeapons(UDWORD	numStats)
 bool statsAllocBody(UDWORD	numStats)
 {
 	ALLOC_STATS(numStats, asBodyStats, numBodyStats, BODY_STATS);
-}
-/* Allocate Brain Stats */
-bool statsAllocBrain(UDWORD	numStats)
-{
-	ALLOC_STATS(numStats, asBrainStats, numBrainStats, BRAIN_STATS);
 }
 /* Allocate Propulsion Stats */
 bool statsAllocPropulsion(UDWORD	numStats)
@@ -393,7 +384,7 @@ bool loadWeaponStats(const char *pFileName)
 		}
 
 		// set max extra weapon range on misses, make this modifiable one day by mod makers
-		if (psStats->weaponSubClass == WSC_MGUN || psStats->weaponSubClass == WSC_COMMAND)
+		if (psStats->weaponSubClass == WSC_MGUN)
 		{
 			psStats->distanceExtensionFactor = 120;
 		}
@@ -652,44 +643,6 @@ bool loadBodyStats(const char *pFileName)
 
 	return true;
 }
-
-/*Load the Brain stats from the file exported from Access*/
-bool loadBrainStats(const char *pFileName)
-{
-	WzConfig ini(pFileName, WzConfig::ReadOnlyAndRequired);
-	QStringList list = ini.childGroups();
-	statsAllocBrain(list.size());
-	// Hack to make sure ZNULLBRAIN is always first in list
-	int nullbrain = list.indexOf("ZNULLBRAIN");
-	ASSERT_OR_RETURN(false, nullbrain >= 0, "ZNULLBRAIN is mandatory");
-	list.swap(nullbrain, 0);
-	for (int i = 0; i < list.size(); ++i)
-	{
-		BRAIN_STATS *psStats = &asBrainStats[i];
-
-		ini.beginGroup(list[i]);
-		loadCompStats(ini, psStats, i);
-		psStats->compType = COMP_BRAIN;
-
-		psStats->weight = ini.value("weight", 0).toInt();
-		psStats->maxDroids = ini.value("maxDroids").toInt();
-		psStats->maxDroidsMult = ini.value("maxDroidsMult").toInt();
-		psStats->ref = REF_BRAIN_START + i;
-
-		// check weapon attached
-		psStats->psWeaponStat = NULL;
-		if (ini.contains("turret"))
-		{
-			int weapon = getCompFromName(COMP_WEAPON, ini.value("turret").toString());
-			ASSERT_OR_RETURN(false, weapon >= 0, "Unable to find weapon for brain %s", getName(psStats));
-			psStats->psWeaponStat = asWeaponStats + weapon;
-		}
-		psStats->designable = ini.value("designable", false).toBool();
-		ini.endGroup();
-	}
-	return true;
-}
-
 
 /*returns the propulsion type based on the string name passed in */
 bool getPropulsionType(const char *typeName, PROPULSION_TYPE *type)
@@ -1289,11 +1242,6 @@ UDWORD statType(UDWORD ref)
 	{
 		return COMP_BODY;
 	}
-	if (ref >= REF_BRAIN_START && ref < REF_BRAIN_START +
-	    REF_RANGE)
-	{
-		return COMP_BRAIN;
-	}
 	if (ref >= REF_PROPULSION_START && ref <
 	    REF_PROPULSION_START + REF_RANGE)
 	{
@@ -1339,11 +1287,6 @@ UDWORD statRefStart(UDWORD stat)
 	case COMP_BODY:
 		{
 			start = REF_BODY_START;
-			break;
-		}
-	case COMP_BRAIN:
-		{
-			start = REF_BRAIN_START;
 			break;
 		}
 	case COMP_PROPULSION:
@@ -1506,10 +1449,6 @@ bool getWeaponSubClass(const char *subClass, WEAPON_SUBCLASS *wclass)
 	{
 		*wclass = WSC_BOMB;
 	}
-	else if (strcmp(subClass, "COMMAND") == 0)
-	{
-		*wclass = WSC_COMMAND;
-	}
 	else if (strcmp(subClass, "EMP") == 0)
 	{
 		*wclass = WSC_EMP;
@@ -1543,7 +1482,6 @@ const char *getWeaponSubClass(WEAPON_SUBCLASS wclass)
 	case WSC_SLOWROCKET: return "SLOW ROCKET";
 	case WSC_LAS_SAT: return "LAS_SAT";
 	case WSC_BOMB: return "BOMB";
-	case WSC_COMMAND: return "COMMAND";
 	case WSC_EMP: return "EMP";
 	case WSC_NUM_WEAPON_SUBCLASSES: break;
 	}
@@ -2054,7 +1992,7 @@ SENSOR_STATS *objActiveRadar(const BASE_OBJECT *psObj)
 	switch (psObj->type)
 	{
 	case OBJ_DROID:
-		if (((DROID *)psObj)->droidType != DROID_SENSOR && ((DROID *)psObj)->droidType != DROID_COMMAND)
+		if (((DROID *)psObj)->droidType != DROID_SENSOR)
 		{
 			return NULL;
 		}

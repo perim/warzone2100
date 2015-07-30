@@ -419,17 +419,6 @@
             "Cannon375mmMk1"
         ]
     },
-    "Cobra-Trk-Com": {
-        "body": "Body5REC",
-        "brain": "CommandBrain01",
-        "id": "Cobra-Trk-Com",
-        "name": "Command Turret Cobra Tracks",
-        "propulsion": "tracked01",
-        "type": "DROID",
-        "weapons": [
-            "CommandTurret1"
-        ]
-    },
     "CobraBBTracks": {
         "body": "Body5REC",
         "id": "CobraBBTracks",
@@ -438,17 +427,6 @@
         "type": "DROID",
         "weapons": [
             "Rocket-BB"
-        ]
-    },
-    "CobraComHalftrack": {
-        "body": "Body5REC",
-        "brain": "CommandBrain01",
-        "id": "CobraComHalftrack",
-        "name": "Command Turret Cobra Half-tracks",
-        "propulsion": "HalfTrack",
-        "type": "DROID",
-        "weapons": [
-            "CommandTurret1"
         ]
     },
     "CobraFlameTracks": {
@@ -1016,17 +994,6 @@
             "Cyb-Wpn-Rail1"
         ]
     },
-    "Mantis-Trk-Com": {
-        "body": "Body12SUP",
-        "brain": "CommandBrain01",
-        "id": "Mantis-Trk-Com",
-        "name": "Command Turret Mantis Tracks",
-        "propulsion": "tracked01",
-        "type": "DROID",
-        "weapons": [
-            "CommandTurret1"
-        ]
-    },
     "MantisBBTracks": {
         "body": "Body12SUP",
         "id": "MantisBBTracks",
@@ -1140,17 +1107,6 @@
         "name": "Cobra Truck",
         "propulsion": "tracked01",
         "type": "DROID"
-    },
-    "P0PythonComTracks": {
-        "body": "Body11ABT",
-        "brain": "CommandBrain01",
-        "id": "P0PythonComTracks",
-        "name": "Command Turret Python Tracks",
-        "propulsion": "HalfTrack",
-        "type": "DROID",
-        "weapons": [
-            "CommandTurret1"
-        ]
     },
     "P0PythonHvyCnTrks": {
         "body": "Body11ABT",
@@ -1268,17 +1224,6 @@
         "type": "DROID",
         "weapons": [
             "MG4ROTARYMk1"
-        ]
-    },
-    "PythonComTracks": {
-        "body": "Body11ABT",
-        "brain": "CommandBrain01",
-        "id": "PythonComTracks",
-        "name": "Command Turret Python Tracks",
-        "propulsion": "tracked01",
-        "type": "DROID",
-        "weapons": [
-            "CommandTurret1"
         ]
     },
     "PythonGaussTracks": {
@@ -2217,17 +2162,6 @@
             "Missile-A-T"
         ]
     },
-    "Scorp-Trk-Com": {
-        "body": "Body8MBT",
-        "brain": "CommandBrain01",
-        "id": "Scorp-Trk-Com",
-        "name": "Command Turret Scorpion Tracks",
-        "propulsion": "tracked01",
-        "type": "DROID",
-        "weapons": [
-            "CommandTurret1"
-        ]
-    },
     "ScorpBBTracks": {
         "body": "Body8MBT",
         "id": "ScorpBBTracks",
@@ -2476,17 +2410,6 @@
         "type": "DROID",
         "weapons": [
             "Rocket-VTOL-LtA-T"
-        ]
-    },
-    "Viper-Trk-Com": {
-        "body": "Body1REC",
-        "brain": "CommandBrain01",
-        "id": "Viper-Trk-Com",
-        "name": "Command Turret Viper Tracks",
-        "propulsion": "tracked01",
-        "type": "DROID",
-        "weapons": [
-            "CommandTurret1"
         ]
     },
     "ViperBBWheels": {
