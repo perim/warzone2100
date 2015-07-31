@@ -78,17 +78,12 @@
 
 #include "keymap.h"
 #include "loop.h"
-#include "lib/script/script.h"
-#include "scripttabs.h"
-#include "scriptextern.h"
 #include "mission.h"
 #include "mapgrid.h"
 #include "order.h"
 #include "drive.h"
 #include "selection.h"
 #include "difficulty.h"
-#include "scriptcb.h"		/* for console callback */
-#include "scriptfuncs.h"
 #include "clparse.h"
 #include "research.h"
 #include "template.h"
@@ -418,10 +413,6 @@ void	kf_CloneSelected(void)
 				if (psNewDroid)
 				{
 					addDroid(psNewDroid, apsDroidLists);
-					psScrCBNewDroid = psNewDroid;
-					psScrCBNewDroidFact = NULL;
-					eventFireCallbackTrigger((TRIGGER_TYPE)CALL_NEWDROID);	// notify scripts so it will get assigned jobs
-					psScrCBNewDroid = NULL;
 					triggerEventDroidBuilt(psNewDroid, NULL);
 				}
 				else
@@ -449,20 +440,14 @@ void	kf_BuildInfo(void)
 // --------------------------------------------------------------------------
 void	kf_ToggleConsoleDrop(void)
 {
-	if (!bInTutorial)
-	{
-		setHistoryMode(false);
-		toggleConsoleDrop();
-	}
+	setHistoryMode(false);
+	toggleConsoleDrop();
 }
 
 void kf_ToggleTeamChat(void)
 {
-	if (!bInTutorial)
-	{
-		setHistoryMode(true);
-		toggleConsoleDrop();
-	}
+	setHistoryMode(true);
+	toggleConsoleDrop();
 }
 // --------------------------------------------------------------------------
 void	kf_SetKillerLevel(void)
@@ -1215,43 +1200,6 @@ void	kf_addInGameOptions(void)
 	{
 		intAddInGameOptions();
 	}
-}
-
-// --------------------------------------------------------------------------
-/* Tell the scripts to start a mission*/
-void	kf_AddMissionOffWorld(void)
-{
-#ifndef DEBUG
-	// Bail out if we're running a _true_ multiplayer game
-	if (runningMultiplayer())
-	{
-		noMPCheatMsg();
-		return;
-	}
-#endif
-
-	eventFireCallbackTrigger((TRIGGER_TYPE)CALL_MISSION_START);
-}
-
-// --------------------------------------------------------------------------
-/* Tell the scripts to end a mission*/
-void	kf_EndMissionOffWorld(void)
-{
-	const char *cmsg;
-
-#ifndef DEBUG
-	// Bail out if we're running a _true_ multiplayer game
-	if (runningMultiplayer())
-	{
-		noMPCheatMsg();
-		return;
-	}
-#endif
-
-	sasprintf((char **)&cmsg, _("Warning!  This cheat can cause dire problems later on! [%s]"), _("Ending Mission."));
-	sendTextMessage(cmsg, true);
-
-	eventFireCallbackTrigger((TRIGGER_TYPE)CALL_MISSION_END);
 }
 
 // --------------------------------------------------------------------------
@@ -2568,12 +2516,9 @@ const unsigned nb_available_speeds = ARRAY_SIZE(available_speed);
 static void tryChangeSpeed(Rational newMod, Rational oldMod)
 {
 	// Bail out if we're running a _true_ multiplayer game or are playing a tutorial
-	if ((runningMultiplayer() && !getDebugMappingStatus()) || bInTutorial)
+	if ((runningMultiplayer() && !getDebugMappingStatus()))
 	{
-		if (!bInTutorial)
-		{
-			addConsoleMessage(_("Sorry, but game speed cannot be changed in multiplayer."), DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
-		}
+		addConsoleMessage(_("Sorry, but game speed cannot be changed in multiplayer."), DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
 		return;
 	}
 
@@ -2652,12 +2597,9 @@ void kf_SlowDown(void)
 void kf_NormalSpeed(void)
 {
 	// Bail out if we're running a _true_ multiplayer game or are playing a tutorial
-	if (runningMultiplayer() || bInTutorial)
+	if (runningMultiplayer())
 	{
-		if (!bInTutorial)
-		{
-			noMPCheatMsg();
-		}
+		noMPCheatMsg();
 		return;
 	}
 

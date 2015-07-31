@@ -40,7 +40,6 @@
 #include "lib/ivis_opengl/piestate.h"
 // FIXME Direct iVis implementation include!
 #include "lib/ivis_opengl/screen.h"
-#include "lib/script/script.h"
 #include "lib/netplay/netplay.h"
 
 #include "action.h"
@@ -74,9 +73,6 @@
 #include "multigifts.h"
 #include "radar.h"
 #include "research.h"
-#include "scriptcb.h"
-#include "scriptextern.h"
-#include "scripttabs.h"
 #include "transporter.h"
 #include "warcam.h"
 #include "main.h"
@@ -584,16 +580,13 @@ bool intInitialise(void)
 	asJumpPos.clear();
 
 	/* make demolish stat always available */
-	if (!bInTutorial)
+	for (int comp = 0; comp < numStructureStats; comp++)
 	{
-		for (int comp = 0; comp < numStructureStats; comp++)
+		if (asStructureStats[comp].type == REF_DEMOLISH)
 		{
-			if (asStructureStats[comp].type == REF_DEMOLISH)
+			for (int inc = 0; inc < MAX_PLAYERS; inc++)
 			{
-				for (int inc = 0; inc < MAX_PLAYERS; inc++)
-				{
-					apStructTypeLists[inc][comp] = AVAILABLE;
-				}
+				apStructTypeLists[inc][comp] = AVAILABLE;
 			}
 		}
 	}
@@ -898,10 +891,6 @@ void intResetScreen(bool NoAnim)
 	case INT_DESIGN:
 		intRemoveDesign();
 		intHidePowerBar();
-		if (bInTutorial)
-		{
-			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DESIGN_QUIT);
-		}
 		break;
 	case INT_INTELMAP:
 		if (NoAnim)
@@ -1195,10 +1184,6 @@ INT_RETVAL intRunWidgets(void)
 	}
 
 	intLastWidget = retIDs.empty() ? 0 : retIDs.back();
-	if (bInTutorial && !retIDs.empty())
-	{
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_BUTTON_PRESSED);
-	}
 
 	/* Extra code for the power bars to deal with the shadow */
 	if (powerBarUp)
@@ -1326,9 +1311,6 @@ INT_RETVAL intRunWidgets(void)
 				int mode = (int) widgGetUserData2(psWScreen, CHAT_EDITBOX);
 				if (strlen(msg2))
 				{
-					sstrcpy(ConsoleMsg, msg2);
-					ConsolePlayer = selectedPlayer;
-					eventFireCallbackTrigger((TRIGGER_TYPE)CALL_CONSOLE);
 					attemptCheatCode(msg2);		// parse the message
 					if (mode == CHAT_TEAM)
 					{
@@ -1589,11 +1571,6 @@ INT_RETVAL intRunWidgets(void)
 							// Send a text message to all players, notifying them of
 							// the fact that we're cheating ourselves a new droid.
 							sasprintf((char **)&msg, _("Player %u is cheating (debug menu) him/herself a new droid: %s."), selectedPlayer, psDroid->aName);
-
-							psScrCBNewDroid = psDroid;
-							psScrCBNewDroidFact = NULL;
-							eventFireCallbackTrigger((TRIGGER_TYPE)CALL_NEWDROID);	// notify scripts so it will get assigned jobs
-							psScrCBNewDroid = NULL;
 
 							triggerEventDroidBuilt(psDroid, NULL);
 						}
@@ -2185,13 +2162,6 @@ static void intProcessStats(UDWORD id)
 						}
 					}
 
-					// call the tutorial callback if necessary
-					if (bInTutorial && objMode == IOBJ_BUILD)
-					{
-
-						eventFireCallbackTrigger((TRIGGER_TYPE)CALL_BUILDGRID);
-					}
-
 					// Set the object stats
 					compIndex = id - IDSTAT_START;
 					ASSERT_OR_RETURN(, compIndex < numStatsListEntries, "Invalid range referenced for numStatsListEntries, %d > %d", compIndex, numStatsListEntries);
@@ -2425,7 +2395,7 @@ static void intStopStructPosition(void)
 /* Display the widgets for the in game interface */
 void intDisplayWidgets(void)
 {
-	if (ReticuleUp && !bInTutorial)
+	if (ReticuleUp)
 	{
 		intCheckReticuleButtons();
 	}
@@ -2439,7 +2409,7 @@ void intDisplayWidgets(void)
 			screen_RestartBackDrop();
 
 			// We need to add the console messages to the intelmap for the tutorial so that it can display messages
-			if ((intMode == INT_DESIGN) || (bInTutorial && intMode == INT_INTELMAP))
+			if (intMode == INT_DESIGN)
 			{
 				displayConsoleMessages();
 			}
@@ -3409,12 +3379,6 @@ static bool intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected, 
 		intShowPowerBar();
 	}
 
-	if (bInTutorial)
-	{
-		debug(LOG_NEVER, "Go with object open callback!");
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_OBJECTOPEN);
-	}
-
 	return true;
 }
 
@@ -3454,12 +3418,6 @@ void intRemoveObject(void)
 	}
 
 	intHidePowerBar();
-
-	if (bInTutorial)
-	{
-		debug(LOG_NEVER, "Go with object close callback!");
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_OBJECTCLOSE);
-	}
 }
 
 
@@ -3921,25 +3879,6 @@ static bool intAddStats(BASE_STATS **ppsStatsList, UDWORD numStats,
 	}
 
 	StatsUp = true;
-
-	// call the tutorial callbacks if necessary
-	if (bInTutorial)
-	{
-		switch (objMode)
-		{
-		case IOBJ_BUILD:
-			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_BUILDLIST);
-			break;
-		case IOBJ_RESEARCH:
-			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_RESEARCHLIST);
-			break;
-		case IOBJ_MANUFACTURE:
-			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_MANULIST);
-			break;
-		default:
-			break;
-		}
-	}
 
 	return true;
 }
@@ -4962,10 +4901,6 @@ DROID *intGotoNextDroidType(DROID *CurrDroid, DROID_TYPE droidType, bool AllowGr
 
 	if (Found == true)
 	{
-		psCBSelectedDroid = CurrentDroid;
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DROID_SELECTED);
-		psCBSelectedDroid = NULL;
-
 		// Center it on screen.
 		if (CurrentDroid)
 		{

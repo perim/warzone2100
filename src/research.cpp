@@ -37,8 +37,6 @@
 #include "message.h"
 #include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
-#include "lib/script/script.h"
-#include "scripttabs.h"
 #include "hci.h"
 #include "console.h"
 #include "power.h"
@@ -596,16 +594,6 @@ void researchResult(UDWORD researchIndex, UBYTE player, bool bDisplay, STRUCTURE
 	if (psResearchFacility)
 	{
 		psResearchFacility->pFunctionality->researchFacility.psSubject = NULL;		// Make sure topic is cleared
-	}
-	if ((bMultiPlayer || player == selectedPlayer) && bTrigger)
-	{
-		psCBLastResearch = pResearch;  // Fun with pointers. Throw them into some random global variable, and get Nexus to absorb them.
-		CBResFacilityOwner = player;
-		psCBLastResStructure = psResearchFacility;
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_RESEARCHCOMPLETED);
-		psCBLastResStructure = NULL;
-		CBResFacilityOwner = -1;
-		psCBLastResearch = NULL;
 	}
 	triggerEventResearched(pResearch, psResearchFacility, player);
 }

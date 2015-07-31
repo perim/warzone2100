@@ -34,15 +34,11 @@
 #include "group.h"
 #include "anim_id.h"
 #include "hci.h"
-#include "scriptfuncs.h"		// for objectinrange.
 #include "lib/gamelib/gtime.h"
 #include "effects.h"
 #include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"			// for samples.
 #include "wrappers.h"			// for gameover..
-#include "lib/script/script.h"
-#include "scripttabs.h"
-#include "scriptcb.h"
 #include "loop.h"
 #include "transporter.h"
 #include "mission.h" // for INVALID_XY
@@ -407,11 +403,6 @@ void requestAlliance(uint8_t from, uint8_t to, bool prop, bool allowAudio)
 	syncDebug("Request alliance %d %d", from, to);
 	alliances[from][to] = ALLIANCE_REQUESTED;	// We've asked
 	alliances[to][from] = ALLIANCE_INVITATION;	// They've been invited
-
-
-	CBallFrom = from;
-	CBallTo = to;
-	eventFireCallbackTrigger((TRIGGER_TYPE) CALL_ALLIANCEOFFER);
 
 	if (to == selectedPlayer)
 	{

@@ -47,7 +47,6 @@
 #include "lib/ivis_opengl/piemode.h"
 #include "lib/ivis_opengl/screen.h"
 #include "lib/netplay/netplay.h"
-#include "lib/script/script.h"
 #include "lib/sound/audio.h"
 #include "lib/sound/cdaudio.h"
 
@@ -68,7 +67,6 @@
 #include "multiplay.h"
 #include "qtscript.h"
 #include "research.h"
-#include "scripttabs.h"
 #include "seqdisp.h"
 #include "warzoneconfig.h"
 #include "main.h"
@@ -794,10 +792,6 @@ static void startGameLoop(void)
 	if (challengeActive)
 	{
 		addMissionTimerInterface();
-	}
-	if (game.type == SKIRMISH)
-	{
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_START_NEXT_LEVEL);
 	}
 	triggerEvent(TRIGGER_START_LEVEL);
 	screen_disableMapPreview();

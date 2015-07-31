@@ -53,8 +53,6 @@
 #include "research.h"
 #include "lib/gamelib/gtime.h"
 #include "loop.h"
-#include "lib/script/script.h"
-#include "scripttabs.h"
 #include "warzoneconfig.h"
 #include "seqdisp.h"
 #include "mission.h"
@@ -63,8 +61,6 @@
 #include "lib/sound/cdaudio.h"
 #include "lib/sequence/sequence.h"
 #include "lib/sound/track.h"
-
-#include "scriptextern.h"
 
 #include "multimenu.h"
 
@@ -829,21 +825,6 @@ static void intCleanUpIntelMap(void)
 	immediateMessage = false;
 
 	cdAudio_Resume();
-
-	if (interpProcessorActive())
-	{
-		debug(LOG_SCRIPT, "intCleanUpIntelMap: interpreter running, storing CALL_VIDEO_QUIT");
-		if (!msgStackPush(CALL_VIDEO_QUIT, -1, -1, "\0", -1, -1, NULL))
-		{
-			debug(LOG_ERROR, "intCleanUpIntelMap() - msgStackPush - stack failed");
-			return;
-		}
-	}
-	else
-	{
-		debug(LOG_SCRIPT, "intCleanUpIntelMap: not running");
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_VIDEO_QUIT);
-	}
 }
 
 
@@ -1192,12 +1173,8 @@ void setIntelligencePauseState(void)
 		clearMissionWidgets();
 		gameTimeStop();
 		setGameUpdatePause(true);
-		if (!bInTutorial)
-		{
-			// Don't pause the scripts or the console if the tutorial is running.
-			setScriptPause(true);
-			setConsolePause(true);
-		}
+		setScriptPause(true);
+		setConsolePause(true);
 		setScrollPause(true);
 		screen_RestartBackDrop();
 	}
@@ -1211,10 +1188,7 @@ void resetIntelligencePauseState(void)
 		//put any widgets back on for the missions
 		resetMissionWidgets();
 		setGameUpdatePause(false);
-		if (!bInTutorial)
-		{
-			setScriptPause(false);
-		}
+		setScriptPause(false);
 		setScrollPause(false);
 		setConsolePause(false);
 		gameTimeStart();

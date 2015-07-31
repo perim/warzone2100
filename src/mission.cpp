@@ -32,7 +32,6 @@
 #include "lib/ivis_opengl/bitimage.h"
 #include "lib/ivis_opengl/pieblitfunc.h"
 #include "lib/gamelib/gtime.h"
-#include "lib/script/script.h"
 #include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "lib/sound/cdaudio.h"
@@ -59,7 +58,6 @@
 #include "main.h"
 #include "display.h"
 #include "loadsave.h"
-#include "scripttabs.h"
 #include "warcam.h"
 #include "wrappers.h"
 #include "console.h"
@@ -69,7 +67,6 @@
 #include "loop.h"
 #include "visibility.h"
 #include "mapgrid.h"
-#include "cluster.h"
 #include "selection.h"
 #include "scores.h"
 #include "keymap.h"
@@ -414,8 +411,6 @@ bool startMission(LEVEL_TYPE missionType, char *pGame)
 		return true;
 	}
 
-	// reset the cluster stuff
-	clustInitialise();
 	initEffectsSystem();
 
 	//load the game file for all types of mission except a Between Mission
@@ -983,7 +978,6 @@ void placeLimboDroids(void)
 			psDroid->selected = false;
 			//this is mainly for VTOLs
 			setDroidBase(psDroid, NULL);
-			psDroid->cluster = 0;
 			//initialise the movement data
 			initDroidMovement(psDroid);
 			//make sure the died flag is not set
@@ -1012,7 +1006,6 @@ void restoreMissionLimboData(void)
 		if (droidRemove(psDroid, mission.apsDroidLists))
 		{
 			addDroid(psDroid, apsDroidLists);
-			psDroid->cluster = 0;
 			//reset droid orders
 			orderDroid(psDroid, DORDER_STOP, ModeImmediate);
 			//the location of the droid should be valid!
@@ -1315,7 +1308,6 @@ static void processMission(void)
 			psDroid->selected = false;
 			// This is mainly for VTOLs
 			setDroidBase(psDroid, NULL);
-			psDroid->cluster = 0;
 		}
 	}
 }
@@ -1355,7 +1347,6 @@ void processMissionLimbo(void)
 					addDroid(psDroid, apsLimboDroids);
 					// This is mainly for VTOLs
 					setDroidBase(psDroid, NULL);
-					psDroid->cluster = 0;
 					orderDroid(psDroid, DORDER_STOP, ModeImmediate);
 					numDroidsAddedToLimboList++;
 				}
@@ -1732,8 +1723,6 @@ void unloadTransporter(DROID *psTransporter, UDWORD x, UDWORD y, bool goingHome)
 	//unload all the droids from within the current Transporter
 	if (isTransporter(psTransporter))
 	{
-		// reset the transporter cluster
-		psTransporter->cluster = 0;
 		for (psDroid = psTransporter->psGroup->psList; psDroid != NULL && psDroid != psTransporter; psDroid = psNext)
 		{
 			psNext = psDroid->psGrpNext;
@@ -1764,7 +1753,6 @@ void unloadTransporter(DROID *psTransporter, UDWORD x, UDWORD y, bool goingHome)
 				// So VTOLs don't try to rearm on another map
 				setDroidBase(psDroid, NULL);
 			}
-			psDroid->cluster = 0;
 			if (goingHome)
 			{
 				//swap the droid and map pointers
@@ -1774,7 +1762,6 @@ void unloadTransporter(DROID *psTransporter, UDWORD x, UDWORD y, bool goingHome)
 
 		/* trigger script callback detailing group about to disembark */
 		transporterSetScriptCurrent(psTransporter);
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_TRANSPORTER_LANDED);
 		triggerEvent(TRIGGER_TRANSPORTER_LANDED, psTransporter);
 		transporterSetScriptCurrent(NULL);
 
@@ -1815,7 +1802,6 @@ void missionMoveTransporterOffWorld(DROID *psTransporter)
 	{
 		/* trigger script callback */
 		transporterSetScriptCurrent(psTransporter);
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_TRANSPORTER_OFFMAP);
 		triggerEvent(TRIGGER_TRANSPORTER_EXIT, psTransporter);
 		transporterSetScriptCurrent(NULL);
 
@@ -1855,7 +1841,6 @@ void missionMoveTransporterOffWorld(DROID *psTransporter)
 			}
 			if (psDroid == NULL)
 			{
-				eventFireCallbackTrigger((TRIGGER_TYPE)CALL_NO_REINFORCEMENTS_LEFT);
 				triggerEvent(TRIGGER_TRANSPORTER_DONE, psTransporter);
 			}
 		}
@@ -2136,7 +2121,6 @@ void intUpdateTransporterTimer(WIDGET *psWidget, W_CONTEXT *psContext)
 					if (psTransporter->action == DACTION_TRANSPORTWAITTOFLYIN)
 					{
 						missionFlyTransportersIn(selectedPlayer, false);
-						eventFireCallbackTrigger((TRIGGER_TYPE)CALL_TRANSPORTER_REINFORCE);
 						triggerEvent(TRIGGER_TRANSPORTER_ARRIVED, psTransporter);
 					}
 				}
@@ -2837,7 +2821,6 @@ void missionTimerUpdate(void)
 			if ((SDWORD)(gameTime - mission.startTime) > mission.time)
 			{
 				//the script can call the end game cos have failed!
-				eventFireCallbackTrigger((TRIGGER_TYPE)CALL_MISSION_TIME);
 				triggerEvent(TRIGGER_MISSION_TIMEOUT);
 			}
 		}

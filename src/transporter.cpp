@@ -42,8 +42,6 @@
 #include "objects.h"
 #include "display.h"
 #include "qtscript.h"
-#include "lib/script/script.h"
-#include "scripttabs.h"
 #include "order.h"
 #include "action.h"
 #include "lib/gamelib/gtime.h"
@@ -56,7 +54,6 @@
 #include "mapgrid.h"
 #include "visibility.h"
 #include "multiplay.h"
-#include "qtscript.h"
 
 //#define IDTRANS_FORM			9000	//The Transporter base form
 #define IDTRANS_CLOSE			9002	//The close button icon
@@ -941,7 +938,6 @@ void transporterRemoveDroid(DROID *psTransport, DROID *psDroid, QUEUE_MODE mode)
 	initDroidMovement(psDroid);
 	//reset droid orders
 	orderDroid(psDroid, DORDER_STOP, ModeImmediate);
-	psDroid->cluster = 0;
 	psDroid->selected = true;
 
 	if (calcRemainingCapacity(psTransport))
@@ -1164,8 +1160,6 @@ bool updateTransporter(DROID *psTransporter)
 			// Set the Transporter to have arrived at its destination
 			psTransporter->action = DACTION_NONE;
 
-			//the script can call startMission for this callback for offworld missions
-			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_START_NEXT_LEVEL);
 			triggerEvent(TRIGGER_TRANSPORTER_EXIT, psTransporter);
 
 			// clear order
@@ -1250,7 +1244,6 @@ void processLaunchTransporter(void)
 			//set the data for the transporter timer
 			widgSetUserData(psWScreen, IDTRANTIMER_DISPLAY, (void *)psCurrTransporter);
 
-			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_LAUNCH_TRANSPORTER);
 			triggerEvent(TRIGGER_TRANSPORTER_LAUNCH, psCurrTransporter);
 		}
 	}

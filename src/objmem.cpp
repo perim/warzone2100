@@ -33,10 +33,6 @@
 #include "map.h"
 #include "power.h"
 #include "objects.h"
-#include "lib/script/script.h"
-#include "scriptvals.h"
-#include "scripttabs.h"
-#include "scriptcb.h"
 #include "mission.h"
 #include "structuredef.h"
 #include "structure.h"
@@ -134,12 +130,6 @@ void objmemUpdate(void)
 	objListIntegCheck();
 #endif
 
-	// tell the script system about any destroyed objects
-	if (psDestroyedObj != NULL)
-	{
-		scrvUpdateBasePointers();
-	}
-
 	/* Go through the destroyed objects list looking for objects that
 	   were destroyed before this turn */
 
@@ -173,25 +163,7 @@ void objmemUpdate(void)
 		else
 		{
 			// do the object died callback
-			psCBObjDestroyed = psCurr;
-			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_OBJ_DESTROYED);
-			switch (psCurr->type)
-			{
-			case OBJ_DROID:
-				eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DROID_DESTROYED);
-				break;
-			case OBJ_STRUCTURE:
-				eventFireCallbackTrigger((TRIGGER_TYPE)CALL_STRUCT_DESTROYED);
-				break;
-			case OBJ_FEATURE:
-				eventFireCallbackTrigger((TRIGGER_TYPE)CALL_FEATURE_DESTROYED);
-				break;
-			default:
-				break;
-			}
-			psCBObjDestroyed = NULL;
 			triggerEventDestroyed(psCurr);
-
 			psPrev = psCurr;
 		}
 	}

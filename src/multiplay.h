@@ -27,6 +27,7 @@
 #include "featuredef.h"
 #include "group.h"
 #include "featuredef.h"
+#include "messagedef.h"
 #include "droid.h"  // For INITIAL_DROID_ORDERS.
 #include "levels.h"  // For LevelHashSize.
 
@@ -221,5 +222,9 @@ extern	void resetReadyStatus(bool bSendOptions);
 STRUCTURE *findResearchingFacilityByResearchIndex(unsigned player, unsigned index);
 
 void sendSyncRequest(int32_t req_id, int32_t x, int32_t y, BASE_OBJECT *psObj, BASE_OBJECT *psObj2);
+
+bool sendBeaconToPlayer(SDWORD locX, SDWORD locY, SDWORD forPlayer, SDWORD sender, const char *beaconMsg);
+MESSAGE *findBeaconMsg(UDWORD player, SDWORD sender);
+VIEWDATA *CreateBeaconViewData(SDWORD sender, UDWORD LocX, UDWORD LocY);
 
 #endif // __INCLUDED_SRC_MULTIPLAY_H__

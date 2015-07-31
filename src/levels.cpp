@@ -45,8 +45,6 @@
 #include "game.h"
 #include "lib/ivis_opengl/piestate.h"
 #include "data.h"
-#include "lib/script/script.h"
-#include "scripttabs.h"
 #include "research.h"
 #include "lib/framework/lexer_input.h"
 #include "effects.h"
@@ -1024,7 +1022,7 @@ bool levLoadData(char const *name, Sha256 const *hash, char *pSaveName, GAME_TYP
 	//in from the script-controlled Transporters
 	if (!pSaveName && psNewLevel->type == LDS_CAMSTART)
 	{
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_NO_REINFORCEMENTS_LEFT);
+		// TBD - script callback here
 	}
 
 	//restore the level name for comparisons on next mission load up

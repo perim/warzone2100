@@ -54,7 +54,6 @@ static CHEAT_ENTRY cheatCodes[] =
 	{"deity", kf_ToggleGodMode},	//from above
 	{"droidinfo", kf_DebugDroidInfo},	//show unit stats
 	{"sensors", kf_ToggleSensorDisplay},	//show sensor ranges
-	{"let me win", kf_AddMissionOffWorld},	//let me win
 	{"timedemo", kf_FrameRate},	 //timedemo
 	{"kill", kf_KillSelected},	//kill slected
 	{"john kettley", kf_ToggleWeather},	//john kettley

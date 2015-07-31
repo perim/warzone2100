@@ -15,7 +15,6 @@ data		"wrf/cam1.wrf"
 data		"wrf/audio.wrf"
 data		"wrf/stats.wrf"
 game		"multiplay/maps/4c-rush.gam"
-data		"wrf/prog.wrf"
 
 /******************************************************/
 /*     Tutorial dataset and levels                  */

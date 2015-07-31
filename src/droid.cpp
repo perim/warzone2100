@@ -32,7 +32,6 @@
 #include "lib/ivis_opengl/piematrix.h"
 #include "lib/ivis_opengl/screen.h"
 #include "lib/framework/fixedpoint.h"
-#include "lib/script/script.h"
 #include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "lib/netplay/netplay.h"
@@ -63,12 +62,9 @@
 #include "display3d.h"
 #include "group.h"
 #include "text.h"
-#include "scripttabs.h"
-#include "scriptcb.h"
 #include "fpath.h"
 #include "mapgrid.h"
 #include "projectile.h"
-#include "cluster.h"
 #include "mission.h"
 #include "levels.h"
 #include "transporter.h"
@@ -78,7 +74,6 @@
 #include "scores.h"
 #include "research.h"
 #include "combat.h"
-#include "scriptfuncs.h"			//for ThreatInRange()
 #include "template.h"
 #include "qtscript.h"
 
@@ -116,13 +111,6 @@ void cancelBuild(DROID *psDroid)
 		psDroid->action = DACTION_NONE;
 		psDroid->order = DroidOrder(DORDER_NONE);
 		setDroidActionTarget(psDroid, NULL, 0);
-
-		/* Notify scripts we just became idle */
-		psScrCBOrderDroid = psDroid;
-		psScrCBOrder = psDroid->order.type;
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DROID_REACH_LOCATION);
-		psScrCBOrderDroid = NULL;
-		psScrCBOrder = DORDER_NONE;
 
 		triggerEventDroidIdle(psDroid);
 	}
@@ -423,9 +411,6 @@ DROID::~DROID()
 		psDroid->psGroup->remove(psDroid);
 	}
 
-	// remove the droid from the cluster system
-	clustRemoveObject((BASE_OBJECT *)psDroid);
-
 	free(sMove.asPath);
 }
 
@@ -559,9 +544,6 @@ bool removeDroidBase(DROID *psDel)
 		}
 	}
 
-	// remove the droid from the cluster systerm
-	clustRemoveObject((BASE_OBJECT *)psDel);
-
 	if (psDel->player == selectedPlayer)
 	{
 		intRefreshScreen();
@@ -649,7 +631,7 @@ void	vanishDroid(DROID *psDel)
 }
 
 /* Remove a droid from the List so doesn't update or get drawn etc
-TAKE CARE with removeDroid() - usually want droidRemove since it deal with cluster and grid code*/
+TAKE CARE with removeDroid() - usually want droidRemove since it deal with grid code*/
 //returns false if the droid wasn't removed - because it died!
 bool droidRemove(DROID *psDroid, DROID *pList[MAX_PLAYERS])
 {
@@ -672,9 +654,6 @@ bool droidRemove(DROID *psDroid, DROID *pList[MAX_PLAYERS])
 
 	// reset the baseStruct
 	setDroidBase(psDroid, NULL);
-
-	// remove the droid from the cluster systerm
-	clustRemoveObject((BASE_OBJECT *)psDroid);
 
 	removeDroid(psDroid, pList);
 
@@ -838,12 +817,6 @@ void droidUpdate(DROID *psDroid)
 	for (i = 0; i < MAX(1, psDroid->numWeaps); ++i)
 	{
 		psDroid->asWeaps[i].prevRot = psDroid->asWeaps[i].rot;
-	}
-
-	// update the cluster of the droid
-	if ((psDroid->id + gameTime) / 2000 != (psDroid->id + gameTime - deltaGameTime) / 2000)
-	{
-		clustUpdateObject((BASE_OBJECT *)psDroid);
 	}
 
 	// ai update droid
@@ -1859,7 +1832,6 @@ DROID *reallyBuildDroid(DROID_TEMPLATE *pTemplate, Position pos, UDWORD player, 
 			updateDroidOrientation(psDroid);
 		}
 		visTilesUpdate((BASE_OBJECT *)psDroid);
-		clustNewDroid(psDroid);
 	}
 
 	/* transporter-specific stuff */
@@ -2508,6 +2480,79 @@ bool pickATileGen(Vector2i *pos, unsigned numIterations, bool (*function)(UDWORD
 	return ret;
 }
 
+static bool ThreatInRange(SDWORD player, SDWORD range, SDWORD rangeX, SDWORD rangeY, bool bVTOLs)
+{
+	UDWORD				i, structType;
+	STRUCTURE			*psStruct;
+	DROID				*psDroid;
+
+	const int tx = map_coord(rangeX);
+	const int ty = map_coord(rangeY);
+
+	for (i = 0; i < MAX_PLAYERS; i++)
+	{
+		if ((alliances[player][i] == ALLIANCE_FORMED) || (i == player))
+		{
+			continue;
+		}
+
+		//check structures
+		for (psStruct = apsStructLists[i]; psStruct; psStruct = psStruct->psNext)
+		{
+			if (psStruct->visible[player] || psStruct->born == 2)	// if can see it or started there
+			{
+				if (psStruct->status == SS_BUILT)
+				{
+					structType = psStruct->pStructureType->type;
+
+					switch (structType)		//dangerous to get near these structures
+					{
+					case REF_DEFENSE:
+					case REF_CYBORG_FACTORY:
+					case REF_FACTORY:
+					case REF_VTOL_FACTORY:
+					case REF_REARM_PAD:
+
+						if (range < 0
+						    || world_coord(hypotf(tx - map_coord(psStruct->pos.x), ty - map_coord(psStruct->pos.y))) < range)	//enemy in range
+						{
+							return true;
+						}
+
+						break;
+					}
+				}
+			}
+		}
+
+		//check droids
+		for (psDroid = apsDroidLists[i]; psDroid; psDroid = psDroid->psNext)
+		{
+			if (psDroid->visible[player])		//can see this droid?
+			{
+				if (!objHasWeapon((BASE_OBJECT *)psDroid))
+				{
+					continue;
+				}
+
+				//if VTOLs are excluded, skip them
+				if (!bVTOLs && ((asPropulsionStats[psDroid->asBits[COMP_PROPULSION]].propulsionType == PROPULSION_TYPE_LIFT) || isTransporter(psDroid)))
+				{
+					continue;
+				}
+
+				if (range < 0
+				    || world_coord(hypotf(tx - map_coord(psDroid->pos.x), ty - map_coord(psDroid->pos.y))) < range)	//enemy in range
+				{
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
 /// find a tile for which the passed function will return true without any threat in the specified range
 bool	pickATileGenThreat(UDWORD *x, UDWORD *y, UBYTE numIterations, SDWORD threatRange,
                            SDWORD player, bool (*function)(UDWORD x, UDWORD y))
@@ -2871,13 +2916,6 @@ bool vtolReadyToRearm(DROID *psDroid, STRUCTURE *psStruct)
 		return false;
 	}
 
-	if ((psDroid->psActionTarget[0] != NULL) &&
-	    (psDroid->psActionTarget[0]->cluster != psStruct->cluster))
-	{
-		// vtol is rearming at a different base
-		return false;
-	}
-
 	return true;
 }
 
@@ -3202,12 +3240,6 @@ DROID *giftSingleDroid(DROID *psD, UDWORD to)
 	if (!(psNewDroid->droidType == DROID_PERSON || cyborgDroid(psNewDroid) || isTransporter(psNewDroid)))
 	{
 		updateDroidOrientation(psNewDroid);
-	}
-	if (bMultiPlayer)	// skirmish callback!
-	{
-		psScrCBDroidTaken = psD;
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_UNITTAKEOVER);
-		psScrCBDroidTaken = NULL;
 	}
 	triggerEventObjectTransfer(psNewDroid, psD->player);
 	return psNewDroid;

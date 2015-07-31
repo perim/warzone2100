@@ -43,7 +43,6 @@
 #include "frontend.h"		// for textdisplay function
 #include "loadsave.h"		// for textdisplay function
 #include "console.h"		// to add console message
-#include "scriptextern.h"	// for tutorial
 #include "keybind.h"
 #include "multiplay.h"
 #include "ingameop.h"
@@ -208,7 +207,7 @@ static bool _intAddInGameOptions(void)
 
 	WIDGET *parent = psWScreen->psForm;
 
-	bool s = (bMultiPlayer && NetPlay.bComms != 0) || bInTutorial;
+	bool s = (bMultiPlayer && NetPlay.bComms != 0);
 
 	// add form
 	IntFormAnimated *ingameOp = new IntFormAnimated(parent);

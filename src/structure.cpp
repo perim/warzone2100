@@ -59,9 +59,6 @@
 #include "lib/framework/fixedpoint.h"
 #include "order.h"
 #include "droid.h"
-#include "lib/script/script.h"
-#include "scripttabs.h"
-#include "scriptcb.h"
 #include "text.h"
 #include "action.h"
 #include "group.h"
@@ -73,11 +70,9 @@
 #include "feature.h"
 #include "mapgrid.h"
 #include "projectile.h"
-#include "cluster.h"
 #include "intdisplay.h"
 #include "display.h"
 #include "difficulty.h"
-#include "scriptextern.h"
 #include "keymap.h"
 #include "game.h"
 #include "qtscript.h"
@@ -150,7 +145,6 @@ static void findAssemblyPointPosition(UDWORD *pX, UDWORD *pY, UDWORD player);
 static void removeStructFromMap(STRUCTURE *psStruct);
 static void resetResistanceLag(STRUCTURE *psBuilding);
 static int structureTotalReturn(STRUCTURE *psStruct);
-static void structureCompletedCallback(STRUCTURE_STATS *psStructType);
 
 // last time the maximum units message was displayed
 static UDWORD	lastMaxUnitMessage;
@@ -860,17 +854,9 @@ void structureBuild(STRUCTURE *psStruct, DROID *psDroid, int buildPoints, int bu
 				}
 			}
 
-			/* Notify scripts we just finished building a structure, pass builder and what was built */
-			psScrCBNewStruct	= psStruct;
-			psScrCBNewStructTruck	= psDroid;
-			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_STRUCTBUILT);
-
 			audio_StopObjTrack(psDroid, ID_SOUND_CONSTRUCTION_LOOP);
 		}
 		triggerEventStructBuilt(psStruct, psDroid);
-
-		/* Not needed, but left for backward compatibility */
-		structureCompletedCallback(psStruct->pStructureType);
 	}
 	else
 	{
@@ -1598,7 +1584,6 @@ STRUCTURE *buildStructureDir(STRUCTURE_STATS *pStructureType, UDWORD x, UDWORD y
 		//add the structure to the list - this enables it to be drawn whilst being built
 		addStructure(psBuilding);
 
-		clustNewStruct(psBuilding);
 		asStructLimits[player][max].currentQuantity++;
 
 		if (isLasSat(psBuilding->pStructureType))
@@ -2236,10 +2221,6 @@ static bool structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl, DR
 			{
 				orderDroidLoc(psNewDroid, DORDER_MOVE, psFlag->coords.x, psFlag->coords.y, ModeQueue);
 			}
-		}
-		if (psNewDroid->player == selectedPlayer)
-		{
-			eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DROIDBUILT);
 		}
 		return true;
 	}
@@ -3579,16 +3560,6 @@ UDWORD fillStructureList(STRUCTURE_STATS **ppList, UDWORD selectedPlayer, UDWORD
 					continue;
 				}
 
-				// Remove the demolish stat from the list for tutorial
-				// tjc 4-dec-98  ...
-				if (bInTutorial)
-				{
-					if (psBuilding->type == REF_DEMOLISH)
-					{
-						continue;
-					}
-				}
-
 				//can't build list when offworld
 				if (missionIsOffworld())
 				{
@@ -4238,7 +4209,6 @@ static void removeStructFromMap(STRUCTURE *psStruct)
 bool removeStruct(STRUCTURE *psDel, bool bDestroy)
 {
 	bool		resourceFound = false;
-	SDWORD		cluster;
 	FLAG_POSITION	*psAssemblyPoint = NULL;
 
 	ASSERT_OR_RETURN(false, psDel != NULL, "Invalid structure pointer");
@@ -4320,10 +4290,6 @@ bool removeStruct(STRUCTURE *psDel, bool bDestroy)
 		}
 	}
 
-	// remove the structure from the cluster
-	cluster = psDel->cluster;
-	clustRemoveObject(psDel);
-
 	if (bDestroy)
 	{
 		debug(LOG_DEATH, "Killing off %s id %d (%p)", objInfo(psDel), psDel->id, psDel);
@@ -4336,8 +4302,6 @@ bool removeStruct(STRUCTURE *psDel, bool bDestroy)
 		animObj_Remove(psDel->psCurAnim, psDel->psCurAnim->psAnim->uwID);
 		psDel->psCurAnim = NULL;
 	}
-
-	clustUpdateCluster(apsStructLists[psDel->player], cluster);
 
 	if (psDel->player == selectedPlayer)
 	{
@@ -4728,32 +4692,6 @@ void setFlagPositionInc(FUNCTIONALITY *pFunctionality, UDWORD player, UBYTE fact
 		factoryNumFlag[player][factoryType][inc] = true;
 	}
 }
-
-/*called when a structure has been built - checks through the list of callbacks
-for the scripts*/
-static void structureCompletedCallback(STRUCTURE_STATS *psStructType)
-{
-
-	if (psStructType->type == REF_POWER_GEN)
-	{
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_POWERGEN_BUILT);
-	}
-	if (psStructType->type == REF_RESOURCE_EXTRACTOR)
-	{
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_RESEX_BUILT);
-	}
-	if (psStructType->type == REF_RESEARCH)
-	{
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_RESEARCH_BUILT);
-	}
-	if (psStructType->type == REF_FACTORY ||
-	    psStructType->type == REF_CYBORG_FACTORY ||
-	    psStructType->type == REF_VTOL_FACTORY)
-	{
-		eventFireCallbackTrigger((TRIGGER_TYPE)CALL_FACTORY_BUILT);
-	}
-}
-
 
 STRUCTURE_STATS *structGetDemolishStat(void)
 {
@@ -5453,8 +5391,6 @@ bool electronicDamage(BASE_OBJECT *psTarget, UDWORD damage, UBYTE attackPlayer)
 
 			psStructure->lastHitWeapon = WSC_ELECTRONIC;
 
-			// tell the cluster system it has been attacked
-			clustObjectAttacked(psStructure);
 			triggerEventAttacked(psStructure, g_pProjLastAttacker, lastHit);
 
 			psStructure->resistance = (SWORD)(psStructure->resistance - damage);
@@ -5466,8 +5402,6 @@ bool electronicDamage(BASE_OBJECT *psTarget, UDWORD damage, UBYTE attackPlayer)
 				{
 					console(_("%s - Electronically Damaged"),
 					        getName(psStructure->pStructureType));
-					//tell the scripts if selectedPlayer has lost a structure
-					eventFireCallbackTrigger((TRIGGER_TYPE)CALL_ELECTRONIC_TAKEOVER);
 				}
 				bCompleted = true;
 				//give the structure to the attacking player
@@ -5500,8 +5434,6 @@ bool electronicDamage(BASE_OBJECT *psTarget, UDWORD damage, UBYTE attackPlayer)
 		}
 		else
 		{
-			// tell the cluster system it has been attacked
-			clustObjectAttacked(psDroid);
 			triggerEventAttacked(psDroid, g_pProjLastAttacker, lastHit);
 
 			psDroid->resistance = (SWORD)(psDroid->resistance - damage);
@@ -5512,8 +5444,6 @@ bool electronicDamage(BASE_OBJECT *psTarget, UDWORD damage, UBYTE attackPlayer)
 				if (psDroid->player == selectedPlayer)
 				{
 					console(_("%s - Electronically Damaged"), "Unit");
-					//tell the scripts if selectedPlayer has lost a droid
-					eventFireCallbackTrigger((TRIGGER_TYPE)CALL_ELECTRONIC_TAKEOVER);
 				}
 				bCompleted = true;
 
@@ -6446,8 +6376,6 @@ bool clearRearmPad(STRUCTURE *psStruct)
 
 
 // return the nearest rearm pad
-// if bClear is true it tries to find the nearest clear rearm pad in
-// the same cluster as psTarget
 // psTarget can be NULL
 STRUCTURE *findNearestReArmPad(DROID *psDroid, STRUCTURE *psTarget, bool bClear)
 {
@@ -6477,9 +6405,7 @@ STRUCTURE *findNearestReArmPad(DROID *psDroid, STRUCTURE *psTarget, bool bClear)
 	psTotallyClear = NULL;
 	for (psStruct = apsStructLists[psDroid->player]; psStruct; psStruct = psStruct->psNext)
 	{
-		if ((psStruct->pStructureType->type == REF_REARM_PAD) &&
-		    (psTarget == NULL || psTarget->cluster == psStruct->cluster) &&
-		    (!bClear || clearRearmPad(psStruct)))
+		if (psStruct->pStructureType->type == REF_REARM_PAD && (!bClear || clearRearmPad(psStruct)))
 		{
 			xdiff = (SDWORD)psStruct->pos.x - cx;
 			ydiff = (SDWORD)psStruct->pos.y - cy;
@@ -6647,9 +6573,6 @@ STRUCTURE *giftSingleStructure(STRUCTURE *psStructure, UBYTE attackPlayer, bool 
 					setStructureTarget(psStruct, NULL, 0, ORIGIN_UNKNOWN);
 				}
 			}
-
-			//add back into cluster system
-			clustNewStruct(psStructure);
 
 			if (psStructure->status == SS_BUILT)
 			{
@@ -6821,13 +6744,6 @@ bool lasSatStructSelected(STRUCTURE *psStruct)
 void cbNewDroid(STRUCTURE *psFactory, DROID *psDroid)
 {
 	ASSERT_OR_RETURN(, psDroid != NULL, "no droid assigned for CALL_NEWDROID callback");
-
-	psScrCBNewDroid = psDroid;
-	psScrCBNewDroidFact = psFactory;
-	eventFireCallbackTrigger((TRIGGER_TYPE)CALL_NEWDROID);
-	psScrCBNewDroid = NULL;
-	psScrCBNewDroidFact = NULL;
-
 	triggerEventDroidBuilt(psDroid, psFactory);
 }
 

@@ -25,7 +25,6 @@
  */
 
 #include "lib/framework/frame.h"
-#include "lib/script/script.h"
 #include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "lib/netplay/netplay.h"
@@ -39,8 +38,6 @@
 #include "qtscript.h"
 #include "random.h"
 #include "research.h"
-#include "scriptcb.h"
-#include "scripttabs.h"
 #include "transporter.h"
 #include "mapgrid.h"
 
@@ -838,7 +835,6 @@ void actionUpdateDroid(DROID *psDroid)
 				if (!missionDroidsRemaining(selectedPlayer))
 				{
 					//the script can call startMission for this callback for offworld missions
-					eventFireCallbackTrigger((TRIGGER_TYPE)CALL_START_NEXT_LEVEL);
 					triggerEvent(TRIGGER_TRANSPORTER_EXIT, psDroid);
 				}
 			}
@@ -860,12 +856,6 @@ void actionUpdateDroid(DROID *psDroid)
 				/* notify scripts we have reached the destination
 				*  also triggers when patrolling and reached a waypoint
 				*/
-				psScrCBOrder = order->type;
-				psScrCBOrderDroid = psDroid;
-				eventFireCallbackTrigger((TRIGGER_TYPE)CALL_DROID_REACH_LOCATION);
-				psScrCBOrderDroid = NULL;
-				psScrCBOrder = DORDER_NONE;
-
 				triggerEventDroidIdle(psDroid);
 			}
 		}

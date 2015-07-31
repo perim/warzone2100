@@ -10,7 +10,6 @@ SUBDIRS = \
 	3rdparty/quesoglc \
 	lib/framework \
 	lib/exceptionhandler \
-	lib/script \
 	lib/sequence \
 	lib/ivis_opengl \
 	lib/gamelib \
@@ -46,13 +45,7 @@ EXTRA_DIST= \
 	lib/framework/strres_parser.ypp \
 	lib/gamelib/audp_lexer.lpp \
 	lib/gamelib/audp_parser.ypp \
-	lib/script/chat_lexer.lpp \
-	lib/script/chat_parser.ypp \
-	lib/script/script_lexer.lpp \
-	lib/script/script_parser.ypp \
 	src/level_lexer.lpp \
-	src/scriptvals_lexer.lpp \
-	src/scriptvals_parser.ypp \
 	build_tools/autorevision \
 	autogen.sh \
 	config.rpath \

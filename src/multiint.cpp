@@ -46,7 +46,6 @@
 
 #include "lib/gamelib/gtime.h"
 #include "lib/netplay/netplay.h"
-#include "lib/script/script.h"
 #include "lib/widget/editbox.h"
 #include "lib/widget/button.h"
 #include "lib/widget/widget.h"
@@ -226,8 +225,6 @@ struct AIDATA
 {
 	AIDATA() : assigned(0) {}
 	char name[MAX_LEN_AI_NAME];
-	char slo[MAX_LEN_AI_NAME];
-	char vlo[MAX_LEN_AI_NAME];
 	char js[MAX_LEN_AI_NAME];
 	char tip[255];
 	int assigned;	///< How many AIs have we assigned of this type
@@ -365,12 +362,6 @@ void loadMultiScripts()
 					continue;
 				}
 				ini.endGroup();
-			}
-			if (aidata[NetPlay.players[i].ai].slo[0] != '\0')
-			{
-				debug(LOG_SAVE, "Loading wzscript AI for player %d", i);
-				resLoadFile("SCRIPT", aidata[NetPlay.players[i].ai].slo);
-				resLoadFile("SCRIPTVAL", aidata[NetPlay.players[i].ai].vlo);
 			}
 			// autogames are to be implemented differently for qtscript, do not start for human players yet
 			if (!NetPlay.players[i].allocated && aidata[NetPlay.players[i].ai].js[0] != '\0')
@@ -667,8 +658,6 @@ void readAIs()
 		AIDATA ai;
 		aiconf.beginGroup("AI");
 		sstrcpy(ai.name, aiconf.value("name", "error").toString().toUtf8().constData());
-		sstrcpy(ai.slo, aiconf.value("slo", "").toString().toUtf8().constData());
-		sstrcpy(ai.vlo, aiconf.value("vlo", "").toString().toUtf8().constData());
 		sstrcpy(ai.js, aiconf.value("js", "").toString().toUtf8().constData());
 		sstrcpy(ai.tip, aiconf.value("tip", "Click to choose this AI").toString().toUtf8().constData());
 		if (strcmp(ai.name, "Nexus") == 0)

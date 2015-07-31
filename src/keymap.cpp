@@ -41,7 +41,6 @@
 #include "display3d.h"
 #include "keymap.h"
 #include "keyedit.h"
-#include "lib/script/script.h"
 
 static UDWORD asciiKeyCodeToTable(KEY_CODE code);
 
@@ -229,7 +228,7 @@ _keymapsave keyMapSaveTable[] =
 	kf_NOOP,
 	kf_TraceObject,
 	kf_NOOP, // unused
-	kf_AddMissionOffWorld,
+	kf_NOOP,
 	kf_KillSelected,
 	kf_ShowMappings,
 	kf_NOOP, // unused
@@ -238,7 +237,7 @@ _keymapsave keyMapSaveTable[] =
 	kf_LowerTile,
 	kf_NOOP, // unused
 	kf_ToggleGodMode,
-	kf_EndMissionOffWorld,
+	kf_NOOP,
 	kf_SystemClose,
 	kf_ToggleShadows,
 	kf_RaiseTile,
@@ -448,7 +447,6 @@ void	keyInitMappings(bool bForceDefaults)
 	keyAddMapping(KEYMAP__DEBUG, KEY_IGNORE, KEY_V,         KEYMAP_PRESSED, kf_ToggleVisibility,    N_("Toggle visibility"));
 	keyAddMapping(KEYMAP__DEBUG, KEY_IGNORE, KEY_W,         KEYMAP_DOWN,    kf_RaiseTile,           N_("Raise tile height"));
 	keyAddMapping(KEYMAP__DEBUG, KEY_IGNORE, KEY_A,         KEYMAP_DOWN,    kf_LowerTile,           N_("Lower tile height"));
-	keyAddMapping(KEYMAP__DEBUG, KEY_LCTRL,  KEY_B,         KEYMAP_PRESSED, kf_EndMissionOffWorld,  N_("End Mission"));
 	keyAddMapping(KEYMAP__DEBUG, KEY_LCTRL,  KEY_J,         KEYMAP_PRESSED, kf_ToggleFog,           N_("Toggles All fog"));
 	keyAddMapping(KEYMAP__DEBUG, KEY_LCTRL,  KEY_Q,         KEYMAP_PRESSED, kf_ToggleWeather,       N_("Trigger some weather"));
 	keyAddMapping(KEYMAP__DEBUG, KEY_IGNORE, KEY_K,         KEYMAP_PRESSED, kf_TriFlip,             N_("Flip terrain triangle"));

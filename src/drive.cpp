@@ -55,10 +55,6 @@
 #include "intdisplay.h"
 #include "multiplay.h"
 
-// all the bollox needed for script callbacks
-#include "lib/script/parse.h"				// needed to define types in scripttabs.h (Arse!)
-#include "scripttabs.h"			// needed to define the callback
-#include "scriptextern.h"		// needed to include the GLOBAL for checking bInTutorial
 #include "group.h"
 
 #define DRIVENOISE		// Enable driving noises.

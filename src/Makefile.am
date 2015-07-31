@@ -57,7 +57,6 @@ noinst_HEADERS = \
 	cheat.h \
 	challenge.h \
 	clparse.h \
-	cluster.h \
 	combat.h \
 	component.h \
 	configuration.h \
@@ -139,14 +138,6 @@ noinst_HEADERS = \
 	researchdef.h \
 	research.h \
 	scores.h \
-	scriptai.h \
-	scriptcb.h \
-	scriptextern.h \
-	scriptfuncs.h \
-	scriptobj.h \
-	scripttabs.h \
-	scriptvals.h \
-	scriptvals_parser.h \
 	selection.h \
 	seqdisp.h \
 	statsdef.h \
@@ -185,7 +176,6 @@ COMMONSOURCES = \
 	challenge.cpp \
 	cheat.cpp \
 	clparse.cpp \
-	cluster.cpp \
 	combat.cpp \
 	component.cpp \
 	configuration.cpp \
@@ -256,15 +246,6 @@ COMMONSOURCES = \
 	raycast.cpp \
 	research.cpp \
 	scores.cpp \
-	scriptai.cpp \
-	scriptcb.cpp \
-	scriptextern.cpp \
-	scriptfuncs.cpp \
-	scriptobj.cpp \
-	scripttabs.cpp \
-	scriptvals.cpp \
-	scriptvals_lexer.cpp \
-	scriptvals_parser.cpp \
 	selection.cpp \
 	seqdisp.cpp \
 	stats.cpp \
@@ -287,7 +268,6 @@ COMMONLIBS = \
 	$(top_builddir)/lib/widget/libwidget.a \
 	$(top_builddir)/lib/sequence/libsequence.a \
 	$(top_builddir)/lib/sound/libsound.a \
-	$(top_builddir)/lib/script/libscript.a \
 	$(top_builddir)/lib/netplay/libnetplay.a \
 	$(top_builddir)/lib/ivis_opengl/libivis_opengl.a \
 	$(top_builddir)/lib/gamelib/libgamelib.a \

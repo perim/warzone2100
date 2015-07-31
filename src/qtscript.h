@@ -49,6 +49,11 @@ enum SCRIPT_TRIGGER_TYPE
 // ----------------------------------------------
 // State functions
 
+bool scriptInit(void);
+void scriptSetStartPos(int position, int x, int  y);
+void scriptSetDerrickPos(int x, int y);
+Vector2i getPlayerStartPosition(int player);
+
 /// Initialize script system
 bool initScripts();
 

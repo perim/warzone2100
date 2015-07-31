@@ -37,9 +37,7 @@
 #include "geometry.h"
 #include "hci.h"
 #include "mapgrid.h"
-#include "cluster.h"
 #include "research.h"
-#include "scriptextern.h"
 #include "structure.h"
 #include "projectile.h"
 #include "display.h"
@@ -663,13 +661,6 @@ static void processVisibilityVision(BASE_OBJECT *psViewer)
 
 			// Check if scripting system wants to trigger an event for this
 			triggerEventSeen(psViewer, psObj);
-
-			// This looks like some kind of weird hack. Only used by wzscript.
-			if (psObj->type != OBJ_FEATURE && psObj->visible[psViewer->player] <= 0)
-			{
-				// features are not in the cluster system
-				clustObjectSeen(psObj, psViewer);
-			}
 		}
 	}
 }
@@ -743,7 +734,7 @@ static void processVisibilityLevel(BASE_OBJECT *psObj)
 						psMessage->pViewData = (MSG_VIEWDATA *)psObj;
 						debug(LOG_MSG, "Added message for oil well or artefact, pViewData=%p", psMessage->pViewData);
 					}
-					if (!bInTutorial && player == selectedPlayer)
+					if (player == selectedPlayer)
 					{
 						// play message to indicate been seen
 						audio_QueueTrackPos(type, psObj->pos.x, psObj->pos.y, psObj->pos.z);

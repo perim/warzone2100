@@ -41,7 +41,6 @@
 #include "lib/ivis_opengl/screen.h"
 
 #include "lib/gamelib/gtime.h"
-#include "lib/script/script.h"
 #include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "lib/netplay/netplay.h"
@@ -73,9 +72,6 @@
 #include "message.h"
 #include "component.h"
 #include "warcam.h"
-#include "scripttabs.h"
-#include "scriptextern.h"
-#include "scriptcb.h"
 #include "keymap.h"
 #include "drive.h"
 #include "gateway.h"

@@ -38,7 +38,6 @@
 #include "lib/ivis_opengl/piestate.h"
 #include "lib/ivis_opengl/piepalette.h"
 #include "lib/netplay/netplay.h"
-#include "lib/script/script.h"
 #include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
 #include "modding.h"
@@ -75,13 +74,9 @@
 #include "mission.h"
 #include "geometry.h"
 #include "gateway.h"
-#include "scripttabs.h"
-#include "scriptvals.h"
-#include "scriptextern.h"
 #include "multistat.h"
 #include "multiint.h"
 #include "wrappers.h"
-#include "scriptfuncs.h"
 #include "challenge.h"
 #include "combat.h"
 #include "template.h"
@@ -1670,7 +1665,6 @@ bool loadMissionExtras(const char *pGameToLoad, SWORD levelType)
 
 static void sanityUpdate()
 {
-	scrvUpdateBasePointers();	// update the script object pointers
 	for (int player = 0; player < game.maxPlayers; player++)
 	{
 		for (DROID *psDroid = apsDroidLists[player]; psDroid; psDroid = psDroid->psNext)
@@ -1770,8 +1764,6 @@ bool loadGame(const char *pGameToLoad, bool keepObjects, bool freeMem, bool User
 	    (gameType == GTYPE_SAVE_MIDMISSION))
 	{
 		gameTimeReset(savedGameTime);//added 14 may 98 JPS to solve kev's problem with no firing droids
-		//need to reset the event timer too - AB 14/01/99
-		eventTimeReset(savedGameTime / SCR_TICKRATE);
 	}
 
 	/* Clear all the objects off the map and free up the map memory */
@@ -1961,13 +1953,6 @@ bool loadGame(const char *pGameToLoad, bool keepObjects, bool freeMem, bool User
 					aDroidExperience[player][inc]	= saveGameData.aDroidExperience[player][inc];
 				}
 			}
-		}
-		if (saveGameVersion >= VERSION_30)
-		{
-			scrGameLevel = saveGameData.scrGameLevel;
-			bExtraVictoryFlag = saveGameData.bExtraVictoryFlag;
-			bExtraFailFlag = saveGameData.bExtraFailFlag;
-			bTrackTransporter = saveGameData.bTrackTransporter;
 		}
 
 		//extra code added for the first patch (v1.1) to save out if mission time is not being counted
@@ -2545,8 +2530,6 @@ bool loadGame(const char *pGameToLoad, bool keepObjects, bool freeMem, bool User
 	{
 		ASSERT(gameTime == savedGameTime, "loadGame; game time modified during load");
 		gameTimeReset(savedGameTime);//added 14 may 98 JPS to solve kev's problem with no firing droids
-		//need to reset the event timer too - AB 14/01/99
-		eventTimeReset(savedGameTime / SCR_TICKRATE);
 
 		//reset the objId for new objects
 		if (saveGameVersion >= VERSION_17)
@@ -2827,7 +2810,6 @@ bool saveGame(char *aFileName, GAME_TYPE saveType)
 			psDroid->pos.y = INVALID_XY;
 			//this is mainly for VTOLs
 			setSaveDroidBase(psDroid, NULL);
-			psDroid->cluster = 0;
 			orderDroid(psDroid, DORDER_STOP, ModeImmediate);
 		}
 	}
@@ -3713,14 +3695,6 @@ bool gameLoadV(PHYSFS_file *fileHandle, unsigned int version)
 		mission.scrollMaxY = saveGameData.missionScrollMaxY;
 	}
 
-	if (saveGameVersion >= VERSION_30)
-	{
-		scrGameLevel = saveGameData.scrGameLevel;
-		bExtraVictoryFlag = saveGameData.bExtraVictoryFlag;
-		bExtraFailFlag = saveGameData.bExtraFailFlag;
-		bTrackTransporter = saveGameData.bTrackTransporter;
-	}
-
 	if (saveGameVersion >= VERSION_31)
 	{
 		mission.cheatTime = saveGameData.missionCheatTime;
@@ -3989,10 +3963,10 @@ static bool writeGameFile(const char *fileName, SDWORD saveType)
 	saveGame.bPlayerHasLost = (UBYTE)testPlayerHasLost();
 
 	//version 30
-	saveGame.scrGameLevel = scrGameLevel;
-	saveGame.bExtraFailFlag = (UBYTE)bExtraFailFlag;
-	saveGame.bExtraVictoryFlag = (UBYTE)bExtraVictoryFlag;
-	saveGame.bTrackTransporter = (UBYTE)bTrackTransporter;
+	saveGame.scrGameLevel = 0;
+	saveGame.bExtraFailFlag = 0;
+	saveGame.bExtraVictoryFlag = 0;
+	saveGame.bTrackTransporter = 0;
 
 	// version 33
 	saveGame.sGame		= game;
@@ -6351,11 +6325,6 @@ static bool	writeScriptState(const char *pFileName)
 {
 	char	jsFilename[PATH_MAX], *ext;
 
-	if (!eventSaveState(pFileName))
-	{
-		return false;
-	}
-
 	// The below belongs to the new javascript stuff
 	sstrcpy(jsFilename, pFileName);
 	ext = strrchr(jsFilename, '/');
@@ -6381,11 +6350,6 @@ bool loadScriptState(char *pFileName)
 
 	// change the file extension
 	strcat(pFileName, "/scriptstate.es");
-
-	if (!eventLoadState(pFileName))
-	{
-		return false;
-	}
 
 	return true;
 }

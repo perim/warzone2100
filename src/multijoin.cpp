@@ -36,7 +36,6 @@
 #include "lib/netplay/netplay.h"
 #include "lib/sound/audio.h"
 #include "lib/sound/audio_id.h"
-#include "lib/script/script.h"
 
 #include "multijoin.h"
 
@@ -59,7 +58,6 @@
 #include "wrappers.h"
 #include "intimage.h"
 #include "data.h"
-#include "scripttabs.h"
 
 #include "multimenu.h"
 #include "multiplay.h"
@@ -68,7 +66,6 @@
 #include "multistat.h"
 #include "multigifts.h"
 #include "qtscript.h"
-#include "scriptcb.h"
 
 // ////////////////////////////////////////////////////////////////////////////
 // Local Functions
@@ -301,8 +298,6 @@ bool MultiPlayerLeave(UDWORD playerIndex)
 	}
 
 	// fire script callback to reassign skirmish players.
-	CBPlayerLeft = playerIndex;
-	eventFireCallbackTrigger((TRIGGER_TYPE)CALL_PLAYERLEFT);
 	triggerEventPlayerLeft(playerIndex);
 
 	netPlayersUpdated = true;

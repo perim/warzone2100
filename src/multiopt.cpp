@@ -52,7 +52,6 @@
 #include "multigifts.h"
 #include "multiint.h"
 #include "multirecv.h"
-#include "scriptfuncs.h"
 #include "template.h"
 #include "lib/framework/wzapp.h"
 
@@ -429,7 +428,6 @@ bool multiGameInit(void)
 	}
 
 	gameInit();
-	msgStackReset();	//for multiplayer msgs, reset message stack
 
 	return true;
 }
