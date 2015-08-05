@@ -65,13 +65,6 @@ enum ORDBUTTONCLASS
 	ORDBUTCLASS_NORMAL,			// A normal button, one order type per line.
 };
 
-
-/*
- NOTE:
-	ORD_BTYPE_BOOLEAN_DEPEND only supports two buttons
-	ie button 1 = enable destruct, button 2 = destruct
-*/
-
 enum ORDBUTTONJUSTIFY
 {
 	ORD_JUSTIFY_LEFT,			// Pretty self explanatory really.
@@ -105,7 +98,6 @@ struct ORDERBUTTONS
 	unsigned States[MAX_ORDER_BUTS];                // Order state relating to each button, combination of SECONDARY_STATEs ored together.
 };
 
-
 struct AVORDER
 {
 	bool operator <(AVORDER const &b) const
@@ -119,7 +111,6 @@ struct AVORDER
 
 	UWORD OrderIndex;		// Index into ORDERBUTTONS array of available orders.
 };
-
 
 enum
 {
@@ -185,12 +176,12 @@ static ORDERBUTTONS OrderButtons[NUM_ORDERS] =
 		ORD_BTYPE_RADIO,
 		ORD_JUSTIFY_CENTER | ORD_JUSTIFY_NEWLINE,
 		IDORDER_ATTACK_LEVEL,
-		3, 0,
-		{IMAGE_ORD_FATWILLUP,	IMAGE_ORD_RETFIREUP,	IMAGE_ORD_HOLDFIREUP},
-		{IMAGE_ORD_FATWILLUP,	IMAGE_ORD_RETFIREUP,	IMAGE_ORD_HOLDFIREUP},
-		{IMAGE_DES_HILIGHT,		IMAGE_DES_HILIGHT,	IMAGE_DES_HILIGHT},
-		{STR_DORD_FIRE1,	STR_DORD_FIRE2,	STR_DORD_FIRE3},
-		{DSS_ALEV_ALWAYS,	DSS_ALEV_ATTACKED,	DSS_ALEV_NEVER}
+		2, 0,
+		{IMAGE_ORD_FATWILLUP,	IMAGE_ORD_HOLDFIREUP},
+		{IMAGE_ORD_FATWILLUP,	IMAGE_ORD_HOLDFIREUP},
+		{IMAGE_DES_HILIGHT,	IMAGE_DES_HILIGHT},
+		{STR_DORD_FIRE1,	STR_DORD_FIRE3},
+		{DSS_ALEV_ALWAYS,	DSS_ALEV_NEVER}
 	},
 	{
 		ORDBUTCLASS_NORMAL,
@@ -252,11 +243,9 @@ static ORDERBUTTONS OrderButtons[NUM_ORDERS] =
 	}
 };
 
-
 static std::vector<DROID *> SelectedDroids;
 static STRUCTURE *psSelectedFactory = NULL;
 static std::vector<AVORDER> AvailableOrders;
-
 
 bool OrderUp = false;
 
@@ -353,22 +342,8 @@ static SECONDARY_STATE GetSecondaryStates(SECONDARY_ORDER sec)
 	return state;
 }
 
-
-static UDWORD GetImageWidth(IMAGEFILE *ImageFile, UDWORD ImageID)
-{
-	return iV_GetImageWidth(ImageFile, (UWORD)ImageID);
-}
-
-static UDWORD GetImageHeight(IMAGEFILE *ImageFile, UDWORD ImageID)
-{
-	return iV_GetImageHeight(ImageFile, (UWORD)ImageID);
-}
-
-
 // Add the droid order screen.
 // Returns true if the form was displayed ok.
-//
-//changed to a BASE_OBJECT to accomodate the factories - AB 21/04/99
 bool intAddOrder(BASE_OBJECT *psObj)
 {
 	bool Animate = true;
@@ -514,13 +489,13 @@ bool intAddOrder(BASE_OBJECT *psObj)
 
 		case ORD_JUSTIFY_RIGHT:
 			sButInit.x = orderForm->width() - ORDER_BUTX -
-			             (NumJustifyButs * GetImageWidth(IntImages, OrderButtons[OrdIndex].ButImageID[0]) +
+			             (NumJustifyButs * iV_GetImageWidth(IntImages, OrderButtons[OrdIndex].ButImageID[0]) +
 			              (NumJustifyButs - 1) * ORDER_BUTGAP);
 			break;
 
 		case ORD_JUSTIFY_CENTER:
 			sButInit.x = (orderForm->width() -
-			              (NumJustifyButs * GetImageWidth(IntImages, OrderButtons[OrdIndex].ButImageID[0]) +
+			              (NumJustifyButs * iV_GetImageWidth(IntImages, OrderButtons[OrdIndex].ButImageID[0]) +
 			               (NumJustifyButs - 1) * ORDER_BUTGAP)) / 2;
 			break;
 
@@ -554,16 +529,16 @@ bool intAddOrder(BASE_OBJECT *psObj)
 			{
 				// the buttons will fill the line
 				sButInit.x = (SWORD)(ORDER_BUTX +
-				                     (GetImageWidth(IntImages, OrderButtons[OrdIndex].ButImageID[0]) + ORDER_BUTGAP) * NumCombineBefore);
+				                     (iV_GetImageWidth(IntImages, OrderButtons[OrdIndex].ButImageID[0]) + ORDER_BUTGAP) * NumCombineBefore);
 			}
 			else
 			{
 				// center the buttons
 				sButInit.x = orderForm->width() / 2 -
-				             (NumCombineButs * GetImageWidth(IntImages, OrderButtons[OrdIndex].ButImageID[0]) +
+				             (NumCombineButs * iV_GetImageWidth(IntImages, OrderButtons[OrdIndex].ButImageID[0]) +
 				              (NumCombineButs - 1) * ORDER_BUTGAP) / 2;
 				sButInit.x = (SWORD)(sButInit.x +
-				                     (GetImageWidth(IntImages, OrderButtons[OrdIndex].ButImageID[0]) + ORDER_BUTGAP) * NumCombineBefore);
+				                     (iV_GetImageWidth(IntImages, OrderButtons[OrdIndex].ButImageID[0]) + ORDER_BUTGAP) * NumCombineBefore);
 			}
 
 			// see if need to start a new line of buttons
@@ -578,8 +553,8 @@ bool intAddOrder(BASE_OBJECT *psObj)
 		for (unsigned i = 0; i < OrderButtons[OrdIndex].AcNumButs; ++i)
 		{
 			sButInit.pTip = getDORDDescription(OrderButtons[OrdIndex].ButTips[i]);
-			sButInit.width = (UWORD)GetImageWidth(IntImages, OrderButtons[OrdIndex].ButImageID[i]);
-			sButInit.height = (UWORD)GetImageHeight(IntImages, OrderButtons[OrdIndex].ButImageID[i]);
+			sButInit.width = (UWORD)iV_GetImageWidth(IntImages, OrderButtons[OrdIndex].ButImageID[i]);
+			sButInit.height = (UWORD)iV_GetImageHeight(IntImages, OrderButtons[OrdIndex].ButImageID[i]);
 			sButInit.UserData = PACKDWORD_TRI(OrderButtons[OrdIndex].ButGreyID[i],
 			                                  OrderButtons[OrdIndex].ButHilightID[i],
 			                                  OrderButtons[OrdIndex].ButImageID[i]);

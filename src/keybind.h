@@ -150,7 +150,6 @@ extern void	kf_SetDroidRetreatHeavy(void);
 extern void	kf_SetDroidRetreatNever(void);
 
 extern void	kf_SetDroidAttackAtWill(void);
-extern void	kf_SetDroidAttackReturn(void);
 extern void	kf_SetDroidAttackCease(void);
 
 void kf_SetDroidOrderHold();

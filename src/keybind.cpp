@@ -2226,12 +2226,6 @@ void	kf_SetDroidAttackAtWill(void)
 }
 
 // --------------------------------------------------------------------------
-void	kf_SetDroidAttackReturn(void)
-{
-	kfsf_SetSelectedDroidsState(DSO_ATTACK_LEVEL, DSS_ALEV_ATTACKED);
-}
-
-// --------------------------------------------------------------------------
 void	kf_SetDroidAttackCease(void)
 {
 	kfsf_SetSelectedDroidsState(DSO_ATTACK_LEVEL, DSS_ALEV_NEVER);

@@ -79,7 +79,7 @@ typedef DroidOrderType DROID_ORDER;
 enum SECONDARY_ORDER
 {
 	DSO_REPAIR_LEVEL,               /**< The repair level at which the droid falls back to repair: can be low, high or never. Used with DSS_REPLEV_LOW, DSS_REPLEV_HIGH, DSS_REPLEV_NEVER. */
-	DSO_ATTACK_LEVEL,               /**< The attack level at which a droid can attack: can be always, attacked or never. Used with DSS_ALEV_ALWAYS, DSS_ALEV_ATTACKED, DSS_ALEV_NEVER. */
+	DSO_ATTACK_LEVEL,               /**< The attack level at which a droid can attack: can be always or never. Used with DSS_ALEV_ALWAYS or DSS_ALEV_NEVER. */
 	DSO_RECYCLE,                    /**< If can be recicled or not. */
 	DSO_PATROL,                     /**< If it is assigned to patrol between current pos and next move target. */
 	DSO_RETURN_TO_LOC,              /**< Generic secondary order to return to a location. Will depend on the secondary state DSS_RTL* to be specific. */
@@ -94,7 +94,6 @@ enum SECONDARY_STATE
 	DSS_REPLEV_HIGH     = 0x000008,	/**< state referred to secondary order DSO_REPAIR_LEVEL. Droid falls back if its health decrease below 50%. */
 	DSS_REPLEV_NEVER    = 0x00000c,	/**< state referred to secondary order DSO_REPAIR_LEVEL. Droid never falls back. */
 	DSS_ALEV_ALWAYS     = 0x000010,	/**< state referred to secondary order DSO_ATTACK_LEVEL. Droid attacks by its free will everytime. */
-	DSS_ALEV_ATTACKED   = 0x000020,	/**< state referred to secondary order DSO_ATTACK_LEVEL. Droid attacks if it is attacked. */
 	DSS_ALEV_NEVER      = 0x000030,	/**< state referred to secondary order DSO_ATTACK_LEVEL. Droid never attacks. */
 	DSS_RECYCLE_SET     = 0x000100,	/**< state referred to secondary order DSO_RECYCLE. If set, the droid can be recycled. */
 	DSS_RTL_REPAIR      = 0x080000,	/**< state set to send order DORDER_RTR to droid. */
