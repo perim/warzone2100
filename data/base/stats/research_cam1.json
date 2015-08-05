@@ -90,11 +90,7 @@
             "A0ComDroidControl"
         ],
         "researchPoints": 1200,
-        "researchPower": 37,
-        "resultComponents": [
-            "CommandBrain01"
-        ],
-        "statID": "CommandBrain01"
+        "researchPower": 37
     },
     "R-Comp-SynapticLink": {
         "iconID": "IMAGE_RES_COMPUTERTECH",

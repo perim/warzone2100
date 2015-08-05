@@ -45,7 +45,6 @@ function eventStartLevel()
 	setMiniMap(false);
 	setDesign(false);
 	setDroidLimit(0, 100, DROID_ANY);
-	setDroidLimit(0, 10, DROID_COMMAND);
 	setDroidLimit(0, 15, DROID_CONSTRUCT);
 
 	setStructureLimits("A0PowerGenerator", 5, 0);
