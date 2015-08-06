@@ -71,7 +71,6 @@ extern char	MultiCustomMapsPath[PATH_MAX];
 
 bool	MultiMenuUp			= false;
 static UDWORD	context = 0;
-UDWORD	current_tech = 1;
 UDWORD	current_numplayers = 4;
 static std::string current_searchString;
 
@@ -244,29 +243,6 @@ void displayRequestOption(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 	}
 }
 
-// ////////////////////////////////////////////////////////////////////////////
-// ////////////////////////////////////////////////////////////////////////////
-
-static void displayCamTypeBut(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
-{
-	int x = xOffset + psWidget->x();
-	int y = yOffset + psWidget->y();
-	char buffer[8];
-
-	iV_SetFont(font_regular);
-	drawBlueBox(x, y, psWidget->width(), psWidget->height());
-	sprintf(buffer, "T%i", (int)(psWidget->UserData));
-	if ((unsigned int)(psWidget->UserData) == current_tech)
-	{
-		iV_SetTextColour(WZCOL_TEXT_BRIGHT);
-	}
-	else
-	{
-		iV_SetTextColour(WZCOL_TEXT_MEDIUM);
-	}
-	iV_DrawText(buffer, x + 2, y + 12);
-}
-
 static void displayNumPlayersBut(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset)
 {
 	int x = xOffset + psWidget->x();
@@ -346,6 +322,22 @@ static bool reverseSortByFirst(std::pair<int, W_BUTTON *> const &a, std::pair<in
 	return a.first > b.first;
 }
 
+/// returns maps of the right 'type'
+static LEVEL_LIST enumerateMultiMaps(int numPlayers)
+{
+	LEVEL_LIST list;
+
+	for (auto lev : getLevels())
+	{
+		if (game.type == SKIRMISH && lev->type == SKIRMISH && (numPlayers == 0 || numPlayers == lev->players))
+		{
+			list.push_front(lev);
+		}
+	}
+
+	return list;
+}
+
 /** Searches in the given search directory for files ending with the
  *  given extension. Then will create a window with buttons for each
  *  found file.
@@ -356,7 +348,7 @@ static bool reverseSortByFirst(std::pair<int, W_BUTTON *> const &a, std::pair<in
  *  \param mode (purpose unknown)
  *  \param numPlayers (purpose unknown)
  */
-void addMultiRequest(const char *searchDir, const char *fileExtension, UDWORD mode, UBYTE mapCam, UBYTE numPlayers, std::string const &searchString)
+void addMultiRequest(const char *searchDir, const char *fileExtension, UDWORD mode, UBYTE numPlayers, std::string const &searchString)
 {
 	const unsigned int extensionLength = strlen(fileExtension);
 	const unsigned int buttonsX = (mode == MULTIOP_MAP) ? 22 : 17;
@@ -365,7 +357,6 @@ void addMultiRequest(const char *searchDir, const char *fileExtension, UDWORD mo
 	if (mode == MULTIOP_MAP)
 	{
 		// only save these when they select MAP button
-		current_tech = mapCam;
 		current_numplayers = numPlayers;
 		current_searchString = searchString;
 	}
@@ -437,7 +428,7 @@ void addMultiRequest(const char *searchDir, const char *fileExtension, UDWORD mo
 
 	if (mode == MULTIOP_MAP)
 	{
-		LEVEL_LIST levels = enumerateMultiMaps(mapCam, numPlayers);
+		LEVEL_LIST levels = enumerateMultiMaps(numPlayers);
 		std::vector<std::pair<int, W_BUTTON *> > buttons;
 
 		for (auto mapData : levels)
@@ -462,31 +453,11 @@ void addMultiRequest(const char *searchDir, const char *fileExtension, UDWORD mo
 		// if it's map select then add the cam style buttons.
 		sButInit = W_BUTINIT();
 		sButInit.formID		= M_REQUEST;
-		sButInit.id		= M_REQUEST_C1;
 		sButInit.x              = 3;
-		sButInit.y              = 254;
+		sButInit.y		= 17;
 		sButInit.width		= 17;
 		sButInit.height		= 17;
-		sButInit.UserData	= 1;
-		sButInit.pTip		= _("Technology level 1");
-		sButInit.pDisplay	= displayCamTypeBut;
-
-		widgAddButton(psRScreen, &sButInit);
-
-		sButInit.id		= M_REQUEST_C2;
-		sButInit.y		+= 22;
-		sButInit.UserData	= 2;
-		sButInit.pTip		= _("Technology level 2");
-		widgAddButton(psRScreen, &sButInit);
-
-		sButInit.id		= M_REQUEST_C3;
-		sButInit.y		+= 22;
-		sButInit.UserData	= 3;
-		sButInit.pTip		= _("Technology level 3");
-		widgAddButton(psRScreen, &sButInit);
-
 		sButInit.id		= M_REQUEST_AP;
-		sButInit.y		= 17;
 		sButInit.UserData	= 0;
 		sButInit.pTip		= _("Any number of players");
 		sButInit.pDisplay	= displayNumPlayersBut;
@@ -562,37 +533,20 @@ bool runMultiRequester(UDWORD id, UDWORD *mode, QString *chosen, LEVEL_DATASET *
 		id = 0;
 	}
 
-	switch (id)
+	if (id == M_REQUEST_AP)
 	{
-	case M_REQUEST_C1:
-		closeMultiRequester();
-		addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, 1, current_numplayers, current_searchString);
-		break;
-	case M_REQUEST_C2:
-		closeMultiRequester();
-		addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, 2, current_numplayers, current_searchString);
-		break;
-	case M_REQUEST_C3:
-		closeMultiRequester();
-		addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, 3, current_numplayers, current_searchString);
-		break;
-	case M_REQUEST_AP:
-		closeMultiRequester();
-		addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, current_tech, 0, current_searchString);
-		break;
-	default:
-		for (unsigned numPlayers = 2; numPlayers <= MAX_PLAYERS_IN_GUI; ++numPlayers)
-		{
-			if (id == M_REQUEST_NP[numPlayers - 2])
-			{
-				closeMultiRequester();
-				addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, current_tech, numPlayers, current_searchString);
-				break;
-			}
-		}
-		break;
+		addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, 0, current_searchString);
+		return false;
 	}
-
+	for (unsigned numPlayers = 2; numPlayers <= MAX_PLAYERS_IN_GUI; ++numPlayers)
+	{
+		if (id == M_REQUEST_NP[numPlayers - 2])
+		{
+			closeMultiRequester();
+			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, numPlayers, current_searchString);
+			break;
+		}
+	}
 	return false;
 }
 

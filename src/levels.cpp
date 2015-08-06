@@ -92,6 +92,10 @@ enum LEVELPARSER_STATE
 	LP_GAME,		// game token received
 };
 
+LEVEL_LIST getLevels()
+{
+	return psLevels;
+}
 
 // initialise the level system
 bool levInitialise(void)
@@ -1049,39 +1053,4 @@ bool levLoadData(char const *name, Sha256 const *hash, char *pSaveName, GAME_TYP
 	}
 
 	return true;
-}
-
-/// returns maps of the right 'type'
-LEVEL_LIST enumerateMultiMaps(int camToUse, int numPlayers)
-{
-	LEVEL_LIST list;
-
-	for (auto lev : psLevels)
-	{
-		if (game.type == SKIRMISH)
-		{
-			int cam;
-
-			if (lev->type == MULTI_SKIRMISH2)
-			{
-				cam = 2;
-			}
-			else if (lev->type == MULTI_SKIRMISH3)
-			{
-				cam = 3;
-			}
-			else
-			{
-				cam = 1;
-			}
-			if ((lev->type == SKIRMISH || lev->type == MULTI_SKIRMISH2 || lev->type == MULTI_SKIRMISH3)
-			    && (numPlayers == 0 || numPlayers == lev->players)
-			    && cam == camToUse)
-			{
-				list.push_front(lev);
-			}
-		}
-	}
-
-	return list;
 }

@@ -72,7 +72,7 @@ struct LEVEL_DATASET
 
 typedef std::list<LEVEL_DATASET *> LEVEL_LIST;
 
-LEVEL_LIST enumerateMultiMaps(int camToUse, int numPlayers);
+LEVEL_LIST getLevels();
 
 // parse a level description data file
 bool levParse(const char *buffer, size_t size, searchPathMode datadir, bool ignoreWrf, char const *realFileName);

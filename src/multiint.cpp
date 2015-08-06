@@ -2850,7 +2850,7 @@ static void processMultiopWidgets(UDWORD id)
 			widgDelete(psWScreen, FRONTEND_SIDETEXT2);  // del text too,
 
 			debug(LOG_WZ, "processMultiopWidgets[MULTIOP_MAP_ICON]: %s.wrf", MultiCustomMapsPath);
-			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, current_tech, 0, widgGetString(psWScreen, MULTIOP_MAP));
+			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, 0, widgGetString(psWScreen, MULTIOP_MAP));
 
 			widgSetString(psWScreen, MULTIOP_MAP + 1 , game.map); //What a horrible hack! FIX ME! (See addBlueForm())
 			widgReveal(psWScreen, MULTIOP_MAP_MOD);
@@ -2861,7 +2861,7 @@ static void processMultiopWidgets(UDWORD id)
 			widgDelete(psWScreen, FRONTEND_SIDETEXT2);					// del text too,
 
 			debug(LOG_WZ, "processMultiopWidgets[MULTIOP_MAP_ICON]: %s.wrf", MultiCustomMapsPath);
-			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, current_tech, current_numplayers);
+			addMultiRequest(MultiCustomMapsPath, ".wrf", MULTIOP_MAP, current_numplayers);
 			break;
 
 		case MULTIOP_MAP_PREVIEW:
@@ -2995,7 +2995,7 @@ static void processMultiopWidgets(UDWORD id)
 		widgDelete(psWScreen, MULTIOP_PLAYERS);
 		widgDelete(psWScreen, FRONTEND_SIDETEXT2);					// del text too,
 
-		addMultiRequest(MultiPlayersPath, ".sta", MULTIOP_PNAME, 0, 0);
+		addMultiRequest(MultiPlayersPath, ".sta", MULTIOP_PNAME, 0);
 		break;
 
 	case MULTIOP_HOST:

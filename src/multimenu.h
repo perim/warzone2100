@@ -28,7 +28,7 @@
 #include "stringdef.h"
 
 // requester
-void addMultiRequest(const char *searchDir, const char *fileExtension, UDWORD id, UBYTE mapCam, UBYTE numPlayers, std::string const &searchString = std::string());
+void addMultiRequest(const char *searchDir, const char *fileExtension, UDWORD id, UBYTE numPlayers, std::string const &searchString = std::string());
 extern bool		multiRequestUp;
 extern W_SCREEN *psRScreen;			// requester stuff.
 bool runMultiRequester(UDWORD id, UDWORD *mode, QString *chosen, LEVEL_DATASET **chosenValue, bool *isHoverPreview);
@@ -44,7 +44,6 @@ extern bool		intAddMultiMenu(void);
 extern bool		MultiMenuUp;
 
 extern UDWORD		current_numplayers;
-extern UDWORD		current_tech;
 
 #define MULTIMENU				10600
 #define MULTIMENU_FORM			MULTIMENU
