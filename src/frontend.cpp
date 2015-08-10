@@ -736,47 +736,33 @@ static bool startGraphicsOptionsMenu(void)
 	}
 
 	////////////
-	// screenshake
-	addTextButton(FRONTEND_SSHAKE,	 FRONTEND_POS4X - 35,   FRONTEND_POS4Y, _("Screen Shake"), 0);
-	if (getShakeStatus())
-	{
-		// shaking on
-		addTextButton(FRONTEND_SSHAKE_R, FRONTEND_POS4M - 55,  FRONTEND_POS4Y, _("On"), 0);
-	}
-	else
-	{
-		//shaking off.
-		addTextButton(FRONTEND_SSHAKE_R, FRONTEND_POS4M - 55,  FRONTEND_POS4Y, _("Off"), 0);
-	}
-
-	////////////
 	//subtitle mode.
-	addTextButton(FRONTEND_SUBTITLES, FRONTEND_POS6X - 35, FRONTEND_POS5Y, _("Subtitles"), 0);
+	addTextButton(FRONTEND_SUBTITLES, FRONTEND_POS4X - 35, FRONTEND_POS4Y, _("Subtitles"), 0);
 	if (!seq_GetSubtitles())
 	{
-		addTextButton(FRONTEND_SUBTITLES_R, FRONTEND_POS6M - 55, FRONTEND_POS5Y, _("Off"), 0);
+		addTextButton(FRONTEND_SUBTITLES_R, FRONTEND_POS4M - 55, FRONTEND_POS4Y, _("Off"), 0);
 	}
 	else
 	{
-		addTextButton(FRONTEND_SUBTITLES_R, FRONTEND_POS6M - 55, FRONTEND_POS5Y, _("On"), 0);
+		addTextButton(FRONTEND_SUBTITLES_R, FRONTEND_POS4M - 55, FRONTEND_POS4Y, _("On"), 0);
 	}
 
 	////////////
 	//shadows
-	addTextButton(FRONTEND_SHADOWS, FRONTEND_POS7X - 35, FRONTEND_POS6Y, _("Shadows"), 0);
+	addTextButton(FRONTEND_SHADOWS, FRONTEND_POS5X - 35, FRONTEND_POS5Y, _("Shadows"), 0);
 	if (getDrawShadows())
 	{
-		addTextButton(FRONTEND_SHADOWS_R, FRONTEND_POS7M - 55,  FRONTEND_POS6Y, _("On"), 0);
+		addTextButton(FRONTEND_SHADOWS_R, FRONTEND_POS5M - 55,  FRONTEND_POS5Y, _("On"), 0);
 	}
 	else
 	{
 		// not flipped
-		addTextButton(FRONTEND_SHADOWS_R, FRONTEND_POS7M - 55,  FRONTEND_POS6Y, _("Off"), 0);
+		addTextButton(FRONTEND_SHADOWS_R, FRONTEND_POS5M - 55,  FRONTEND_POS5Y, _("Off"), 0);
 	}
 
 	// Radar
-	addTextButton(FRONTEND_RADAR, FRONTEND_POS7X - 35, FRONTEND_POS7Y, _("Radar"), 0);
-	addTextButton(FRONTEND_RADAR_R, FRONTEND_POS7M - 55, FRONTEND_POS7Y, rotateRadar ? _("Rotating") : _("Fixed"), 0);
+	addTextButton(FRONTEND_RADAR, FRONTEND_POS6X - 35, FRONTEND_POS6Y, _("Radar"), 0);
+	addTextButton(FRONTEND_RADAR_R, FRONTEND_POS6M - 55, FRONTEND_POS6Y, rotateRadar ? _("Rotating") : _("Fixed"), 0);
 
 	// Add some text down the side of the form
 	addSideText(FRONTEND_SIDETEXT, FRONTEND_SIDEX, FRONTEND_SIDEY, _("GRAPHICS OPTIONS"));
@@ -796,20 +782,6 @@ bool runGraphicsOptionsMenu(void)
 
 	switch (id)
 	{
-	case FRONTEND_SSHAKE:
-	case FRONTEND_SSHAKE_R:
-		if (getShakeStatus())
-		{
-			setShakeStatus(false);
-			widgSetString(psWScreen, FRONTEND_SSHAKE_R, _("Off"));
-		}
-		else
-		{
-			setShakeStatus(true);
-			widgSetString(psWScreen, FRONTEND_SSHAKE_R, _("On"));
-		}
-		break;
-
 	case FRONTEND_QUIT:
 		changeTitleMode(OPTIONS);
 		break;

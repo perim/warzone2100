@@ -814,7 +814,6 @@ void	kf_ToggleCamera(void)
 {
 	if (getWarCamStatus() == false)
 	{
-		shakeStop();	// Ensure screen shake stopped before starting camera mode.
 		setDrivingStatus(false);
 	}
 	camToggleStatus();
@@ -2452,20 +2451,7 @@ void	kf_ToggleMouseInvert(void)
 		CONPRINTF(ConsoleString, (ConsoleString, _("Vertical rotation direction: Flipped")));
 	}
 }
-// --------------------------------------------------------------------------
-void	kf_ToggleShakeStatus(void)
-{
-	if (getShakeStatus())
-	{
-		setShakeStatus(false);
-		CONPRINTF(ConsoleString, (ConsoleString, _("Screen shake when things die: Off")));
-	}
-	else
-	{
-		setShakeStatus(true);
-		CONPRINTF(ConsoleString, (ConsoleString, _("Screen shake when things die: On")));
-	}
-}
+
 // --------------------------------------------------------------------------
 void	kf_ToggleShadows(void)
 {
