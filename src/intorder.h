@@ -29,7 +29,7 @@
 
 extern bool OrderUp;
 
-bool intAddOrder(BASE_OBJECT *psObj);			// create and open order form
+bool intAddOrder(BASE_OBJECT *psObj, bool Animate = true);
 void intRunOrder(void);
 void intProcessOrder(UDWORD id);
 void intRemoveOrder(void);

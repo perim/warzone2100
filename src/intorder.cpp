@@ -344,9 +344,8 @@ static SECONDARY_STATE GetSecondaryStates(SECONDARY_ORDER sec)
 
 // Add the droid order screen.
 // Returns true if the form was displayed ok.
-bool intAddOrder(BASE_OBJECT *psObj)
+bool intAddOrder(BASE_OBJECT *psObj, bool Animate)
 {
-	bool Animate = true;
 	SECONDARY_STATE State;
 	UWORD OrdIndex;
 	UWORD Height, NumDisplayedOrders;
@@ -621,6 +620,7 @@ bool intAddOrder(BASE_OBJECT *psObj)
 	orderForm->setGeometry(orderForm->x(), ORDER_BOTTOMY - newHeight, orderForm->width(), newHeight);
 
 	OrderUp = true;
+	intMode = INT_ORDER;
 
 	return true;
 }
@@ -779,7 +779,8 @@ void intProcessOrder(UDWORD id)
 					// Enable the dependant button.
 					widgSetButtonState(psWScreen, id + 1, 0);
 				}
-			} if ((id > BaseID) && (id < BaseID + OrderButtons[OrdIndex].AcNumButs))
+			}
+			if ((id > BaseID) && (id < BaseID + OrderButtons[OrdIndex].AcNumButs))
 			{
 				// If the previous button is down ( armed )..
 				if (widgGetButtonState(psWScreen, id - 1) & WBUT_CLICKLOCK)
@@ -927,8 +928,6 @@ bool intRefreshOrder(void)
 	if ((intMode == INT_ORDER) &&
 	    (widgGetFromID(psWScreen, IDORDER_FORM) != NULL))
 	{
-		bool Ret;
-
 		SelectedDroids.clear();
 
 		// check for factory selected first
@@ -945,18 +944,17 @@ bool intRefreshOrder(void)
 		// if the orders havn't changed, just reset the state
 		if (CheckObjectOrderList())
 		{
-			Ret = intRefreshOrderButtons();
+			return intRefreshOrderButtons();
 		}
 		else
 		{
 			// Refresh it by re-adding it.
-			Ret = intAddOrder(NULL);
-			if (Ret == false)
+			if (!intAddOrder(NULL))
 			{
 				intMode = INT_NORMAL;
+				return false;
 			}
 		}
-		return Ret;
 	}
 
 	return true;
@@ -998,11 +996,6 @@ void intAddFactoryOrder(STRUCTURE *psStructure)
 	if (!OrderUp)
 	{
 		intResetScreen(false);
-		intAddOrder((BASE_OBJECT *)psStructure);
-		intMode = INT_ORDER;
 	}
-	else
-	{
-		intAddOrder((BASE_OBJECT *)psStructure);
-	}
+	intAddOrder((BASE_OBJECT *)psStructure);
 }

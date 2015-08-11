@@ -2318,15 +2318,8 @@ void intObjectSelected(BASE_OBJECT *psObj)
 			if (!OrderUp)
 			{
 				intResetScreen(false);
-				// changed to a BASE_OBJECT to accomodate the factories - AB 21/04/99
-				intAddOrder(psObj);
-				intMode = INT_ORDER;
 			}
-			else
-			{
-				// changed to a BASE_OBJECT to accomodate the factories - AB 21/04/99
-				intAddOrder(psObj);
-			}
+			intAddOrder(psObj);
 			break;
 
 		case OBJ_STRUCTURE:

@@ -56,6 +56,7 @@
 #include "display.h"
 #include "console.h"
 #include "component.h"
+#include "intorder.h"
 #include "lighting.h"
 #include "multiplay.h"
 #include "warcam.h"
@@ -3302,8 +3303,9 @@ void SelectDroid(DROID *psDroid)
 	{
 		psDroid->selected = true;
 		intRefreshScreen();
+		intAddOrder(psDroid, false);
+		triggerEventSelected();
 	}
-	triggerEventSelected();
 }
 
 // De-select a droid and do any necessary housekeeping.
