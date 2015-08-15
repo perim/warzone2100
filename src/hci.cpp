@@ -54,7 +54,6 @@
 #include "design.h"
 #include "display.h"
 #include "display3d.h"
-#include "drive.h"
 #include "edit3d.h"
 #include "effects.h"
 #include "game.h"
@@ -795,9 +794,6 @@ static void intRemoveOptions(void)
 /* Reset the widget screen to just the reticule */
 void intResetScreen(bool NoAnim)
 {
-	// Ensure driver mode is turned off.
-	StopDriverMode();
-
 	if (getWidgetsStatus() == false)
 	{
 		NoAnim = true;
@@ -1815,18 +1811,8 @@ static void intAddObjectStats(BASE_OBJECT *psObj, UDWORD id)
 
 static void intSelectDroid(BASE_OBJECT *psObj)
 {
-	if (driveModeActive())
-	{
-		clearSel();
-		((DROID *)psObj)->selected = true;
-		driveSelectionChanged();
-		driveDisableControl();
-	}
-	else
-	{
-		clearSelection();
-		((DROID *)psObj)->selected = true;
-	}
+	clearSelection();
+	((DROID *)psObj)->selected = true;
 	triggerEventSelected();
 }
 
@@ -1943,38 +1929,35 @@ static void intProcessObject(UDWORD id)
 				triggerEventSelected();
 			}
 
-			if (!driveModeActive())
+			// don't do this if offWorld and a structure object has been selected
+			if (!(psObj->type == OBJ_STRUCTURE && offWorldKeepLists))
 			{
-				// don't do this if offWorld and a structure object has been selected
-				if (!(psObj->type == OBJ_STRUCTURE && offWorldKeepLists))
+				// set the map position - either the object position, or the position jumped from
+				butIndex = id - IDOBJ_OBJSTART;
+				if (butIndex >= 0 && butIndex <= IDOBJ_OBJEND - IDOBJ_OBJSTART)
 				{
-					// set the map position - either the object position, or the position jumped from
-					butIndex = id - IDOBJ_OBJSTART;
-					if (butIndex >= 0 && butIndex <= IDOBJ_OBJEND - IDOBJ_OBJSTART)
+					asJumpPos.resize(IDOBJ_OBJEND - IDOBJ_OBJSTART, Vector2i(0, 0));
+					if (((asJumpPos[butIndex].x == 0) && (asJumpPos[butIndex].y == 0)) ||
+					    !DrawnInLastFrame((SDWORD)psObj->sDisplay.frameNumber) ||
+					    ((psObj->sDisplay.screenX > pie_GetVideoBufferWidth()) ||
+					     (psObj->sDisplay.screenY > pie_GetVideoBufferHeight())))
 					{
-						asJumpPos.resize(IDOBJ_OBJEND - IDOBJ_OBJSTART, Vector2i(0, 0));
-						if (((asJumpPos[butIndex].x == 0) && (asJumpPos[butIndex].y == 0)) ||
-						    !DrawnInLastFrame((SDWORD)psObj->sDisplay.frameNumber) ||
-						    ((psObj->sDisplay.screenX > pie_GetVideoBufferWidth()) ||
-						     (psObj->sDisplay.screenY > pie_GetVideoBufferHeight())))
+						asJumpPos[butIndex] = getPlayerPos();
+						setPlayerPos(psObj->pos.x, psObj->pos.y);
+						if (getWarCamStatus())
 						{
-							asJumpPos[butIndex] = getPlayerPos();
-							setPlayerPos(psObj->pos.x, psObj->pos.y);
-							if (getWarCamStatus())
-							{
-								camToggleStatus();
-							}
+							camToggleStatus();
 						}
-						else
+					}
+					else
+					{
+						setPlayerPos(asJumpPos[butIndex].x, asJumpPos[butIndex].y);
+						if (getWarCamStatus())
 						{
-							setPlayerPos(asJumpPos[butIndex].x, asJumpPos[butIndex].y);
-							if (getWarCamStatus())
-							{
-								camToggleStatus();
-							}
-							asJumpPos[butIndex].x = 0;
-							asJumpPos[butIndex].y = 0;
+							camToggleStatus();
 						}
+						asJumpPos[butIndex].x = 0;
+						asJumpPos[butIndex].y = 0;
 					}
 				}
 			}
@@ -2194,19 +2177,6 @@ static void intProcessStats(UDWORD id)
 				// or if selecting a structure to demolish
 				if (objMode == IOBJ_BUILDSEL || objMode == IOBJ_DEMOLISHSEL)
 				{
-					if (driveModeActive())
-					{
-						// Make sure weve got a construction droid selected.
-						if (driveGetDriven()->droidType != DROID_CONSTRUCT
-						    && driveGetDriven()->droidType != DROID_CYBORG_CONSTRUCT)
-						{
-							driveDisableControl();
-						}
-						driveDisableTactical();
-						driveStartBuild();
-						intRemoveObject();
-					}
-
 					intRemoveObject();
 					// hack to stop the stats window re-opening in demolish mode
 					if (objMode == IOBJ_DEMOLISHSEL)
@@ -2295,10 +2265,7 @@ static void intProcessStats(UDWORD id)
 /* Set the map view point to the world coordinates x,y */
 void intSetMapPos(UDWORD x, UDWORD y)
 {
-	if (!driveModeActive())
-	{
-		setViewPos(map_coord(x), map_coord(y), true);
-	}
+	setViewPos(map_coord(x), map_coord(y), true);
 }
 
 
@@ -4305,12 +4272,6 @@ void addIntelScreen(void)
 {
 	bool	radOnScreen;
 
-	if (driveModeActive() && !driveInterfaceEnabled())
-	{
-		driveDisableControl();
-		driveEnableInterface(true);
-	}
-
 	intResetScreen(false);
 
 	//lock the reticule button
@@ -4723,32 +4684,9 @@ bool intCheckReticuleButEnabled(UDWORD id)
 	return false;
 }
 
-// Find any structure. Returns NULL if none found.
-//
-STRUCTURE *intFindAStructure(void)
-{
-	STRUCTURE *Struct;
-
-	// First try and find a factory.
-	Struct = intGotoNextStructureType(REF_FACTORY, false, false);
-	if (Struct == NULL)
-	{
-		// If that fails then look for a command center.
-		Struct = intGotoNextStructureType(REF_HQ, false, false);
-		if (Struct == NULL)
-		{
-			// If that fails then look for a any structure.
-			Struct = intGotoNextStructureType(REF_ANY, false, false);
-		}
-	}
-
-	return Struct;
-}
-
-
 // Look through the players structures and find the next one of type structType.
 //
-STRUCTURE *intGotoNextStructureType(UDWORD structType, bool JumpTo, bool CancelDrive)
+static STRUCTURE *intGotoNextStructureType(UDWORD structType)
 {
 	STRUCTURE	*psStruct;
 	bool Found = false;
@@ -4774,14 +4712,7 @@ STRUCTURE *intGotoNextStructureType(UDWORD structType, bool JumpTo, bool CancelD
 		{
 			if (psStruct != CurrentStruct)
 			{
-				if (CancelDrive)
-				{
-					clearSelection();
-				}
-				else
-				{
-					clearSel();
-				}
+				clearSel();
 				psStruct->selected = true;
 				CurrentStruct = psStruct;
 				Found = true;
@@ -4799,14 +4730,7 @@ STRUCTURE *intGotoNextStructureType(UDWORD structType, bool JumpTo, bool CancelD
 			{
 				if (psStruct != CurrentStruct)
 				{
-					if (CancelDrive)
-					{
-						clearSelection();
-					}
-					else
-					{
-						clearSel();
-					}
+					clearSel();
 					psStruct->selected = true;
 					CurrentStruct = psStruct;
 					break;
@@ -4815,15 +4739,31 @@ STRUCTURE *intGotoNextStructureType(UDWORD structType, bool JumpTo, bool CancelD
 		}
 	}
 
-	// Center it on screen.
-	if ((CurrentStruct) && (JumpTo))
-	{
-		intSetMapPos(CurrentStruct->pos.x, CurrentStruct->pos.y);
-	}
-
 	triggerEventSelected();
 
 	return CurrentStruct;
+}
+
+// Find any structure. Returns NULL if none found.
+//
+STRUCTURE *intFindAStructure(void)
+{
+	STRUCTURE *Struct;
+
+	// First try and find a factory.
+	Struct = intGotoNextStructureType(REF_FACTORY);
+	if (Struct == NULL)
+	{
+		// If that fails then look for a command center.
+		Struct = intGotoNextStructureType(REF_HQ);
+		if (Struct == NULL)
+		{
+			// If that fails then look for a any structure.
+			Struct = intGotoNextStructureType(REF_ANY);
+		}
+	}
+
+	return Struct;
 }
 
 // Look through the players droids and find the next one of type droidType.

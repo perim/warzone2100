@@ -76,7 +76,6 @@
 #include "lighting.h"
 #include "mapgrid.h"
 #include "edit3d.h"
-#include "drive.h"
 #include "fpath.h"
 #include "keybind.h"
 #include "wrappers.h"
@@ -561,12 +560,6 @@ static void gameStateUpdate()
 
 	//update the findpath system
 	fpathUpdate();
-
-	// update the command droids
-	if (getDrivingStatus())
-	{
-		driveUpdate();
-	}
 
 	for (unsigned i = 0; i < MAX_PLAYERS; i++)
 	{

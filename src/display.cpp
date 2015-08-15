@@ -66,7 +66,6 @@
 #include "projectile.h"
 #include "message.h"
 #include "effects.h"
-#include "drive.h"
 #include "selection.h"
 #include "transporter.h"
 #include "intorder.h"
@@ -275,27 +274,19 @@ void ProcessRadarInput()
 					x = mousePressPos_DEPRECATED(MOUSE_MMB).x;
 					y = mousePressPos_DEPRECATED(MOUSE_MMB).y;
 				}
-				if (driveModeActive())
+
+				/* If we're tracking a droid, then cancel that */
+				CalcRadarPosition(x, y, &PosX, &PosY);
+				if (mouseOverRadar)
 				{
-					driveProcessRadarInput(x, y);
+					// MARKER
+					// Send all droids to that location
+					orderSelectedLoc(selectedPlayer, (PosX * TILE_UNITS) + TILE_UNITS / 2,
+					                 (PosY * TILE_UNITS) + TILE_UNITS / 2, ctrlShiftDown()); // ctrlShiftDown() = ctrl clicked a destination, add an order
+
 				}
-				else
-				{
-
-					/* If we're tracking a droid, then cancel that */
-					CalcRadarPosition(x, y, &PosX, &PosY);
-					if (mouseOverRadar)
-					{
-						// MARKER
-						// Send all droids to that location
-						orderSelectedLoc(selectedPlayer, (PosX * TILE_UNITS) + TILE_UNITS / 2,
-						                 (PosY * TILE_UNITS) + TILE_UNITS / 2, ctrlShiftDown()); // ctrlShiftDown() = ctrl clicked a destination, add an order
-
-
-					}
-					CheckScrollLimits();
-					audio_PlayTrack(ID_SOUND_MESSAGEEND);
-				}
+				CheckScrollLimits();
+				audio_PlayTrack(ID_SOUND_MESSAGEEND);
 			}
 
 
@@ -435,11 +426,6 @@ static bool OverRadarAndNotDragging(void)
 
 static void CheckFinishedDrag(void)
 {
-	if (driveModeActive())
-	{
-		return;
-	}
-
 	if (mouseReleased(MOUSE_LMB) || mouseDown(MOUSE_RMB))
 	{
 		selectAttempt = false;
@@ -484,11 +470,6 @@ static void CheckFinishedDrag(void)
 
 static void CheckStartWallDrag(void)
 {
-	if (driveModeActive())
-	{
-		return;
-	}
-
 	if (mousePressed(MOUSE_LMB))
 	{
 		/* Store away the details if we're building */
@@ -574,18 +555,13 @@ static void HandleDrag(void)
 {
 	UDWORD dragX = 0, dragY = 0;
 
-	if ((driveModeActive() && mouseDown(MOUSE_LMB))
-	    || (mouseDrag(MOUSE_LMB, &dragX, &dragY) && !mouseOverRadar && !mouseDown(MOUSE_RMB)))
+	if (mouseDrag(MOUSE_LMB, &dragX, &dragY) && !mouseOverRadar && !mouseDown(MOUSE_RMB))
 	{
-		if (!driveModeActive())
-		{
-			dragBox3D.x1 = dragX;
-			dragBox3D.x2 = mouseX();
-			dragBox3D.y1 = dragY;
-			dragBox3D.y2 = mouseY();
-
-			dragBox3D.status = DRAG_DRAGGING;
-		}
+		dragBox3D.x1 = dragX;
+		dragBox3D.x2 = mouseX();
+		dragBox3D.y1 = dragY;
+		dragBox3D.y2 = mouseY();
+		dragBox3D.status = DRAG_DRAGGING;
 
 		if (buildState == BUILD3D_VALID)
 		{
@@ -666,61 +642,51 @@ void processMouseClickInput(void)
 		dealWithLMBDClick();
 	}
 
-	if (driveModeActive() && !driveTacticalActive())
+	if (mouseReleased(MOUSE_RMB) && !rotActive && !ignoreRMBC)
 	{
-		driveProcessAquireButton();
-	}
-	else
-	{
-		if (!driveModeActive())
+		dragBox3D.status = DRAG_INACTIVE;
+		// Pretty sure we wan't set walldrag status here aswell.
+		wallDrag.status = DRAG_INACTIVE;
+		bRadarDragging = false;
+		if (bRightClickOrders)
 		{
-			if (mouseReleased(MOUSE_RMB) && !rotActive && !ignoreRMBC)
-			{
-				dragBox3D.status = DRAG_INACTIVE;
-				// Pretty sure we wan't set walldrag status here aswell.
-				wallDrag.status = DRAG_INACTIVE;
-				bRadarDragging = false;
-				if (bRightClickOrders)
-				{
-					dealWithLMB();
-				}
-				else
-				{
-					dealWithRMB();
-				}
-				// Why?
-				if (getWarCamStatus())
-				{
-					camToggleStatus();
-				}
-			}
-
-			if (!mouseDrag(MOUSE_SELECT, (UDWORD *)&rotX, (UDWORD *)&rotY) && bRadarDragging)
-			{
-				bRadarDragging = false;
-			}
-
-			/* Right mouse click kills a building placement */
-			if (mouseReleased(MOUSE_RMB) &&
-			    (buildState == BUILD3D_POS || buildState == BUILD3D_VALID))
-			{
-				/* Stop the placement */
-				kill3DBuilding();
-				bRadarDragging = false;
-			}
-			if (mouseReleased(MOUSE_RMB))
-			{
-				cancelDeliveryRepos();
-			}
-			if (mouseDrag(MOUSE_ROTATE, (UDWORD *)&rotX, (UDWORD *)&rotY) && !rotActive && !bRadarDragging)
-			{
-				rotInitial = player.r.y;
-				rotInitialUp = player.r.x;
-				xMoved = 0;
-				yMoved = 0;
-				rotActive = true;
-			}
+			dealWithLMB();
 		}
+		else
+		{
+			dealWithRMB();
+		}
+		// Why?
+		if (getWarCamStatus())
+		{
+			camToggleStatus();
+		}
+	}
+
+	if (!mouseDrag(MOUSE_SELECT, (UDWORD *)&rotX, (UDWORD *)&rotY) && bRadarDragging)
+	{
+		bRadarDragging = false;
+	}
+
+	/* Right mouse click kills a building placement */
+	if (mouseReleased(MOUSE_RMB) &&
+	    (buildState == BUILD3D_POS || buildState == BUILD3D_VALID))
+	{
+		/* Stop the placement */
+		kill3DBuilding();
+		bRadarDragging = false;
+	}
+	if (mouseReleased(MOUSE_RMB))
+	{
+		cancelDeliveryRepos();
+	}
+	if (mouseDrag(MOUSE_ROTATE, (UDWORD *)&rotX, (UDWORD *)&rotY) && !rotActive && !bRadarDragging)
+	{
+		rotInitial = player.r.y;
+		rotInitialUp = player.r.x;
+		xMoved = 0;
+		yMoved = 0;
+		rotActive = true;
 	}
 
 	selection = establishSelection(selectedPlayer);
@@ -1590,7 +1556,6 @@ static void dealWithLMBDroid(DROID *psDroid, SELECTION_TYPE selection)
 		}
 
 		FeedbackOrderGiven();
-		driveDisableTactical();
 		return;
 	}
 
@@ -1607,7 +1572,6 @@ static void dealWithLMBDroid(DROID *psDroid, SELECTION_TYPE selection)
 		// try to attack your own unit
 		orderSelectedObjAdd(selectedPlayer, (BASE_OBJECT *)psDroid, ctrlShiftDown());
 		FeedbackOrderGiven();
-		driveDisableTactical();
 	}
 	else if (isTransporter(psDroid))
 	{
@@ -1731,7 +1695,6 @@ static void dealWithLMBStructure(STRUCTURE *psStructure, SELECTION_TYPE selectio
 			orderStructureObj(selectedPlayer, (BASE_OBJECT *)psStructure);
 		}
 		FeedbackOrderGiven();
-		driveDisableTactical();
 		return;
 	}
 
@@ -1815,8 +1778,6 @@ static void dealWithLMBStructure(STRUCTURE *psStructure, SELECTION_TYPE selectio
 			intDemolishCancel();
 		}
 	}
-
-	driveDisableTactical();
 }
 
 static void dealWithLMBFeature(FEATURE *psFeature)
@@ -1893,7 +1854,6 @@ static void dealWithLMBFeature(FEATURE *psFeature)
 	{
 		console("(Feature) %s ID: %d ref: %d Hipoints: %d/%d", getID(psFeature->psStats), psFeature->id, psFeature->psStats->ref, psFeature->psStats->body, psFeature->body);
 	}
-	driveDisableTactical();
 }
 
 static void dealWithLMBObject(BASE_OBJECT *psClickedOn)
@@ -1936,30 +1896,16 @@ void	dealWithLMB(void)
 	}
 
 	/* What have we clicked on? */
-	if (driveModeActive() && !driveTacticalActive())
+	psClickedOn = mouseTarget();
+	if (psClickedOn)
 	{
-		psClickedOn = NULL;
-		if (psClickedOn)
-		{
-			dealWithLMBObject(psClickedOn);
-		}
-
+		dealWithLMBObject(psClickedOn);
 		return;
-	}
-	else
-	{
-		psClickedOn = mouseTarget();
-		if (psClickedOn)
-		{
-			dealWithLMBObject(psClickedOn);
-
-			return;
-		}
 	}
 
 	/*Check for a Delivery Point or a Proximity Message*/
 	psLocation = checkMouseLoc();
-	if (psLocation == NULL || driveModeActive() || selNumSelected(selectedPlayer))
+	if (psLocation == NULL || selNumSelected(selectedPlayer))
 	{
 		// now changed to use the multiple order stuff
 		// clicked on a destination.
@@ -1983,8 +1929,6 @@ void	dealWithLMB(void)
 			        aux & AUXBITS_DANGER ? "danger" : "", aux & AUXBITS_THREAT ? "threat" : "",
 			        (int)psTile->watchers[selectedPlayer], (int)psTile->sensors[selectedPlayer], (int)psTile->jammers[selectedPlayer]);
 		}
-
-		driveDisableTactical();
 
 		return;
 	}
@@ -2113,8 +2057,7 @@ static void dealWithRMB(void)
 	DROID				*psDroid;
 	STRUCTURE			*psStructure;
 
-	if (driveModeActive() || mouseOverRadar ||
-	    InGameOpUp == true || widgGetFromID(psWScreen, INTINGAMEOP))
+	if (mouseOverRadar || InGameOpUp == true || widgGetFromID(psWScreen, INTINGAMEOP))
 	{
 		return;
 	}
@@ -2305,16 +2248,10 @@ static MOUSE_TARGET	itemUnderMouse(BASE_OBJECT **ppObjectUnderMouse)
 
 	*ppObjectUnderMouse = NULL;
 
-	if (!driveModeActive() || driveTacticalActive())
+	if (mouseTileX < 0 || mouseTileY < 0 || mouseTileX > (int)(mapWidth - 1) || mouseTileY > (int)(mapHeight - 1))
 	{
-		if ((mouseTileX < 0) ||
-		    (mouseTileY < 0) ||
-		    (mouseTileX > (SDWORD)(mapWidth - 1)) ||
-		    (mouseTileY > (SDWORD)(mapHeight - 1)))
-		{
-			retVal = MT_BLOCKING;
-			return (retVal);
-		}
+		retVal = MT_BLOCKING;
+		return retVal;
 	}
 
 	/* We haven't found anything yet */
@@ -2394,17 +2331,10 @@ static MOUSE_TARGET	itemUnderMouse(BASE_OBJECT **ppObjectUnderMouse)
 
 	/*	Not a droid, so maybe a structure or feature?
 		If still NULL after this then nothing */
-	if (driveModeActive() && !driveTacticalActive())
+	psNotDroid = getTileOccupier(mouseTileX, mouseTileY);
+	if (psNotDroid == NULL)
 	{
-		psNotDroid = NULL;
-	}
-	else
-	{
-		psNotDroid = getTileOccupier(mouseTileX, mouseTileY);
-		if (psNotDroid == NULL)
-		{
-			psNotDroid = getTileBlueprintStructure(mouseTileX, mouseTileY);
-		}
+		psNotDroid = getTileBlueprintStructure(mouseTileX, mouseTileY);
 	}
 
 	if (psNotDroid != NULL)
@@ -2715,11 +2645,8 @@ void clearSel()
 	triggerEventSelected();
 }
 
-// Clear the selection and stop driver mode.
-//
 void clearSelection()
 {
-	StopDriverMode();	// Cancel driver mode ( if active ).
 	clearSel();
 }
 
