@@ -4310,6 +4310,8 @@ static bool loadSaveDroid(const char *pFileName, DROID **ppsCurrentDroidLists)
 		bool onMission = ini.value("onMission", false).toBool();
 		DROID_TEMPLATE templ, *psTemplate = &templ;
 
+		ASSERT(pos.x >= 0 && pos.y >= 0 && pos.z >= 0, "Negative map coordinates saved");
+
 		if (skipForDifficulty(ini, player))
 		{
 			ini.endGroup();
@@ -4940,7 +4942,6 @@ static bool loadSaveStructure2(const char *pFileName, STRUCTURE **ppList)
 			psFactory->timeStartHold = ini.value("Factory/timeStartHold", psFactory->timeStartHold).toInt();
 			psFactory->loopsPerformed = ini.value("Factory/loopsPerformed", psFactory->loopsPerformed).toInt();
 			// statusPending and pendingCount belong to the GUI, not the game state.
-			psFactory->secondaryOrder = ini.value("Factory/secondaryOrder", psFactory->secondaryOrder).toInt();
 			//adjust the module structures IMD
 			if (capacity)
 			{
@@ -5227,7 +5228,6 @@ bool writeStructFile(const char *pFileName)
 					ini.setValue("Factory/timeStartHold", psFactory->timeStartHold);
 					ini.setValue("Factory/loopsPerformed", psFactory->loopsPerformed);
 					// statusPending and pendingCount belong to the GUI, not the game state.
-					ini.setValue("Factory/secondaryOrder", psFactory->secondaryOrder);
 
 					if (psFactory->psSubject != NULL)
 					{
@@ -5243,7 +5243,6 @@ bool writeStructFile(const char *pFileName)
 						}
 						ini.setValue("Factory/assemblyPoint/number", psFlag->factoryInc);
 					}
-					ini.setValue("Factory/secondaryOrder", psFactory->secondaryOrder);
 					ProductionRun emptyRun;
 					bool haveRun = psFactory->psAssemblyPoint->factoryInc < asProductionRun[psFactory->psAssemblyPoint->factoryType].size();
 					ProductionRun const &productionRun = haveRun ? asProductionRun[psFactory->psAssemblyPoint->factoryType][psFactory->psAssemblyPoint->factoryInc] : emptyRun;

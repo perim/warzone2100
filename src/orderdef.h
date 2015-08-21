@@ -80,7 +80,7 @@ enum SECONDARY_ORDER
 {
 	DSO_REPAIR_LEVEL,               /**< The repair level at which the droid falls back to repair: can be low, high or never. Used with DSS_REPLEV_LOW, DSS_REPLEV_HIGH, DSS_REPLEV_NEVER. */
 	DSO_ATTACK_LEVEL,               /**< The attack level at which a droid can attack: can be always or never. Used with DSS_ALEV_ALWAYS or DSS_ALEV_NEVER. */
-	DSO_RECYCLE,                    /**< If can be recicled or not. */
+	DSO_RECYCLE,                    /**< If can be recycled or not. */
 	DSO_PATROL,                     /**< If it is assigned to patrol between current pos and next move target. */
 	DSO_RETURN_TO_LOC,              /**< Generic secondary order to return to a location. Will depend on the secondary state DSS_RTL* to be specific. */
 	DSO_CIRCLE,                     /**< circling target position and engage. */

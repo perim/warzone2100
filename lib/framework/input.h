@@ -179,7 +179,7 @@ typedef std::vector<MousePress> MousePresses;
 void inputLoseFocus();
 void StopTextInput();
 /** Converts the key code into an ascii string. */
-WZ_DECL_NONNULL(2) void keyScanToString(KEY_CODE code, char *ascii, UDWORD maxStringSize);
+WZ_DECL_NONNULL(2) bool keyScanToString(KEY_CODE code, char *ascii, UDWORD maxStringSize);
 
 /** Initialise the input module. */
 void inputInitialise();

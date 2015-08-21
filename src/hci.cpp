@@ -2520,20 +2520,17 @@ void intDemolishCancel(void)
 	}
 }
 
-
 //reorder the research facilities so that first built is first in the list
 static void orderResearch(void)
 {
 	std::reverse(apsObjectList.begin(), apsObjectList.end());  // Why reverse this list, instead of sorting it?
 }
 
-
 static inline bool sortObjectByIdFunction(BASE_OBJECT *a, BASE_OBJECT *b)
 {
 	return (a == NULL ? 0 : a->id) < (b == NULL ? 0 : b->id);
 }
 
-// reorder the commanders
 static void orderDroids(void)
 {
 	// bubble sort on the ID - first built will always be first in the list

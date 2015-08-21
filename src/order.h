@@ -112,7 +112,7 @@ void orderSelectedStatsTwoLocDir(UDWORD player, DROID_ORDER order, STRUCTURE_STA
 extern bool secondarySupported(DROID *psDroid, SECONDARY_ORDER sec);
 
 /** \brief Gets the state of a secondary order, return false if unsupported. */
-SECONDARY_STATE secondaryGetState(DROID *psDroid, SECONDARY_ORDER sec, QUEUE_MODE mode = ModeImmediate);
+SECONDARY_STATE secondaryGetState(const DROID *psDroid, SECONDARY_ORDER sec, QUEUE_MODE mode = ModeImmediate);
 
 /** \brief Sets the state of a secondary order, return false if failed. */
 extern bool secondarySetState(DROID *psDroid, SECONDARY_ORDER sec, SECONDARY_STATE State, QUEUE_MODE mode = ModeQueue);
@@ -140,12 +140,6 @@ extern BASE_OBJECT *checkForDamagedStruct(DROID *psDroid, STRUCTURE *psTarget);
 
 /** \brief Does a health check on a droid. */
 extern void orderHealthCheck(DROID *psDroid);
-
-/** \brief Sets the state of a secondary order for a factory. */
-extern bool setFactoryState(STRUCTURE *psStruct, SECONDARY_ORDER sec, SECONDARY_STATE State);
-
-/** \brief Gets the state of a secondary order for a Factory. */
-extern bool getFactoryState(STRUCTURE *psStruct, SECONDARY_ORDER sec, SECONDARY_STATE *pState);
 
 /** \brief lasSat structure can select a target. */
 extern void orderStructureObj(UDWORD player, BASE_OBJECT *psObj);

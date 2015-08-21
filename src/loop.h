@@ -91,7 +91,6 @@ UDWORD	getNumCommandDroids(UDWORD player);
 UDWORD	getNumConstructorDroids(UDWORD player);
 // increase the droid counts - used by update factory to keep the counts in sync
 void incNumDroids(UDWORD player);
-void incNumCommandDroids(UDWORD player);
 void incNumConstructorDroids(UDWORD player);
 
 #endif // __INCLUDED_SRC_LOOP_H__

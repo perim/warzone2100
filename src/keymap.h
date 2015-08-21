@@ -54,6 +54,7 @@ struct KEY_MAPPING
 	KEY_MAPPING    *psNext;
 };
 
+QString keyExpandWithMapping(const QString &tooltip, void *function);
 extern KEY_MAPPING	*keyAddMapping(KEY_STATUS status, KEY_CODE metaCode, KEY_CODE subcode,
                                    KEY_ACTION action, void (*pKeyMapFunc)(void), const char *name);
 extern bool	keyRemoveMapping(KEY_CODE metaCode, KEY_CODE subCode);

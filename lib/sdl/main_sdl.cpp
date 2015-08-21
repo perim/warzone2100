@@ -721,25 +721,22 @@ static void inputAddBuffer(UDWORD key, utf_32_char unicode)
 	pEndBuffer = pNext;
 }
 
-void keyScanToString(KEY_CODE code, char *ascii, UDWORD maxStringSize)
+bool keyScanToString(KEY_CODE code, char *ascii, UDWORD maxStringSize)
 {
 	if (code == KEY_LCTRL)
 	{
 		// shortcuts with modifier keys work with either key.
 		strcpy(ascii, "Ctrl");
-		return;
 	}
 	else if (code == KEY_LSHIFT)
 	{
 		// shortcuts with modifier keys work with either key.
 		strcpy(ascii, "Shift");
-		return;
 	}
 	else if (code == KEY_LALT)
 	{
 		// shortcuts with modifier keys work with either key.
 		strcpy(ascii, "Alt");
-		return;
 	}
 	else if (code == KEY_LMETA)
 	{
@@ -749,23 +746,22 @@ void keyScanToString(KEY_CODE code, char *ascii, UDWORD maxStringSize)
 #else
 		strcpy(ascii, "Meta");
 #endif
-		return;
 	}
-
-	if (code < KEY_MAXSCAN)
+	else if (code < KEY_MAXSCAN)
 	{
 		snprintf(ascii, maxStringSize, "%s", SDL_GetKeyName(keyCodeToSDLKey(code)));
 		if (ascii[0] >= 'a' && ascii[0] <= 'z' && ascii[1] != 0)
 		{
 			// capitalize
 			ascii[0] += 'A' - 'a';
-			return;
 		}
 	}
 	else
 	{
 		strcpy(ascii, "???");
+		return false;
 	}
+	return true;
 }
 
 /* Initialise the input module */

@@ -28,6 +28,7 @@
 */
 
 #include <string.h>
+#include <QStringBuilder>
 
 #include "lib/framework/frame.h"
 #include "lib/framework/input.h"
@@ -44,23 +45,45 @@
 
 static UDWORD asciiKeyCodeToTable(KEY_CODE code);
 
-// ----------------------------------------------------------------------------------
-KEY_MAPPING	*keyGetMappingFromFunction(void	*function)
+QString keyExpandWithMapping(const QString &tooltip, void *function)
 {
-	KEY_MAPPING	*psMapping, *psReturn;
+        char    asciiSub[20], asciiMeta[20];
 
-	for (psMapping = keyMappings, psReturn = NULL;
-	     psMapping && !psReturn;
-	     psMapping = psMapping->psNext)
+	for (KEY_MAPPING *psMapping = keyMappings; psMapping; psMapping = psMapping->psNext)
 	{
 		if ((void *)psMapping->function == function)
 		{
-			psReturn = psMapping;
+			QString ret = tooltip;
+		        if (psMapping->metaKeyCode != KEY_IGNORE && psMapping->metaKeyCode != KEY_MAXSCAN)
+		        {
+				keyScanToString(psMapping->metaKeyCode, (char *)&asciiMeta, 20);
+				keyScanToString(psMapping->subKeyCode, (char *)&asciiSub, 20);
+				ret = tooltip % " (" % QString(asciiMeta) % " + " % QString(asciiSub) % ")";
+		        }
+			else if (psMapping->subKeyCode != KEY_IGNORE && psMapping->subKeyCode != KEY_MAXSCAN)
+			{
+				keyScanToString(psMapping->subKeyCode, (char *)&asciiSub, 20);
+				ret = tooltip % " (" % QString(asciiSub) % ")";
+			}
+			return ret;
 		}
 	}
-
-	return (psReturn);
+	return tooltip;
 }
+
+// ----------------------------------------------------------------------------------
+KEY_MAPPING	*keyGetMappingFromFunction(void	*function)
+{
+	for (KEY_MAPPING *psMapping = keyMappings; psMapping; psMapping = psMapping->psNext)
+	{
+		if ((void *)psMapping->function == function)
+		{
+			return psMapping;
+		}
+	}
+	return NULL;
+}
+
 // ----------------------------------------------------------------------------------
 /* Some stuff allowing the user to add key mappings themselves */
 

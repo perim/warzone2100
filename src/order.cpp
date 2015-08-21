@@ -2838,7 +2838,7 @@ bool secondarySupported(DROID *psDroid, SECONDARY_ORDER sec)
 
 
 /** This function returns the droid order's secondary state of the secondary order.*/
-SECONDARY_STATE secondaryGetState(DROID *psDroid, SECONDARY_ORDER sec, QUEUE_MODE mode)
+SECONDARY_STATE secondaryGetState(const DROID *psDroid, SECONDARY_ORDER sec, QUEUE_MODE mode)
 {
 	uint32_t state;
 
@@ -3500,94 +3500,6 @@ void orderHealthCheck(DROID *psDroid)
 	}
 }
 
-
-/** This function changes the structure's secondary state to be the function input's state.
- * Returns true if the function changed the structure's state, and false if it did not.
- * @todo SECONDARY_STATE argument is called "State", which is not current style. Suggestion to change it to "pState".
- */
-bool setFactoryState(STRUCTURE *psStruct, SECONDARY_ORDER sec, SECONDARY_STATE State)
-{
-	UDWORD		CurrState;
-	bool		retVal;
-	FACTORY     *psFactory;
-
-
-	if (!StructIsFactory(psStruct))
-	{
-		ASSERT(false, "setFactoryState: structure is not a factory");
-		return false;
-	}
-
-	psFactory = (FACTORY *)psStruct->pFunctionality;
-
-	CurrState = psFactory->secondaryOrder;
-
-	retVal = true;
-	switch (sec)
-	{
-	case DSO_REPAIR_LEVEL:
-		CurrState = (CurrState & ~DSS_REPLEV_MASK) | State;
-		break;
-
-	case DSO_ATTACK_LEVEL:
-		CurrState = (CurrState & ~DSS_ALEV_MASK) | State;
-		break;
-
-	case DSO_PATROL:
-		if (State & DSS_PATROL_SET)
-		{
-			CurrState |= DSS_PATROL_SET;
-		}
-		else
-		{
-			CurrState &= ~DSS_PATROL_MASK;
-		}
-		break;
-	default:
-		break;
-	}
-
-	psFactory->secondaryOrder = CurrState;
-
-	return retVal;
-}
-
-
-/** This function sets the structure's secondary state to be pState.
- *  return true except on an ASSERT (which is not a good design.)
- *  or, an invalid factory.
- */
-bool getFactoryState(STRUCTURE *psStruct, SECONDARY_ORDER sec, SECONDARY_STATE *pState)
-{
-	UDWORD	state;
-
-	ASSERT_OR_RETURN(false, StructIsFactory(psStruct), "Structure is not a factory");
-	if ((FACTORY *)psStruct->pFunctionality)
-	{
-		state = ((FACTORY *)psStruct->pFunctionality)->secondaryOrder;
-
-		switch (sec)
-		{
-		case DSO_REPAIR_LEVEL:
-			*pState = (SECONDARY_STATE)(state & DSS_REPLEV_MASK);
-			break;
-		case DSO_ATTACK_LEVEL:
-			*pState = (SECONDARY_STATE)(state & DSS_ALEV_MASK);
-			break;
-		case DSO_PATROL:
-			*pState = (SECONDARY_STATE)(state & DSS_PATROL_MASK);
-			break;
-		default:
-			*pState = (SECONDARY_STATE)0;
-			break;
-		}
-
-		return true;
-	}
-	return false;
-}
-
-
 /** lasSat structure can select a target
  * @todo improve documentation: it is not clear what this function performs by the current documentation.
  */
@@ -3606,7 +3518,6 @@ void orderStructureObj(UDWORD player, BASE_OBJECT *psObj)
 		}
 	}
 }
-
 
 /** This function maps the order enum to its name, returning its enum name as a (const char*)
  * Formally, this function is equivalent to a stl map: for a given key (enum), returns a mapped value (char*).

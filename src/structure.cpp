@@ -1862,9 +1862,6 @@ static bool setFunctionality(STRUCTURE	*psBuilding, STRUCTURE_TYPE functionType)
 
 			psFactory->psSubject = NULL;
 
-			// Default the secondary order - AB 22/04/99
-			psFactory->secondaryOrder = DSS_REPLEV_NEVER | DSS_ALEV_ALWAYS;
-
 			// Create the assembly point for the factory
 			if (!createFlagPosition(&psFactory->psAssemblyPoint, psBuilding->player))
 			{
@@ -2116,7 +2113,7 @@ static bool structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl, DR
 
 	if (placed)
 	{
-		INITIAL_DROID_ORDERS initialOrders = {psStructure->pFunctionality->factory.secondaryOrder, psStructure->pFunctionality->factory.psAssemblyPoint->coords.x, psStructure->pFunctionality->factory.psAssemblyPoint->coords.y, psStructure->id};
+		INITIAL_DROID_ORDERS initialOrders = {0, psStructure->pFunctionality->factory.psAssemblyPoint->coords.x, psStructure->pFunctionality->factory.psAssemblyPoint->coords.y, psStructure->id};
 		//create a droid near to the structure
 		syncDebug("Placing new droid at (%d,%d)", x, y);
 		turnOffMultiMsg(true);
@@ -2126,24 +2123,6 @@ static bool structPlaceDroid(STRUCTURE *psStructure, DROID_TEMPLATE *psTempl, DR
 		{
 			*ppsDroid = NULL;
 			return false;
-		}
-
-		if (myResponsibility(psStructure->player))
-		{
-			uint32_t newState = psStructure->pFunctionality->factory.secondaryOrder;
-			uint32_t diff = newState ^ psNewDroid->secondaryOrder;
-			if ((diff & DSS_REPLEV_MASK) != 0)
-			{
-				secondarySetState(psNewDroid, DSO_REPAIR_LEVEL, (SECONDARY_STATE)(newState & DSS_REPLEV_MASK));
-			}
-			if ((diff & DSS_ALEV_MASK) != 0)
-			{
-				secondarySetState(psNewDroid, DSO_ATTACK_LEVEL, (SECONDARY_STATE)(newState & DSS_ALEV_MASK));
-			}
-			if ((diff & DSS_CIRCLE_MASK) != 0)
-			{
-				secondarySetState(psNewDroid, DSO_CIRCLE, (SECONDARY_STATE)(newState & DSS_CIRCLE_MASK));
-			}
 		}
 
 		if (psStructure->visible[selectedPlayer])

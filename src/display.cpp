@@ -624,7 +624,7 @@ void processMouseClickInput(void)
 		}
 		else
 		{
-			if (!bMultiPlayer  && (establishSelection(selectedPlayer) == SC_DROID_TRANSPORTER || establishSelection(selectedPlayer) == SC_DROID_SUPERTRANSPORTER))
+			if (!bMultiPlayer && establishSelection(selectedPlayer) == SC_DROID_TRANSPORTER)
 			{
 				// Never, *ever* let user control the transport in SP games--it breaks the scripts!
 				ASSERT(game.type == CAMPAIGN, "Game type was set incorrectly!");
@@ -864,8 +864,7 @@ void processMouseClickInput(void)
 				item = MT_BLOCKING;
 			}
 
-			if (specialOrderKeyDown() && (selection == SC_DROID_TRANSPORTER || selection == SC_DROID_SUPERTRANSPORTER) &&
-			    arnMPointers[item][selection] == CURSOR_MOVE && bMultiPlayer)
+			if (specialOrderKeyDown() && (selection == SC_DROID_TRANSPORTER) && arnMPointers[item][selection] == CURSOR_MOVE && bMultiPlayer)
 			{
 				// Alt+move = disembark transporter
 				wzSetCursor(CURSOR_DISEMBARK);
@@ -1708,40 +1707,28 @@ static void dealWithLMBStructure(STRUCTURE *psStructure, SELECTION_TYPE selectio
 
 	/* Got to be built. Also, you can't 'select' derricks */
 	if (!specialOrderKeyDown() && (psStructure->status == SS_BUILT) &&
-	    (psStructure->pStructureType->type != REF_RESOURCE_EXTRACTOR) && ownStruct)
+	    psStructure->pStructureType->type != REF_RESOURCE_EXTRACTOR && ownStruct && !bRightClickOrders)
 	{
-		if (bRightClickOrders)
+		// now only display interface if nothing selected
+		if (!anyDroidSelected(selectedPlayer))
 		{
-			if (StructIsFactory(psStructure) && selection != SC_DROID_CONSTRUCT)
-			{
-				intAddFactoryOrder(psStructure);
-			}
+			intObjectSelected((BASE_OBJECT *)psStructure);
+			FeedbackOrderGiven();
 		}
-		else
+		if (selection == SC_INVALID)
 		{
-			// now only display interface if nothing selected
-			if (!anyDroidSelected(selectedPlayer))
+			STRUCTURE *psCurr;
+			/* Clear old building selection(s) - should only be one */
+			for (psCurr = apsStructLists[selectedPlayer]; psCurr; psCurr = psCurr->psNext)
 			{
-				intObjectSelected((BASE_OBJECT *)psStructure);
-				FeedbackOrderGiven();
+				psCurr->selected = false;
 			}
-			if (selection == SC_INVALID)
-			{
-				STRUCTURE *psCurr;
-
-				/* Clear old building selection(s) - should only be one */
-				for (psCurr = apsStructLists[selectedPlayer]; psCurr; psCurr = psCurr->psNext)
-				{
-					psCurr->selected = false;
-				}
-				/* Establish new one */
-				psStructure->selected = true;
-				triggerEventSelected();
-			}
-			//determine if LasSat structure has been selected
-			bLasSatStruct = lasSatStructSelected(psStructure);
+			/* Establish new one */
+			psStructure->selected = true;
+			triggerEventSelected();
 		}
-
+		//determine if LasSat structure has been selected
+		bLasSatStruct = lasSatStructSelected(psStructure);
 	}
 	else if ((psStructure->status == SS_BUILT) &&
 	         (psStructure->pStructureType->type == REF_RESOURCE_EXTRACTOR) &&
@@ -2171,11 +2158,6 @@ static void dealWithRMB(void)
 							bLasSatStruct = lasSatStructSelected(psStructure);
 							triggerEventSelected();
 						}
-					}
-					else if (StructIsFactory(psStructure))
-					{
-						//pop up the order interface for the factory
-						intAddFactoryOrder(psStructure);
 					}
 					else
 					{

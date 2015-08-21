@@ -317,10 +317,6 @@ static SECONDARY_STATE GetSecondaryStates(SECONDARY_ORDER sec)
 	bFirst = true;
 	if (psSelectedFactory)
 	{
-		if (getFactoryState(psSelectedFactory, sec, &currState))
-		{
-			state = currState;
-		}
 	}
 	else //droids
 	{
@@ -678,15 +674,6 @@ static bool SetSecondaryState(SECONDARY_ORDER sec, unsigned State)
 					return false;
 				}
 			}
-		}
-	}
-
-	// set the Factory settings
-	if (psSelectedFactory)
-	{
-		if (!setFactoryState(psSelectedFactory, sec, (SECONDARY_STATE)State))
-		{
-			return false;
 		}
 	}
 

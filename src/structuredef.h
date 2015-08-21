@@ -179,8 +179,6 @@ struct FACTORY
 	int buildPointsRemaining;         ///< Build points required to finish building the droid.
 	UDWORD timeStartHold;             /* The time the factory was put on hold*/
 	FLAG_POSITION *psAssemblyPoint;   /* Place for the new droids to assemble at */
-	struct DROID *psCommander;        // command droid to produce droids for (if any)
-	uint32_t secondaryOrder;          ///< Secondary order state for all units coming out of the factory.
 };
 
 struct RES_EXTRACTOR

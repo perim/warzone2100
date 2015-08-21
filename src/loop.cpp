@@ -844,10 +844,7 @@ void incNumDroids(UDWORD player)
 {
 	numDroids[player] += 1;
 }
-void incNumCommandDroids(UDWORD player)
-{
-	numCommandDroids[player] += 1;
-}
+
 void incNumConstructorDroids(UDWORD player)
 {
 	numConstructorDroids[player] += 1;
