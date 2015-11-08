@@ -55,6 +55,21 @@ enum PICKTILE
 	FREE_TILE,
 };
 
+enum SELECTION_TYPE
+{
+	SELECTED_ALL,
+	SELECTED_CYBORG,
+	SELECTED_VTOL,
+	SELECTED_REPAIR,
+	SELECTED_CONSTRUCT,
+	SELECTED_WEAPON,
+	SELECTED_SENSOR,
+	SELECTED_TRANSPORT,
+	SELECTED_COUNT
+};
+
+const std::list<DROID *> &selectedDroidList(SELECTION_TYPE type = SELECTED_ALL);
+
 // the structure that was last hit
 extern DROID	*psLastDroidHit;
 
@@ -233,12 +248,6 @@ extern void setUpBuildModule(DROID *psDroid);
 /* Just returns true if the droid's present body points aren't as high as the original*/
 extern bool	droidIsDamaged(DROID *psDroid);
 
-/* Returns currently active (selected) group */
-extern UDWORD	getSelectedGroup(void);
-extern void	setSelectedGroup(UDWORD groupNumber);
-extern UDWORD	getSelectedCommander(void);
-extern void	setSelectedCommander(UDWORD commander);
-
 extern char const *getDroidResourceName(char const *pName);
 
 /*checks to see if an electronic warfare weapon is attached to the droid*/
@@ -311,6 +320,8 @@ extern void SelectDroid(DROID *psDroid);
 
 // De-select a droid and do any necessary housekeeping.
 extern void DeSelectDroid(DROID *psDroid);
+
+void ClearSelectedDroids(bool announce = true);
 
 /* audio finished callback */
 extern bool droidAudioTrackStopped(void *psObj);

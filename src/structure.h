@@ -187,10 +187,12 @@ static inline bool isLasSat(STRUCTURE_STATS *pStructureType)
 extern void setSatUplinkExists(bool state, UDWORD player);
 /*returns the status of the flag*/
 extern bool getSatUplinkExists(UDWORD player);
+
 /*sets the flag to indicate a Las Sat Exists - ONLY EVER WANT ONE*/
-extern void setLasSatExists(bool state, UDWORD player);
+void setLasSatExists(STRUCTURE *psStruct, UDWORD player);
+
 /*returns the status of the flag*/
-extern bool getLasSatExists(UDWORD player);
+STRUCTURE *getLasSat(UDWORD player);
 
 /* added int weapon_slot to fix the alway slot 0 hack */
 bool calcStructureMuzzleLocation(STRUCTURE *psStructure, Vector3i *muzzle, int weapon_slot);
@@ -471,7 +473,8 @@ void checkStructure(const STRUCTURE *psStructure, const char *const location_des
 
 #define CHECK_STRUCTURE(object) checkStructure((object), AT_MACRO, __FUNCTION__, max_check_object_recursion)
 
-extern void     structureInitVars(void);
+void structureInitVars();
+void structureUpdateGlobals();
 
 #define syncDebugStructure(psStruct, ch) _syncDebugStructure(__FUNCTION__, psStruct, ch)
 void _syncDebugStructure(const char *function, STRUCTURE const *psStruct, char ch);

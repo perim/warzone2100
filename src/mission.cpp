@@ -663,7 +663,7 @@ void missionFlyTransportersIn(SDWORD iPlayer, bool bTrackTransporter)
 				if ((bTrackTransporter == true) && (iPlayer == (SDWORD)selectedPlayer))
 				{
 					/* deselect all droids */
-					selDroidDeselect(selectedPlayer);
+					ClearSelectedDroids();
 
 					if (getWarCamStatus())
 					{

@@ -1068,7 +1068,7 @@ bool stageTwoInitialise(void)
 	// loading a savegame where we are building a lassat
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
-		setLasSatExists(false, i);
+		setLasSatExists(NULL, i);
 	}
 
 	if (!dispInitialise())		/* Initialise the display system */
@@ -1386,7 +1386,6 @@ static void initMiscVars()
 	includeRedundantDesigns = false;
 	enableConsoleDisplay(true);
 
-	setSelectedGroup(UBYTE_MAX);
 	for (unsigned n = 0; n < MAX_PLAYERS; ++n)
 	{
 		processDebugMappings(n, false);

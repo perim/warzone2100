@@ -62,7 +62,7 @@ extern	KEY_MAPPING	*keyGetMappingFromFunction(void	*function);
 extern bool	keyRemoveMappingPt(KEY_MAPPING *psToRemove);
 extern KEY_MAPPING *keyFindMapping(KEY_CODE metaCode, KEY_CODE subCode);
 extern void	keyClearMappings(void);
-extern void	keyProcessMappings(bool bExclude);
+void keyProcessMappings();
 extern void	keyInitMappings(bool bForceDefaults);
 extern UDWORD	getNumMappings(void);
 extern KEY_CODE	getLastSubKey(void);

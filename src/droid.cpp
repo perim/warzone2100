@@ -83,7 +83,6 @@
 
 // store the experience of recently recycled droids
 UWORD	aDroidExperience[MAX_PLAYERS][MAX_RECYCLED_DROIDS];
-UDWORD	selectedGroup = UBYTE_MAX;
 
 /** Height the transporter hovers at above the terrain. */
 #define TRANSPORTER_HOVER_HEIGHT	10
@@ -1972,7 +1971,6 @@ void assignDroidsToGroup(UDWORD	playerNumber, UDWORD groupNumber)
 	}
 	if (bAtLeastOne)
 	{
-		setSelectedGroup(groupNumber);
 		//clear the Deliv Point if one
 		for (psFlagPos = apsFlagPosLists[selectedPlayer]; psFlagPos;
 		     psFlagPos = psFlagPos->psNext)
@@ -2035,12 +2033,7 @@ bool activateGroupAndMove(UDWORD playerNumber, UDWORD groupNumber)
 
 	if (selected)
 	{
-		setSelectedGroup(groupNumber);
 		groupConsoleInformOfCentering(groupNumber);
-	}
-	else
-	{
-		setSelectedGroup(UBYTE_MAX);
 	}
 
 	return selected;
@@ -2072,7 +2065,6 @@ bool activateGroup(UDWORD playerNumber, UDWORD groupNumber)
 
 	if (selected)
 	{
-		setSelectedGroup(groupNumber);
 		//clear the Deliv Point if one
 		for (psFlagPos = apsFlagPosLists[selectedPlayer]; psFlagPos;
 		     psFlagPos = psFlagPos->psNext)
@@ -2080,10 +2072,6 @@ bool activateGroup(UDWORD playerNumber, UDWORD groupNumber)
 			psFlagPos->selected = false;
 		}
 		groupConsoleInformOfSelection(groupNumber);
-	}
-	else
-	{
-		setSelectedGroup(UBYTE_MAX);
 	}
 	return selected;
 }
@@ -2118,17 +2106,6 @@ void	groupConsoleInformOfCentering(UDWORD groupNumber)
 	{
 		CONPRINTF(ConsoleString, (ConsoleString, ngettext("Aligning with Group %u - %u Unit", "Aligning with Group %u - %u Units", num_selected), groupNumber, num_selected));
 	}
-}
-
-
-UDWORD	getSelectedGroup(void)
-{
-	return (selectedGroup);
-}
-
-void	setSelectedGroup(UDWORD groupNumber)
-{
-	selectedGroup = groupNumber;
 }
 
 /**
@@ -3288,17 +3265,57 @@ bool checkValidWeaponForProp(DROID_TEMPLATE *psTemplate)
 	return true;
 }
 
+static std::list<DROID *> _selectedDroidList[SELECTED_COUNT];
+
+const std::list<DROID *> &selectedDroidList(SELECTION_TYPE type)
+{
+	return _selectedDroidList[type];
+}
+
 // Select a droid and do any necessary housekeeping.
 //
 void SelectDroid(DROID *psDroid)
 {
 	// we shouldn't ever control the transporter in SP games
-	if (!isTransporter(psDroid) || bMultiPlayer)
+	if (!psDroid->selected && (!isTransporter(psDroid) || bMultiPlayer))
 	{
 		psDroid->selected = true;
 		intRefreshScreen();
 		intAddOrder(psDroid, false);
 		triggerEventSelected();
+		if (game.type != CAMPAIGN || !isTransporter(psDroid))
+		{
+			_selectedDroidList[SELECTED_ALL].push_back(psDroid);
+		}
+		if (isVtolDroid(psDroid))
+		{
+			_selectedDroidList[SELECTED_VTOL].push_back(psDroid);
+		}
+		if (cyborgDroid(psDroid))
+		{
+			_selectedDroidList[SELECTED_CYBORG].push_back(psDroid);
+		}
+		if (psDroid->droidType == DROID_CONSTRUCT || psDroid->droidType == DROID_CYBORG_CONSTRUCT)
+		{
+			_selectedDroidList[SELECTED_CONSTRUCT].push_back(psDroid);
+		}
+		if (psDroid->droidType == DROID_REPAIR || psDroid->droidType == DROID_CYBORG_REPAIR)
+		{
+			_selectedDroidList[SELECTED_REPAIR].push_back(psDroid);
+		}
+		if (psDroid->droidType == DROID_WEAPON || psDroid->droidType == DROID_CYBORG
+		    || psDroid->droidType == DROID_CYBORG_SUPER || psDroid->droidType == DROID_PERSON)
+		{
+			_selectedDroidList[SELECTED_WEAPON].push_back(psDroid);
+		}
+		if (psDroid->droidType == DROID_SENSOR)
+		{
+			_selectedDroidList[SELECTED_SENSOR].push_back(psDroid);
+		}
+		if (isTransporter(psDroid))
+		{
+			_selectedDroidList[SELECTED_TRANSPORT].push_back(psDroid);
+		}
 	}
 }
 
@@ -3306,9 +3323,34 @@ void SelectDroid(DROID *psDroid)
 //
 void DeSelectDroid(DROID *psDroid)
 {
-	psDroid->selected = false;
-	intRefreshScreen();
-	triggerEventSelected();
+	if (psDroid->selected)
+	{
+		psDroid->selected = false;
+		intRefreshScreen();
+		triggerEventSelected();
+		for (int i = 0; i < SELECTED_COUNT; i++)
+		{
+			_selectedDroidList[i].remove(psDroid);
+		}
+	}
+}
+
+void ClearSelectedDroids(bool announce)
+{
+	announce = announce && _selectedDroidList[SELECTED_ALL].size() > 0;
+	for (auto &psDroid : _selectedDroidList[SELECTED_ALL])
+	{
+		psDroid->selected = false;
+	}
+	for (int i = 0; i < SELECTED_COUNT; i++)
+	{
+		_selectedDroidList[i].clear();
+	}
+	if (announce)
+	{
+		intRefreshScreen();
+		triggerEventSelected();
+	}
 }
 
 /** Callback function for stopped audio tracks

@@ -110,7 +110,7 @@ static STRUCTURE	*psOldRE = NULL;
 static char	sCurrentConsoleText[MAX_CONSOLE_STRING_LENGTH];			//remember what user types in console for beacon msg
 
 /* Support functions to minimise code size */
-static void kfsf_SetSelectedDroidsState(SECONDARY_ORDER sec, SECONDARY_STATE State);
+static bool kfsf_SetSelectedDroidsState(SECONDARY_ORDER sec, SECONDARY_STATE State);
 
 /** A function to determine wether we're running a multiplayer game, not just a
  *  single player campaign or a skirmish game.
@@ -2183,69 +2183,93 @@ void	kf_SetDroidRetreatNever(void)
 }
 
 // --------------------------------------------------------------------------
-void	kf_SetDroidAttackAtWill(void)
+void kf_SetDroidAttackCease() // cycles through state
 {
-	kfsf_SetSelectedDroidsState(DSO_ATTACK_LEVEL, DSS_ALEV_ALWAYS);
-}
-
-// --------------------------------------------------------------------------
-void	kf_SetDroidAttackCease(void)
-{
-	kfsf_SetSelectedDroidsState(DSO_ATTACK_LEVEL, DSS_ALEV_NEVER);
+	if (!kfsf_SetSelectedDroidsState(DSO_ATTACK_LEVEL, DSS_ALEV_NEVER))
+	{
+		// we found no droids to change state to cease fire on, so cycle it to fire at will
+		kfsf_SetSelectedDroidsState(DSO_ATTACK_LEVEL, DSS_ALEV_ALWAYS);
+	}
 }
 
 // --------------------------------------------------------------------------
 void	kf_SetDroidOrderHold()
 {
-	for (DROID *psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
+	for (DROID *psDroid : selectedDroidList(SELECTED_ALL))
 	{
-		if (psDroid->selected)
-		{
-			orderDroid(psDroid, DORDER_HOLD, ModeQueue);
-		}
+		orderDroid(psDroid, DORDER_HOLD, ModeQueue);
 	}
 }
 
 // --------------------------------------------------------------------------
 void	kf_SetDroidOrderStop()
 {
-	for (DROID *psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
+	for (DROID *psDroid : selectedDroidList(SELECTED_ALL))
 	{
-		if (psDroid->selected)
-		{
-			orderDroid(psDroid, DORDER_STOP, ModeQueue);
-		}
+		orderDroid(psDroid, DORDER_STOP, ModeQueue);
 	}
+}
+
+void kf_SetDroidOrderAttack()
+{
+	intSetSelectMode(SELECT_ATTACK);
+}
+
+void kf_SetDroidOrderGuard()
+{
+	intSetSelectMode(SELECT_GUARD);
 }
 
 // --------------------------------------------------------------------------
 void	kf_SetDroidMovePatrol(void)
 {
-	kfsf_SetSelectedDroidsState(DSO_PATROL, DSS_PATROL_SET);	// ASK
+	intSetSelectMode(SELECT_PATROL);
+}
+
+// --------------------------------------------------------------------------
+void kf_SetDroidMoveCircle()
+{
+	intSetSelectMode(SELECT_CIRCLE);
 }
 
 // --------------------------------------------------------------------------
 void	kf_SetDroidReturnToBase(void)
 {
-	kfsf_SetSelectedDroidsState(DSO_RETURN_TO_LOC, DSS_RTL_BASE);
+	for (DROID *psDroid : selectedDroidList(SELECTED_ALL))
+	{
+		orderDroid(psDroid, DORDER_RTB, ModeQueue);
+	}
 }
 
 // --------------------------------------------------------------------------
 void	kf_SetDroidGoToTransport(void)
 {
-	kfsf_SetSelectedDroidsState(DSO_RETURN_TO_LOC, DSS_RTL_TRANSPORT);
+	for (DROID *psDroid : selectedDroidList(SELECTED_ALL))
+	{
+		DROID *psTransport = FindATransporter(psDroid);
+		if (psTransport)
+		{
+			orderDroidObj(psDroid, DORDER_EMBARK, psTransport, ModeQueue);
+		}
+	}
 }
 
 // --------------------------------------------------------------------------
 void	kf_SetDroidGoForRepair(void)
 {
-	kfsf_SetSelectedDroidsState(DSO_RETURN_TO_LOC, DSS_RTL_REPAIR);
+	for (DROID *psDroid : selectedDroidList(SELECTED_ALL))
+	{
+		orderDroid(psDroid, DORDER_RTR, ModeQueue);
+	}
 }
 
 // --------------------------------------------------------------------------
 void	kf_SetDroidRecycle(void)
 {
-	kfsf_SetSelectedDroidsState(DSO_RECYCLE, DSS_RECYCLE_SET);
+	for (DROID *psDroid : selectedDroidList(SELECTED_ALL))
+	{
+		orderDroid(psDroid, DORDER_RECYCLE, ModeQueue);
+	}
 }
 
 // --------------------------------------------------------------------------
@@ -2264,55 +2288,23 @@ void	kf_ToggleVisibility(void)
 }
 
 // --------------------------------------------------------------------------
-static void kfsf_SetSelectedDroidsState(SECONDARY_ORDER sec, SECONDARY_STATE state)
+static bool kfsf_SetSelectedDroidsState(SECONDARY_ORDER sec, SECONDARY_STATE state)
 {
-	DROID	*psDroid;
-
 	// NOT A CHEAT CODE
 	// This is a function to set unit orders via keyboard shortcuts. It should
 	// _not_ be disallowed in multiplayer games.
 
-	// This code is similar to SetSecondaryState() in intorder.cpp. Unfortunately, it seems hard to un-duplicate the code.
-	for (psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
+	bool found = false;
+	for (DROID *psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
 	{
-		// Only set the state if it's not a transporter.
-		if (psDroid->selected && !isTransporter(psDroid))
+		SECONDARY_STATE currState = secondaryGetState(psDroid, sec, ModeQueue);
+		if (psDroid->selected && !isTransporter(psDroid) && currState != state)
 		{
 			secondarySetState(psDroid, sec, state);
-		}
-	}
-}
-
-// --------------------------------------------------------------------------
-void	kf_TriggerRayCast(void)
-{
-	DROID	*psDroid;
-	bool	found;
-
-	found = false;
-	for (psDroid = apsDroidLists[selectedPlayer]; psDroid && !found;
-	     psDroid = psDroid->psNext)
-	{
-		if (psDroid->selected)
-		{
 			found = true;
 		}
-		/* NOP */
 	}
-
-	if (found)
-	{
-//		getBlockHeightDirToEdgeOfGrid(UDWORD x, UDWORD y, UBYTE direction, UDWORD *height, UDWORD *dist)
-//		getBlockHeightDirToEdgeOfGrid(psOther->pos.x,psOther->pos.y,psOther->direction,&height,&dist);
-//		getBlockHeightDirToEdgeOfGrid(mouseTileX*TILE_UNITS,mouseTileY*TILE_UNITS,getTestAngle(),&height,&dist);
-	}
-}
-
-// --------------------------------------------------------------------------
-void	kf_ScatterDroids(void)
-{
-	// to be written!
-	addConsoleMessage("Scatter droids - not written yet!", LEFT_JUSTIFY, SYSTEM_MESSAGE);
+	return found; // changed something?
 }
 
 // --------------------------------------------------------------------------
@@ -2353,12 +2345,6 @@ void	kf_CentreOnBase(void)
 	{
 		addConsoleMessage(_("Unable to locate HQ!"), LEFT_JUSTIFY, SYSTEM_MESSAGE);
 	}
-}
-
-// --------------------------------------------------------------------------
-void kf_ToggleFormationSpeedLimiting(void)
-{
-	addConsoleMessage(_("Formation speed limiting has been removed from the game due to bugs."), LEFT_JUSTIFY, SYSTEM_MESSAGE);
 }
 
 // --------------------------------------------------------------------------

@@ -48,7 +48,7 @@ void orderCheckList(DROID *psDroid);
 extern void orderUpdateDroid(DROID *psDroid);
 
 /** \brief Sends an order to a droid. */
-extern void orderDroid(DROID *psDroid, DROID_ORDER order, QUEUE_MODE mode);
+extern void orderDroid(DROID *psDroid, DROID_ORDER order, QUEUE_MODE mode = ModeQueue);
 
 /** \brief Compares droid's order with order. */
 extern bool orderState(DROID *psDroid, DROID_ORDER order);
@@ -60,13 +60,13 @@ bool validOrderForLoc(DROID_ORDER order);
 bool validOrderForObj(DROID_ORDER order);
 
 /** \brief Sends an order with a location to a droid. */
-void orderDroidLoc(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWORD y, QUEUE_MODE mode);
+void orderDroidLoc(DROID *psDroid, DROID_ORDER order, UDWORD x, UDWORD y, QUEUE_MODE mode = ModeQueue, bool add = false);
 
 /** \brief Gets the state of a droid order with a location. */
 extern bool orderStateLoc(DROID *psDroid, DROID_ORDER order, UDWORD *pX, UDWORD *pY);
 
 /** \brief Sends an order with an object target to a droid. */
-void orderDroidObj(DROID *psDroid, DROID_ORDER order, BASE_OBJECT *psObj, QUEUE_MODE mode);
+void orderDroidObj(DROID *psDroid, DROID_ORDER order, BASE_OBJECT *psObj, QUEUE_MODE mode = ModeQueue);
 
 /** \brief Gets the state of a droid's order with an object. */
 extern BASE_OBJECT *orderStateObj(DROID *psDroid, DROID_ORDER order);
@@ -82,13 +82,6 @@ void orderDroidStatsTwoLocDir(DROID *psDroid, DROID_ORDER order, STRUCTURE_STATS
 
 /** \brief Sends an order with two locations and a stat to a droid. */
 void orderDroidStatsTwoLocDirAdd(DROID *psDroid, DROID_ORDER order, STRUCTURE_STATS *psStats, UDWORD x1, UDWORD y1, UDWORD x2, UDWORD y2, uint16_t direction);
-
-/** \brief Sends an order with a location target to all selected droids. add = true queues the order. */
-extern void orderSelectedLoc(uint32_t player, uint32_t x, uint32_t y, bool add);
-
-/** \brief Sends an order with an object target to all selected droids. add = true queues the order. */
-extern void orderSelectedObj(UDWORD player, BASE_OBJECT *psObj);
-extern void orderSelectedObjAdd(UDWORD player, BASE_OBJECT *psObj, bool add);
 
 /** \brief Adds an order to a droids order list. */
 void orderDroidAdd(DROID *psDroid, DROID_ORDER_DATA *psOrder);
@@ -150,10 +143,6 @@ void orderDroidListEraseRange(DROID *psDroid, unsigned indexBegin, unsigned inde
 /** \brief Clears all orders for the given target (including pending orders) from the order list. */
 void orderClearTargetFromDroidList(DROID *psDroid, BASE_OBJECT *psTarget);
 
-/** \brief Chooses an order from a location. */
-extern DROID_ORDER chooseOrderLoc(DROID *psDroid, UDWORD x, UDWORD y, bool altOrder);
-
-/** \brief Chooses an order from an object. */
-DroidOrder chooseOrderObj(DROID *psDroid, BASE_OBJECT *psObj, bool altOrder);
+void buildModule(DROID *psDroid, BASE_OBJECT *psObj, bool altOrder);
 
 #endif // __INCLUDED_SRC_ORDER_H__

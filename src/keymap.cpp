@@ -42,6 +42,7 @@
 #include "display3d.h"
 #include "keymap.h"
 #include "keyedit.h"
+#include "hci.h"
 
 static UDWORD asciiKeyCodeToTable(KEY_CODE code);
 
@@ -177,10 +178,10 @@ _keymapsave keyMapSaveTable[] =
 	kf_SetDroidAttackCease ,
 	kf_JumpToUnassignedUnits ,
 	kf_NOOP,
-	kf_SetDroidAttackAtWill ,
-	kf_SetDroidReturnToBase ,
 	kf_NOOP,
-	kf_ToggleFormationSpeedLimiting,
+	kf_SetDroidReturnToBase,
+	kf_NOOP,
+	kf_NOOP,
 	kf_NOOP,
 	kf_NOOP,
 	kf_SetDroidMovePatrol ,
@@ -188,7 +189,7 @@ _keymapsave keyMapSaveTable[] =
 	kf_SetDroidOrderHold,
 	kf_SendGlobalMessage,
 	kf_SendTeamMessage,
-	kf_ScatterDroids,
+	kf_NOOP,
 	kf_SetDroidRetreatMedium,
 	kf_SetDroidRetreatHeavy,
 	kf_SetDroidRetreatNever,
@@ -232,7 +233,7 @@ _keymapsave keyMapSaveTable[] =
 	kf_NOOP,
 	kf_ToggleRadarTerrain,          //radar terrain on/off
 	kf_ToggleRadarAllyEnemy,        //enemy/ally radar color toggle
-	kf_ToggleSensorDisplay,		//  Was commented out below. moved also!.  Re-enabled --Q 5/10/05
+	kf_ToggleSensorDisplay,
 	kf_AddHelpBlip,				//Add a beacon
 	kf_AllAvailable,
 	kf_ToggleDebugMappings,
@@ -338,9 +339,8 @@ void	keyInitMappings(bool bForceDefaults)
 	keyAddMapping(KEYMAP_ASSIGNABLE,     KEY_IGNORE, KEY_F8,  KEYMAP_PRESSED, kf_ToggleConsole,                N_("Toggle Console Display"));
 	keyAddMapping(KEYMAP_ASSIGNABLE,     KEY_IGNORE, KEY_F9,  KEYMAP_PRESSED, kf_ToggleEnergyBars,             N_("Toggle Damage Bars On/Off"));
 	keyAddMapping(KEYMAP_ALWAYS,         KEY_IGNORE, KEY_F10, KEYMAP_PRESSED, kf_ScreenDump,                   N_("Take Screen Shot"));
-	keyAddMapping(KEYMAP_ASSIGNABLE,     KEY_IGNORE, KEY_F11, KEYMAP_PRESSED, kf_ToggleFormationSpeedLimiting, N_("Toggle Formation Speed Limiting"));
 	keyAddMapping(KEYMAP_ASSIGNABLE,     KEY_IGNORE, KEY_F12, KEYMAP_PRESSED, kf_MoveToLastMessagePos,         N_("View Location of Previous Message"));
-	keyAddMapping(KEYMAP_ASSIGNABLE,     KEY_LSHIFT, KEY_F12, KEYMAP_PRESSED, kf_ToggleSensorDisplay,          N_("Toggle Sensor display")); //Which key should we use? --Re enabled see below! -Q 5-10-05
+	keyAddMapping(KEYMAP_ASSIGNABLE,     KEY_LSHIFT, KEY_F12, KEYMAP_PRESSED, kf_ToggleSensorDisplay,          N_("Toggle Sensor display"));
 	//                                **********************************
 	//                                **********************************
 	//										ASSIGN GROUPS
@@ -405,7 +405,6 @@ void	keyInitMappings(bool bForceDefaults)
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, KEY_B,      KEYMAP_PRESSED, kf_CentreOnBase,          N_("Center View on HQ"));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, KEY_C,      KEYMAP_PRESSED, kf_SetDroidAttackCease,   N_("Hold Fire"));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, KEY_D,      KEYMAP_PRESSED, kf_JumpToUnassignedUnits, N_("View Unassigned Units"));
-	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, KEY_F,      KEYMAP_PRESSED, kf_SetDroidAttackAtWill,  N_("Fire at Will"));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_LSHIFT, KEY_H,      KEYMAP_PRESSED, kf_SetDroidReturnToBase,  N_("Return to HQ"));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, KEY_H,      KEYMAP_PRESSED, kf_SetDroidOrderHold,     N_("Hold Position"));
 	keyAddMapping(KEYMAP_ASSIGNABLE, KEY_IGNORE, KEY_Q,      KEYMAP_PRESSED, kf_SetDroidMovePatrol,    N_("Patrol"));
@@ -699,7 +698,7 @@ static bool checkQwertyKeys(void)
 
 // ----------------------------------------------------------------------------------
 /* Manages update of all the active function mappings */
-void	keyProcessMappings(bool bExclude)
+void keyProcessMappings()
 {
 	KEY_MAPPING	*keyToProcess;
 	bool		bMetaKeyDown;
@@ -735,7 +734,7 @@ void	keyProcessMappings(bool bExclude)
 			break;
 		}
 		/* Skip innappropriate ones when necessary */
-		if (bExclude && keyToProcess->status != KEYMAP_ALWAYS_PROCESS)
+		if (intMode == INT_DESIGN && keyToProcess->status != KEYMAP_ALWAYS_PROCESS)
 		{
 			break;
 		}

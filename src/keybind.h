@@ -148,21 +148,19 @@ extern void	kf_SetDroidRetreatMedium(void);
 extern void	kf_SetDroidRetreatHeavy(void);
 extern void	kf_SetDroidRetreatNever(void);
 
-extern void	kf_SetDroidAttackAtWill(void);
 extern void	kf_SetDroidAttackCease(void);
 
+void kf_SetDroidOrderAttack();
+void kf_SetDroidOrderGuard();
 void kf_SetDroidOrderHold();
 void kf_SetDroidOrderStop();
-
-extern void	kf_SetDroidMoveGuard(void);
-extern void	kf_SetDroidMovePursue(void);   //not there?
-extern void	kf_SetDroidMovePatrol(void);   // not there?
+void kf_SetDroidMovePatrol();
+void kf_SetDroidMoveCircle();
 
 extern void	kf_SetDroidReturnToBase(void);
 extern void	kf_SetDroidGoToTransport(void);
 extern void	kf_SetDroidGoForRepair(void);
 extern void	kf_SetDroidRecycle(void);
-extern void	kf_ScatterDroids(void);
 extern void	kf_CentreOnBase(void);
 extern void	kf_ToggleFog(void);
 extern void	kf_MoveToLastMessagePos(void);
@@ -171,8 +169,6 @@ extern void	kf_RightOrderMenu(void);
 
 extern bool	bAllowOtherKeyPresses;
 
-extern void	kf_TriggerRayCast(void);
-extern void	kf_ToggleFormationSpeedLimiting(void);
 extern void	kf_ToggleSensorDisplay(void);		//Was commented out.  Re-enabled --Q 5/10/05
 extern void	kf_JumpToResourceExtractor(void);
 extern void	kf_JumpToRepairUnits(void);

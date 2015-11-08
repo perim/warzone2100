@@ -302,6 +302,22 @@ extern bool intBuildSelectMode(void);
 extern bool intDemolishSelectMode(void);
 extern bool intBuildMode(void);
 
+enum SELECT_MODE
+{
+	SELECT_NONE,
+	SELECT_BUILD,
+	SELECT_DEMOLISH,
+	SELECT_LASSAT,
+	SELECT_ATTACK,
+	SELECT_GUARD,
+	SELECT_PATROL,
+	SELECT_CIRCLE,
+	SELECT_DISEMBARK,
+};
+
+SELECT_MODE intSelectMode();
+void intSetSelectMode(SELECT_MODE mode);
+
 // add the construction interface if a constructor droid is selected
 void intCommanderSelected(DROID *psDroid);
 

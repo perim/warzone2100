@@ -212,7 +212,7 @@ bool multiPlayerLoop(void)
 		bDisplayMultiJoiningStatus = joinCount;	// someone is still joining! say So
 
 		// deselect anything selected.
-		selDroidDeselect(selectedPlayer);
+		ClearSelectedDroids();
 
 		if (keyPressed(KEY_ESC))// check for cancel
 		{

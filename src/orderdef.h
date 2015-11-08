@@ -61,7 +61,6 @@ enum DroidOrderType
 	DORDER_TRANSPORTIN,     /**< onworld transporter order. */
 	DORDER_TRANSPORTRETURN, /**< transporter return after unloading. */
 	DORDER_GUARD,           /**< guard a structure. */
-	DORDER_DROIDREPAIR,     /**< repair a droid. */
 	DORDER_RESTORE,         /**< restore resistance points for a structure. */
 	DORDER_SCOUT,           /**< same as move, but stop if an enemy is seen. */
 	DORDER_RUNBURN,         /**< run away on fire. */
@@ -81,9 +80,7 @@ enum SECONDARY_ORDER
 	DSO_REPAIR_LEVEL,               /**< The repair level at which the droid falls back to repair: can be low, high or never. Used with DSS_REPLEV_LOW, DSS_REPLEV_HIGH, DSS_REPLEV_NEVER. */
 	DSO_ATTACK_LEVEL,               /**< The attack level at which a droid can attack: can be always or never. Used with DSS_ALEV_ALWAYS or DSS_ALEV_NEVER. */
 	DSO_RECYCLE,                    /**< If can be recycled or not. */
-	DSO_PATROL,                     /**< If it is assigned to patrol between current pos and next move target. */
 	DSO_RETURN_TO_LOC,              /**< Generic secondary order to return to a location. Will depend on the secondary state DSS_RTL* to be specific. */
-	DSO_CIRCLE,                     /**< circling target position and engage. */
 };
 
 /** All associated secondary states of the secondary orders. */
@@ -99,8 +96,6 @@ enum SECONDARY_STATE
 	DSS_RTL_REPAIR      = 0x080000,	/**< state set to send order DORDER_RTR to droid. */
 	DSS_RTL_BASE        = 0x100000,	/**< state set to send order DORDER_RTB to droid. */
 	DSS_RTL_TRANSPORT   = 0x200000,	/**< state set to send order DORDER_EMBARK to droid. */
-	DSS_PATROL_SET      = 0x400000,	/**< state referred to secondary order DSO_PATROL. If set, the droid is set to patrol. */
-	DSS_CIRCLE_SET      = 0x400100,	/**< state referred to secondary order DSO_CIRCLE. If set, the droid is set to circle. */
 };
 
 /** masks for the secondary order state. */
@@ -108,8 +103,6 @@ enum SECONDARY_STATE
 #define DSS_ALEV_MASK               0x000030
 #define DSS_RECYCLE_MASK            0x000100
 #define DSS_RTL_MASK                0x380000
-#define DSS_PATROL_MASK             0x400000
-#define DSS_CIRCLE_MASK             0x400100
 
 /** struct used to store the data for retreating. */
 struct RUN_DATA

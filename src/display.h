@@ -42,10 +42,9 @@ extern void setMouseScroll(bool);
 
 extern bool DrawnInLastFrame(SDWORD Frame);
 
-// Clear all selections.
-extern void clearSel();
-// Clear all selections and stop driver mode.
+// Clear all selections
 extern void clearSelection();
+
 // deal with selecting a droid
 extern void dealWithDroidSelect(DROID *psDroid, bool bDragBox);
 
@@ -97,64 +96,6 @@ struct	_dragBox
 
 extern struct	_dragBox dragBox3D, wallDrag;
 
-enum MOUSE_POINTER
-{
-	MP_ATTACH = 99,
-	MP_ATTACK,
-	MP_BRIDGE,
-	MP_BUILD,
-	MP_EMBARK,
-	MP_FIX,
-	MP_GUARD,
-	MP_JAM,
-	MP_MOVE,
-	MP_PICKUP,
-	MP_REPAIR,
-	MP_SELECT,
-	MP_LOCKON,
-	MP_MENSELECT,
-	MP_BOMB
-};
-
-enum SELECTION_TYPE
-{
-	SC_DROID_CONSTRUCT,
-	SC_DROID_DIRECT,
-	SC_DROID_INDIRECT,
-	SC_DROID_SENSOR,
-	SC_DROID_ECM,
-	SC_DROID_TRANSPORTER,
-	SC_DROID_DEMOLISH,
-	SC_DROID_REPAIR,
-	SC_INVALID,
-};
-
-enum MOUSE_TARGET
-{
-	MT_TERRAIN,
-	MT_RESOURCE,
-	MT_BLOCKING,
-	MT_OWNSTRDAM,
-	MT_OWNSTROK,
-	MT_OWNSTRINCOMP,
-	MT_REPAIR,
-	MT_REPAIRDAM,
-	MT_ENEMYSTR,
-	MT_TRANDROID,
-	MT_OWNDROID,
-	MT_OWNDROIDDAM,
-	MT_ENEMYDROID,
-	MT_ARTIFACT,
-	MT_DAMFEATURE,
-	MT_SENSOR,
-	MT_UNUSED,
-	MT_CONSTRUCT,
-	MT_SENSORSTRUCT,
-	MT_SENSORSTRUCTDAM,
-
-	MT_NOTARGET		//leave as last one
-};
-
 extern bool		gameStats;
 extern bool		godMode;
 
@@ -200,15 +141,10 @@ extern void	setDesiredPitch(SDWORD pitch);
 #define	HIDDEN_FRONTEND_WIDTH	(640)
 #define	HIDDEN_FRONTEND_HEIGHT	(480)
 
-//access function for bSensorAssigned variable
-extern void setSensorAssigned(void);
-
 void AddDerrickBurningMessage(void);
 
 // check whether the queue order keys are pressed
 extern bool ctrlShiftDown(void);
-
-extern UDWORD getTargetType(void);
 
 void setZoom(float zoomSpeed, float zoomTarget);
 float getZoom();

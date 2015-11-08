@@ -492,8 +492,7 @@ void countUpdate()
 				break;
 			}
 		}
-		// FIXME: These for-loops are code duplicationo
-		setLasSatExists(false, i);
+		setLasSatExists(NULL, i);
 		for (STRUCTURE *psCBuilding = apsStructLists[i]; psCBuilding != NULL; psCBuilding = psCBuilding->psNext)
 		{
 			if (psCBuilding->pStructureType->type == REF_SAT_UPLINK && psCBuilding->status == SS_BUILT)
@@ -503,7 +502,7 @@ void countUpdate()
 			//don't wait for the Las Sat to be built - can't build another if one is partially built
 			if (asWeaponStats[psCBuilding->asWeaps[0].nStat].weaponSubClass == WSC_LAS_SAT)
 			{
-				setLasSatExists(true, i);
+				setLasSatExists(psCBuilding, i);
 			}
 		}
 		for (STRUCTURE *psCBuilding = mission.apsStructLists[i]; psCBuilding != NULL; psCBuilding = psCBuilding->psNext)
@@ -515,7 +514,7 @@ void countUpdate()
 			//don't wait for the Las Sat to be built - can't build another if one is partially built
 			if (asWeaponStats[psCBuilding->asWeaps[0].nStat].weaponSubClass == WSC_LAS_SAT)
 			{
-				setLasSatExists(true, i);
+				setLasSatExists(psCBuilding, i);
 			}
 		}
 	}
@@ -597,6 +596,7 @@ static void gameStateUpdate()
 			structureUpdate(psCBuilding, true); // update for mission
 		}
 	}
+	structureUpdateGlobals();
 	countUpdate();
 
 	missionTimerUpdate();

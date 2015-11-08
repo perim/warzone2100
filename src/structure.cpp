@@ -132,8 +132,9 @@ STRUCTURE	*psLastStructHit;
 
 //flag for drawing all sat uplink sees
 static		UBYTE	satUplinkExists[MAX_PLAYERS];
-//flag for when the player has one built - either completely or partially
-static		UBYTE	lasSatExists[MAX_PLAYERS];
+
+/// flag for when the player has one built - either completely or partially
+static STRUCTURE *lasSatExists[MAX_PLAYERS];
 
 static bool setFunctionality(STRUCTURE *psBuilding, STRUCTURE_TYPE functionType);
 static void setFlagPositionInc(FUNCTIONALITY *pFunctionality, UDWORD player, UBYTE factoryType);
@@ -236,7 +237,7 @@ bool isBlueprint(BASE_OBJECT *psObject)
 	return psObject->type == OBJ_STRUCTURE && structureIsBlueprint((STRUCTURE *)psObject);
 }
 
-void structureInitVars(void)
+void structureInitVars()
 {
 	int i, j;
 
@@ -260,7 +261,7 @@ void structureInitVars(void)
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
 		satUplinkExists[i] = false;
-		lasSatExists[i] = false;
+		lasSatExists[i] = NULL;
 	}
 	//initialise the selectedPlayer's production run
 	for (unsigned type = 0; type < NUM_FACTORY_TYPES; ++type)
@@ -3589,7 +3590,7 @@ UDWORD fillStructureList(STRUCTURE_STATS **ppList, UDWORD selectedPlayer, UDWORD
 					}
 				}
 				//HARD_CODE don't ever want more than one Las Sat structure
-				if (isLasSat(psBuilding) && getLasSatExists(selectedPlayer))
+				if (isLasSat(psBuilding) && getLasSat(selectedPlayer))
 				{
 					continue;
 				}
@@ -4678,14 +4679,24 @@ bool getSatUplinkExists(UDWORD player)
 
 
 /*sets the flag to indicate a Las Sat Exists - ONLY EVER WANT ONE*/
-void setLasSatExists(bool state, UDWORD player)
+void setLasSatExists(STRUCTURE *psStruct, UDWORD player)
 {
-	lasSatExists[player] = (UBYTE)state;
+	lasSatExists[player] = psStruct;
 }
 
+void structureUpdateGlobals()
+{
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		if (lasSatExists[i] && lasSatExists[i]->died)
+		{
+			lasSatExists[i] = NULL;
+		}
+	}
+}
 
 /*returns the status of the flag*/
-bool getLasSatExists(UDWORD player)
+STRUCTURE *getLasSat(UDWORD player)
 {
 	return lasSatExists[player];
 }

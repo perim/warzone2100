@@ -1222,6 +1222,50 @@ static const char *cursor_select[] =
 	"15,15"
 };
 
+static const char *cursor_select_add[] =
+{
+	/* width height num_colors chars_per_pixel */
+	"    32    32        3            1",
+	/* colors */
+	"X c #000000",
+	". c #ffffff",
+	"  c None",
+	/* pixels */
+	"                                ",
+	"                                ",
+	"                                ",
+	"                                ",
+	"    .....X            .....X    ",
+	"    .XXXXX             XXX.X    ",
+	"    .X                    .X    ",
+	"    .X                    .X    ",
+	"    .X                    .X    ",
+	"    XX                    XX    ",
+	"                                ",
+	"                                ",
+	"                                ",
+	"                                ",
+	"                                ",
+	"               .X               ",
+	"               XX               ",
+	"                                ",
+	"                                ",
+	"                                ",
+	"                    .           ",
+	"                    .X          ",
+	"    .             .....X  .     ",
+	"    .X              .XX   .X    ",
+	"    .X              .X    .X    ",
+	"    .X               X    .X    ",
+	"    .....X            .....X    ",
+	"    XXXXXX            XXXXXX    ",
+	"                                ",
+	"                                ",
+	"                                ",
+	"                                ",
+	"15,15"
+};
+
 static const struct
 {
 	const char **image;
@@ -1256,6 +1300,7 @@ static const struct
 	{ cursor_pickup,        CURSOR_PICKUP },
 	{ cursor_seekrepair,    CURSOR_SEEKREPAIR },
 	{ cursor_select,        CURSOR_SELECT },
+	{ cursor_select_add,    CURSOR_SELECT_ADD },
 };
 
 /**
@@ -1410,6 +1455,7 @@ void sdlInitColoredCursors()
 	aCursors[CURSOR_PICKUP]      = init_system_ColorCursor(CURSOR_PICKUP, "images/intfac/image_cursor_pickup.png");
 	aCursors[CURSOR_SEEKREPAIR]  = init_system_ColorCursor(CURSOR_SEEKREPAIR, "images/intfac/image_cursor_repair.png");
 	aCursors[CURSOR_SELECT]      = init_system_ColorCursor(CURSOR_SELECT, "images/intfac/image_cursor_select.png");
+	aCursors[CURSOR_SELECT_ADD]  = init_system_ColorCursor(CURSOR_SELECT, "images/intfac/image_cursor_select_add.png");
 }
 
 /**
@@ -1446,6 +1492,7 @@ void sdlInitCursors()
 	aCursors[CURSOR_PICKUP]      = init_system_cursor32(CURSOR_PICKUP);
 	aCursors[CURSOR_SEEKREPAIR]  = init_system_cursor32(CURSOR_SEEKREPAIR);
 	aCursors[CURSOR_SELECT]      = init_system_cursor32(CURSOR_SELECT);
+	aCursors[CURSOR_SELECT_ADD]  = init_system_cursor32(CURSOR_SELECT_ADD);
 }
 
 void sdlFreeCursors()

@@ -90,6 +90,8 @@ static bool SecondaryWindowUp = false;
 // Chat dialog
 static bool ChatDialogUp = false;
 
+static SELECT_MODE selectMode = SELECT_NONE;
+
 #define RETXOFFSET (0)// Reticule button offset
 #define RETYOFFSET (0)
 #define NUMRETBUTS	7 // Number of reticule buttons.
@@ -918,7 +920,6 @@ void intResetScreen(bool NoAnim)
 	}
 	SecondaryWindowUp = false;
 	intMode = INT_NORMAL;
-	//clearSel() sets IntRefreshPending = true by calling intRefreshScreen() but if we're doing this then we won't need to refresh - hopefully!
 	IntRefreshPending = false;
 }
 
@@ -2286,7 +2287,7 @@ void intObjectSelected(BASE_OBJECT *psObj)
 			{
 				intResetScreen(false);
 			}
-			intAddOrder(psObj);
+			intAddOrder(castDroid(psObj));
 			break;
 
 		case OBJ_STRUCTURE:
@@ -2491,6 +2492,29 @@ void intBuildStarted(DROID *psDroid)
 			}
 		}
 	}
+}
+
+void intSetSelectMode(SELECT_MODE mode)
+{
+	selectMode = mode;
+}
+
+SELECT_MODE intSelectMode()
+{
+	switch (objMode)
+	{
+	case IOBJ_BUILDSEL: selectMode = SELECT_BUILD; break;
+	case IOBJ_DEMOLISHSEL: selectMode = SELECT_DEMOLISH; break;
+	default: break;
+	}
+	ASSERT(objMode != IOBJ_BUILDSEL || selectMode == SELECT_BUILD, "Bad state");
+	ASSERT(objMode != IOBJ_DEMOLISHSEL || selectMode == SELECT_DEMOLISH, "Bad state");
+	STRUCTURE *psLastSat = getLasSat(selectedPlayer);
+	if (psLastSat && psLastSat->selected)
+	{
+		selectMode = SELECT_LASSAT;
+	}
+	return selectMode;
 }
 
 /* Are we in build select mode*/
@@ -4709,7 +4733,7 @@ static STRUCTURE *intGotoNextStructureType(UDWORD structType)
 		{
 			if (psStruct != CurrentStruct)
 			{
-				clearSel();
+				clearSelection();
 				psStruct->selected = true;
 				CurrentStruct = psStruct;
 				Found = true;
@@ -4727,7 +4751,7 @@ static STRUCTURE *intGotoNextStructureType(UDWORD structType)
 			{
 				if (psStruct != CurrentStruct)
 				{
-					clearSel();
+					clearSelection();
 					psStruct->selected = true;
 					CurrentStruct = psStruct;
 					break;
@@ -4799,7 +4823,7 @@ DROID *intGotoNextDroidType(DROID *CurrDroid, DROID_TYPE droidType, bool AllowGr
 		{
 			if (psDroid != CurrentDroid)
 			{
-				clearSel();
+				clearSelection();
 				SelectDroid(psDroid);
 				CurrentDroid = psDroid;
 				Found = true;
@@ -4819,7 +4843,7 @@ DROID *intGotoNextDroidType(DROID *CurrDroid, DROID_TYPE droidType, bool AllowGr
 			{
 				if (psDroid != CurrentDroid)
 				{
-					clearSel();
+					clearSelection();
 					SelectDroid(psDroid);
 					CurrentDroid = psDroid;
 					Found = true;

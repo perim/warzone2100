@@ -50,7 +50,7 @@ static unsigned selSelectUnitsIf(unsigned player, T condition, bool onlyOnScreen
 {
 	unsigned count = 0;
 
-	selDroidDeselect(player);
+	ClearSelectedDroids();
 
 	// Go through all.
 	for (DROID *psDroid = apsDroidLists[player]; psDroid != nullptr; psDroid = psDroid->psNext)
@@ -124,6 +124,7 @@ static bool selDamaged(DROID *droid)
 // Deselects all units for the player
 unsigned int selDroidDeselect(unsigned int player)
 {
+	ClearSelectedDroids();
 	unsigned int count = 0;
 
 	for (DROID *psDroid = apsDroidLists[player]; psDroid; psDroid = psDroid->psNext)
@@ -189,7 +190,6 @@ static unsigned int selSelectAllSame(unsigned int player, bool bOnScreen)
 	return selNumSelected(player);
 }
 
-// ffs am
 // ---------------------------------------------------------------------
 void selNextSpecifiedUnit(DROID_TYPE unitType)
 {
@@ -256,7 +256,7 @@ void selNextSpecifiedUnit(DROID_TYPE unitType)
 
 	if (psResult && !psResult->died)
 	{
-		selDroidDeselect(selectedPlayer);
+		ClearSelectedDroids();
 		SelectDroid(psResult);
 		if (getWarCamStatus())
 		{
@@ -337,7 +337,7 @@ void selNextUnassignedUnit()
 
 	if (psResult && !psResult->died)
 	{
-		selDroidDeselect(selectedPlayer);
+		ClearSelectedDroids();
 		SelectDroid(psResult);
 		if (getWarCamStatus())
 		{
@@ -423,6 +423,8 @@ void selNextSpecifiedBuilding(STRUCTURE_TYPE structType)
    */
 unsigned int selDroidSelection(unsigned int player, SELECTION_CLASS droidClass, SELECTIONTYPE droidType, bool bOnScreen)
 {
+	ASSERT(player == selectedPlayer, "Bad input"); // player is a useless parameter, remove later
+
 	/* So far, we haven't selected any */
 	unsigned int retVal = 0;
 
