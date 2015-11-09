@@ -684,7 +684,6 @@ QScriptValue convFeature(FEATURE *psFeature, QScriptEngine *engine)
 //;;   \item[DORDER_HELPBUILD] Order a droid to help build something.
 //;;   \item[DORDER_LINEBUILD] Order a droid to build something repeatedly in a line.
 //;;   \item[DORDER_REPAIR] Order a droid to repair something.
-//;;   \item[DORDER_RETREAT] Order a droid to retreat back to HQ.
 //;;   \item[DORDER_PATROL] Order a droid to patrol.
 //;;   \item[DORDER_DEMOLISH] Order a droid to demolish something.
 //;;   \item[DORDER_EMBARK] Order a droid to embark on a transport.
@@ -5051,7 +5050,6 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 	engine->globalObject().setProperty("DORDER_HELPBUILD", DORDER_HELPBUILD, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_LINEBUILD", DORDER_LINEBUILD, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_REPAIR", DORDER_REPAIR, QScriptValue::ReadOnly | QScriptValue::Undeletable);
-	engine->globalObject().setProperty("DORDER_RETREAT", DORDER_RETREAT, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_PATROL", DORDER_PATROL, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_DEMOLISH", DORDER_DEMOLISH, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_EMBARK", DORDER_EMBARK, QScriptValue::ReadOnly | QScriptValue::Undeletable);

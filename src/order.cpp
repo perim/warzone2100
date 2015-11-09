@@ -94,9 +94,6 @@
 /** The maximum distance allowed to a droid to move out of the path if already attacking a target on a patrol/scout. */
 #define SCOUT_ATTACK_DIST	(TILE_UNITS * 5)
 
-/** This instance is a global instance of RUN_DATA. It has the information of each player about retreat position and minimum moral/health for a unit to retreat to. */
-RUN_DATA	asRunData[MAX_PLAYERS];
-
 static void orderClearDroidList(DROID *psDroid);
 
 /** Whether an order effect has been displayed
@@ -109,18 +106,6 @@ extern char DROIDDOING[512];
 //////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////
-
-/** This function initializes asRunData, allocking it. It should be called AFTER every mission so that asRunData gets reset. */
-void initRunData(void)
-{
-	UBYTE   i;
-
-	for (i = 0; i < MAX_PLAYERS; i++)
-	{
-		memset(&asRunData[i], 0, sizeof(RUN_DATA));
-	}
-}
-
 
 /** This function checks if the droid is off range. If yes, it uses actionDroid() to make the droid to move to its target if its target is on range, or to move to its order position if not.
  * @todo droid doesn't shoot while returning to the guard position.
@@ -443,7 +428,6 @@ void orderUpdateDroid(DROID *psDroid)
 		}
 		break;
 	case DORDER_MOVE:
-	case DORDER_RETREAT:
 		// Just wait for the action to finish then clear the order
 		if (psDroid->action == DACTION_NONE || psDroid->action == DACTION_ATTACK)
 		{
@@ -893,19 +877,6 @@ void orderUpdateDroid(DROID *psDroid)
 		{
 			debug(LOG_DEATH, "orderUpdateDroid: Droid %d burned to death", psDroid->id); // why is this an order?
 			destroyDroid(psDroid, psDroid->actionStarted + RUN_BURN_TIME);
-		}
-		break;
-	case DORDER_RUN:
-		if (psDroid->action == DACTION_NONE)
-		{
-			// got there so stop running
-			psDroid->order = DroidOrder(DORDER_NONE);
-		}
-		if (psDroid->actionStarted + RUN_TIME < gameTime)
-		{
-			// been running long enough
-			actionDroid(psDroid, DACTION_NONE);
-			psDroid->order = DroidOrder(DORDER_NONE);
 		}
 		break;
 	case DORDER_LINEBUILD:
@@ -1405,14 +1376,8 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 			orderPlayFireSupportAudio(psOrder->psObj);
 		}
 		break;
-	case DORDER_RETREAT:
 	case DORDER_RUNBURN:
-	case DORDER_RUN:
 		psDroid->order = *psOrder;
-		if (psOrder->type != DORDER_RUN || psOrder->pos == Vector2i(0, 0))
-		{
-			psDroid->order.pos = asRunData[psDroid->player].sPos;
-		}
 		if (psDroid->order.pos == Vector2i(0, 0))
 		{
 			// We have still not managed to find a valid place to run.
@@ -1671,11 +1636,9 @@ void orderDroid(DROID *psDroid, DROID_ORDER order, QUEUE_MODE mode)
 	ASSERT(psDroid != NULL,
 	       "orderUnit: Invalid unit pointer");
 	ASSERT(order == DORDER_NONE ||
-	       order == DORDER_RETREAT ||
 	       order == DORDER_RTR ||
 	       order == DORDER_RTB ||
 	       order == DORDER_RECYCLE ||
-	       order == DORDER_RUN ||
 	       order == DORDER_RUNBURN ||
 	       order == DORDER_TRANSPORTIN ||
 	       order == DORDER_STOP ||		// Added this PD.
@@ -1713,7 +1676,7 @@ bool orderState(DROID *psDroid, DROID_ORDER order)
 bool validOrderForLoc(DROID_ORDER order)
 {
 	return (order == DORDER_NONE ||	order == DORDER_MOVE ||	order == DORDER_GUARD ||
-	        order == DORDER_SCOUT || order == DORDER_RUN || order == DORDER_PATROL ||
+	        order == DORDER_SCOUT || order == DORDER_PATROL ||
 	        order == DORDER_TRANSPORTOUT || order == DORDER_TRANSPORTIN  ||
 	        order == DORDER_TRANSPORTRETURN || order == DORDER_DISEMBARK ||
 	        order == DORDER_CIRCLE);
@@ -1757,7 +1720,6 @@ bool orderStateLoc(DROID *psDroid, DROID_ORDER order, UDWORD *pX, UDWORD *pY)
 		// not a location order - return false
 		break;
 	case DORDER_MOVE:
-	case DORDER_RETREAT:
 		*pX = psDroid->order.pos.x;
 		*pY = psDroid->order.pos.y;
 		return true;
@@ -2766,209 +2728,6 @@ void secondarySetAverageGroupState(UDWORD player, UDWORD group)
 	}
 }
 
-
-/** This function runs through all player's droids and check if their moral is below the minimum moral to flee. If it is, then it uses the orderDroid() to send the order DORDER_RUN to the droid.*/
-void orderMoralCheck(UDWORD player)
-{
-	DROID	*psCurr;
-	SDWORD	units, numVehicles, leadership, personLShip, check;
-
-	// count the number of vehicles and units on the side
-	units = 0;
-	numVehicles = 0;
-	for (psCurr = apsDroidLists[player]; psCurr; psCurr = psCurr->psNext)
-	{
-		units += 1;
-		if (psCurr->droidType != DROID_PERSON)
-		{
-			numVehicles += 1;
-		}
-	}
-
-	if (units > asRunData[player].forceLevel)
-	{
-		// too many units, don't run
-		return;
-	}
-
-	// calculate the overall leadership
-	leadership = asRunData[player].leadership + 10;
-	personLShip = asRunData[player].leadership + numVehicles * 3;
-
-	// do the moral check for each droid
-	for (psCurr = apsDroidLists[player]; psCurr; psCurr = psCurr->psNext)
-	{
-		if (orderState(psCurr, DORDER_RUN) ||
-		    orderState(psCurr, DORDER_RUNBURN) ||
-		    orderState(psCurr, DORDER_RETREAT) ||
-		    orderState(psCurr, DORDER_RTB) ||
-		    orderState(psCurr, DORDER_RTR))
-		{
-			// already running - ignore
-			continue;
-		}
-
-		check = gameRand(100);
-		syncDebug("Run check = %d", check);
-		if (psCurr->droidType == DROID_PERSON)
-		{
-			if (check > personLShip)
-			{
-				syncDebug("Person running.");
-				orderDroid(psCurr, DORDER_RUN, ModeImmediate);
-			}
-		}
-		else
-		{
-			if (check > leadership)
-			{
-				syncDebug("Droid running.");
-				orderDroid(psCurr, DORDER_RUN, ModeImmediate);
-			}
-		}
-	}
-}
-
-
-/** This function runs through all group's droids and check if their moral is below the minimum moral to flee. If it is, then the order DORDER_RUN is set to that droid.
- * @todo this fuction is near a duplicate of orderMoralCheck(). A better approach to erase this one should be tried.
- */
-void orderGroupMoralCheck(DROID_GROUP *psGroup)
-{
-	DROID		*psCurr;
-	SDWORD		units, numVehicles, leadership, personLShip, check;
-	RUN_DATA	*psRunData;
-
-	// count the number of vehicles and units on the side
-	units = 0;
-	numVehicles = 0;
-	for (psCurr = psGroup->psList; psCurr; psCurr = psCurr->psGrpNext)
-	{
-		units += 1;
-		if (psCurr->droidType != DROID_PERSON)
-		{
-			numVehicles += 1;
-		}
-	}
-
-	psRunData = &psGroup->sRunData;
-	if (units > psRunData->forceLevel)
-	{
-		// too many units, don't run
-		return;
-	}
-
-	// calculate the overall leadership
-	leadership = psRunData->leadership + 10;
-	personLShip = psRunData->leadership + numVehicles * 3;
-
-	// do the moral check for each droid
-	for (psCurr = psGroup->psList; psCurr; psCurr = psCurr->psGrpNext)
-	{
-		if (orderState(psCurr, DORDER_RUN) ||
-		    orderState(psCurr, DORDER_RUNBURN) ||
-		    orderState(psCurr, DORDER_RETREAT) ||
-		    orderState(psCurr, DORDER_RTB) ||
-		    orderState(psCurr, DORDER_RTR))
-		{
-			// already running - ignore
-			continue;
-		}
-
-		check = gameRand(100);
-		syncDebug("Run check = %d", check);
-		if (psCurr->droidType == DROID_PERSON)
-		{
-			if (check > personLShip)
-			{
-				syncDebug("Person running.");
-				orderDroidLoc(psCurr, DORDER_RUN, psRunData->sPos.x, psRunData->sPos.y, ModeImmediate);
-			}
-		}
-		else
-		{
-			if (check > leadership)
-			{
-				syncDebug("Droid running.");
-				orderDroidLoc(psCurr, DORDER_RUN, psRunData->sPos.x, psRunData->sPos.y, ModeImmediate);
-			}
-		}
-	}
-}
-
-
-/** This function checks if the droid's health level is below a minimum health to flee.
- * If it is, then it uses the orderDroid() to send the order DORDER_RUN to the droid.
- */
-void orderHealthCheck(DROID *psDroid)
-{
-	DROID		*psCurr;
-	SBYTE       healthLevel = 0;
-	UDWORD      retreatX = 0, retreatY = 0;
-
-	if (isTransporter(psDroid))
-	{
-		return;
-	}
-
-	// get the health value to compare with
-	if (psDroid->psGroup)
-	{
-		healthLevel = psDroid->psGroup->sRunData.healthLevel;
-		retreatX = psDroid->psGroup->sRunData.sPos.x;
-		retreatY = psDroid->psGroup->sRunData.sPos.y;
-	}
-
-	// if health has not been set for the group - use players'
-	if (!healthLevel)
-	{
-		healthLevel = asRunData[psDroid->player].healthLevel;
-	}
-
-	// if not got a health level set then ignore
-	if (!healthLevel)
-	{
-		return;
-	}
-
-	// if pos has not been set for the group - use players'
-	if (retreatX == 0 && retreatY == 0)
-	{
-		retreatX = asRunData[psDroid->player].sPos.x;
-		retreatY = asRunData[psDroid->player].sPos.y;
-	}
-
-	if (PERCENT(psDroid->body, psDroid->originalBody) < healthLevel)
-	{
-		// order this droid to turn and run - // if already running - ignore
-		if (!(orderState(psDroid, DORDER_RUN) ||
-		      orderState(psDroid, DORDER_RUNBURN) ||
-		      orderState(psDroid, DORDER_RETREAT) ||
-		      orderState(psDroid, DORDER_RTB) ||
-		      orderState(psDroid, DORDER_RTR)))
-		{
-			syncDebug("Droid running.");
-			orderDroidLoc(psDroid, DORDER_RUN, retreatX, retreatY, ModeImmediate);
-		}
-
-		// order each unit in the same group to run
-		if (psDroid->psGroup)
-		{
-			for (psCurr = psDroid->psGroup->psList; psCurr; psCurr = psCurr->psGrpNext)
-			{
-				if (orderState(psCurr, DORDER_RUN) || orderState(psCurr, DORDER_RUNBURN) || orderState(psCurr, DORDER_RETREAT)
-				    || orderState(psCurr, DORDER_RTB) || orderState(psCurr, DORDER_RTR))
-				{
-					// already running - ignore
-					continue;
-				}
-				syncDebug("Group running.");
-				orderDroidLoc(psCurr, DORDER_RUN, retreatX, retreatY, ModeImmediate);
-			}
-		}
-	}
-}
-
 /** lasSat structure can select a target
  * @todo improve documentation: it is not clear what this function performs by the current documentation.
  */
@@ -3006,10 +2765,8 @@ const char *getDroidOrderName(DROID_ORDER order)
 	case DORDER_REPAIR:                   return "DORDER_REPAIR";
 	case DORDER_OBSERVE:                  return "DORDER_OBSERVE";
 	case DORDER_FIRESUPPORT:              return "DORDER_FIRESUPPORT";
-	case DORDER_RETREAT:                  return "DORDER_RETREAT";
 	case DORDER_RTB:                      return "DORDER_RTB";
 	case DORDER_RTR:                      return "DORDER_RTR";
-	case DORDER_RUN:                      return "DORDER_RUN";
 	case DORDER_EMBARK:                   return "DORDER_EMBARK";
 	case DORDER_DISEMBARK:                return "DORDER_DISEMBARK";
 	case DORDER_ATTACKTARGET:             return "DORDER_ATTACKTARGET";

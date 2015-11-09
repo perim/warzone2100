@@ -973,9 +973,6 @@ bool stageOneInitialise(void)
 	initTransporters();
 	scriptInit();
 
-	// do this here so that the very first mission has it initialised
-	initRunData();
-
 	gameTimeInit();
 
 	return true;
@@ -1320,8 +1317,6 @@ bool stageThreeShutDown(void)
 	{
 		return false;
 	}
-
-	initRunData();
 
 	resetVTOLLandingPos();
 

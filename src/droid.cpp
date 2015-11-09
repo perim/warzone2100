@@ -212,13 +212,6 @@ int32_t droidDamage(DROID *psDroid, unsigned damage, WEAPON_CLASS weaponClass, W
 	{
 		// Now check for auto return on droid's secondary orders (i.e. return on medium/heavy damage)
 		secondaryCheckDamageLevel(psDroid);
-
-		if (!bMultiPlayer)
-		{
-			// Now check for scripted run-away based on health left
-			orderHealthCheck(psDroid);
-		}
-
 		CHECK_DROID(psDroid);
 	}
 	else if (relativeDamage < 0)
@@ -439,7 +432,6 @@ void recycleDroid(DROID *psDroid)
 
 	// hide the droid
 	memset(psDroid->visible, 0, sizeof(psDroid->visible));
-	// stop any group moral checks
 	if (psDroid->psGroup)
 	{
 		psDroid->psGroup->remove(psDroid);
@@ -494,22 +486,6 @@ bool removeDroidBase(DROID *psDel)
 				addDroid(psCurr, apsDroidLists);
 				vanishDroid(psCurr);
 			}
-		}
-	}
-
-	if (!bMultiPlayer)  // The moral(e?) checks don't seem like something that belongs in real games.
-	{
-		// check moral
-		if (psDel->psGroup && psDel->psGroup->refCount > 1 && !bMultiPlayer)
-		{
-			DROID_GROUP *group = psDel->psGroup;
-			psDel->psGroup->remove(psDel);
-			psDel->psGroup = NULL;
-			orderGroupMoralCheck(group);
-		}
-		else
-		{
-			orderMoralCheck(psDel->player);
 		}
 	}
 

@@ -32,14 +32,8 @@
 #include "droiddef.h"
 #include "structuredef.h"
 
-/** Retreat positions for the players. This is a global instance of RUN_DATA.*/
-extern RUN_DATA asRunData[MAX_PLAYERS];
-
 /** \brief Gives the droid an order. */
 extern void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder);
-
-/** \brief Initializes the global instance of RUN_DATA. */
-extern void initRunData(void);
 
 /** \brief Checks targets of droid's order list. */
 void orderCheckList(DROID *psDroid);
@@ -116,12 +110,6 @@ extern void secondaryCheckDamageLevel(DROID *psDroid);
 /** \brief Makes all the members of a numeric group to have the same secondary states. */
 extern void secondarySetAverageGroupState(UDWORD player, UDWORD group);
 
-/** \brief Does a moral check for a player. */
-extern void orderMoralCheck(UDWORD player);
-
-/** \brief Does a moral check for a group. */
-extern void orderGroupMoralCheck(DROID_GROUP *psGroup);
-
 /** \brief Gets the name of an order. */
 extern const char *getDroidOrderName(DROID_ORDER order);
 
@@ -130,9 +118,6 @@ DROID *FindATransporter(DROID const *embarkee);
 
 /** \brief Checks if there are any damaged buildings to repair. */
 extern BASE_OBJECT *checkForDamagedStruct(DROID *psDroid, STRUCTURE *psTarget);
-
-/** \brief Does a health check on a droid. */
-extern void orderHealthCheck(DROID *psDroid);
 
 /** \brief lasSat structure can select a target. */
 extern void orderStructureObj(UDWORD player, BASE_OBJECT *psObj);

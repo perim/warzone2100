@@ -63,7 +63,6 @@ DROID_GROUP::DROID_GROUP()
 	type = GT_NORMAL;
 	refCount = 0;
 	psList = NULL;
-	memset(&sRunData, 0, sizeof(sRunData));
 }
 
 // create a new group

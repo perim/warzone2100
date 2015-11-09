@@ -48,10 +48,8 @@ enum DroidOrderType
 	DORDER_REPAIR,          /**< repair a structure. */
 	DORDER_OBSERVE,         /**< keep a target in sensor view. */
 	DORDER_FIRESUPPORT,     /**< attack whatever the linked sensor droid attacks. */
-	DORDER_RETREAT,         /**< return to the players retreat position. */
 	DORDER_RTB,             /**< return to base. */
 	DORDER_RTR,             /**< return to repair at any repair facility. */
-	DORDER_RUN,             /**< run away after moral failure. */
 	DORDER_EMBARK,          /**< board a transporter. */
 	DORDER_DISEMBARK,       /**< get off a transporter. */
 	DORDER_ATTACKTARGET,    /**< a suggestion to attack something i.e. the target was chosen because the droid could see it. */
@@ -103,15 +101,6 @@ enum SECONDARY_STATE
 #define DSS_ALEV_MASK               0x000030
 #define DSS_RECYCLE_MASK            0x000100
 #define DSS_RTL_MASK                0x380000
-
-/** struct used to store the data for retreating. */
-struct RUN_DATA
-{
-	Vector2i    sPos;       /**< position to where units should flee to. */
-	uint8_t     forceLevel; /**< number of units below which others might flee. */
-	uint8_t     healthLevel;/**< health percentage value below which it might flee. This value is used for groups only. */
-	uint8_t     leadership; /**< basic value that will be used on calculations of the flee probability. */
-};
 
 struct STRUCTURE_STATS;
 
