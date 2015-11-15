@@ -160,14 +160,14 @@ static BASE_OBJECT *aiSearchSensorTargets(BASE_OBJECT *psObj, int weapon_slot, W
 	int		tarDist = longRange * longRange;
 	bool		foundCB = false;
 	int		minDist = psWStats->upgrade[psObj->player].minRange * psWStats->upgrade[psObj->player].minRange;
-	BASE_OBJECT	*psSensor, *psTarget = NULL;
+	BASE_OBJECT	*psTarget = NULL;
 
 	if (targetOrigin)
 	{
 		*targetOrigin = ORIGIN_UNKNOWN;
 	}
 
-	for (psSensor = apsSensorList[0]; psSensor; psSensor = psSensor->psNextFunc)
+	for (BASE_OBJECT *psSensor = apsSensorList[0]; psSensor; psSensor = psSensor->psNextFunc)
 	{
 		BASE_OBJECT	*psTemp = NULL;
 		bool		isCB = false;
@@ -185,6 +185,7 @@ static BASE_OBJECT *aiSearchSensorTargets(BASE_OBJECT *psObj, int weapon_slot, W
 			// Skip non-observing droids.
 			if (psDroid->action != DACTION_OBSERVE)
 			{
+				objTrace(psObj->id, "%s : not using %s, not observing", objInfo(psObj), objInfo(psSensor));
 				continue;
 			}
 			psTemp = psDroid->psActionTarget[0];
@@ -204,7 +205,8 @@ static BASE_OBJECT *aiSearchSensorTargets(BASE_OBJECT *psObj, int weapon_slot, W
 			isCB = structCBSensor(psCStruct);
 			isRD = objRadarDetector((BASE_OBJECT *)psCStruct);
 		}
-		if (!psTemp || psTemp->died || aiObjectIsProbablyDoomed(psTemp, false) || !validTarget(psObj, psTemp, 0) || aiCheckAlliances(psTemp->player, psObj->player))
+		if (!psTemp || psTemp->died || aiObjectIsProbablyDoomed(psTemp, false) || !validTarget(psObj, psTemp, 0) || aiCheckAlliances(psTemp->player, psObj->player)
+		    || !aiObjHasRange(psObj, psTemp, weapon_slot) || !visibleObject(psSensor, psTemp, false))
 		{
 			continue;
 		}
@@ -212,33 +214,30 @@ static BASE_OBJECT *aiSearchSensorTargets(BASE_OBJECT *psObj, int weapon_slot, W
 		// Need to be in range, prefer closer targets or CB targets
 		if ((isCB > foundCB || (isCB == foundCB && distSq < tarDist)) && distSq > minDist)
 		{
-			if (aiObjHasRange(psObj, psTemp, weapon_slot) && visibleObject(psSensor, psTemp, false))
+			tarDist = distSq;
+			psTarget = psTemp;
+			if (targetOrigin)
 			{
-				tarDist = distSq;
-				psTarget = psTemp;
+				*targetOrigin = ORIGIN_SENSOR;
+			}
+			if (isCB)
+			{
 				if (targetOrigin)
 				{
-					*targetOrigin = ORIGIN_SENSOR;
+					*targetOrigin = ORIGIN_CB_SENSOR;
 				}
-
-				if (isCB)
+				foundCB = true;  // got CB target, drop everything and shoot!
+			}
+			else if (isRD)
+			{
+				if (targetOrigin)
 				{
-					if (targetOrigin)
-					{
-						*targetOrigin = ORIGIN_CB_SENSOR;
-					}
-					foundCB = true;  // got CB target, drop everything and shoot!
-				}
-				else if (isRD)
-				{
-					if (targetOrigin)
-					{
-						*targetOrigin = ORIGIN_RADAR_DETECTOR;
-					}
+					*targetOrigin = ORIGIN_RADAR_DETECTOR;
 				}
 			}
 		}
 	}
+	objTrace(psObj->id, "%s : target %s", objInfo(psObj), psTarget ? objInfo(psTarget) : "(none)");
 	return psTarget;
 }
 
@@ -441,7 +440,7 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 		attackWeight /= TARGET_DOOMED_PENALTY_F;
 	}
 
-	return attackWeight;
+	return std::max<int>(1, attackWeight);
 }
 
 
@@ -609,7 +608,7 @@ int aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot, i
 
 	if (bestTarget)
 	{
-		ASSERT(!bestTarget->died, "aiBestNearestTarget: AI gave us a target that is already dead.");
+		ASSERT(!bestTarget->died, "AI gave us a target that is already dead.");
 		targetStructure = visGetBlockingWall((BASE_OBJECT *)psDroid, bestTarget);
 
 		/* See if target is blocked by a wall; only affects direct weapons */
@@ -624,6 +623,7 @@ int aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot, i
 		}
 
 		*ppsObj = bestTarget;
+		objTrace(psDroid->id, "%s : best target is %s (weight %d)", objInfo(psDroid), objInfo(bestTarget), bestMod);
 		return bestMod;
 	}
 
@@ -778,7 +778,8 @@ bool aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 		    && validTarget(psObj, psTarget, weapon_slot)
 		    && aiDroidHasRange((DROID *)psObj, psTarget, weapon_slot))
 		{
-			ASSERT(!isDead(psTarget), "aiChooseTarget: Droid found a dead target!");
+			ASSERT(!isDead(psTarget), "Droid found a dead target!");
+			objTrace(psObj->id, "%s : using target %s", objInfo(psObj), objInfo(psTarget));
 			*ppsTarget = psTarget;
 			return true;
 		}
@@ -946,7 +947,7 @@ static bool updateAttackTarget(BASE_OBJECT *psAttacker, SDWORD weapon_slot)
 			if ((orderState(psDroid, DORDER_NONE) ||
 			     orderState(psDroid, DORDER_GUARD) ||
 			     orderState(psDroid, DORDER_ATTACKTARGET)) &&
-			    weapon_slot == 0)	//Watermelon:only primary slot(0) updates affect order
+			    weapon_slot == 0)
 			{
 				actionDroid((DROID *)psAttacker, DACTION_ATTACK, psBetterTarget);
 			}
@@ -984,17 +985,13 @@ void aiUpdateDroid(DROID *psDroid)
 	updateTarget = false;
 
 	// look for a target if doing nothing
-	if (orderState(psDroid, DORDER_NONE) ||
-	    orderState(psDroid, DORDER_GUARD) ||
-	    orderState(psDroid, DORDER_HOLD))
+	if (orderState(psDroid, DORDER_NONE) || orderState(psDroid, DORDER_GUARD) || orderState(psDroid, DORDER_HOLD))
 	{
 		lookForTarget = true;
 	}
 	// but do not choose another target if doing anything while guarding
 	// exception for sensors, to allow re-targetting when target is doomed
-	if (orderState(psDroid, DORDER_GUARD) &&
-	    (psDroid->action != DACTION_NONE) &&
-	    (psDroid->droidType != DROID_SENSOR))
+	if (orderState(psDroid, DORDER_GUARD) && psDroid->action != DACTION_NONE && psDroid->droidType != DROID_SENSOR)
 	{
 		lookForTarget = false;
 	}
@@ -1019,8 +1016,7 @@ void aiUpdateDroid(DROID *psDroid)
 		updateTarget = false;
 	}
 
-	/* Don't update target if we are sent to attack and reached
-		attack destination (attacking our target) */
+	/* Don't update target if we are sent to attack and reached attack destination (attacking our target) */
 	if (orderState(psDroid, DORDER_ATTACK) && psDroid->psActionTarget[0] == psDroid->order.psObj)
 	{
 		updateTarget = false;
@@ -1053,22 +1049,12 @@ void aiUpdateDroid(DROID *psDroid)
 	}
 
 	/* look for a better target once in a while */
-	if (!lookForTarget && updateTarget)
+	if (!lookForTarget && updateTarget && psDroid->numWeaps > 0
+	    && (psDroid->id + gameTime) / TARGET_UPD_SKIP_FRAMES != (psDroid->id + gameTime - deltaGameTime) / TARGET_UPD_SKIP_FRAMES)
 	{
-		if (psDroid->numWeaps > 0)
+		for (int i = 0; i < psDroid->numWeaps; ++i)
 		{
-			if ((psDroid->id + gameTime) / TARGET_UPD_SKIP_FRAMES != (psDroid->id + gameTime - deltaGameTime) / TARGET_UPD_SKIP_FRAMES)
-			{
-				unsigned int i;
-
-				(void)updateAttackTarget((BASE_OBJECT *)psDroid, 0); // this function always has to be called on weapon-slot 0 (even if ->numWeaps == 0)
-
-				//updates all targets
-				for (i = 1; i < psDroid->numWeaps; ++i)
-				{
-					(void)updateAttackTarget((BASE_OBJECT *)psDroid, i);
-				}
-			}
+			updateAttackTarget((BASE_OBJECT *)psDroid, i);
 		}
 	}
 
