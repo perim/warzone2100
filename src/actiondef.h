@@ -38,7 +38,6 @@ enum DROID_ACTION
 	DACTION_REPAIR,					///< 5 repairing a structure
 	DACTION_ATTACK,					///< 6 attacking something
 	DACTION_OBSERVE,				///< 7 observing something
-	DACTION_FIRESUPPORT,				///< 8 attacking something visible by a sensor droid
 	DACTION_SULK,					///< 9 refuse to do anything aggresive for a fixed time
 	DACTION_UNUSED_2,
 	DACTION_TRANSPORTOUT,				///< 11 move transporter offworld
@@ -72,7 +71,6 @@ enum DROID_ACTION
 	DACTION_VTOLATTACK,				///< 36 a VTOL droid doing attack runs
 	DACTION_CLEARREARMPAD,				///< 37 a VTOL droid being told to get off a rearm pad
 	DACTION_RETURNTOPOS,				///< 38 used by scout/patrol order when returning to route
-	DACTION_FIRESUPPORT_RETREAT,			///< 39 used by firesupport order when sensor retreats
 	DACTION_CIRCLE = 41,				///< 41 circling while engaging
 };
 

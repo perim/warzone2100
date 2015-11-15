@@ -688,7 +688,6 @@ QScriptValue convFeature(FEATURE *psFeature, QScriptEngine *engine)
 //;;   \item[DORDER_DEMOLISH] Order a droid to demolish something.
 //;;   \item[DORDER_EMBARK] Order a droid to embark on a transport.
 //;;   \item[DORDER_DISEMBARK] Order a transport to disembark its units at the given position.
-//;;   \item[DORDER_FIRESUPPORT] Order a droid to fire at whatever the target sensor is targeting. (3.2+ only)
 //;;   \item[DORDER_STOP] Order a droid to stop whatever it is doing. (3.2+ only)
 //;;   \item[DORDER_RTR] Order a droid to return for repairs. (3.2+ only)
 //;;   \item[DORDER_RTB] Order a droid to return to base. (3.2+ only)
@@ -5054,7 +5053,6 @@ bool registerFunctions(QScriptEngine *engine, QString scriptName)
 	engine->globalObject().setProperty("DORDER_DEMOLISH", DORDER_DEMOLISH, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_EMBARK", DORDER_EMBARK, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_DISEMBARK", DORDER_DISEMBARK, QScriptValue::ReadOnly | QScriptValue::Undeletable);
-	engine->globalObject().setProperty("DORDER_FIRESUPPORT", DORDER_FIRESUPPORT, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_HOLD", DORDER_HOLD, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_RTR", DORDER_RTR, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_RTB", DORDER_RTB, QScriptValue::ReadOnly | QScriptValue::Undeletable);

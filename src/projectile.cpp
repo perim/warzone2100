@@ -298,12 +298,6 @@ static void proj_UpdateKills(PROJECTILE *psObj, int32_t experienceInc)
 		ASSERT_OR_RETURN(, 0 <= experienceInc && experienceInc < (int)(2.1 * 65536), "Experience increase out of range");
 
 		psDroid->experience += experienceInc;
-
-		BASE_OBJECT *psSensor = orderStateObj(psDroid, DORDER_FIRESUPPORT);
-		if (psSensor && psSensor->type == OBJ_DROID)
-		{
-			((DROID *)psSensor)->experience += experienceInc;
-		}
 	}
 }
 

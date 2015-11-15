@@ -107,7 +107,6 @@ const char *getDroidActionName(DROID_ACTION action)
 		"DACTION_REPAIR",					// 5 repairing a structure
 		"DACTION_ATTACK",					// attacking something
 		"DACTION_OBSERVE",				// 7 observing something
-		"DACTION_FIRESUPPORT",			// attacking something visible by a sensor droid
 		"DACTION_SULK",					// 9 refuse to do anything aggressive for a fixed time
 		"DACTION_DESTRUCT",				// self destruct
 		"DACTION_TRANSPORTOUT",			// 11 move transporter offworld
@@ -138,7 +137,6 @@ const char *getDroidActionName(DROID_ACTION action)
 		"DACTION_VTOLATTACK",				// (36) a VTOL droid doing attack runs
 		"DACTION_CLEARREARMPAD",			// (37) a VTOL droid being told to get off a rearm pad
 		"DACTION_RETURNTOPOS",			// (38) used by scout/patrol order when returning to route
-		"DACTION_FIRESUPPORT_RETREAT",	// (39) used by firesupport order when sensor retreats
 		"ACTION UNKNOWN",
 		"DACTION_CIRCLE"				// (41) circling while engaging
 	};
@@ -446,8 +444,7 @@ bool actionVisibleTarget(DROID *psDroid, BASE_OBJECT *psTarget, int weapon_slot)
 	}
 	const int compIndex = psDroid->asWeaps[weapon_slot].nStat;
 	ASSERT_OR_RETURN(false, compIndex < numWeaponStats, "Invalid range referenced for numWeaponStats, %d > %d", compIndex, numWeaponStats);
-	return (orderState(psDroid, DORDER_FIRESUPPORT)	|| visibleObject(psDroid, psTarget, false))
-	       && lineOfFire(psDroid, psTarget, weapon_slot, true);
+	return (visibleObject(psDroid, psTarget, false)) && lineOfFire(psDroid, psTarget, weapon_slot, true);
 }
 
 static void actionAddVtolAttackRun(DROID *psDroid)
@@ -706,7 +703,6 @@ void actionSanity(DROID *psDroid)
 // Update the action state for a droid
 void actionUpdateDroid(DROID *psDroid)
 {
-	BASE_OBJECT			*psTarget;
 	PROPULSION_STATS	*psPropStats;
 	bool	(*actionUpdateFunc)(DROID * psDroid) = NULL;
 	unsigned i;
@@ -759,7 +755,6 @@ void actionUpdateDroid(DROID *psDroid)
 	}
 
 	DROID_ORDER_DATA *order = &psDroid->order;
-	psTarget = order->psObj;
 
 	switch (psDroid->action)
 	{
@@ -843,7 +838,6 @@ void actionUpdateDroid(DROID *psDroid)
 
 	case DACTION_MOVE:
 	case DACTION_RETURNTOPOS:
-	case DACTION_FIRESUPPORT_RETREAT:
 		// moving to a location
 		if (DROID_STOPPED(psDroid))
 		{
@@ -1101,15 +1095,8 @@ void actionUpdateDroid(DROID *psDroid)
 
 		if (!bHasTarget)
 		{
-			if ((!isVtolDroid(psDroid)
-			     && (psTarget = orderStateObj(psDroid, DORDER_FIRESUPPORT))
-			     && psTarget->type == OBJ_STRUCTURE)
-			    || order->type == DORDER_NONE
-			    || order->type == DORDER_HOLD
-			    || order->type == DORDER_RTR)
+			if (order->type == DORDER_NONE || order->type == DORDER_HOLD || order->type == DORDER_RTR)
 			{
-				// don't move if on hold or firesupport for a sensor tower
-				// also don't move if we're holding position or waiting for repair
 				psDroid->action = DACTION_NONE;				// holding, cancel the order.
 			}
 			else
@@ -1691,45 +1678,6 @@ void actionUpdateDroid(DROID *psDroid)
 			moveDroidTo(psDroid, psDroid->psActionTarget[0]->pos.x, psDroid->psActionTarget[0]->pos.y);
 		}
 		break;
-	case DACTION_FIRESUPPORT:
-		if (!order->psObj)
-		{
-			psDroid->action = DACTION_NONE;
-			return;
-		}
-		//can be either a droid or a structure now - AB 7/10/98
-		ASSERT_OR_RETURN(, (order->psObj->type == OBJ_DROID || order->psObj->type == OBJ_STRUCTURE)
-		                 && aiCheckAlliances(order->psObj->player, psDroid->player), "DACTION_FIRESUPPORT: incorrect target type");
-
-		//don't move VTOL's
-		// also don't move closer to sensor towers
-		if (!isVtolDroid(psDroid) &&
-		    (order->psObj->type != OBJ_STRUCTURE))
-		{
-			Vector2i diff = removeZ(psDroid->pos - order->psObj->pos);
-			int rangeSq = asWeaponStats[psDroid->asWeaps[0].nStat].upgrade[psDroid->player].maxRange / 2; // move close to sensor
-			rangeSq = rangeSq * rangeSq;
-			if (diff * diff < rangeSq)
-			{
-				if (!DROID_STOPPED(psDroid))
-				{
-					moveStopDroid(psDroid);
-				}
-			}
-			else
-			{
-				if (!DROID_STOPPED(psDroid))
-				{
-					diff = removeZ(order->psObj->pos) - psDroid->sMove.destination;
-				}
-				if (DROID_STOPPED(psDroid) || diff * diff > rangeSq)
-				{
-					// move in range
-					moveDroidTo(psDroid, order->psObj->pos.x, order->psObj->pos.y);
-				}
-			}
-		}
-		break;
 	case DACTION_MOVETODROIDREPAIR:
 		{
 			// moving to repair a droid
@@ -2025,11 +1973,7 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 		psDroid->actionPos = psDroid->pos;
 		setDroidActionTarget(psDroid, psAction->psObj, 0);
 
-		if (!isVtolDroid(psDroid) && (orderStateObj(psDroid, DORDER_FIRESUPPORT) != NULL))
-		{
-			psDroid->action = DACTION_ATTACK;		// holding, try attack straightaway
-		}
-		else if (actionInsideMinRange(psDroid, psAction->psObj, psWeapStats))
+		if (actionInsideMinRange(psDroid, psAction->psObj, psWeapStats))
 		{
 			if (!proj_Direct(psWeapStats))
 			{
@@ -2094,7 +2038,6 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 	case DACTION_TRANSPORTIN:
 	case DACTION_TRANSPORTOUT:
 	case DACTION_RETURNTOPOS:
-	case DACTION_FIRESUPPORT_RETREAT:
 		psDroid->action = psAction->action;
 		psDroid->actionPos.x = psAction->x;
 		psDroid->actionPos.y = psAction->y;
@@ -2150,13 +2093,6 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 		{
 			psDroid->action = DACTION_MOVETOOBSERVE;
 			moveDroidTo(psDroid, psDroid->psActionTarget[0]->pos.x, psDroid->psActionTarget[0]->pos.y);
-		}
-		break;
-	case DACTION_FIRESUPPORT:
-		psDroid->action = DACTION_FIRESUPPORT;
-		if (!isVtolDroid(psDroid) && order->psObj->type != OBJ_STRUCTURE)
-		{
-			moveDroidTo(psDroid, order->psObj->pos.x, order->psObj->pos.y);		// movetotarget.
 		}
 		break;
 	case DACTION_SULK:

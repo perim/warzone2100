@@ -110,7 +110,6 @@ static void	displayAnimation(ANIM_OBJECT *psAnimObj, bool bHoldOnFirstFrame);
 static void displayBlueprints(void);
 static void	processSensorTarget(void);
 static void	processDestinationTarget(void);
-static bool	eitherSelected(DROID *psDroid);
 static void	structureEffects(void);
 static void	showDroidSensorRanges(void);
 static void	showSensorRange2(BASE_OBJECT *psObj);
@@ -118,7 +117,6 @@ static void	drawRangeAtPos(SDWORD centerX, SDWORD centerY, SDWORD radius);
 static void	addConstructionLine(DROID *psDroid, STRUCTURE *psStructure);
 static void	doConstructionLines(void);
 static void	drawDroidRank(DROID *psDroid);
-static void	drawDroidSensorLock(DROID *psDroid);
 static void	calcAverageTerrainHeight(iView *player);
 bool	doWeDrawProximitys(void);
 static PIELIGHT getBlueprintColour(STRUCT_STATES state);
@@ -2939,28 +2937,6 @@ static UDWORD	getTargettingGfx(void)
 	}
 }
 
-/// Is the droid or its sensor tower selected?
-bool	eitherSelected(DROID *psDroid)
-{
-	bool			retVal;
-	BASE_OBJECT		*psObj;
-
-	retVal = false;
-	if (psDroid->selected)
-	{
-		retVal = true;
-	}
-
-	psObj = orderStateObj(psDroid, DORDER_FIRESUPPORT);
-	if (psObj
-	    && psObj->selected)
-	{
-		retVal = true;
-	}
-
-	return retVal;
-}
-
 /// Draw the selection graphics for selected droids
 static void	drawDroidSelections(void)
 {
@@ -2996,7 +2972,7 @@ static void	drawDroidSelections(void)
 		}
 
 		/* If it's selected and on screen or it's the one the mouse is over */
-		if (eitherSelected(psDroid) ||
+		if (psDroid->selected ||
 		    (bMouseOverOwnDroid && psDroid == (DROID *) psClickedOn) ||
 		    droidUnderRepair(psDroid) ||
 		    barMode == BAR_DROIDS || barMode == BAR_DROIDS_AND_STRUCTURES
@@ -3053,7 +3029,6 @@ static void	drawDroidSelections(void)
 			    &&	(scrY - scrR) < pie_GetVideoBufferHeight())
 			{
 				drawDroidRank(psDroid);
-				drawDroidSensorLock(psDroid);
 				drawDroidGroupNumber(psDroid);
 			}
 
@@ -3836,19 +3811,6 @@ static void	drawDroidRank(DROID *psDroid)
 		iV_DrawImage(IntImages, (UWORD)gfxId,
 		             psDroid->sDisplay.screenX + psDroid->sDisplay.screenR + 8,
 		             psDroid->sDisplay.screenY + psDroid->sDisplay.screenR);
-	}
-}
-
-/**	Will render a sensor graphic for a droid locked to a sensor droid/structure
- * \note Assumes matrix context set and that z-buffer write is force enabled (Always).
- */
-static void	drawDroidSensorLock(DROID *psDroid)
-{
-	//if on fire support duty - must be locked to a Sensor Droid/Structure
-	if (orderState(psDroid, DORDER_FIRESUPPORT))
-	{
-		/* Render the sensor graphic at the correct location - which is what?!*/
-		iV_DrawImage(IntImages, IMAGE_GN_STAR, psDroid->sDisplay.screenX, psDroid->sDisplay.screenY);
 	}
 }
 

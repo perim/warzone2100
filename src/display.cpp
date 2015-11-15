@@ -701,23 +701,6 @@ static CURSOR getCursorState(std::list<DROID *> &droids, BASE_OBJECT **ppObjUnde
 			}
 			return CURSOR_NOTPOSSIBLE;
 		}
-		else if (objUnderMouse->type == OBJ_STRUCTURE && aiCheckAlliances(selectedPlayer, objUnderMouse->player) && numWeapDroids > 0)
-		{
-			// TODO - this is slow, make it faster when we have a good check if structure is a sensor or not
-			STRUCTURE *psStruct = castStructure(objUnderMouse);
-			droids = selectedDroidList(SELECTED_WEAPON);
-			for (auto *psDroid : selectedDroidList(SELECTED_WEAPON))
-			{
-				if (!structSensorDroidWeapon(psStruct, psDroid))
-				{
-					droids.remove(psDroid);
-				}
-			}
-			if (droids.size() > 0)
-			{
-				return CURSOR_ATTACH;
-			}
-		}
 		if (intSelectMode() == SELECT_GUARD && numWeapDroids > 0)
 		{
 			droids = selectedDroidList(SELECTED_WEAPON);
@@ -730,21 +713,6 @@ static CURSOR getCursorState(std::list<DROID *> &droids, BASE_OBJECT **ppObjUnde
 				return CURSOR_NOTPOSSIBLE;
 			}
 			return CURSOR_GUARD;
-		}
-		if (objUnderMouse->type == OBJ_DROID && ((DROID *)objUnderMouse)->droidType == DROID_SENSOR && numWeapDroids > 0)
-		{
-			droids = selectedDroidList(SELECTED_WEAPON);
-			for (auto *psDroid : selectedDroidList(SELECTED_WEAPON))
-			{
-				if (!droidSensorDroidWeapon(objUnderMouse, psDroid))
-				{
-					droids.remove(psDroid);
-				}
-			}
-			if (droids.size() > 0)
-			{
-				return CURSOR_ATTACH;
-			}
 		}
 		if (selectedDroidList(SELECTED_SENSOR).size() > 0 && !aiCheckAlliances(selectedPlayer, objUnderMouse->player)
 		    && objUnderMouse->type != OBJ_FEATURE) // features handled specially later
@@ -1401,32 +1369,6 @@ void renderDeliveryRepos(void)
 	}
 }
 
-// check whether a clicked on droid is assigned to a sensor
-static bool droidHasLeader(DROID *psDroid)
-{
-	BASE_OBJECT		*psLeader;
-
-	if (psDroid->droidType == DROID_SENSOR)
-	{
-		return false;
-	}
-
-	// psLeader can be either a droid or a structure
-	psLeader = orderStateObj(psDroid, DORDER_FIRESUPPORT);
-
-	if (psLeader != NULL)
-	{
-		if (psLeader->type == OBJ_DROID)
-		{
-			SelectDroid((DROID *)psLeader);
-		}
-		assignSensorTarget(psLeader);
-		return true;
-	}
-
-	return false;
-}
-
 // deal with selecting a droid
 void dealWithDroidSelect(DROID *psDroid, bool bDragBox)
 {
@@ -1436,7 +1378,7 @@ void dealWithDroidSelect(DROID *psDroid, bool bDragBox)
 	{
 		DeSelectDroid(psDroid);
 	}
-	else if (ctrlShiftDown() || !droidHasLeader(psDroid))
+	else
 	{
 		if (specialOrderKeyDown())
 		{
@@ -1576,12 +1518,6 @@ static void dealWithLMBCommon(BASE_OBJECT *psObj, CURSOR cursor, std::list<DROID
 		case CURSOR_GUARD:
 			orderDroidObj(psCurr, DORDER_GUARD, psObj);
 			intSetSelectMode(SELECT_NONE);
-			FeedbackOrderGiven();
-			break;
-		case CURSOR_ATTACH:
-			orderDroidObj(psCurr, DORDER_FIRESUPPORT, psObj);
-			clearSelection();
-			assignSensorTarget(psObj);
 			FeedbackOrderGiven();
 			break;
 		case CURSOR_LOCKON:

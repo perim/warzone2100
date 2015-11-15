@@ -1024,7 +1024,6 @@ bool testPlayerScript(QString path, int player, int difficulty)
 	engine->globalObject().setProperty("DORDER_DEMOLISH", 8, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_EMBARK", 9, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_DISEMBARK", 10, QScriptValue::ReadOnly | QScriptValue::Undeletable);
-	engine->globalObject().setProperty("DORDER_FIRESUPPORT", 11, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_HOLD", 12, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_RTR", 13, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("DORDER_RTB", 14, QScriptValue::ReadOnly | QScriptValue::Undeletable);

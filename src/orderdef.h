@@ -47,7 +47,6 @@ enum DroidOrderType
 	DORDER_DEMOLISH,        /**< demolish a structure. */
 	DORDER_REPAIR,          /**< repair a structure. */
 	DORDER_OBSERVE,         /**< keep a target in sensor view. */
-	DORDER_FIRESUPPORT,     /**< attack whatever the linked sensor droid attacks. */
 	DORDER_RTB,             /**< return to base. */
 	DORDER_RTR,             /**< return to repair at any repair facility. */
 	DORDER_EMBARK,          /**< board a transporter. */
