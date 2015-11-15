@@ -339,7 +339,6 @@ bool SendDroid(DROID_TEMPLATE *pTemplate, uint32_t x, uint32_t y, uint8_t player
 		NETqstring(pTemplate->name);
 		NETint32_t(&droidType);
 		NETuint8_t(&pTemplate->asParts[COMP_BODY]);
-		NETuint8_t(&pTemplate->asParts[COMP_BRAIN]);
 		NETuint8_t(&pTemplate->asParts[COMP_PROPULSION]);
 		NETuint8_t(&pTemplate->asParts[COMP_REPAIRUNIT]);
 		NETuint8_t(&pTemplate->asParts[COMP_ECM]);
@@ -387,7 +386,6 @@ bool recvDroid(NETQUEUE queue)
 		pT->id = pT->name;
 		NETint32_t(&droidType);
 		NETuint8_t(&pT->asParts[COMP_BODY]);
-		NETuint8_t(&pT->asParts[COMP_BRAIN]);
 		NETuint8_t(&pT->asParts[COMP_PROPULSION]);
 		NETuint8_t(&pT->asParts[COMP_REPAIRUNIT]);
 		NETuint8_t(&pT->asParts[COMP_ECM]);

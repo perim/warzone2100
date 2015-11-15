@@ -4317,7 +4317,6 @@ static bool loadSaveDroid(const char *pFileName, DROID **ppsCurrentDroidLists)
 			psTemplate->numWeaps = ini.value("weapons", 0).toInt();
 			ini.beginGroup("parts");	// the following is copy-pasted from loadSaveTemplate() -- fixme somehow
 			psTemplate->asParts[COMP_BODY] = getCompFromName(COMP_BODY, ini.value("body", "ZNULLBODY").toString());
-			psTemplate->asParts[COMP_BRAIN] = getCompFromName(COMP_BRAIN, ini.value("brain", "ZNULLBRAIN").toString());
 			psTemplate->asParts[COMP_PROPULSION] = getCompFromName(COMP_PROPULSION, ini.value("propulsion", "ZNULLPROP").toString());
 			psTemplate->asParts[COMP_REPAIRUNIT] = getCompFromName(COMP_REPAIRUNIT, ini.value("repair", "ZNULLREPAIR").toString());
 			psTemplate->asParts[COMP_ECM] = getCompFromName(COMP_ECM, ini.value("ecm", "ZNULLECM").toString());
@@ -5593,7 +5592,6 @@ bool loadSaveTemplate(const char *pFileName)
 		psTemplate->droidType = (DROID_TYPE)ini.value("droidType").toInt();
 		psTemplate->multiPlayerID = ini.value("multiPlayerID").toInt();
 		psTemplate->asParts[COMP_BODY] = getCompFromName(COMP_BODY, ini.value("body", "ZNULLBODY").toString());
-		psTemplate->asParts[COMP_BRAIN] = getCompFromName(COMP_BRAIN, ini.value("brain", "ZNULLBRAIN").toString());
 		psTemplate->asParts[COMP_PROPULSION] = getCompFromName(COMP_PROPULSION, ini.value("propulsion", "ZNULLPROP").toString());
 		psTemplate->asParts[COMP_REPAIRUNIT] = getCompFromName(COMP_REPAIRUNIT, ini.value("repair", "ZNULLREPAIR").toString());
 		psTemplate->asParts[COMP_ECM] = getCompFromName(COMP_ECM, ini.value("ecm", "ZNULLECM").toString());

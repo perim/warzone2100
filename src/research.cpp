@@ -1043,7 +1043,6 @@ static void replaceComponent(COMPONENT_STATS *pNewComponent, COMPONENT_STATS *pO
 		switch (oldType)
 		{
 		case COMP_BODY:
-		case COMP_BRAIN:
 		case COMP_PROPULSION:
 		case COMP_REPAIRUNIT:
 		case COMP_ECM:
@@ -1277,7 +1276,6 @@ static void switchComponent(DROID *psDroid, UDWORD oldType, UDWORD oldCompInc,
 	switch (oldType)
 	{
 	case COMP_BODY:
-	case COMP_BRAIN:
 	case COMP_PROPULSION:
 	case COMP_REPAIRUNIT:
 	case COMP_ECM:

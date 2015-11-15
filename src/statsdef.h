@@ -92,7 +92,6 @@ struct StringToEnumMap : public std::vector<std::pair<char const *, unsigned> >
 enum COMPONENT_TYPE
 {
 	COMP_BODY,
-	COMP_BRAIN,
 	COMP_PROPULSION,
 	COMP_REPAIRUNIT,
 	COMP_ECM,

@@ -216,8 +216,6 @@ void printDroidInfo(const DROID *psDroid)
 				CONPRINTF(ConsoleString, (ConsoleString, "ZNULL BODY\n"));
 			}
 			break;
-		case COMP_BRAIN:
-			break;
 		case COMP_PROPULSION:
 			if (psDroid->asBits[i] > 0)
 			{
