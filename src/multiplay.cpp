@@ -1539,7 +1539,7 @@ static void NETtemplate(DROID_TEMPLATE *pTempl)
 	NETint8_t(&pTempl->numWeaps);
 	NETbool(&pTempl->stored);	// other players don't need to know, but we need to keep the knowledge in the loop somehow...
 
-	for (int i = 0; i < DROID_MAXWEAPS; ++i)
+	for (int i = 0; i < MAX_WEAPONS; ++i)
 	{
 		NETuint8_t(&pTempl->asWeaps[i]);
 	}

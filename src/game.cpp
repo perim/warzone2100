@@ -4211,7 +4211,7 @@ foundDroid:
 			getIniDroidOrder(ini, "orderList/" + QString::number(i), psDroid->asOrderList[i]);
 		}
 		psDroid->listPendingBegin = 0;
-		for (int j = 0; j < DROID_MAXWEAPS; j++)
+		for (int j = 0; j < MAX_WEAPONS; j++)
 		{
 			objTrace(psDroid->id, "weapon %d, nStat %d", j, psDroid->asWeaps[j].nStat);
 			getIniBaseObject(ini, "actionTarget/" + QString::number(j), psDroid->psActionTarget[j]);
@@ -4420,7 +4420,7 @@ static bool loadSaveDroid(const char *pFileName, DROID **ppsCurrentDroidLists)
 		psDroid->sMove.iVertSpeed = ini.value("vertSpeed").toInt();
 		psDroid->sMove.bumpTime = ini.value("bumpTime").toInt();
 		psDroid->sMove.shuffleStart = ini.value("shuffleStart").toInt();
-		for (int j = 0; j < DROID_MAXWEAPS; ++j)
+		for (int j = 0; j < MAX_WEAPONS; ++j)
 		{
 			psDroid->asWeaps[j].usedAmmo = ini.value("attackRun/" + QString::number(j)).toInt();
 		}
@@ -4493,7 +4493,7 @@ static bool writeDroid(WzConfig &ini, DROID *psCurr, bool onMission, int &counte
 			ini.setVector3i("rotation/" + QString::number(i), psCurr->asWeaps[i].rot);
 		}
 	}
-	for (int i = 0; i < DROID_MAXWEAPS; i++)
+	for (int i = 0; i < MAX_WEAPONS; i++)
 	{
 		setIniBaseObject(ini, "actionTarget/" + QString::number(i), psCurr->psActionTarget[i]);
 	}
@@ -4589,7 +4589,7 @@ static bool writeDroid(WzConfig &ini, DROID *psCurr, bool onMission, int &counte
 	ini.setValue("vertSpeed", psCurr->sMove.iVertSpeed);
 	ini.setValue("bumpTime", psCurr->sMove.bumpTime);
 	ini.setValue("shuffleStart", psCurr->sMove.shuffleStart);
-	for (int i = 0; i < DROID_MAXWEAPS; ++i)
+	for (int i = 0; i < MAX_WEAPONS; ++i)
 	{
 		ini.setValue("attackRun/" + QString::number(i), psCurr->asWeaps[i].usedAmmo);
 	}
@@ -5307,7 +5307,7 @@ bool loadSaveStructurePointers(QString filename, STRUCTURE **ppList)
 			ini.endGroup();
 			continue;	// it is not unusual for a structure to 'disappear' like this; it can happen eg because of module upgrades
 		}
-		for (int j = 0; j < STRUCT_MAXWEAPS; j++)
+		for (int j = 0; j < MAX_WEAPONS; j++)
 		{
 			objTrace(psStruct->id, "weapon %d, nStat %d", j, psStruct->asWeaps[j].nStat);
 			if (ini.contains("target/" + QString::number(j) + "/id"))
