@@ -154,7 +154,7 @@ bool aiShutdown(void)
 }
 
 /** Search the global list of sensors for a possible target for psObj. */
-static BASE_OBJECT *aiSearchSensorTargets(BASE_OBJECT *psObj, int weapon_slot, WEAPON_STATS *psWStats, UWORD *targetOrigin)
+static BASE_OBJECT *aiSearchSensorTargets(BASE_OBJECT *psObj, int weapon_slot, WEAPON_STATS *psWStats, TARGET_ORIGIN *targetOrigin)
 {
 	int		longRange = proj_GetLongRange(psWStats, psObj->player);
 	int		tarDist = longRange * longRange;
@@ -454,7 +454,7 @@ int aiBestNearestTarget(DROID *psDroid, BASE_OBJECT **ppsObj, int weapon_slot, i
 	bool				electronic = false;
 	STRUCTURE			*targetStructure;
 	WEAPON_EFFECT			weaponEffect;
-	UWORD				tmpOrigin = ORIGIN_UNKNOWN;
+	TARGET_ORIGIN tmpOrigin = ORIGIN_UNKNOWN;
 
 	//don't bother looking if empty vtol droid
 	if (vtolEmpty(psDroid))
@@ -721,40 +721,18 @@ static bool aiObjIsWall(BASE_OBJECT *psObj)
 
 
 /* See if there is a target in range */
-bool aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot, bool bUpdateTarget, UWORD *targetOrigin)
+bool aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot, bool bUpdateTarget, TARGET_ORIGIN *targetOrigin)
 {
 	BASE_OBJECT		*psTarget = NULL;
 	SDWORD			curTargetWeight = -1;
-	UWORD 			tmpOrigin = ORIGIN_UNKNOWN;
+	TARGET_ORIGIN tmpOrigin = ORIGIN_UNKNOWN;
 
 	if (targetOrigin)
 	{
 		*targetOrigin = ORIGIN_UNKNOWN;
 	}
 
-	switch (psObj->type)
-	{
-	case OBJ_DROID:
-		if (((DROID *)psObj)->asWeaps[weapon_slot].nStat == 0)
-		{
-			return false;
-		}
-		if (((DROID *)psObj)->asWeaps[0].nStat == 0 &&
-		    ((DROID *)psObj)->droidType != DROID_SENSOR)
-		{
-			return false;	// Can't target without a weapon or sensor
-		}
-		break;
-	case OBJ_STRUCTURE:
-		if (((STRUCTURE *)psObj)->numWeaps == 0 || ((STRUCTURE *)psObj)->asWeaps[0].nStat == 0)
-		{
-			// Can't attack without a weapon
-			return false;
-		}
-		break;
-	default:
-		break;
-	}
+	ASSERT_OR_RETURN(false, psObj->numWeaps > weapon_slot, "Invalid weapon selected");
 
 	/* See if there is a something in range */
 	if (psObj->type == OBJ_DROID)
@@ -786,11 +764,9 @@ bool aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 	}
 	else if (psObj->type == OBJ_STRUCTURE)
 	{
-		WEAPON_STATS	*psWStats = NULL;
+		ASSERT_OR_RETURN(false, psObj->asWeaps[weapon_slot].nStat > 0, "Invalid weapon turret");
 
-		ASSERT(((STRUCTURE *)psObj)->asWeaps[weapon_slot].nStat > 0, "no weapons on structure");
-
-		psWStats = ((STRUCTURE *)psObj)->asWeaps[weapon_slot].nStat + asWeaponStats;
+		WEAPON_STATS *psWStats = psObj->asWeaps[weapon_slot].nStat + asWeaponStats;
 		int longRange = proj_GetLongRange(psWStats, psObj->player);
 
 		psTarget = NULL;
@@ -843,7 +819,7 @@ bool aiChooseTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget, int weapon_slot
 
 		if (psTarget)
 		{
-			ASSERT(!psTarget->died, "aiChooseTarget: Structure found a dead target!");
+			ASSERT(!psTarget->died, "Structure found a dead target!");
 			if (targetOrigin)
 			{
 				*targetOrigin = tmpOrigin;
@@ -936,7 +912,7 @@ bool aiChooseSensorTarget(BASE_OBJECT *psObj, BASE_OBJECT **ppsTarget)
 static bool updateAttackTarget(BASE_OBJECT *psAttacker, SDWORD weapon_slot)
 {
 	BASE_OBJECT		*psBetterTarget = NULL;
-	UWORD			tmpOrigin = ORIGIN_UNKNOWN;
+	TARGET_ORIGIN tmpOrigin = ORIGIN_UNKNOWN;
 
 	if (aiChooseTarget(psAttacker, &psBetterTarget, weapon_slot, true, &tmpOrigin))	//update target
 	{
@@ -977,6 +953,11 @@ void aiUpdateDroid(DROID *psDroid)
 
 	ASSERT(psDroid != NULL, "Invalid droid pointer");
 	if (!psDroid || isDead((BASE_OBJECT *)psDroid))
+	{
+		return;
+	}
+
+	if (psDroid->droidType != DROID_SENSOR && psDroid->numWeaps == 0)
 	{
 		return;
 	}

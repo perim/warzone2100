@@ -1453,8 +1453,8 @@ STRUCTURE *buildStructureDir(STRUCTURE_STATS *pStructureType, UDWORD x, UDWORD y
 			psBuilding->asWeaps[i].rot.pitch = 0;
 			psBuilding->asWeaps[i].rot.roll = 0;
 			psBuilding->asWeaps[i].prevRot = psBuilding->asWeaps[i].rot;
+			psBuilding->asWeaps[i].origin = ORIGIN_UNKNOWN;
 			psBuilding->psTarget[i] = NULL;
-			psBuilding->targetOrigin[i] = ORIGIN_UNKNOWN;
 		}
 
 		psBuilding->periodicalDamageStart = 0;
@@ -1466,7 +1466,6 @@ STRUCTURE *buildStructureDir(STRUCTURE_STATS *pStructureType, UDWORD x, UDWORD y
 		alignStructure(psBuilding);
 
 		/* Store the weapons */
-		memset(psBuilding->asWeaps, 0, sizeof(WEAPON));
 		psBuilding->numWeaps = 0;
 		if (pStructureType->numWeaps > 0)
 		{
@@ -2302,7 +2301,7 @@ static void aiUpdateStructure(STRUCTURE *psStructure, bool isMission)
 	bool				bDirect = false;
 	SDWORD				xdiff, ydiff, mindist, currdist;
 	UDWORD				i;
-	UWORD 				tmpOrigin = ORIGIN_UNKNOWN;
+	TARGET_ORIGIN tmpOrigin = ORIGIN_UNKNOWN;
 
 	CHECK_STRUCTURE(psStructure);
 

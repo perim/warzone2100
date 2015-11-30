@@ -395,11 +395,11 @@ static inline Rotation structureGetInterpolatedWeaponRotation(STRUCTURE *psStruc
 }
 
 #define setStructureTarget(_psBuilding, _psNewTarget, _idx, _targetOrigin) _setStructureTarget(_psBuilding, _psNewTarget, _idx, _targetOrigin, __LINE__, __FUNCTION__)
-static inline void _setStructureTarget(STRUCTURE *psBuilding, BASE_OBJECT *psNewTarget, UWORD idx, UWORD targetOrigin, int line, const char *func)
+static inline void _setStructureTarget(STRUCTURE *psBuilding, BASE_OBJECT *psNewTarget, UWORD idx, TARGET_ORIGIN targetOrigin, int line, const char *func)
 {
 	assert(idx < MAX_WEAPONS);
+	psBuilding->asWeaps[idx].origin = targetOrigin;
 	psBuilding->psTarget[idx] = psNewTarget;
-	psBuilding->targetOrigin[idx] = targetOrigin;
 	ASSERT(psNewTarget == NULL || !psNewTarget->died, "setStructureTarget set dead target");
 #ifdef DEBUG
 	psBuilding->targetLine[idx] = line;

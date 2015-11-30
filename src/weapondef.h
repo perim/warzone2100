@@ -24,6 +24,25 @@
 #ifndef __INCLUDED_WEAPONDEF_H__
 #define __INCLUDED_WEAPONDEF_H__
 
+// maximum difference in direction for a fixed turret to fire
+#define FIXED_TURRET_DIR DEG(1)
+
+// %age at which a unit is considered to be heavily damaged
+#define HEAVY_DAMAGE_LEVEL	25
+
+/* who specified the target? */
+enum TARGET_ORIGIN
+{
+	ORIGIN_UNKNOWN,		///< Default value if unknown
+	ORIGIN_PLAYER,		///< Came directly from player
+	ORIGIN_VISUAL,		///< Visual targeting
+	ORIGIN_ALLY,		///< Came from allied unit/structure
+	ORIGIN_SENSOR,		///< Came from standard sensor
+	ORIGIN_CB_SENSOR,	///< Came from counter-battery sensor
+	ORIGIN_AIRDEF_SENSOR,	///< Came from Air Defense sensor
+	ORIGIN_RADAR_DETECTOR,	///< Came from Radar Detector sensor
+};
+
 struct WEAPON
 {
 	uint32_t        nStat;		///< Index into the asWeaponStats global array
@@ -33,6 +52,9 @@ struct WEAPON
 	Rotation	rot;
 	Rotation	prevRot;
 	unsigned        usedAmmo;    ///< Amount of ammunition used up by a VTOL
+	TARGET_ORIGIN   origin;
+
+	WEAPON() : nStat(0), ammo(0), lastFired(0), shotsFired(0), usedAmmo(0), origin(ORIGIN_UNKNOWN) {}
 };
 
 // Defined in droid.cpp.

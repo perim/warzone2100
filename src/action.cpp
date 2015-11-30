@@ -487,9 +487,6 @@ static void actionAddVtolAttackRun(DROID *psDroid)
 
 static void actionUpdateVtolAttack(DROID *psDroid)
 {
-	WEAPON_STATS	*psWeapStats[MAX_WEAPONS] = { NULL };
-	UBYTE i;
-
 	CHECK_DROID(psDroid);
 
 	/* don't do attack runs whilst returning to base */
@@ -498,36 +495,11 @@ static void actionUpdateVtolAttack(DROID *psDroid)
 		return;
 	}
 
-	/* if I am a multi-turret droid */
-	if (psDroid->numWeaps > 1)
-	{
-		for (i = 0; i < psDroid->numWeaps; i++)
-		{
-			if (psDroid->asWeaps[i].nStat != 0)
-			{
-				psWeapStats[i] = asWeaponStats + psDroid->asWeaps[i].nStat;
-				ASSERT(psWeapStats != NULL, "invalid weapon stats pointer");
-				break;
-			}
-		}
-	}
-	else
-	{
-		if (psDroid->asWeaps[0].nStat > 0)
-		{
-			psWeapStats[0] = asWeaponStats + psDroid->asWeaps[0].nStat;
-			ASSERT(psWeapStats != NULL, "invalid weapon stats pointer");
-		}
-	}
-
 	/* order back to base after fixed number of attack runs */
-	if (psWeapStats[0] != NULL)
+	if (psDroid->numWeaps > 0 && psDroid->asWeaps[0].nStat > 0 && vtolEmpty(psDroid))
 	{
-		if (vtolEmpty(psDroid))
-		{
-			moveToRearm(psDroid);
-			return;
-		}
+		moveToRearm(psDroid);
+		return;
 	}
 
 	/* circle around target if hovering and not cyborg */
