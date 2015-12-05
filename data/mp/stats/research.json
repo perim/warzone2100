@@ -769,7 +769,7 @@
         "researchPoints": 7200,
         "researchPower": 225,
         "resultStructures": [
-            "GuardTower-Rail1"
+            "GuardTower-Rail1", "ExtensionTower-Rail1"
         ],
         "statID": "GuardTower-Rail1"
     },
@@ -1378,7 +1378,7 @@
         "researchPoints": 600,
         "researchPower": 18,
         "resultStructures": [
-            "GuardTower1"
+            "GuardTower1", "ExtensionTower1"
         ],
         "statID": "GuardTower1"
     },
@@ -7137,6 +7137,12 @@
         "requiredResearch": [
             "R-Wpn-MG-Damage02"
         ],
+        "redStructures": [
+            "GuardTower1"
+        ],
+        "resultStructures": [
+            "GuardTower2"
+        ],
         "researchPoints": 1200,
         "researchPower": 37,
         "resultComponents": [
@@ -7154,6 +7160,12 @@
         "requiredResearch": [
             "R-Wpn-MG-Damage03",
             "R-Wpn-MG2Mk1"
+        ],
+        "redStructures": [
+            "GuardTower2"
+        ],
+        "resultStructures": [
+            "GuardTower3"
         ],
         "researchPoints": 2400,
         "researchPower": 75,
