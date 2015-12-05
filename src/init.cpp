@@ -704,7 +704,7 @@ bool systemInitialise(void)
 	wzSceneBegin("Main menu loop");
 	iV_TextInit();
 
-	pie_InitRadar();
+	pie_InitGraphics();
 
 	readAIs();
 
@@ -719,7 +719,7 @@ extern char *mod_list;
 
 void systemShutdown(void)
 {
-	pie_ShutdownRadar();
+	pie_ShutdownGraphics();
 	if (mod_list)
 	{
 		free(mod_list);

@@ -244,42 +244,51 @@ function sortByDistToBase(obj1, obj2)
 	return (dist1 - dist2);
 }
 
-function lookForOil(droids)
+function lookForOil()
 {
 	var droids = enumDroid(me, DROID_CONSTRUCT);
 	var oils = enumFeature(-1, oilRes);
-	var bestDroid = null;
+	var bestDroid = -1;
 	var bestDist = 99999;
-	log("looking for oil... " + oils.length + " available");
-	if (oils.length > 0)
+	var droidlist = [];
+	var sentlist = [];
+	for (var j = 0; j < droids.length; j++)
+	{
+		if (droids[j].order != DORDER_BUILD && droids[j].order != DORDER_LINEBUILD) // but can snatch from HELPBUILD
+		{
+			droidlist.push(droids[j]);
+		}
+	}
+	log("looking for oil. " + oils.length + " oils available. " + droidlist.length + " droids available.");
+	if (oils.length > 0 && droidlist.length > 0)
 	{
 		oils.sort(sortByDistToBase); // grab closer oils first
 		for (var i = 0; i < oils.length; i++)
 		{
-			for (var j = 0; j < droids.length; j++)
+			for (var j = 0; j < droidlist.length; j++)
 			{
-				var dist = distBetweenTwoPoints(droids[j].x, droids[j].y, oils[i].x, oils[i].y);
-				if (droidCanReach(droids[j], oils[i].x, oils[i].y)
+				log("droid " + droidlist[j].id + ", checking oil at " + oils[i].x + ", " + oils[i].y);
+				var dist = distBetweenTwoPoints(droidlist[j].x, droidlist[j].y, oils[i].x, oils[i].y);
+				if (droidCanReach(droidlist[j], oils[i].x, oils[i].y)
 				    && safeDest(me, oils[i].x, oils[i].y)
-				    && droids[j].order != DORDER_BUILD  // but can snatch from HELPBUILD
-				    && droids[j].order != DORDER_LINEBUILD
-				    && bestDist > dist
-				    && !droids[j].busy)
+				    && bestDist > dist)
 				{
-					bestDroid = droids[j];
+					bestDroid = j;
 					bestDist = dist;
 				}
 			}
-			if (bestDroid)
+			if (bestDroid != -1)
 			{
-				bestDroid.busy = true;
-				orderDroidBuild(bestDroid, DORDER_BUILD, derrick, oils[i].x, oils[i].y);
+				log("ordering droid " + droidlist[bestDroid].id + " to build oil");
+				orderDroidBuild(droidlist[bestDroid], DORDER_BUILD, derrick, oils[i].x, oils[i].y);
+				sentlist.push(bestDroid);
+				droidlist.splice(bestDroid, 1);
 				bestDist = 99999;
-				bestDroid = null;
+				bestDroid = -1;
 			}
 		}
 	}
-	return bestDroid;
+	return sentlist.length;
 }
 
 function buildFundamentals()
@@ -289,6 +298,15 @@ function buildFundamentals()
 
 	fundamentalsTriggered = false;
 
+	if (countStruct(derrick) > 2 && countStruct(powGen) > 0
+	    && ((isStructureAvailable(factory) && countStruct(factory) == 0)
+	        || (!researchDone && isStructureAvailable(resLab) && countStruct(resLab) == 0)))
+	{
+		log("Prioritize early base, have " + countStruct(derrick) + " derricks");
+		queue("buildFundamentals2"); // once we have basic economy, prioritize base to avoid getting rushed
+		return;
+	}
+
 	// Do we need power generators?
 	if (playerPower(me) < 1000 && numUnusedDerricks() > 0)
 	{
@@ -297,7 +315,7 @@ function buildFundamentals()
 	}
 	if (!needPwGen && playerPower(me) < 500) // check for more income
 	{
-		if (lookForOil())
+		if (lookForOil() > 0)
 		{
 			log("Now looking for oil");
 			return; // do not build anything else

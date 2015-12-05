@@ -91,7 +91,7 @@ private:
 	GLenum mFormat;
 	int mWidth;
 	int mHeight;
-	GLenum mdrawType;
+	GLenum mDrawType;
 	int mCoordsPerVertex;
 	GLuint mBuffers[VBO_COUNT];
 	GLuint mTexture;
@@ -129,8 +129,8 @@ static inline void iV_DrawImageTc(IMAGEFILE *imageFile, unsigned id, unsigned id
 extern void iV_TransBoxFill(float x0, float y0, float x1, float y1);
 extern void pie_UniTransBoxFill(float x0, float y0, float x1, float y1, PIELIGHT colour);
 
-bool pie_InitRadar();
-bool pie_ShutdownRadar();
+bool pie_InitGraphics();
+bool pie_ShutdownGraphics();
 void pie_DownLoadRadar(UDWORD *buffer);
 void pie_RenderRadar();
 void pie_SetRadar(GLfloat x, GLfloat y, GLfloat width, GLfloat height, int twidth, int theight, bool filter);

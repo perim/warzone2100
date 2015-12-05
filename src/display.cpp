@@ -373,7 +373,10 @@ void processInput(void)
 		}
 	}
 
-	keyProcessMappings();
+	if (bAllowOtherKeyPresses)
+	{
+		keyProcessMappings();
+	}
 
 	/* Allow the user to clear the (Active) console if need be */
 	if (mouseOverConsoleBox() && mousePressed(MOUSE_LMB))

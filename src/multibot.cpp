@@ -555,6 +555,7 @@ void sendDroidInfo(DROID *psDroid, DroidOrder const &order, bool add)
 {
 	if (!myResponsibility(psDroid->player))
 	{
+		debug(LOG_ERROR, "Tried to send info on droid %d that we do not have responsibility for!", (int)psDroid->id);
 		return;
 	}
 

@@ -70,7 +70,7 @@ static Vector2i makePieImage(IMAGEFILE *imageFile, unsigned id, PIERECT *dest = 
  */
 /***************************************************************************/
 
-GFX::GFX(GFXTYPE type, GLenum drawType, int coordsPerVertex) : mType(type), mdrawType(drawType), mCoordsPerVertex(coordsPerVertex), mSize(0)
+GFX::GFX(GFXTYPE type, GLenum drawType, int coordsPerVertex) : mType(type), mDrawType(drawType), mCoordsPerVertex(coordsPerVertex), mSize(0)
 {
 	glGenBuffers(VBO_MINIMAL, mBuffers);
 	if (type == GFX_TEXTURE)
@@ -163,7 +163,7 @@ void GFX::draw()
 	}
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glBindBuffer(GL_ARRAY_BUFFER, mBuffers[VBO_VERTEX]); glVertexPointer(mCoordsPerVertex, GL_FLOAT, 0, NULL);
-	glDrawArrays(mdrawType, 0, mSize);
+	glDrawArrays(mDrawType, 0, mSize);
 	glDisableClientState(GL_VERTEX_ARRAY);
 	if (mType == GFX_TEXTURE)
 	{
@@ -434,13 +434,13 @@ void iV_DrawImageRepeatY(IMAGEFILE *ImageFile, UWORD ID, int x, int y, int Heigh
 	}
 }
 
-bool pie_InitRadar(void)
+bool pie_InitGraphics()
 {
 	radarGfx = new GFX(GFX_TEXTURE, GL_TRIANGLE_STRIP, 2);
 	return true;
 }
 
-bool pie_ShutdownRadar(void)
+bool pie_ShutdownGraphics()
 {
 	delete radarGfx;
 	radarGfx = NULL;
