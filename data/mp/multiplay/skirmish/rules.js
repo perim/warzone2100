@@ -198,11 +198,12 @@ function eventGameInit()
 		}
 	}
 
-	// Disabled by default
-	setMiniMap(false);
-	setDesign(false);
 	// This is the only template that should be enabled before design is allowed
 	enableTemplate("ConstructionDroid");
+	for (var i = 0; i < maxPlayers; i++)
+	{
+		setPowerStorageMaximum(500, i);
+	}
 
 	var structlist = enumStruct(selectedPlayer, HQ);
 	for (var i = 0; i < structlist.length; i++)
@@ -299,19 +300,17 @@ function eventAttacked(victimObj, attackerObj)
 
 function eventStructureBuilt(struct)
 {
-	if (struct.player == selectedPlayer && struct.type == STRUCTURE && struct.stattype == HQ)
+	if (struct.type == STRUCTURE && struct.stattype == HQ)
 	{
-		setMiniMap(true); // show minimap
-		setDesign(true); // permit designs
+		setPowerStorageMaximum(1000000, struct.player);
 	}
 }
 
 function eventDestroyed(victim)
 {
-	if (victim.player == selectedPlayer && victim.type == STRUCTURE && victim.stattype == HQ)
+	if (victim.type == STRUCTURE && victim.stattype == HQ)
 	{
-		setMiniMap(false); // hide minimap if HQ is destroyed
-		setDesign(false); // and disallow design
+		setPowerStorageMaximum(500, victim.player);
 	}
 }
 
