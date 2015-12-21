@@ -1023,7 +1023,7 @@ intChooseSystemStats(DROID_TEMPLATE *psTemplate)
 	return psStats;
 }
 
-const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
+static const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate)
 {
 	// NOTE:	At this time, savegames can support a max of 60. We are using MAX_STR_LENGTH (currently 256) for display
 	// We are also returning a truncated string, instead of NULL if the string is too long.

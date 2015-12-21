@@ -119,11 +119,3 @@ bool strresLoad(STR_RES *psRes, const char *fileName)
 
 	return retval;
 }
-
-/* Get the ID number for a string*/
-const char *strresGetIDfromString(STR_RES *psRes, const char *pString)
-{
-	ASSERT(psRes != NULL, "Invalid string res pointer");
-
-	return treapFindKey(psRes->psIDTreap, pString);
-}

@@ -125,8 +125,6 @@ extern void intRemoveDesign(void);
 extern void intProcessDesign(UDWORD id);
 extern void intRunDesign(void);
 
-extern const char *GetDefaultTemplateName(DROID_TEMPLATE *psTemplate);
-
 bool intValidTemplate(DROID_TEMPLATE *psTempl, const char *newName, bool complain, int player);
 
 #endif // __INCLUDED_SRC_DESIGN_H__

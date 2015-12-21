@@ -239,8 +239,6 @@ extern void setUpBuildModule(DROID *psDroid);
 /* Just returns true if the droid's present body points aren't as high as the original*/
 extern bool	droidIsDamaged(DROID *psDroid);
 
-extern char const *getDroidResourceName(char const *pName);
-
 /*checks to see if an electronic warfare weapon is attached to the droid*/
 extern bool electronicDroid(DROID *psDroid);
 

@@ -45,7 +45,4 @@ WZ_DECL_NONNULL(1, 2) const char *strresGetString(const struct STR_RES *psRes, c
 /* Load a string resource file */
 WZ_DECL_NONNULL(1, 2) bool strresLoad(struct STR_RES *psRes, const char *fileName);
 
-/* Get the ID string for a string */
-WZ_DECL_NONNULL(1, 2) const char *strresGetIDfromString(struct STR_RES *psRes, const char *pString);
-
 #endif

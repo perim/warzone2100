@@ -314,8 +314,6 @@ bool loadDroidTemplates(const char *filename)
 		design.stored = false;
 		design.enabled = true;
 		bool available = ini.value("available", false).toBool();
-		char const *droidResourceName = getDroidResourceName(list[i].toUtf8().constData());
-		design.name = droidResourceName != NULL ? droidResourceName : GetDefaultTemplateName(&design);
 		ini.endGroup();
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
