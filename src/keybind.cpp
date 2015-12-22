@@ -843,38 +843,6 @@ void kf_MapCheck(void)
 	}
 }
 
-/* Raises the tile under the mouse */
-void	kf_RaiseTile(void)
-{
-	if (runningMultiplayer())
-	{
-		return;  // Don't desynch if pressing 'W'...
-	}
-
-	raiseTile(mouseTileX, mouseTileY);
-}
-
-// --------------------------------------------------------------------------
-
-/* Lowers the tile under the mouse */
-void	kf_LowerTile(void)
-{
-	if (runningMultiplayer())
-	{
-		return;  // Don't desynch if pressing 'A'...
-	}
-
-	lowerTile(mouseTileX, mouseTileY);
-}
-
-// --------------------------------------------------------------------------
-
-/* Quick game exit */
-void	kf_SystemClose(void)
-{
-
-}
-
 // --------------------------------------------------------------------------
 /* Zooms out from display */
 void	kf_ZoomOut(void)

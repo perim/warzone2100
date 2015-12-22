@@ -37,20 +37,6 @@ extern void init3DBuilding(BASE_STATS *psStats, BUILDCALLBACK CallBack, void *Us
 extern	void	kill3DBuilding(void);
 extern bool process3DBuilding(void);
 
-extern void	adjustTileHeight(MAPTILE *psTile, SDWORD adjust);
-extern void	raiseTile(int tile3dX, int tile3dY);
-extern void	lowerTile(int tile3dX, int tile3dY);
-bool	inHighlight(UDWORD realX, UDWORD realY);
-
-struct HIGHLIGHT
-{
-	UWORD	xTL, yTL;		// Top left of box to highlight
-	UWORD	xBR, yBR;		// Bottom right of box to highlight
-};
-
-extern HIGHLIGHT	buildSite;
-
-
 #define BUILD3D_NONE		99
 #define BUILD3D_POS			100
 #define BUILD3D_FINISHED	101
@@ -70,7 +56,6 @@ extern BUILDDETAILS	sBuildDetails;
 
 extern UDWORD buildState;
 extern UDWORD temp;
-extern int brushSize;
 extern bool quickQueueMode;
 
 /*returns true if the build state is not equal to BUILD3D_NONE*/

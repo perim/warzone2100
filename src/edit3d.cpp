@@ -31,17 +31,15 @@ Alex McLean, Pumpkin Studios, EIDOS Interactive, 1997
 #include "display.h"
 #include "hci.h"
 
-/*
-Definition of a tile to highlight - presently more than is required
-but means that we can highlight any individual tile in future. An
-x coordinate that is greater than mapWidth implies that the highlight
-is invalid (not currently being used)
-*/
+struct HIGHLIGHT
+{
+	UWORD xTL, yTL;               // Top left of box to highlight
+	UWORD xBR, yBR;               // Bottom right of box to highlight
+};
 
 UDWORD	buildState = BUILD3D_NONE;
-BUILDDETAILS	sBuildDetails;
-HIGHLIGHT		buildSite;
-int brushSize = 1;
+BUILDDETAILS sBuildDetails;
+static HIGHLIGHT buildSite;
 bool quickQueueMode = false;
 
 // Initialisation function for statis & globals in this module.
@@ -49,71 +47,6 @@ bool quickQueueMode = false;
 void Edit3DInitVars(void)
 {
 	buildState = BUILD3D_NONE;
-	brushSize = 1;
-}
-
-/* Raises a tile by a #defined height */
-void raiseTile(int tile3dX, int tile3dY)
-{
-	int i, j;
-
-	if (tile3dX < 0 || tile3dX > mapWidth - 1 || tile3dY < 0 || tile3dY > mapHeight - 1)
-	{
-		return;
-	}
-	for (i = tile3dX; i <= MIN(mapWidth - 1, tile3dX + brushSize); i++)
-	{
-		for (j = tile3dY; j <= MIN(mapHeight - 1, tile3dY + brushSize); j++)
-		{
-			adjustTileHeight(mapTile(i, j), TILE_RAISE);
-			markTileDirty(i, j);
-		}
-	}
-}
-
-/* Lowers a tile by a #defined height */
-void lowerTile(int tile3dX, int tile3dY)
-{
-	int i, j;
-
-	if (tile3dX < 0 || tile3dX > mapWidth - 1 || tile3dY < 0 || tile3dY > mapHeight - 1)
-	{
-		return;
-	}
-	for (i = tile3dX; i <= MIN(mapWidth - 1, tile3dX + brushSize); i++)
-	{
-		for (j = tile3dY; j <= MIN(mapHeight - 1, tile3dY + brushSize); j++)
-		{
-			adjustTileHeight(mapTile(i, j), TILE_LOWER);
-			markTileDirty(i, j);
-		}
-	}
-}
-
-/* Ensures any adjustment to tile elevation is within allowed ranges */
-void	adjustTileHeight(MAPTILE *psTile, SDWORD adjust)
-{
-	int32_t newHeight = psTile->height + adjust * ELEVATION_SCALE;
-
-	if (newHeight >= MIN_TILE_HEIGHT * ELEVATION_SCALE && newHeight <= MAX_TILE_HEIGHT * ELEVATION_SCALE)
-	{
-		psTile->height = newHeight;
-	}
-}
-
-bool	inHighlight(UDWORD realX, UDWORD realY)
-{
-	bool	retVal = false;
-
-	if (realX >= buildSite.xTL && realX <= buildSite.xBR)
-	{
-		if (realY >= buildSite.yTL && realY <= buildSite.yBR)
-		{
-			retVal = true;
-		}
-	}
-
-	return (retVal);
 }
 
 void init3DBuilding(BASE_STATS *psStats, BUILDCALLBACK CallBack, void *UserData)

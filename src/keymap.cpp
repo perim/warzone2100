@@ -258,13 +258,13 @@ _keymapsave keyMapSaveTable[] =
 	kf_NOOP, // unused
 	kf_ToggleVisibility,
 	kf_FinishResearch,
-	kf_LowerTile,
+	kf_NOOP,
 	kf_NOOP, // unused
 	kf_ToggleGodMode,
 	kf_NOOP,
-	kf_SystemClose,
+	kf_NOOP,
 	kf_ToggleShadows,
-	kf_RaiseTile,
+	kf_NOOP,
 	kf_NOOP, // unused
 	kf_TriFlip,
 	kf_NOOP, // unused
@@ -466,8 +466,6 @@ void	keyInitMappings(bool bForceDefaults)
 	keyAddMapping(KEYMAP__DEBUG, KEY_LCTRL,  KEY_E,         KEYMAP_PRESSED, kf_ToggleShowGateways,  N_("Toggle display of gateways"));
 	keyAddMapping(KEYMAP__DEBUG, KEY_IGNORE, KEY_M,         KEYMAP_PRESSED, kf_ShowMappings,        N_("Show all keyboard mappings - use pause!"));
 	keyAddMapping(KEYMAP__DEBUG, KEY_IGNORE, KEY_V,         KEYMAP_PRESSED, kf_ToggleVisibility,    N_("Toggle visibility"));
-	keyAddMapping(KEYMAP__DEBUG, KEY_IGNORE, KEY_W,         KEYMAP_DOWN,    kf_RaiseTile,           N_("Raise tile height"));
-	keyAddMapping(KEYMAP__DEBUG, KEY_IGNORE, KEY_A,         KEYMAP_DOWN,    kf_LowerTile,           N_("Lower tile height"));
 	keyAddMapping(KEYMAP__DEBUG, KEY_LCTRL,  KEY_J,         KEYMAP_PRESSED, kf_ToggleFog,           N_("Toggles All fog"));
 	keyAddMapping(KEYMAP__DEBUG, KEY_LCTRL,  KEY_Q,         KEYMAP_PRESSED, kf_ToggleWeather,       N_("Trigger some weather"));
 	keyAddMapping(KEYMAP__DEBUG, KEY_IGNORE, KEY_K,         KEYMAP_PRESSED, kf_TriFlip,             N_("Flip terrain triangle"));
