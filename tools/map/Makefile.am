@@ -8,13 +8,16 @@ EXTRA_DIST = \
 	configs \
 	MapUtilities.xcodeproj
 
-noinst_PROGRAMS = mapconv mapinfo map2lnd map2preview map2png
+noinst_PROGRAMS = mapconv mapinfo map2lnd map2preview map2png terrainconv
 noinst_HEADERS = maplib.h mapload.h pngsave.h vector.h
 
 LIBLIST = $(LTLIBINTL) $(PHYSFS_LIBS) $(PNG_LIBS) $(QT5_LIBS)
 
 mapconv_SOURCES = mapconv.cpp mapload.cpp maplib.cpp pngsave.cpp
 mapconv_LDADD = $(LIBLIST)
+
+terrainconv_SOURCES = terrainconv.cpp mapload.cpp maplib.cpp
+terrainconv_LDADD = $(LIBLIST)
 
 mapinfo_SOURCES = mapinfo.cpp mapload.cpp maplib.cpp
 mapinfo_LDADD = $(LIBLIST)
