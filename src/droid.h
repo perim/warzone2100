@@ -47,7 +47,6 @@
 /* Experience modifies */
 #define EXP_REDUCE_DAMAGE		6		// damage of a droid is reduced by this value per experience level, in %
 #define EXP_ACCURACY_BONUS		5		// accuracy of a droid is increased by this value per experience level, in %
-#define EXP_SPEED_BONUS			5		// speed of a droid is increased by this value per experience level, in %
 
 enum PICKTILE
 {

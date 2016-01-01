@@ -1450,23 +1450,20 @@ UDWORD calcDroidBaseSpeed(DROID_TEMPLATE *psTemplate, UDWORD weight, UBYTE playe
 /* Calculate the speed of a droid over a terrain */
 UDWORD calcDroidSpeed(UDWORD baseSpeed, UDWORD terrainType, UDWORD propIndex, UDWORD level)
 {
-	PROPULSION_STATS	*propulsion = asPropulsionStats + propIndex;
-	UDWORD				speed;
+	PROPULSION_STATS *propulsion = asPropulsionStats + propIndex;
+	UDWORD speed = baseSpeed;
 
-	speed  = baseSpeed;
-	// Factor in terrain
-	speed *= getSpeedFactor(terrainType, propulsion->propulsionType);
-	speed /= 100;
+	if (propulsion->propulsionType == PROPULSION_TYPE_LIFT)
+	{
+		speed *= 250;
+		speed /= 100;
+	}
 
 	// Need to ensure doesn't go over the max speed possible for this propulsion
 	if (speed > propulsion->maxSpeed)
 	{
 		speed = propulsion->maxSpeed;
 	}
-
-	// Factor in experience
-	speed *= (100 + EXP_SPEED_BONUS * level);
-	speed /= 100;
 
 	return speed;
 }

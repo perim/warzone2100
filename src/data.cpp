@@ -262,19 +262,6 @@ static bool bufferSPROPSNDLoad(const char *fileName, void **ppData)
 	return true;
 }
 
-/* Load the STERRTABLE stats */
-static bool bufferSTERRTABLELoad(const char *fileName, void **ppData)
-{
-	if (!loadTerrainTable(fileName))
-	{
-		return false;
-	}
-
-	//not interested in this value
-	*ppData = NULL;
-	return true;
-}
-
 /* Load the body/propulsion IMDs stats -- FIXME, REMOVE IT, NOT USED */
 static bool bufferSBPIMDLoad(const char *fileName, void **ppData)
 {
@@ -622,7 +609,6 @@ static const RES_TYPE_MIN_FILE FileResourceTypes[] =
 	{"SCONSTR", bufferSCONSTRLoad, dataReleaseStats},
 	{"SPROP", bufferSPROPLoad, dataReleaseStats},
 	{"SPROPTYPES", bufferSPROPTYPESLoad, dataReleaseStats},
-	{"STERRTABLE", bufferSTERRTABLELoad, dataReleaseStats},
 	{"SBODY", bufferSBODYLoad, dataReleaseStats},
 	{"SWEAPMOD", bufferSWEAPMODLoad, dataReleaseStats},
 	{"SPROPSND", bufferSPROPSNDLoad, dataReleaseStats},

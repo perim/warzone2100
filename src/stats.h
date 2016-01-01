@@ -56,7 +56,6 @@ extern UDWORD		numECMStats;
 extern UDWORD		numRepairStats;
 extern UDWORD		numWeaponStats;
 extern UDWORD		numConstructStats;
-extern UDWORD		numTerrainTypes;
 
 /* What number the ref numbers start at for each type of stat */
 #define REF_BODY_START			0x010000
@@ -153,9 +152,6 @@ extern bool loadPropulsionTypes(const char *pFileName);
 /*Load the propulsion sounds from the file exported from Access*/
 extern bool loadPropulsionSounds(const char *pFileName);
 
-/*Load the Terrain Table from the file exported from Access*/
-extern bool loadTerrainTable(const char *pFileName);
-
 /*Load the Weapon Effect Modifiers from the file exported from Access*/
 extern bool loadWeaponModifiers(const char *pFileName);
 
@@ -165,8 +161,6 @@ extern bool loadWeaponModifiers(const char *pFileName);
 
 /*calls the STATS_DEALLOC macro for each set of stats*/
 extern bool statsShutDown(void);
-
-extern UDWORD getSpeedFactor(UDWORD terrainType, UDWORD propulsionType);
 
 /// Get the component index for a component based on the name, verifying with type.
 /// It is currently identical to getCompFromID, but may not be in the future.
