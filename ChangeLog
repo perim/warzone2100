@@ -1,4 +1,4 @@
-2016-05-17: Version 3.2.0
+2016-05-07: Version 3.2.0 beta1
  * General:
    * Add: Support for autogames (commit:c6e96a71643978ed7f950f56bd71fb03e3475ff1, commit:edc47e872011ef06d2f10fe938c2e2c7e9f29fd8)
  * UI:
